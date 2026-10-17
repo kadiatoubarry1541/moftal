@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useTraduction } from '../i18n/traduction'
 
 export function DebugInfo() {
+  const { tr } = useTraduction()
   const [debugData, setDebugData] = useState<any>(null)
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export function DebugInfo() {
   }, [])
 
   const clearAllData = () => {
-    if (confirm('Êtes-vous sûr de vouloir effacer toutes les données ?')) {
+    if (confirm(tr('Êtes-vous sûr de vouloir effacer toutes les données ?'))) {
       localStorage.clear()
       setDebugData(null)
     }
@@ -33,7 +35,7 @@ export function DebugInfo() {
 
   return (
     <div className="debug-info">
-      <h4>🔍 Debug - Données LocalStorage</h4>
+      <h4>{tr("🔍 Debug - Données LocalStorage")}</h4>
       <div style={{ marginBottom: '10px' }}>
         <button onClick={clearAllData} style={{ 
           background: '#dc3545', 
@@ -43,7 +45,7 @@ export function DebugInfo() {
           borderRadius: '4px',
           cursor: 'pointer'
         }}>
-          Effacer toutes les données
+          {tr("Effacer toutes les données")}
         </button>
       </div>
       
@@ -63,7 +65,7 @@ export function DebugInfo() {
               {JSON.stringify(JSON.parse(value as string), null, 2)}
             </pre>
           ) : (
-            <span style={{ color: '#6c757d' }}>Aucune donnée</span>
+            <span style={{ color: '#6c757d' }}>{tr("Aucune donnée")}</span>
           )}
         </div>
       ))}

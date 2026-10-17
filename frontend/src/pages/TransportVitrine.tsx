@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
+import { useTraduction, trHors } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -14,12 +15,13 @@ const SKY_DARK = "#075985";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number)  { return Number(n) ? (Number(n) || 0).toLocaleString("fr-FR") + " GNF" : "Sur demande"; }
+function fmtMoney(n: number)  { return Number(n) ? (Number(n) || 0).toLocaleString("fr-FR") + " GNF" : trHors("Sur demande"); }
 
 export default function TransportVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [co, setCo]           = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,9 +34,9 @@ export default function TransportVitrine() {
       fetch(`${API}/api/pro-public/transport/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setCo(t.tenant);
-      else setError(t.message || "Compagnie introuvable");
+      else setError(tr(t.message || "Compagnie introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger la compagnie."))
+    }).catch(() => setError(tr("Impossible de charger la compagnie.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -42,7 +44,7 @@ export default function TransportVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #bae6fd`, borderTopColor: SKY, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: SKY_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+        <p style={{ color: SKY_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -52,9 +54,9 @@ export default function TransportVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🚌</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Compagnie introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Compagnie introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: SKY, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: SKY, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -94,12 +96,12 @@ export default function TransportVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{co.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Transport</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Transport")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Trajets","trips"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -116,14 +118,14 @@ export default function TransportVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{co.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {co.description || "Des voyages confortables et sécurisés à travers toute la région. Réservez votre place et partez en toute sérénité."}
+            {co.description || tr("Des voyages confortables et sécurisés à travers toute la région. Réservez votre place et partez en toute sérénité.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("trips")} style={{ background: SKY, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Voir les trajets
+              {tr("Voir les trajets")}
             </button>
             <button onClick={() => scrollTo("contact")} style={{ background: "white", color: SKY, border: `1.5px solid ${SKY}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Réserver
+              {tr("Réserver")}
             </button>
           </div>
         </div>
@@ -141,12 +143,12 @@ export default function TransportVitrine() {
             { icon: "🚌", val: `${stats.vehicles || 0}`, label: "Véhicules" },
             { icon: "👨‍✈️", val: `${stats.drivers || 0}`, label: "Chauffeurs qualifiés" },
             { icon: "🗺️", val: `${stats.trips || 0}`, label: "Trajets à venir" },
-            { icon: "✅", val: "Sécurisé", label: "Voyages certifiés" },
+            { icon: "✅", val: tr("Sécurisé"), label: "Voyages certifiés" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: SKY, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -156,13 +158,13 @@ export default function TransportVitrine() {
       <section id="trips" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <span style={{ background: `${SKY}18`, color: SKY, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Prochains départs</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Trajets Disponibles</h2>
+            <span style={{ background: `${SKY}18`, color: SKY, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Prochains départs")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Trajets Disponibles")}</h2>
           </div>
           {trips.length === 0 ? (
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🚌</div>
-              Aucun trajet programmé pour l'instant. Contactez-nous.
+              {tr("Aucun trajet programmé pour l'instant. Contactez-nous.")}
             </div>
           ) : (
             <div className="trip-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -171,12 +173,12 @@ export default function TransportVitrine() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{t.lieu_depart}</div>
-                      <div style={{ fontSize: 11, color: "#94a3b8" }}>Départ</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr("Départ")}</div>
                     </div>
                     <div style={{ fontSize: 20 }}>→</div>
                     <div style={{ flex: 1, textAlign: "right" }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{t.lieu_arrivee}</div>
-                      <div style={{ fontSize: 11, color: "#94a3b8" }}>Arrivée</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr("Arrivée")}</div>
                     </div>
                   </div>
                   <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
@@ -188,7 +190,7 @@ export default function TransportVitrine() {
                       <span style={{ fontSize: 16, fontWeight: 800, color: SKY }}>{fmtMoney(t.prix)}</span>
                       {t.places_disponibles !== null && t.places_disponibles !== undefined && (
                         <span style={{ fontSize: 11, color: t.places_disponibles > 0 ? "#1a8f1a" : "#dc2626", fontWeight: 700 }}>
-                          {t.places_disponibles > 0 ? `${t.places_disponibles} places` : "Complet"}
+                          {t.places_disponibles > 0 ? tr("{n} places", { n: t.places_disponibles }) : tr("Complet")}
                         </span>
                       )}
                     </div>
@@ -204,26 +206,26 @@ export default function TransportVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 780, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>Réserver votre place</h2>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>{tr("Réserver votre place")}</h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
             {[
-              { icon: "📞", label: "Téléphone", val: co.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: co.email || "Non renseigné" },
-              { icon: "📍", label: "Gare/Bureau", val: co.address || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: co.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: co.email || tr("Non renseigné") },
+              { icon: "📍", label: "Gare/Bureau", val: co.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
               </div>
             ))}
           </div>
           <div style={{ textAlign: "center" }}>
               <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={co.name} couleur={SKY} objet={"Réservation de place"}
-                messageInitial={"Bonjour, je souhaite réserver une place pour un trajet."}
+                messageInitial={tr("Bonjour, je souhaite réserver une place pour un trajet.")}
                 style={{ background: SKY, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                ✉️ Réserver une place
+                {tr("✉️ Réserver une place")}
               </EcrireAuSite>
             </div>
         </div>
@@ -236,9 +238,9 @@ export default function TransportVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{co.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Transport & Voyages</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Transport & Voyages")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { config } from '../config/api';
+import { useTraduction } from '../i18n/traduction';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export default function PaymentModal({
   isOpen, onClose, onSuccess,
   amount, currency = 'GNF', purpose, relatedId, description,
 }: PaymentModalProps) {
+  const { tr } = useTraduction();
   const [step, setStep]       = useState<Step>('choose');
   const [method, setMethod]   = useState<PayMethod | null>(null);
   const [phone, setPhone]     = useState('');
@@ -79,7 +81,7 @@ export default function PaymentModal({
       if (attempts > 40) {
         clearInterval(pollRef.current!);
         setStep('error');
-        setError('Délai dépassé. Vérifiez votre téléphone et réessayez.');
+        setError(tr('Délai dépassé. Vérifiez votre téléphone et réessayez.'));
         return;
       }
       try {
@@ -96,7 +98,7 @@ export default function PaymentModal({
         } else if (status === 'FAILED' || status === 'CANCELLED') {
           clearInterval(pollRef.current!);
           setStep('error');
-          setError('Paiement échoué. Vérifiez votre solde et réessayez.');
+          setError(tr('Paiement échoué. Vérifiez votre solde et réessayez.'));
         }
       } catch { /* continue */ }
     }, 3000);
@@ -105,7 +107,7 @@ export default function PaymentModal({
   const handlePay = async () => {
     if (!method) return;
     if ((method === 'OM' || method === 'MOMO') && phone.replace(/\D/g, '').length < 8) {
-      setError('Entrez un numéro de téléphone valide (8-9 chiffres).');
+      setError(tr('Entrez un numéro de téléphone valide (8-9 chiffres).'));
       return;
     }
 
@@ -137,7 +139,7 @@ export default function PaymentModal({
           setTxRef(data.reference || ref);
           setStep('waiting');
         } else {
-          setError(data.message || 'Erreur lors de la création du paiement.');
+          setError(tr(data.message || 'Erreur lors de la création du paiement.'));
         }
       } else {
         const res  = await fetch(`${API}/api/djomy/initiate`, {
@@ -161,11 +163,11 @@ export default function PaymentModal({
           setStep('waiting');
           if (id) startPolling(id, refServeur);
         } else {
-          setError(data.message || "Erreur lors de l'initiation du paiement.");
+          setError(tr(data.message || "Erreur lors de l'initiation du paiement."));
         }
       }
     } catch {
-      setError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+      setError(tr('Impossible de contacter le serveur. Vérifiez votre connexion.'));
     } finally {
       setLoading(false);
     }
@@ -174,7 +176,7 @@ export default function PaymentModal({
   const confirmManually = async () => {
     if (!txId) {
       // Jamais de « paiement réussi » sans vérification auprès du serveur
-      setError("Impossible de vérifier ce paiement pour l'instant. Si vous avez payé, il sera confirmé automatiquement dans quelques minutes ; sinon, recommencez.");
+      setError(tr("Impossible de vérifier ce paiement pour l'instant. Si vous avez payé, il sera confirmé automatiquement dans quelques minutes ; sinon, recommencez."));
       return;
     }
     setLoading(true);
@@ -189,10 +191,10 @@ export default function PaymentModal({
         setStep('success');
         onSuccess(txRef);
       } else {
-        setError('Paiement non encore confirmé. Confirmez sur votre téléphone puis réessayez.');
+        setError(tr('Paiement non encore confirmé. Confirmez sur votre téléphone puis réessayez.'));
       }
     } catch {
-      setError('Erreur de vérification. Réessayez.');
+      setError(tr('Erreur de vérification. Réessayez.'));
     } finally {
       setLoading(false);
     }
@@ -215,7 +217,7 @@ export default function PaymentModal({
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-white">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-bold">Paiement sécurisé</h2>
+              <h2 className="text-lg font-bold">{tr("Paiement sécurisé")}</h2>
               <p className="text-sm text-emerald-100 mt-0.5 leading-snug">{description}</p>
             </div>
             <button onClick={onClose} className="text-white/70 hover:text-white text-3xl leading-none ml-3">×</button>
@@ -231,7 +233,7 @@ export default function PaymentModal({
           {/* ── ÉTAPE 1 : CHOIX MÉTHODE ── */}
           {step === 'choose' && (
             <>
-              <p className="text-sm font-semibold text-gray-600 mb-3">Choisissez votre moyen de paiement</p>
+              <p className="text-sm font-semibold text-gray-600 mb-3">{tr("Choisissez votre moyen de paiement")}</p>
 
               <div className="space-y-3 mb-5">
                 {METHODS.map(m => (
@@ -247,7 +249,7 @@ export default function PaymentModal({
                     <span className="text-3xl">{m.emoji}</span>
                     <div className="flex-1">
                       <div className="font-bold text-gray-800 text-sm">{m.label}</div>
-                      <div className="text-xs text-gray-500">{m.sublabel}</div>
+                      <div className="text-xs text-gray-500">{tr(m.sublabel)}</div>
                     </div>
                     {method === m.id && (
                       <span className="text-emerald-600 font-bold text-xl">✓</span>
@@ -260,7 +262,7 @@ export default function PaymentModal({
               {(method === 'OM' || method === 'MOMO') && (
                 <div className="mb-5">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Numéro {method === 'OM' ? 'Orange Money' : 'MTN MoMo'}
+                    {tr("Numéro {moyen}", { moyen: method === 'OM' ? 'Orange Money' : 'MTN MoMo' })}
                   </label>
                   <div className="flex items-center border-2 border-gray-200 focus-within:border-emerald-500 rounded-xl overflow-hidden transition-colors">
                     <span className="px-3 py-3 bg-gray-50 text-gray-500 text-sm font-semibold border-r border-gray-200 shrink-0">
@@ -277,7 +279,7 @@ export default function PaymentModal({
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-1.5">
-                    Vous recevrez une notification pour confirmer le paiement.
+                    {tr("Vous recevrez une notification pour confirmer le paiement.")}
                   </p>
                 </div>
               )}
@@ -296,15 +298,15 @@ export default function PaymentModal({
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Traitement en cours...
+                    {tr("Traitement en cours...")}
                   </>
                 ) : (
-                  `Payer ${fmt(amount)} ${currency}`
+                  tr("Payer {montant} {devise}", { montant: fmt(amount), devise: currency })
                 )}
               </button>
 
               <p className="text-xs text-gray-400 text-center mt-3">
-                Paiement sécurisé par Djomy · SSL 256-bit
+                {tr("Paiement sécurisé par Djomy · SSL 256-bit")}
               </p>
             </>
           )}
@@ -317,10 +319,10 @@ export default function PaymentModal({
                   <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-5">
                     <span className="text-4xl">💳</span>
                   </div>
-                  <h3 className="font-bold text-gray-800 text-lg mb-2">Page de paiement ouverte</h3>
+                  <h3 className="font-bold text-gray-800 text-lg mb-2">{tr("Page de paiement ouverte")}</h3>
                   <p className="text-sm text-gray-500 mb-6">
-                    Complétez le paiement dans l'onglet qui s'est ouvert,<br />
-                    puis revenez ici et cliquez sur confirmer.
+                    {tr("Complétez le paiement dans l'onglet qui s'est ouvert,")}<br />
+                    {tr("puis revenez ici et cliquez sur confirmer.")}
                   </p>
                 </>
               ) : (
@@ -332,13 +334,13 @@ export default function PaymentModal({
                     <span className="text-4xl">{method === 'OM' ? '🟠' : '🟡'}</span>
                   </div>
                   <h3 className="font-bold text-gray-800 text-lg mb-2">
-                    Confirmez sur votre téléphone
+                    {tr("Confirmez sur votre téléphone")}
                   </h3>
                   <p className="text-sm text-gray-500 mb-1">
-                    Notification envoyée au <strong>+224 {phone}</strong>
+                    {tr("Notification envoyée au")} <strong>+224 {phone}</strong>
                   </p>
                   <p className="text-sm text-gray-500 mb-5">
-                    Ouvrez {method === 'OM' ? 'Orange Money' : 'MTN MoMo'} et acceptez le paiement de{' '}
+                    {tr("Ouvrez {moyen} et acceptez le paiement de", { moyen: method === 'OM' ? 'Orange Money' : 'MTN MoMo' })}{' '}
                     <strong>{fmt(amount)} {currency}</strong>.
                   </p>
                   {/* Points animés */}
@@ -368,7 +370,7 @@ export default function PaymentModal({
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
-                  "J'ai confirmé le paiement"
+                  tr("J'ai confirmé le paiement")
                 )}
               </button>
 
@@ -380,7 +382,7 @@ export default function PaymentModal({
                 }}
                 className="text-sm text-gray-400 hover:text-gray-600 py-2"
               >
-                Annuler et recommencer
+                {tr("Annuler et recommencer")}
               </button>
             </div>
           )}
@@ -391,14 +393,14 @@ export default function PaymentModal({
               <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
                 <span className="text-5xl">✅</span>
               </div>
-              <h3 className="text-2xl font-bold text-emerald-600 mb-2">Paiement réussi !</h3>
-              <p className="text-sm text-gray-500 mb-1">Votre accès a été activé avec succès.</p>
+              <h3 className="text-2xl font-bold text-emerald-600 mb-2">{tr("Paiement réussi !")}</h3>
+              <p className="text-sm text-gray-500 mb-1">{tr("Votre accès a été activé avec succès.")}</p>
               <p className="text-xs text-gray-400 font-mono mt-1 mb-7">{txRef}</p>
               <button
                 onClick={onClose}
                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl active:scale-95 transition-transform"
               >
-                Continuer
+                {tr("Continuer")}
               </button>
             </div>
           )}
@@ -409,16 +411,16 @@ export default function PaymentModal({
               <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
                 <span className="text-5xl">❌</span>
               </div>
-              <h3 className="text-xl font-bold text-red-600 mb-2">Paiement échoué</h3>
+              <h3 className="text-xl font-bold text-red-600 mb-2">{tr("Paiement échoué")}</h3>
               <p className="text-sm text-gray-500 mb-7">{error}</p>
               <button
                 onClick={() => { setStep('choose'); setError(''); }}
                 className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl mb-3 active:scale-95 transition-transform"
               >
-                Réessayer
+                {tr("Réessayer")}
               </button>
               <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-600 py-2">
-                Annuler
+                {tr("Annuler")}
               </button>
             </div>
           )}

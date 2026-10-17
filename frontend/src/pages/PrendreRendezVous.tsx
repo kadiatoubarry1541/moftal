@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -46,6 +47,7 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
 export default function PrendreRendezVous() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [account, setAccount] = useState<ProAccount | null>(null);
   const [mode, setMode] = useState<"choose" | "written" | "video" | "done">("choose");
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function PrendreRendezVous() {
   // === Envoi rendez-vous écrit ===
   const handleSubmitWritten = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !time || !service) { setError("Tous les champs sont requis"); return; }
+    if (!date || !time || !service) { setError(tr("Tous les champs sont requis")); return; }
     setSending(true);
     setError("");
     try {
@@ -101,8 +103,8 @@ export default function PrendreRendezVous() {
       });
       const data = await res.json();
       if (data.success) setMode("done");
-      else setError(data.message || "Erreur");
-    } catch { setError("Erreur de connexion"); }
+      else setError(tr(data.message || "Erreur"));
+    } catch { setError(tr("Erreur de connexion")); }
     finally { setSending(false); }
   };
 
@@ -111,7 +113,7 @@ export default function PrendreRendezVous() {
   const VIDEO_MAX_MO = 140;
   const handleVideoFile = (file: File) => {
     if (file.size > VIDEO_MAX_MO * 1024 * 1024) {
-      alert(`Vidéo trop volumineuse (${Math.round(file.size / (1024 * 1024))} Mo). Maximum ${VIDEO_MAX_MO} Mo : raccourcissez-la ou filmez en qualité plus basse.`);
+      alert(tr("Vidéo trop volumineuse ({taille} Mo). Maximum {max} Mo : raccourcissez-la ou filmez en qualité plus basse.", { taille: Math.round(file.size / (1024 * 1024)), max: VIDEO_MAX_MO }));
       return;
     }
     setVideoFile(file);
@@ -141,23 +143,23 @@ export default function PrendreRendezVous() {
           });
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.success) setMode("done");
-          else if (res.status === 413) setError(`Vidéo trop volumineuse pour l'envoi (maximum ${VIDEO_MAX_MO} Mo).`);
-          else setError(data.message || "Le rendez-vous n'a pas pu être envoyé. Réessayez.");
+          else if (res.status === 413) setError(tr("Vidéo trop volumineuse pour l'envoi (maximum {max} Mo).", { max: VIDEO_MAX_MO }));
+          else setError(tr(data.message || "Le rendez-vous n'a pas pu être envoyé. Réessayez."));
         } catch {
-          setError("Erreur de connexion : la vidéo n'a pas été envoyée. Réessayez.");
+          setError(tr("Erreur de connexion : la vidéo n'a pas été envoyée. Réessayez."));
         } finally {
           setSending(false);
         }
       };
       reader.readAsDataURL(videoFile);
     } catch {
-      setError("Erreur de connexion");
+      setError(tr("Erreur de connexion"));
       setSending(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="text-gray-500">Chargement...</div></div>;
-  if (!account) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="text-red-500">Établissement non trouvé</div></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="text-gray-500">{tr("Chargement...")}</div></div>;
+  if (!account) return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"><div className="text-red-500">{tr("Établissement non trouvé")}</div></div>;
 
   const typeInfo = TYPE_LABELS[account.type] || { label: account.type, icon: "📄" };
   const websiteMatch = account.description?.match(/https?:\/\/[^\s]+/);
@@ -169,13 +171,13 @@ export default function PrendreRendezVous() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">📨</div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Rendez-vous envoyé !</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{tr("Rendez-vous envoyé !")}</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Votre demande a été envoyée à <strong>{account.name}</strong>.
-            Vous recevrez une notification quand elle sera acceptée.
+            {tr("Votre demande a été envoyée à")} <strong>{account.name}</strong>.
+            {tr("Vous recevrez une notification quand elle sera acceptée.")}
           </p>
           <button onClick={() => navigate("/compte")} className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
-            Retour à mon espace
+            {tr("Retour à mon espace")}
           </button>
         </div>
       </div>
@@ -188,12 +190,12 @@ export default function PrendreRendezVous() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => mode === "choose" ? navigate(-1) : setMode("choose")} className="min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-200 font-medium transition-colors">
-            ← Retour
+            {tr("← Retour")}
           </button>
           <span className="text-2xl">{typeInfo.icon}</span>
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">{account.name}</h1>
-            <p className="text-sm text-gray-500">{typeInfo.label} • {account.city}</p>
+            <p className="text-sm text-gray-500">{tr(typeInfo.label)} • {account.city}</p>
           </div>
         </div>
 
@@ -213,22 +215,22 @@ export default function PrendreRendezVous() {
             <div className="flex-1 space-y-1 text-sm">
               {account.address && (
                 <p className="text-gray-700 dark:text-gray-200">
-                  <span className="font-medium">Adresse :</span> {account.address}{account.city ? `, ${account.city}` : ""}{account.country ? `, ${account.country}` : ""}
+                  <span className="font-medium">{tr("Adresse :")}</span> {account.address}{account.city ? `, ${account.city}` : ""}{account.country ? `, ${account.country}` : ""}
                 </p>
               )}
               {account.phone && (
                 <p className="text-gray-700 dark:text-gray-200">
-                  <span className="font-medium">Téléphone :</span> {account.phone}
+                  <span className="font-medium">{tr("Téléphone :")}</span> {account.phone}
                 </p>
               )}
               {account.email && (
                 <p className="text-gray-700 dark:text-gray-200">
-                  <span className="font-medium">Email :</span> {account.email}
+                  <span className="font-medium">{tr("Email :")}</span> {account.email}
                 </p>
               )}
               {websiteUrl && (
                 <p className="text-gray-700 dark:text-gray-200">
-                  <span className="font-medium">Site web :</span>{" "}
+                  <span className="font-medium">{tr("Site web :")}</span>{" "}
                   <a href={websiteUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">
                     {websiteUrl}
                   </a>
@@ -236,7 +238,7 @@ export default function PrendreRendezVous() {
               )}
               {account.services?.length > 0 && (
                 <div className="pt-1">
-                  <span className="text-gray-700 dark:text-gray-200 font-medium text-sm">Services principaux :</span>
+                  <span className="text-gray-700 dark:text-gray-200 font-medium text-sm">{tr("Services principaux :")}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {account.services.slice(0, 6).map((s, i) => (
                       <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 text-xs rounded-full">
@@ -248,7 +250,7 @@ export default function PrendreRendezVous() {
               )}
               {account.specialties?.length > 0 && (
                 <div className="pt-1">
-                  <span className="text-gray-700 dark:text-gray-200 font-medium text-sm">Spécialités :</span>
+                  <span className="text-gray-700 dark:text-gray-200 font-medium text-sm">{tr("Spécialités :")}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {account.specialties.slice(0, 6).map((s, i) => (
                       <span key={i} className="px-2 py-0.5 bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-200 text-xs rounded-full">
@@ -272,19 +274,19 @@ export default function PrendreRendezVous() {
         {/* Choix du mode */}
         {mode === "choose" && (
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Comment souhaitez-vous prendre rendez-vous ?</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{tr("Comment souhaitez-vous prendre rendez-vous ?")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={() => setMode("written")}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-6 text-left transition-all hover:scale-[1.02]">
                 <div className="text-4xl mb-3">📝</div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Par écrit</h3>
-                <p className="text-sm text-gray-500">Remplissez le jour, l'heure et le service souhaité</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{tr("Par écrit")}</h3>
+                <p className="text-sm text-gray-500">{tr("Remplissez le jour, l'heure et le service souhaité")}</p>
               </button>
               <button onClick={() => setMode("video")}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-6 text-left transition-all hover:scale-[1.02]">
                 <div className="text-4xl mb-3">📹</div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Par vidéo</h3>
-                <p className="text-sm text-gray-500">Enregistrez ou importez une vidéo courte</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{tr("Par vidéo")}</h3>
+                <p className="text-sm text-gray-500">{tr("Enregistrez ou importez une vidéo courte")}</p>
               </button>
             </div>
           </div>
@@ -293,37 +295,37 @@ export default function PrendreRendezVous() {
         {/* Formulaire écrit */}
         {mode === "written" && (
           <form onSubmit={handleSubmitWritten} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📝 Rendez-vous par écrit</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{tr("📝 Rendez-vous par écrit")}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jour *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tr("Jour *")}</label>
                 <input type="date" required value={date} onChange={e => setDate(e.target.value)}
                   className="w-full min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Heure *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tr("Heure *")}</label>
                 <input type="time" required value={time} onChange={e => setTime(e.target.value)}
                   className="w-full min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Service recherché *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{tr("Service recherché *")}</label>
                 {account.services && account.services.length > 0 ? (
                   <select required value={service} onChange={e => setService(e.target.value)}
                     className="w-full min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Choisir un service --</option>
+                    <option value="">{tr("-- Choisir un service --")}</option>
                     {account.services.map((s, i) => <option key={i} value={s}>{s}</option>)}
-                    <option value="autre">Autre</option>
+                    <option value="autre">{tr("Autre")}</option>
                   </select>
                 ) : (
                   <input type="text" required value={service} onChange={e => setService(e.target.value)}
-                    placeholder="Ex: Consultation générale"
+                    placeholder={tr("Ex: Consultation générale")}
                     className="w-full min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
                 )}
               </div>
             </div>
             <button type="submit" disabled={sending}
               className="mt-6 w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-lg transition-colors">
-              {sending ? "Envoi en cours..." : "Envoyer ma demande"}
+              {sending ? tr("Envoi en cours...") : tr("Envoyer ma demande")}
             </button>
           </form>
         )}
@@ -331,7 +333,7 @@ export default function PrendreRendezVous() {
         {/* Enregistrement / sélection vidéo */}
         {mode === "video" && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📹 Rendez-vous par vidéo</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{tr("📹 Rendez-vous par vidéo")}</h2>
 
             {/* Inputs cachés */}
             <input
@@ -353,19 +355,19 @@ export default function PrendreRendezVous() {
             {!videoPreview ? (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500 mb-4">
-                  Filmez ou importez une courte vidéo de présentation de votre demande (maximum 30 s recommandé).
+                  {tr("Filmez ou importez une courte vidéo de présentation de votre demande (maximum 30 s recommandé).")}
                 </p>
                 <button
                   onClick={() => captureRef.current?.click()}
                   className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
-                  <span>📷</span> Filmer maintenant
+                  <span>📷</span> {tr("Filmer maintenant")}
                 </button>
                 <button
                   onClick={() => galleryRef.current?.click()}
                   className="w-full min-h-[44px] px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
                 >
-                  <span>🎞️</span> Choisir depuis la galerie
+                  <span>🎞️</span> {tr("Choisir depuis la galerie")}
                 </button>
               </div>
             ) : (
@@ -377,7 +379,7 @@ export default function PrendreRendezVous() {
                     disabled={sending}
                     className="flex-1 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors"
                   >
-                    {sending ? "Envoi en cours..." : "✅ Envoyer"}
+                    {sending ? tr("Envoi en cours...") : tr("✅ Envoyer")}
                   </button>
                   <button
                     onClick={() => {
@@ -387,7 +389,7 @@ export default function PrendreRendezVous() {
                     }}
                     className="flex-1 min-h-[44px] px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors"
                   >
-                    🔄 Recommencer
+                    {tr("🔄 Recommencer")}
                   </button>
                 </div>
               </div>

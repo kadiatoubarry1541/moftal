@@ -1,4 +1,5 @@
 ﻿import { useRef } from 'react';
+import { useTraduction } from '../i18n/traduction';
 
 interface ReçuProps {
   id: string;
@@ -31,6 +32,7 @@ export function ReçuTransaction({
   beneficiaireContact, description, nomFamille, logoUrl, proNom,
   repartition, onClose
 }: ReçuProps) {
+  const { tr } = useTraduction();
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -39,7 +41,7 @@ export function ReçuTransaction({
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-      <title>Reçu Moftal Pay — ${nomFamille || proNom || ''}</title>
+      <title>${tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' })}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; color: #111; }
@@ -90,28 +92,28 @@ export function ReçuTransaction({
               )}
               <div style={{ fontSize: 18, fontWeight: 900 }}>MOFTAL PAY</div>
               {proNom && <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{proNom}</div>}
-              {nomFamille && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>Famille {nomFamille}</div>}
-              <div style={{ fontSize: 10, opacity: 0.55, marginTop: 8, letterSpacing: 2 }}>RÉF. MF-{refCourt}</div>
+              {nomFamille && <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{tr("Famille {nom}", { nom: nomFamille })}</div>}
+              <div style={{ fontSize: 10, opacity: 0.55, marginTop: 8, letterSpacing: 2 }}>{tr("RÉF. MF-{ref}", { ref: refCourt })}</div>
             </div>
 
             {/* Montant */}
             <div style={{ padding: '0 20px' }}>
               <div style={{ textAlign: 'center', margin: '16px 0', padding: '16px', background: '#f0f7ff', borderRadius: 10 }}>
-                <div style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Montant</div>
+                <div style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>{tr("Montant")}</div>
                 <div style={{ fontSize: 32, fontWeight: 900, color: '#1e3a5f' }}>{montant.toLocaleString()} GNF</div>
                 <div style={{ display: 'inline-block', background: '#dbeafe', color: '#1e3a5f', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 'bold', marginTop: 6 }}>
-                  {TYPE_LABELS[type] || type}
+                  {TYPE_LABELS[type] ? tr(TYPE_LABELS[type]) : type}
                 </div>
               </div>
 
               {/* Détails */}
               <div style={{ borderTop: '1px dashed #ccc', paddingTop: 14, marginBottom: 4 }}>
                 {[
-                  { lbl: 'Date', val: dateFormatee },
-                  acteurNom ? { lbl: 'Effectué par', val: acteurNom } : null,
-                  beneficiaireNom ? { lbl: 'Bénéficiaire', val: beneficiaireNom } : null,
-                  beneficiaireContact ? { lbl: 'Contact', val: beneficiaireContact } : null,
-                  description ? { lbl: 'Motif', val: description } : null,
+                  { lbl: tr('Date'), val: dateFormatee },
+                  acteurNom ? { lbl: tr('Effectué par'), val: acteurNom } : null,
+                  beneficiaireNom ? { lbl: tr('Bénéficiaire'), val: beneficiaireNom } : null,
+                  beneficiaireContact ? { lbl: tr('Contact'), val: beneficiaireContact } : null,
+                  description ? { lbl: tr('Motif'), val: description } : null,
                 ].filter(Boolean).map((r, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, fontSize: 12 }}>
                     <span style={{ color: '#777', flexShrink: 0, marginRight: 12 }}>{r!.lbl}</span>
@@ -123,7 +125,7 @@ export function ReçuTransaction({
               {/* Répartition dépôt */}
               {repartition && Object.keys(repartition).length > 0 && (
                 <div style={{ background: '#f0f9f4', borderRadius: 8, padding: 10, marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 'bold', color: '#1a8f1a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Répartition automatique</div>
+                  <div style={{ fontSize: 10, fontWeight: 'bold', color: '#1a8f1a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{tr("Répartition automatique")}</div>
                   {Object.entries(repartition).map(([k, v]) => Number(v) > 0 && (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#333', marginBottom: 3 }}>
                       <span style={{ textTransform: 'capitalize' }}>{k}</span>
@@ -137,7 +139,7 @@ export function ReçuTransaction({
             {/* Footer */}
             <div style={{ background: '#f8fafc', padding: 14, textAlign: 'center', borderTop: '1px dashed #ccc' }}>
               <div style={{ fontSize: 10, color: '#888', lineHeight: 1.6 }}>
-                <div>Conservez ce reçu comme justificatif officiel</div>
+                <div>{tr("Conservez ce reçu comme justificatif officiel")}</div>
                 <div style={{ marginTop: 4 }}>Moftal Pay · Moftal · {new Date().getFullYear()}</div>
               </div>
             </div>
@@ -151,13 +153,13 @@ export function ReçuTransaction({
             className="flex-1 py-3 rounded-xl text-white font-bold text-sm"
             style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}
           >
-            🖨️ Imprimer le reçu
+            {tr("🖨️ Imprimer le reçu")}
           </button>
           <button
             onClick={onClose}
             className="flex-1 py-3 rounded-xl font-bold text-sm border-2 border-gray-200 text-gray-700 bg-white"
           >
-            Fermer
+            {tr("Fermer")}
           </button>
         </div>
       </div>
