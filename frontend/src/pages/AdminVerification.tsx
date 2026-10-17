@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl } from "../utils/auth";
 import { config } from "../config/api";
 import { VerifiedBadge } from "../components/VerifiedBadge";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -16,6 +17,7 @@ interface Candidat {
 
 export default function AdminVerification() {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const user = getSessionUser();
   const token = localStorage.getItem("token");
 
@@ -47,7 +49,7 @@ export default function AdminVerification() {
   }
 
   async function approuver(c: Candidat) {
-    if (!confirm(`Accorder le badge "Compte vérifié" à ${c.prenom} ${c.nomFamille} ?`)) return;
+    if (!confirm(tr("Accorder le badge « Compte vérifié » à {nom} ?", { nom: `${c.prenom} ${c.nomFamille}` }))) return;
     setActionLoading(c.numeroH);
     try {
       const res = await fetch(`${API}/api/verification/admin/${c.numeroH}/approuver`, {
@@ -55,10 +57,10 @@ export default function AdminVerification() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setMessage({ type: data.success ? "ok" : "err", texte: data.message });
+      setMessage({ type: data.success ? "ok" : "err", texte: tr(data.message || (data.success ? "Badge accordé." : "Erreur.")) });
       if (data.success) setCandidats((prev) => prev.filter((x) => x.numeroH !== c.numeroH));
     } catch {
-      setMessage({ type: "err", texte: "Erreur de connexion." });
+      setMessage({ type: "err", texte: tr("Erreur de connexion.") });
     }
     setActionLoading(null);
   }
@@ -70,14 +72,14 @@ export default function AdminVerification() {
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">←</button>
           <div className="h-5 w-px bg-gray-200" />
           <h1 className="font-bold text-gray-800 flex items-center gap-1.5">
-            <VerifiedBadge size={18} /> Comptes vérifiés
+            <VerifiedBadge size={18} /> {tr("Comptes vérifiés")}
           </h1>
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm text-emerald-800">
-          Ces comptes remplissent déjà tous les critères automatiques : au moins un enfant dans l'arbre familial, une activité professionnelle approuvée, une photo de profil, un numéro de téléphone, et un compte actif depuis au moins 60 jours. Il ne manque que ton approbation.
+          {tr("Ces comptes remplissent déjà tous les critères automatiques : au moins un enfant dans l'arbre familial, une activité professionnelle approuvée, une photo de profil, un numéro de téléphone, et un compte actif depuis au moins 60 jours. Il ne manque que ton approbation.")}
         </div>
 
         {message && (
@@ -87,11 +89,11 @@ export default function AdminVerification() {
         )}
 
         {loading ? (
-          <p className="text-center text-gray-400 py-10">Chargement...</p>
+          <p className="text-center text-gray-400 py-10">{tr("Chargement...")}</p>
         ) : candidats.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400">
             <p className="text-3xl mb-3">📭</p>
-            <p className="font-semibold">Aucun candidat pour le moment.</p>
+            <p className="font-semibold">{tr("Aucun candidat pour le moment.")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -104,14 +106,14 @@ export default function AdminVerification() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-800 truncate">{c.prenom} {c.nomFamille}</p>
-                  <p className="text-xs text-gray-500">{c.nbEnfants} enfant{c.nbEnfants > 1 ? "s" : ""} · {c.numeroH}</p>
+                  <p className="text-xs text-gray-500">{c.nbEnfants > 1 ? tr("{n} enfants", { n: c.nbEnfants }) : tr("{n} enfant", { n: c.nbEnfants })} · {c.numeroH}</p>
                 </div>
                 <button
                   onClick={() => approuver(c)}
                   disabled={actionLoading === c.numeroH}
                   className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-3 py-2 rounded-lg flex-shrink-0"
                 >
-                  {actionLoading === c.numeroH ? "..." : "✅ Approuver"}
+                  {actionLoading === c.numeroH ? "..." : tr("✅ Approuver")}
                 </button>
               </div>
             ))}

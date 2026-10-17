@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin } from '../utils/auth'
+import { useTraduction } from '../i18n/traduction'
 
 type Genre = 'HOMME' | 'FEMME' | 'AUTRE'
 
@@ -107,6 +108,7 @@ export function FamilleQuickNav({
   surface = 'default',
   suppressEntourageHeading = false
 }: Props) {
+  const { tr } = useTraduction()
   const entourage = useEntourageItems(user)
   const hub = surface === 'hub'
 
@@ -114,8 +116,8 @@ export function FamilleQuickNav({
     <Link
       to={primaryItems[0].to}
       className={`${TREE_ROW} focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900`}
-      title={primaryItems[0].hint}
-      aria-label={primaryItems[0].hint}
+      title={tr(primaryItems[0].hint)}
+      aria-label={tr(primaryItems[0].hint)}
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm ring-1 ring-emerald-200/80 dark:bg-gray-800 dark:ring-emerald-700 sm:h-11 sm:w-11 sm:text-[1.65rem]"
@@ -125,10 +127,10 @@ export function FamilleQuickNav({
       </span>
       <span className="min-w-0 flex-1 text-left">
         <span className="block text-sm font-bold leading-tight text-gray-900 dark:text-white sm:text-base">
-          {primaryItems[0].label}
+          {tr(primaryItems[0].label)}
         </span>
         <span className="mt-0.5 block text-xs leading-snug text-gray-600 dark:text-gray-400">
-          Photos · Messages · Arbre
+          {tr('Photos · Messages · Arbre')}
         </span>
       </span>
       <span className="shrink-0 text-xl font-light text-emerald-600 dark:text-emerald-400" aria-hidden>
@@ -146,8 +148,8 @@ export function FamilleQuickNav({
         className={`${linkBase} ${CARD_UNIFIED} ${
           compact ? 'min-h-[92px] px-2 py-2.5 sm:min-h-[100px]' : 'min-h-[96px] px-3 py-3 sm:min-h-[104px]'
         }`}
-        title={item.hint}
-        aria-label={item.hint}
+        title={tr(item.hint)}
+        aria-label={tr(item.hint)}
       >
         <span
           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[1.65rem] ring-2 ${ring} sm:h-14 sm:w-14 sm:text-4xl`}
@@ -158,7 +160,7 @@ export function FamilleQuickNav({
         <span
           className={`mt-2 text-center font-bold leading-tight text-gray-900 dark:text-white ${compact ? 'text-sm sm:text-base' : 'text-base'}`}
         >
-          {item.label}
+          {tr(item.label)}
         </span>
       </Link>
     )
@@ -187,8 +189,8 @@ export function FamilleQuickNav({
         {!suppressEntourageHeading && (
           <SectionHeader
             icon="👥"
-            title="Mon entourage"
-            subtitle={hub ? 'Une touche = une page' : 'Parents, enfants, couple, amours'}
+            title={tr('Mon entourage')}
+            subtitle={hub ? tr('Une touche = une page') : tr('Parents, enfants, couple, amours')}
           />
         )}
         {hub ? (
@@ -208,11 +210,11 @@ export function FamilleQuickNav({
     return (
       <div className="space-y-6">
         <div>
-          <SectionHeader icon="🌳" title="Mon arbre" subtitle="Galerie, messages, généalogie" />
+          <SectionHeader icon="🌳" title={tr("Mon arbre")} subtitle={tr("Galerie, messages, généalogie")} />
           {renderTreeRow()}
         </div>
         <div>
-          <SectionHeader icon="👥" title="Mon entourage" subtitle="Une touche pour ouvrir chaque page" />
+          <SectionHeader icon="👥" title={tr("Mon entourage")} subtitle={tr("Une touche pour ouvrir chaque page")} />
           <div
             className={`grid gap-3 sm:gap-4 ${
               entourage.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'
@@ -229,7 +231,7 @@ export function FamilleQuickNav({
     <div className="space-y-6">
       <div>{renderTreeRow()}</div>
       <div>
-        <SectionHeader icon="👥" title="Mon entourage" subtitle="Choisir une page" />
+        <SectionHeader icon="👥" title={tr("Mon entourage")} subtitle={tr("Choisir une page")} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           {entourage.map((item) => renderEntourageCard(item, compact))}
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { calculerAge } from '../utils/calculs'
+import { useTraduction } from '../i18n/traduction'
 
 interface SocialGroupMember {
   id: string
@@ -32,6 +33,7 @@ interface SocialGroupsProps {
 }
 
 export function SocialGroups({ userData }: SocialGroupsProps) {
+  const { tr } = useTraduction()
   const [activeTab, setActiveTab] = useState('my-groups')
   const [members, setMembers] = useState<SocialGroupMember[]>([])
   const [posts, setPosts] = useState<SocialGroupPost[]>([])
@@ -221,7 +223,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
     return (
       <div className="social-groups-loading">
         <div className="loading-spinner"></div>
-        <p>Chargement des organisations sociaux...</p>
+        <p>{tr('Chargement des organisations sociaux...')}</p>
       </div>
     )
   }
@@ -229,12 +231,12 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
   return (
     <div className="social-groups-page">
       <div className="groups-header">
-        <h3>👥 Groupes Sociaux</h3>
+        <h3>{tr('👥 Groupes Sociaux')}</h3>
         <p className="user-info">
-          {userData.prenom} {userData.nomFamille} - {userData.genre} - {userAge} ans
+          {userData.prenom} {userData.nomFamille} - {userData.genre} - {tr('{n} ans', { n: userAge })}
         </p>
         <p className="access-info">
-          Groupes accessibles : {accessibleGroups.map(g => g.name).join(', ')}
+          {tr('Groupes accessibles : {liste}', { liste: accessibleGroups.map(g => tr(g.name)).join(', ') })}
         </p>
       </div>
 
@@ -247,7 +249,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="tab-icon">{tab.icon}</span>
-            <span className="tab-label">{tab.label}</span>
+            <span className="tab-label">{tr(tab.label)}</span>
           </button>
         ))}
       </div>
@@ -256,7 +258,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
       <div className="groups-content">
         {activeTab === 'my-groups' && (
           <div className="my-groups-tab">
-            <h4>👥 Mes Groupes Sociaux</h4>
+            <h4>{tr('👥 Mes Groupes Sociaux')}</h4>
             {accessibleGroups.length > 0 ? (
               <div className="groups-grid">
                 {accessibleGroups.map(group => {
@@ -270,20 +272,20 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
                           {group.icon}
                         </div>
                         <div className="group-info">
-                          <h5>{group.name}</h5>
-                          <p className="group-description">{group.description}</p>
+                          <h5>{tr(group.name)}</h5>
+                          <p className="group-description">{tr(group.description)}</p>
                         </div>
                         <button 
                           className="join-btn"
                           style={{ backgroundColor: group.color }}
                         >
-                          Rejoindre
+                          {tr('Rejoindre')}
                         </button>
                       </div>
                       <div className="group-stats">
-                        <span className="members-count">👥 {groupMembers.length} membres</span>
-                        <span className="posts-count">📝 {groupPosts.length} discussions</span>
-                        <span className="online-count">🟢 {groupMembers.filter(m => m.isOnline).length} en ligne</span>
+                        <span className="members-count">{tr('👥 {n} membres', { n: groupMembers.length })}</span>
+                        <span className="posts-count">{tr('📝 {n} discussions', { n: groupPosts.length })}</span>
+                        <span className="online-count">{tr('🟢 {n} en ligne', { n: groupMembers.filter(m => m.isOnline).length })}</span>
                       </div>
                     </div>
                   )
@@ -291,8 +293,8 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
               </div>
             ) : (
               <div className="no-access">
-                <p>Vous n'avez accès à aucun organisation social pour le moment.</p>
-                <p>Vérifiez votre profil et votre âge.</p>
+                <p>{tr("Vous n'avez accès à aucun organisation social pour le moment.")}</p>
+                <p>{tr('Vérifiez votre profil et votre âge.')}</p>
               </div>
             )}
           </div>
@@ -300,7 +302,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
 
         {activeTab === 'all-groups' && (
           <div className="all-groups-tab">
-            <h4>🌐 Tous les Groupes Sociaux</h4>
+            <h4>{tr('🌐 Tous les Groupes Sociaux')}</h4>
             <div className="groups-grid">
               {[
                 {
@@ -337,10 +339,10 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
                       {group.icon}
                     </div>
                     <div className="group-info">
-                      <h5>{group.name}</h5>
-                      <p className="group-description">{group.description}</p>
+                      <h5>{tr(group.name)}</h5>
+                      <p className="group-description">{tr(group.description)}</p>
                       {!group.isAccessible && (
-                        <span className="restricted-badge">Accès restreint</span>
+                        <span className="restricted-badge">{tr('Accès restreint')}</span>
                       )}
                     </div>
                     {group.isAccessible ? (
@@ -348,16 +350,16 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
                         className="join-btn"
                         style={{ backgroundColor: group.color }}
                       >
-                        Rejoindre
+                        {tr('Rejoindre')}
                       </button>
                     ) : (
                       <button className="restricted-btn" disabled>
-                        Non accessible
+                        {tr('Non accessible')}
                       </button>
                     )}
                   </div>
                   <div className="group-stats">
-                    <span className="members-count">👥 {group.members} membres</span>
+                    <span className="members-count">{tr('👥 {n} membres', { n: group.members })}</span>
                   </div>
                 </div>
               ))}
@@ -367,7 +369,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
 
         {activeTab === 'discussions' && (
           <div className="discussions-tab">
-            <h4>💬 Discussions des Groupes</h4>
+            <h4>{tr('💬 Discussions des Groupes')}</h4>
             <div className="posts-list">
               {posts.map(post => (
                 <div key={post.id} className="post-card">
@@ -379,7 +381,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
                       <div className="author-details">
                         <h4>{post.author.prenom} {post.author.nomFamille}</h4>
                         <p className="author-info-text">
-                          {post.author.genre} - {post.author.age} ans - NumeroH: {post.author.numeroH}
+                          {post.author.genre} - {tr('{n} ans', { n: post.author.age })} - {tr('NumeroH : {numero}', { numero: post.author.numeroH })}
                         </p>
                         <p className="post-date">
                           {new Date(post.createdAt).toLocaleString()}
@@ -403,7 +405,7 @@ export function SocialGroups({ userData }: SocialGroupsProps) {
                       💬 {post.comments}
                     </button>
                     <button className="share-btn">
-                      🔗 Partager
+                      {tr('🔗 Partager')}
                     </button>
                   </div>
                 </div>

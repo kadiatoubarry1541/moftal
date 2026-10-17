@@ -5,6 +5,7 @@ import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -23,6 +24,7 @@ export default function ScientifiqueVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [lab, setLab]         = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function ScientifiqueVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #c7d2fe`, borderTopColor: INDIGO, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: INDIGO_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+        <p style={{ color: INDIGO_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -55,9 +57,9 @@ export default function ScientifiqueVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🔬</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Laboratoire introuvable</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: INDIGO, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Laboratoire introuvable")}</h2>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error ? tr(error) : error}</p>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: INDIGO, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -98,12 +100,12 @@ export default function ScientifiqueVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{lab.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Laboratoire</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Laboratoire")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Publications","pubs"],["Équipe","team"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -120,14 +122,14 @@ export default function ScientifiqueVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{lab.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {lab.description || "Un centre de recherche dédié à l'avancement scientifique. Publications, projets innovants et expertise multidisciplinaire."}
+            {lab.description || tr("Un centre de recherche dédié à l'avancement scientifique. Publications, projets innovants et expertise multidisciplinaire.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("pubs")} style={{ background: INDIGO, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Nos Publications
+              {tr("Nos Publications")}
             </button>
             <button onClick={() => scrollTo("contact")} style={{ background: "white", color: INDIGO, border: `1.5px solid ${INDIGO}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Collaborer
+              {tr("Collaborer")}
             </button>
           </div>
         </div>
@@ -145,12 +147,12 @@ export default function ScientifiqueVitrine() {
             { icon: "👨‍🔬", val: `${stats.members || 0}`, label: "Chercheurs" },
             { icon: "📄", val: `${stats.publications || 0}`, label: "Publications" },
             { icon: "🚀", val: `${stats.projects || 0}`, label: "Projets actifs" },
-            { icon: "💡", val: "Innovation", label: "Notre moteur" },
+            { icon: "💡", val: tr("Innovation"), label: "Notre moteur" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: INDIGO, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -160,11 +162,11 @@ export default function ScientifiqueVitrine() {
       <section id="pubs" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: `${INDIGO}18`, color: INDIGO, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Travaux scientifiques</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Publications Récentes</h2>
+            <span style={{ background: `${INDIGO}18`, color: INDIGO, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Travaux scientifiques")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Publications Récentes")}</h2>
           </div>
           {publications.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>Aucune publication disponible.</div>
+            <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>{tr("Aucune publication disponible.")}</div>
           ) : (
             <div className="pub-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {publications.map((p: any, i: number) => (
@@ -196,7 +198,7 @@ export default function ScientifiqueVitrine() {
         <section id="team" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>Notre Équipe de Recherche</h2>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Notre Équipe de Recherche")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {members.map((m: any, i: number) => (
@@ -218,18 +220,18 @@ export default function ScientifiqueVitrine() {
       <section id="contact" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>Collaborer avec nous</h2>
-            <p style={{ color: "#334155", fontSize: 15 }}>Nous sommes ouverts aux collaborations scientifiques et aux partenariats de recherche.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>{tr("Collaborer avec nous")}</h2>
+            <p style={{ color: "#334155", fontSize: 15 }}>{tr("Nous sommes ouverts aux collaborations scientifiques et aux partenariats de recherche.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: lab.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: lab.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: lab.address || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: lab.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: lab.email || tr("Non renseigné") },
+              { icon: "📍", label: "Adresse", val: lab.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "24px 16px", background: "white", borderRadius: 16, border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 34, marginBottom: 10 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{item.val}</div>
               </div>
             ))}
@@ -244,9 +246,9 @@ export default function ScientifiqueVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{lab.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre de Recherche</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Centre de Recherche")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>
