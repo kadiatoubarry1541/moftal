@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
+import { useTraduction } from '../../i18n/traduction'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -30,6 +31,7 @@ function getToken() {
 
 export default function FamilleAdmin() {
   const navigate = useNavigate()
+  const { tr } = useTraduction()
   const [parentChildLinks, setParentChildLinks] = useState<ParentChildLinkRow[]>([])
   const [coupleLinks, setCoupleLinks] = useState<CoupleLinkRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,7 +107,7 @@ export default function FamilleAdmin() {
   }
 
   const handleDeleteParentChild = async (linkId: string) => {
-    if (!confirm('Supprimer cette liaison parent-enfant ?')) return
+    if (!confirm(tr('Supprimer cette liaison parent-enfant ?'))) return
     const token = getToken()
     if (!token) return
     setActionLoading(linkId)
@@ -144,7 +146,7 @@ export default function FamilleAdmin() {
   }
 
   const handleLeaveCouple = async (linkId: string) => {
-    if (!confirm('Supprimer cette liaison couple ?')) return
+    if (!confirm(tr('Supprimer cette liaison couple ?'))) return
     const token = getToken()
     if (!token) return
     setActionLoading(linkId)
@@ -176,22 +178,22 @@ export default function FamilleAdmin() {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
         >
           <span aria-hidden>←</span>
-          Retour à Famille
+          {tr('Retour à Famille')}
         </Link>
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <span className="text-3xl">👑</span>
-          Vue Admin – Toutes les liaisons
+          {tr('Vue Admin – Toutes les liaisons')}
         </h1>
         <Link
           to="/famille/admin/arbres"
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm"
         >
-          🌳 Toutes les familles
+          {tr('🌳 Toutes les familles')}
         </Link>
       </div>
 
       {loading && (
-        <div className="text-center py-12 text-gray-500">Chargement...</div>
+        <div className="text-center py-12 text-gray-500">{tr('Chargement...')}</div>
       )}
 
       {!loading && (
@@ -199,11 +201,11 @@ export default function FamilleAdmin() {
           {/* Liaisons parent-enfant */}
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              👨‍👩‍👦 Liaisons parent-enfant ({parentChildLinks.length})
+              {tr('👨‍👩‍👦 Liaisons parent-enfant ({n})', { n: parentChildLinks.length })}
             </h2>
             <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
               {parentChildLinks.length === 0 ? (
-                <p className="p-6 text-gray-500">Aucune liaison parent-enfant.</p>
+                <p className="p-6 text-gray-500">{tr('Aucune liaison parent-enfant.')}</p>
               ) : (
                 <ul className="divide-y divide-gray-200">
                   {parentChildLinks.map((link) => (
@@ -233,7 +235,7 @@ export default function FamilleAdmin() {
                             disabled={actionLoading === link.id}
                             className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50"
                           >
-                            Confirmer
+                            {tr('Confirmer')}
                           </button>
                         )}
                         <button
@@ -242,7 +244,7 @@ export default function FamilleAdmin() {
                           disabled={actionLoading === link.id}
                           className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 disabled:opacity-50"
                         >
-                          Supprimer
+                          {tr('Supprimer')}
                         </button>
                       </div>
                     </li>
@@ -255,11 +257,11 @@ export default function FamilleAdmin() {
           {/* Liaisons couple */}
           <section>
             <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              🤵👰 Liaisons couple ({coupleLinks.length})
+              {tr('🤵👰 Liaisons couple ({n})', { n: coupleLinks.length })}
             </h2>
             <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
               {coupleLinks.length === 0 ? (
-                <p className="p-6 text-gray-500">Aucune liaison couple.</p>
+                <p className="p-6 text-gray-500">{tr('Aucune liaison couple.')}</p>
               ) : (
                 <ul className="divide-y divide-gray-200">
                   {coupleLinks.map((link) => (
@@ -286,7 +288,7 @@ export default function FamilleAdmin() {
                             disabled={actionLoading === link.id}
                             className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50"
                           >
-                            Confirmer
+                            {tr('Confirmer')}
                           </button>
                         )}
                         <button
@@ -295,7 +297,7 @@ export default function FamilleAdmin() {
                           disabled={actionLoading === link.id}
                           className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 disabled:opacity-50"
                         >
-                          Supprimer
+                          {tr('Supprimer')}
                         </button>
                       </div>
                     </li>

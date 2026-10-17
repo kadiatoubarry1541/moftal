@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
+import { useTraduction } from '../i18n/traduction';
 
 interface Props {
   token: string;
@@ -25,6 +26,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
   const [testMontant, setTestMontant] = useState('50000');
   const [testLoading, setTestLoading] = useState(false);
   const [testMsg, setTestMsg] = useState('');
+  const { tr } = useTraduction();
 
   useEffect(() => { charger(); }, []);
 
@@ -62,16 +64,16 @@ export function AdminWalletPro({ token, apiBase }: Props) {
   const fmt = (n: number) => n.toLocaleString('fr-GN') + ' FG';
 
   if (loading) return (
-    <div className="text-center py-10 text-gray-400">Chargement des comptes Moftal Pay...</div>
+    <div className="text-center py-10 text-gray-400">{tr("Chargement des comptes Moftal Pay...")}</div>
   );
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">💼 Moftal Pay — Comptes Professionnels</h2>
-        <p className="text-blue-600 text-xs font-bold">Comptes Moftal Pay des professionnels</p>
+        <h2 className="text-xl font-bold text-gray-800">{tr("💼 Moftal Pay — Comptes Professionnels")}</h2>
+        <p className="text-blue-600 text-xs font-bold">{tr("Comptes Moftal Pay des professionnels")}</p>
         <p className="text-sm text-gray-500 mt-1">
-          Tous les comptes Moftal Pay actifs — retraits Orange Money traités manuellement après validation admin.
+          {tr("Tous les comptes Moftal Pay actifs — retraits Orange Money traités manuellement après validation admin.")}
         </p>
       </div>
 
@@ -79,7 +81,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
       {totaux && (
         <div className="rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
           <p className="text-blue-200 text-sm mb-3 font-semibold">
-            Vue globale — {wallets.length} compte{wallets.length > 1 ? 's' : ''} Moftal Pay
+            {wallets.length > 1 ? tr("Vue globale — {n} comptes Moftal Pay", { n: wallets.length }) : tr("Vue globale — {n} compte Moftal Pay", { n: wallets.length })}
           </p>
           <div className="grid grid-cols-3 gap-3">
             {[
@@ -88,7 +90,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
               { label: 'Total retiré (cumul)', val: totaux.totalRetire, icon: '⬇️' },
             ].map(item => (
               <div key={item.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.12)' }}>
-                <p className="text-blue-200 text-xs mb-0.5">{item.icon} {item.label}</p>
+                <p className="text-blue-200 text-xs mb-0.5">{item.icon} {tr(item.label)}</p>
                 <p className="text-white font-black text-sm">{fmt(item.val)}</p>
               </div>
             ))}
@@ -99,14 +101,14 @@ export function AdminWalletPro({ token, apiBase }: Props) {
       {/* Recherche */}
       <input
         value={search} onChange={e => setSearch(e.target.value)}
-        placeholder="Rechercher un professionnel..."
+        placeholder={tr("Rechercher un professionnel...")}
         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
       />
 
       {/* Liste */}
       <div className="space-y-3">
         {filtrés.length === 0 && (
-          <p className="text-center text-gray-400 py-6">Aucun compte Moftal Pay trouvé.</p>
+          <p className="text-center text-gray-400 py-6">{tr("Aucun compte Moftal Pay trouvé.")}</p>
         )}
         {filtrés.map(w => (
           <div key={w.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -116,23 +118,23 @@ export function AdminWalletPro({ token, apiBase }: Props) {
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-black text-gray-900 truncate">{w.nomPro || '—'}</p>
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
-                    {TYPE_FR[w.typePro] || w.typePro}
+                    {TYPE_FR[w.typePro] ? tr(TYPE_FR[w.typePro]) : w.typePro}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">NumeroH : {w.ownerNumeroH}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{tr("NumeroH : {numero}", { numero: w.ownerNumeroH })}</p>
 
                 {/* Soldes */}
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   <div className="rounded-xl p-2 text-center" style={{ background: '#eff6ff' }}>
-                    <p className="text-blue-400 text-xs">Solde</p>
+                    <p className="text-blue-400 text-xs">{tr("Solde")}</p>
                     <p className="text-blue-700 font-black text-sm">{fmt(w.solde)}</p>
                   </div>
                   <div className="rounded-xl p-2 text-center" style={{ background: '#f0fdf0' }}>
-                    <p className="text-green-400 text-xs">Total reçu</p>
+                    <p className="text-green-400 text-xs">{tr("Total reçu")}</p>
                     <p className="text-green-700 font-bold text-sm">{fmt(w.totalRecu)}</p>
                   </div>
                   <div className="rounded-xl p-2 text-center" style={{ background: '#fef2f2' }}>
-                    <p className="text-red-400 text-xs">Total retiré</p>
+                    <p className="text-red-400 text-xs">{tr("Total retiré")}</p>
                     <p className="text-red-600 font-bold text-sm">{fmt(w.totalRetire)}</p>
                   </div>
                 </div>
@@ -140,22 +142,22 @@ export function AdminWalletPro({ token, apiBase }: Props) {
                 {/* Orange Money */}
                 {w.orangeMoney && (
                   <p className="text-xs text-gray-500 mt-2">
-                    📱 Orange Money : <span className="font-bold">{w.orangeMoney}</span>
+                    {tr("📱 Orange Money :")} <span className="font-bold">{w.orangeMoney}</span>
                   </p>
                 )}
                 {!w.orangeMoney && (
-                  <p className="text-xs text-amber-500 mt-2">⚠️ Aucun numéro Orange Money enregistré</p>
+                  <p className="text-xs text-amber-500 mt-2">{tr("⚠️ Aucun numéro Orange Money enregistré")}</p>
                 )}
 
                 <p className="text-xs text-gray-300 mt-1">
-                  Créé le {new Date(w.creeLe).toLocaleDateString('fr-GN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {tr("Créé le {date}", { date: new Date(w.creeLe).toLocaleDateString('fr-GN', { day: '2-digit', month: 'short', year: 'numeric' }) })}
                 </p>
 
                 {/* Bouton test */}
                 <button
                   onClick={() => { setTestWalletId(testWalletId === w.id ? null : w.id); setTestMsg(''); }}
                   className="mt-2 px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-amber-400 text-amber-600 hover:bg-amber-50 transition-all">
-                  🧪 Tester un dépôt
+                  {tr("🧪 Tester un dépôt")}
                 </button>
               </div>
             </div>
@@ -163,23 +165,23 @@ export function AdminWalletPro({ token, apiBase }: Props) {
             {/* Panneau test */}
             {testWalletId === w.id && (
               <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 rounded-b-2xl">
-                <p className="text-xs font-bold text-amber-700 mb-2">🧪 Dépôt de test</p>
+                <p className="text-xs font-bold text-amber-700 mb-2">{tr("🧪 Dépôt de test")}</p>
                 <div className="flex gap-2 items-center">
                   <input
                     type="number" min="1000" step="1000"
                     value={testMontant} onChange={e => setTestMontant(e.target.value)}
                     className="flex-1 rounded-xl border border-amber-300 px-3 py-2 text-sm outline-none bg-white"
-                    placeholder="Montant (FG)"
+                    placeholder={tr("Montant (FG)")}
                   />
                   <button
                     onClick={() => depotTest(w.id)} disabled={testLoading}
                     className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 transition-all">
-                    {testLoading ? '...' : 'Créditer'}
+                    {testLoading ? '...' : tr('Créditer')}
                   </button>
                 </div>
                 {testMsg && (
                   <p className={`text-xs mt-2 font-semibold ${testMsg.includes('TEST') || testMsg.includes('crédités') ? 'text-green-700' : 'text-red-600'}`}>
-                    {testMsg}
+                    {tr(testMsg)}
                   </p>
                 )}
               </div>

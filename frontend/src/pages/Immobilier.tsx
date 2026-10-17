@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
+import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -39,6 +40,7 @@ function AnnonceImage({ src, alt }: { src?: string; alt: string }) {
 
 export default function Immobilier() {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [annonces, setAnnonces] = useState<Annonce[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,15 +71,15 @@ export default function Immobilier() {
         onClick={() => navigate('/services')}
         className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors text-sm border border-gray-200"
       >
-        ← Retour
+        {tr("← Retour")}
       </button>
 
       <div className="mb-6 flex items-center gap-3 rounded-2xl bg-lime-700 px-4 py-3 text-white shadow-md">
         <span className="text-3xl leading-none">🏘️</span>
         <div>
-          <h1 className="text-base font-bold leading-tight">Immobilier</h1>
+          <h1 className="text-base font-bold leading-tight">{tr("Immobilier")}</h1>
           <p className="text-xs text-lime-100 mt-0.5">
-            Location de maisons et agents immobiliers agréés
+            {tr("Location de maisons et agents immobiliers agréés")}
           </p>
         </div>
       </div>
@@ -85,13 +87,13 @@ export default function Immobilier() {
       {/* Annonces maisons à louer */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
-          Maisons à louer
+          {tr("Maisons à louer")}
         </h2>
 
         {loading ? (
-          <p className="text-sm text-gray-400">Chargement des annonces…</p>
+          <p className="text-sm text-gray-400">{tr("Chargement des annonces…")}</p>
         ) : annonces.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">Aucune annonce de location disponible pour le moment.</p>
+          <p className="text-sm text-gray-500 italic">{tr("Aucune annonce de location disponible pour le moment.")}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {annonces.map((a) => (
@@ -123,17 +125,17 @@ export default function Immobilier() {
       {/* Agents immobiliers */}
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
-          Agents immobiliers agréés
+          {tr("Agents immobiliers agréés")}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Contactez nos <strong>agents immobiliers agréés</strong> pour{' '}
-          <strong>louer ou acheter</strong> un logement, un local commercial ou un terrain.
+          {tr("Contactez nos")} <strong>{tr("agents immobiliers agréés")}</strong> {tr("pour")}{' '}
+          <strong>{tr("louer ou acheter")}</strong> {tr("un logement, un local commercial ou un terrain.")}
         </p>
         <ProSection
           type="broker"
-          title="Agents immobiliers"
+          title={tr("Agents immobiliers")}
           icon="🏘️"
-          description="Professionnels de l'immobilier pour la location et la vente de biens."
+          description={tr("Professionnels de l'immobilier pour la location et la vente de biens.")}
         />
       </div>
     </div>

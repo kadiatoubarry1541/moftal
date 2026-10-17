@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -45,6 +46,7 @@ export default function CommerceVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
 
   const [store, setStore]         = useState<any>(null);
   const [products, setProducts]   = useState<any[]>([]);
@@ -131,7 +133,7 @@ export default function CommerceVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #fde68a`, borderTopColor: AMBER, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: AMBER_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
+        <p style={{ color: AMBER_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -141,10 +143,10 @@ export default function CommerceVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🏪</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Boutique introuvable</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || "Cette boutique n'existe pas ou n'est plus disponible."}</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Boutique introuvable")}</h2>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error ? tr(error) : tr("Cette boutique n'existe pas ou n'est plus disponible.")}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: AMBER, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-          Retour à l'accueil
+          {tr("Retour à l'accueil")}
         </button>
       </div>
     </div>
@@ -189,7 +191,7 @@ export default function CommerceVitrine() {
             {(store.address || store.city) && <span>📍 {[store.address, store.city].filter(Boolean).join(", ")}</span>}
             {store.horaires && <span>🕐 {store.horaires}</span>}
             {store.phone_urgence && (
-              <a href={`tel:${store.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
+              <a href={`tel:${store.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>{tr("🚨 Urgence")}</a>
             )}
           </div>
         </div>
@@ -204,21 +206,21 @@ export default function CommerceVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{store.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{storeLabel}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr(storeLabel)}</div>
             </div>
           </div>
 
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <div style={{ display: "flex", gap: 18 }}>
               {[["Accueil","hero"],["Produits","products"],["Avis","avis"],["Contact","contact"]].map(([label, id]) => (
-                <button key={id} className="nav-link" onClick={() => scrollTo(id)}>{label}</button>
+                <button key={id} className="nav-link" onClick={() => scrollTo(id)}>{tr(label)}</button>
               ))}
             </div>
 
             {/* Panier */}
             <button onClick={() => setShowCart(true)}
               style={{ position: "relative", background: "white", border: `1.5px solid ${AMBER}`, borderRadius: 10, padding: "8px 16px", color: AMBER, cursor: "pointer", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              🛒 Panier
+              {tr("🛒 Panier")}
               {cartCount > 0 && (
                 <span style={{ background: "#ef4444", color: "white", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, position: "absolute", top: -6, right: -6 }}>
                   {cartCount}
@@ -242,16 +244,16 @@ export default function CommerceVitrine() {
             {store.name}
           </h1>
           <p className="hero-sub" style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {store.description || "Bienvenue dans notre boutique. Découvrez nos produits de qualité au meilleur prix."}
+            {store.description || tr("Bienvenue dans notre boutique. Découvrez nos produits de qualité au meilleur prix.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("products")}
               style={{ background: AMBER, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(217,119,6,0.25)" }}>
-              Voir les produits
+              {tr("Voir les produits")}
             </button>
             <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet={cartItems.length ? "Commande" : "Message"} messageInitial={messageBoutique}
               style={{ background: "white", color: AMBER, border: `2px solid ${AMBER}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
-              ✉️ Nous écrire
+              {tr("✉️ Nous écrire")}
             </EcrireAuSite>
           </div>
         </div>
@@ -268,13 +270,13 @@ export default function CommerceVitrine() {
           {[
             { icon: "📦", val: `${products.length}`, label: "Produits disponibles" },
             { icon: "🏷️", val: `${categories.length}`, label: "Catégories" },
-            { icon: "⚡", val: "Rapide", label: "Livraison locale" },
-            { icon: "🌟", val: "Qualité", label: "Produits vérifiés" },
+            { icon: "⚡", val: tr("Rapide"), label: "Livraison locale" },
+            { icon: "🌟", val: tr("Qualité"), label: "Produits vérifiés" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: AMBER, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -284,9 +286,9 @@ export default function CommerceVitrine() {
       <section id="products" style={{ background: "#fafaf9", padding: "40px 20px 80px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <span style={{ background: `${AMBER}18`, color: AMBER, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Notre catalogue</span>
-            <h2 style={{ fontSize: 30, fontWeight: 800, margin: "12px 0 10px", color: "#0f172a" }}>Nos Produits</h2>
-            <p style={{ color: "#64748b", fontSize: 14, maxWidth: 460, margin: "0 auto" }}>Ajoutez vos articles au panier et contactez la boutique pour finaliser votre commande.</p>
+            <span style={{ background: `${AMBER}18`, color: AMBER, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Notre catalogue")}</span>
+            <h2 style={{ fontSize: 30, fontWeight: 800, margin: "12px 0 10px", color: "#0f172a" }}>{tr("Nos Produits")}</h2>
+            <p style={{ color: "#64748b", fontSize: 14, maxWidth: 460, margin: "0 auto" }}>{tr("Ajoutez vos articles au panier et contactez la boutique pour finaliser votre commande.")}</p>
           </div>
 
           {/* Barre de recherche */}
@@ -296,7 +298,7 @@ export default function CommerceVitrine() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher un produit…"
+                placeholder={tr("Rechercher un produit…")}
                 style={{ width: "100%", padding: "10px 12px 10px 38px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", background: "white" }}
               />
             </div>
@@ -308,7 +310,7 @@ export default function CommerceVitrine() {
               {["Tous", ...categories].map(cat => (
                 <button key={cat} className="cat-btn" onClick={() => setActiveCategory(cat)}
                   style={{ padding: "6px 16px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontWeight: activeCategory === cat ? 700 : 500, fontSize: 13, whiteSpace: "nowrap", background: activeCategory === cat ? AMBER : "white", color: activeCategory === cat ? "white" : "#374151", transition: "all 0.15s" }}>
-                  {cat !== "Tous" && getCatIcon(cat)} {cat}
+                  {cat !== "Tous" && getCatIcon(cat)} {cat === "Tous" ? tr("Tous") : cat}
                 </button>
               ))}
             </div>
@@ -318,7 +320,7 @@ export default function CommerceVitrine() {
           {filteredProducts.length === 0 ? (
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-              {search ? `Aucun produit trouvé pour "${search}"` : "Aucun produit disponible dans cette catégorie."}
+              {search ? tr("Aucun produit trouvé pour \"{recherche}\"", { recherche: search }) : tr("Aucun produit disponible dans cette catégorie.")}
             </div>
           ) : (
             <div className="products-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -351,13 +353,13 @@ export default function CommerceVitrine() {
 
                   {/* Stock faible */}
                   {p.stock <= 5 && (
-                    <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, marginBottom: 8 }}>⚠️ Plus que {p.stock} en stock</div>
+                    <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, marginBottom: 8 }}>{tr("⚠️ Plus que {n} en stock", { n: p.stock })}</div>
                   )}
 
                   {/* Bouton ajouter */}
                   <button className="add-btn" onClick={() => addToCart(p)}
                     style={{ width: "100%", marginTop: 12, padding: "10px", background: AMBER, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, transition: "background 0.15s" }}>
-                    + Ajouter au panier
+                    {tr("+ Ajouter au panier")}
                   </button>
                 </div>
               ))}
@@ -369,8 +371,8 @@ export default function CommerceVitrine() {
       {/* ── POURQUOI NOUS ────────────────────────────────────────────────────── */}
       <section style={{ background: "white", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Pourquoi acheter chez nous ?</h2>
-          <p style={{ fontSize: 14, color: "#334155", marginBottom: 44, maxWidth: 460, margin: "0 auto 44px" }}>Des produits de qualité, des prix honnêtes et un service de proximité.</p>
+          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>{tr("Pourquoi acheter chez nous ?")}</h2>
+          <p style={{ fontSize: 14, color: "#334155", marginBottom: 44, maxWidth: 460, margin: "0 auto 44px" }}>{tr("Des produits de qualité, des prix honnêtes et un service de proximité.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 860, margin: "0 auto" }}>
             {[
               { icon: "✅", title: "Produits vérifiés", desc: "Chaque article est contrôlé avant d'être proposé. Qualité garantie." },
@@ -379,8 +381,8 @@ export default function CommerceVitrine() {
             ].map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -391,14 +393,14 @@ export default function CommerceVitrine() {
       <section id="avis" style={{ background: "#fafaf9", padding: "60px 20px" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis clients</h2>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Avis clients")}</h2>
             {reviewStats.total > 0 ? (
               <p style={{ color: "#64748b", fontSize: 14 }}>
                 <span style={{ color: "#f59e0b" }}>{"★".repeat(Math.round(reviewStats.moyenne))}{"☆".repeat(5 - Math.round(reviewStats.moyenne))}</span>
-                {" "}{reviewStats.moyenne.toFixed(1)} / 5 · {reviewStats.total} avis
+                {" "}{tr("{moyenne} / 5 · {total} avis", { moyenne: reviewStats.moyenne.toFixed(1), total: reviewStats.total })}
               </p>
             ) : (
-              <p style={{ color: "#64748b", fontSize: 14 }}>Soyez le premier à donner votre avis sur cette boutique.</p>
+              <p style={{ color: "#64748b", fontSize: 14 }}>{tr("Soyez le premier à donner votre avis sur cette boutique.")}</p>
             )}
           </div>
 
@@ -407,7 +409,7 @@ export default function CommerceVitrine() {
               {reviews.map(r => (
                 <div key={r.id} style={{ background: "white", borderRadius: 14, border: "1px solid #e2e8f0", padding: 18 }}>
                   <div style={{ color: "#f59e0b", fontSize: 14, marginBottom: 6 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{r.nom_auteur || "Anonyme"}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{r.nom_auteur || tr("Anonyme")}</div>
                   {r.commentaire && <p style={{ fontSize: 13, color: "#475569", marginTop: 6 }}>{r.commentaire}</p>}
                 </div>
               ))}
@@ -416,20 +418,20 @@ export default function CommerceVitrine() {
 
           <div style={{ background: "white", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, maxWidth: 480, margin: "0 auto" }}>
             {reviewSent ? (
-              <p style={{ textAlign: "center", color: "#16a34a", fontWeight: 600, margin: 0 }}>Merci ! Votre avis sera visible après modération.</p>
+              <p style={{ textAlign: "center", color: "#16a34a", fontWeight: 600, margin: 0 }}>{tr("Merci ! Votre avis sera visible après modération.")}</p>
             ) : (
               <>
-                <div style={{ fontWeight: 700, marginBottom: 12, textAlign: "center" }}>Laisser un avis</div>
+                <div style={{ fontWeight: 700, marginBottom: 12, textAlign: "center" }}>{tr("Laisser un avis")}</div>
                 <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
                   {[1, 2, 3, 4, 5].map(n => (
                     <button key={n} onClick={() => setReviewForm(f => ({ ...f, note: n }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 26, color: n <= reviewForm.note ? "#f59e0b" : "#e2e8f0" }}>★</button>
                   ))}
                 </div>
-                <input placeholder="Votre nom (optionnel)" value={reviewForm.nom_auteur} onChange={e => setReviewForm(f => ({ ...f, nom_auteur: e.target.value }))}
+                <input placeholder={tr("Votre nom (optionnel)")} value={reviewForm.nom_auteur} onChange={e => setReviewForm(f => ({ ...f, nom_auteur: e.target.value }))}
                   style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 10 }} />
-                <textarea placeholder="Votre commentaire (optionnel)" value={reviewForm.commentaire} onChange={e => setReviewForm(f => ({ ...f, commentaire: e.target.value }))}
+                <textarea placeholder={tr("Votre commentaire (optionnel)")} value={reviewForm.commentaire} onChange={e => setReviewForm(f => ({ ...f, commentaire: e.target.value }))}
                   style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", height: 70, resize: "none", marginBottom: 12 }} />
-                <button onClick={submitReview} style={{ width: "100%", padding: "10px", background: AMBER, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Envoyer mon avis</button>
+                <button onClick={submitReview} style={{ width: "100%", padding: "10px", background: AMBER, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13 }}>{tr("Envoyer mon avis")}</button>
               </>
             )}
           </div>
@@ -440,18 +442,18 @@ export default function CommerceVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
-            <p style={{ color: "#64748b", fontSize: 14 }}>Passez votre commande ou posez vos questions directement.</p>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nous Contacter")}</h2>
+            <p style={{ color: "#64748b", fontSize: 14 }}>{tr("Passez votre commande ou posez vos questions directement.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, maxWidth: 780, margin: "0 auto 40px" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: store.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email",     val: store.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse",   val: [store.address, store.city].filter(Boolean).join(", ") || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: store.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email",     val: store.email || tr("Non renseigné") },
+              { icon: "📍", label: "Adresse",   val: [store.address, store.city].filter(Boolean).join(", ") || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "24px 16px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#fafaf9" }}>
                 <div style={{ fontSize: 34, marginBottom: 10 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
               </div>
             ))}
@@ -459,7 +461,7 @@ export default function CommerceVitrine() {
           <div style={{ textAlign: "center" }}>
             <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet={cartItems.length ? "Commande" : "Message"} messageInitial={messageBoutique}
               style={{ background: AMBER, color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(217,119,6,0.3)" }}>
-              {cartItems.length ? "🛒 Envoyer ma commande" : "✉️ Nous écrire"}
+              {cartItems.length ? tr("🛒 Envoyer ma commande") : tr("✉️ Nous écrire")}
             </EcrireAuSite>
           </div>
         </div>
@@ -478,10 +480,10 @@ export default function CommerceVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{store.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{storeLabel}</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr(storeLabel)}</p>
           <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", border: "1px solid #e2e8f0", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", border: "1px solid #e2e8f0", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
             </button>
           </div>
         </div>
@@ -494,7 +496,7 @@ export default function CommerceVitrine() {
           <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(400px,95vw)", background: "white", zIndex: 400, boxShadow: "-4px 0 32px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", animation: "slideIn 0.25s ease" }}>
             {/* Header panier */}
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", background: "white" }}>
-              <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>🛒 Mon Panier ({cartCount})</div>
+              <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>{tr("🛒 Mon Panier ({n})", { n: cartCount })}</div>
               <button onClick={() => setShowCart(false)} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, color: "#334155", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
 
@@ -503,8 +505,8 @@ export default function CommerceVitrine() {
               {cartItems.length === 0 ? (
                 <div style={{ textAlign: "center", color: "#94a3b8", paddingTop: 60 }}>
                   <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>Votre panier est vide</div>
-                  <div style={{ fontSize: 13, marginTop: 6 }}>Ajoutez des produits depuis le catalogue</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{tr("Votre panier est vide")}</div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>{tr("Ajoutez des produits depuis le catalogue")}</div>
                 </div>
               ) : (
                 cartItems.map(item => (
@@ -531,15 +533,15 @@ export default function CommerceVitrine() {
             {cartItems.length > 0 && (
               <div style={{ padding: "20px 24px", borderTop: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                  <span style={{ fontWeight: 600, color: "#64748b" }}>Total estimé</span>
+                  <span style={{ fontWeight: 600, color: "#64748b" }}>{tr("Total estimé")}</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: AMBER }}>{fmtMoney(cartTotal)}</span>
                 </div>
                 <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet="Commande" messageInitial={messageBoutique}
                   style={{ width: "100%", padding: "14px", background: AMBER, color: "white", border: "none", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 15 }}>
-                  🛒 Envoyer ma commande à la boutique
+                  {tr("🛒 Envoyer ma commande à la boutique")}
                 </EcrireAuSite>
                 <button onClick={() => setCartItems([])} style={{ width: "100%", marginTop: 8, padding: "10px", background: "none", border: "1px solid #e2e8f0", borderRadius: 12, cursor: "pointer", fontSize: 13, color: "#94a3b8" }}>
-                  Vider le panier
+                  {tr("Vider le panier")}
                 </button>
               </div>
             )}

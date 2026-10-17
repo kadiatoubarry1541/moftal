@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { hideIncrement } from '../../utils/formatNumeroH'
 import { InvitationManager } from '../../utils/invitationManager'
 import type { Invitation } from '../../types/invitation.ts'
+import { useTraduction } from '../../i18n/traduction'
 
 interface UserData {
   numeroH: string
@@ -41,6 +42,7 @@ export default function Membres() {
   const [membres, setMembres] = useState<FamilyMember[]>([])
   const [chargement, setChargement] = useState(true)
   const [erreur, setErreur] = useState('')
+  const { tr } = useTraduction()
 
   useEffect(() => {
     if (!user) return
@@ -77,17 +79,17 @@ export default function Membres() {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
         >
           <span aria-hidden>←</span>
-          Retour à Famille
+          {tr('Retour à Famille')}
         </Link>
       </div>
       <div className="card">
-        <h2 className="text-2xl font-bold mb-2">📋 Membres invités ({membres.length})</h2>
+        <h2 className="text-2xl font-bold mb-2">{tr('📋 Membres invités ({n})', { n: membres.length })}</h2>
         {chargement ? (
-          <div className="text-gray-500">Chargement…</div>
+          <div className="text-gray-500">{tr('Chargement…')}</div>
         ) : erreur ? (
-          <div className="text-red-600">{erreur}</div>
+          <div className="text-red-600">{tr(erreur)}</div>
         ) : membres.length === 0 ? (
-          <div className="text-gray-500">Aucun membre ajouté pour le moment.</div>
+          <div className="text-gray-500">{tr('Aucun membre ajouté pour le moment.')}</div>
         ) : (
           <div className="stack">
             {membres.map((m, i) => (
@@ -95,7 +97,7 @@ export default function Membres() {
                 <div className="row">
                   <div className="col-6 font-medium">{m.nomComplet}</div>
                   <div className="col-3 text-blue-700 font-semibold">{hideIncrement(m.numeroH)}</div>
-                  <div className="col-3">{m.relation} · {getStatutLabel(m.statut)}</div>
+                  <div className="col-3">{m.relation} · {tr(getStatutLabel(m.statut))}</div>
                 </div>
               </div>
             ))}
