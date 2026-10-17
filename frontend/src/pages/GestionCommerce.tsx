@@ -18,7 +18,7 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 
 type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "suppliers" | "staff" | "avis" | "settings";
 
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");

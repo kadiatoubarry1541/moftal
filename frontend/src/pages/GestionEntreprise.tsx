@@ -209,7 +209,7 @@ export default function GestionEntreprise() {
           <div style={{ background: "linear-gradient(135deg,#3730a3,#4f46e5)", borderRadius: 14, padding: "20px 24px", color: "white", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(79,70,229,0.35)" }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Chiffre d'affaires total</div>
-              <div style={{ fontSize: 30, fontWeight: 800 }}>{(dash.caTotal || 0).toLocaleString("fr-FR")} GNF</div>
+              <div style={{ fontSize: 30, fontWeight: 800 }}>{(Number(dash.caTotal) || 0).toLocaleString("fr-FR")} GNF</div>
             </div>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="26" height="26" fill="none" stroke="white" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -258,7 +258,7 @@ export default function GestionEntreprise() {
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 700, color: INDIGO, fontSize: 13 }}>{(c.budget || 0).toLocaleString("fr-FR")} GNF</div>
+                      <div style={{ fontWeight: 700, color: INDIGO, fontSize: 13 }}>{(Number(c.budget) || 0).toLocaleString("fr-FR")} GNF</div>
                       <span style={{ fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 6 }}>{sc.label}</span>
                     </div>
                   </div>
@@ -413,7 +413,7 @@ export default function GestionEntreprise() {
                     {c.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontStyle: "italic" }}>{c.description}</div>}
                   </div>
                   <div style={{ marginLeft: 12, textAlign: "right" }}>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: INDIGO, marginBottom: 6 }}>{(c.budget || 0).toLocaleString("fr-FR")} GNF</div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: INDIGO, marginBottom: 6 }}>{(Number(c.budget) || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={c.statut}
                       onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/contracts/${c.id}/statut`, e.target.value))) return; setContracts(cs => cs.map(x => x.id === c.id ? { ...x, statut: e.target.value } : x)); }}

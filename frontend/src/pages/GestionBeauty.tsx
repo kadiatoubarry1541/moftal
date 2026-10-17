@@ -19,7 +19,7 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 
 type Tab = "dashboard" | "services" | "bookings" | "staff" | "clients" | "announcements";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
 const COLOR     = "#db2777";
 const COLOR_BG  = "#fdf2f8";

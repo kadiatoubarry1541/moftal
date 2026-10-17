@@ -44,7 +44,7 @@ type ImamTab   = typeof MODES.imam.tabs[number];
 type AnyTab    = MosqueTab | ImamTab;
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
 const ROLES_FIDELE = ["imam", "muezzin", "enseignant", "responsable", "fidèle", "bénévole"];
 const DON_TYPES    = ["sadaqa", "zakat", "waqf", "lilmosquee", "lilimam", "autre"];

@@ -14,7 +14,7 @@ const SKY_DARK = "#075985";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number)  { return n ? (n || 0).toLocaleString("fr-FR") + " GNF" : "Sur demande"; }
+function fmtMoney(n: number)  { return Number(n) ? (Number(n) || 0).toLocaleString("fr-FR") + " GNF" : "Sur demande"; }
 
 export default function TransportVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();

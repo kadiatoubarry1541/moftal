@@ -18,7 +18,7 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 
 type Tab = "dashboard" | "properties" | "tenants" | "payments" | "maintenance" | "announcements";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
 const AMBER = "#b45309";
 const AMBER_LIGHT = "#fffbeb";

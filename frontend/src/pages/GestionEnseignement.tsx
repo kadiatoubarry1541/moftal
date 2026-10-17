@@ -30,7 +30,7 @@ type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString(localeCourante()) : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString(localeCourante()) + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString(localeCourante()) + " GNF"; }
 
 function printFeeReceipt(f: any, tenant: any, color: string) {
   imprimerRecu({

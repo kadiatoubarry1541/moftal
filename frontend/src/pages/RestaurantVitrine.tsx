@@ -13,7 +13,7 @@ const RED      = "#dc2626";
 const RED_DARK = "#991b1b";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
-function fmtMoney(n: number)  { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number)  { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
 const CAT_ICONS: Record<string, string> = {
   "Entrée": "🥗", "Plat principal": "🍛", "Dessert": "🍮", "Boisson": "🥤",
