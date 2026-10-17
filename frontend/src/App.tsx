@@ -559,7 +559,7 @@ function App() {
                                   : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                               }`}
                             >
-                              <span className="flex-1">{label}</span>
+                              <span className="flex-1 ecriture-locale">{label}</span>
                               {lang === code && <span className="text-blue-600 dark:text-blue-400">✓</span>}
                             </button>
                           ))}

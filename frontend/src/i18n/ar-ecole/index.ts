@@ -4,6 +4,7 @@ import gestion from "./gestion";
 import espaces from "./espaces";
 import vitrine from "./vitrine";
 import partages from "./partages";
+import complements from "./complements";
 
-const AR_ECOLE: Record<string, string> = { ...partages, ...vitrine, ...espaces, ...gestion, ...commun };
+const AR_ECOLE: Record<string, string> = { ...complements, ...partages, ...vitrine, ...espaces, ...gestion, ...commun };
 export default AR_ECOLE;

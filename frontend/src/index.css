@@ -867,3 +867,15 @@ table {
    (barres du navigateur) : le bas des menus de gestion (« Voir la vitrine »,
    « Retour sur Moftal ») passait sous le bord de l'écran. */
 .hauteur-ecran { height: 100vh; height: 100dvh; }
+
+/* ── Langues : un seul design dans les 5 langues ─────────────────────────────
+   La page ne se retourne jamais en miroir. En arabe, chaque texte prend sa
+   propre direction (droite à gauche) sans déplacer menus, boutons ni cartes. */
+html[data-langue="ar"] :is(p, h1, h2, h3, h4, h5, h6, li, dt, dd, label, td, th, blockquote, figcaption, input, textarea) {
+  unicode-bidi: plaintext;
+}
+/* Noms des langues écrits en N'Ko et en Adlam (sélecteur de langue) */
+:root { --polices-ecritures: "Noto Sans NKo", "Noto Sans Adlam"; }
+[lang="man"], [lang="ff"], .ecriture-locale {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, var(--polices-ecritures), sans-serif;
+}

@@ -14,6 +14,18 @@ async function loadStrings(lang: LangCode): Promise<Record<string, string>> {
   }
 }
 
+// Un seul design quelle que soit la langue : la page n'est jamais retournée en
+// miroir (dir reste « ltr »). Chaque paragraphe en arabe s'écrit et s'aligne de
+// droite à gauche tout seul (index.css, unicode-bidi: plaintext) ; menus,
+// boutons et cartes restent à la même place dans les 5 langues.
+const CODE_HTML: Record<LangCode, string> = { fr: 'fr', en: 'en', ar: 'ar', man: 'man', pul: 'ff' };
+function appliquerLangue(l: LangCode) {
+  const html = document.documentElement;
+  html.dir = 'ltr';
+  html.lang = CODE_HTML[l] || 'fr';
+  html.dataset.langue = l;
+}
+
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const stored = (localStorage.getItem("lang") as LangCode) || "fr";
   const [lang, setLangState] = useState<LangCode>(stored);
@@ -23,13 +35,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     if (stored !== 'fr') {
       loadStrings(stored).then(setDict);
     }
-    document.documentElement.dir = stored === 'ar' ? 'rtl' : 'ltr';
+    appliquerLangue(stored);
   }, []);
 
   const setLang = useCallback((l: LangCode) => {
     setLangState(l);
     localStorage.setItem("lang", l);
-    document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
+    appliquerLangue(l);
     loadStrings(l).then(setDict);
   }, []);
 

@@ -62,6 +62,12 @@
 
     <!-- Preconnect backend : connexion TCP établie avant la 1ère requête API -->
     <link rel="preconnect" href="https://enfants-adam-backend.onrender.com" crossorigin />
+    <!-- Écritures N'Ko (mandinka) et Adlam (pular) : sans ces polices, beaucoup de
+         téléphones et d'ordinateurs affichent des carrés. Le navigateur ne télécharge
+         la police que si la page contient vraiment ces lettres (unicode-range). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Adlam:wght@400;700&family=Noto+Sans+NKo&display=swap" />
     <link rel="dns-prefetch" href="https://enfants-adam-backend.onrender.com" />
 
     <!-- Forcer le mode clair toujours -->

@@ -134,7 +134,7 @@ export default function IdentiteModal({
                           <span>🌐</span>
                           <span className="text-left">
                             <span className="block font-semibold text-gray-800">Langue de l'application</span>
-                            <span className="block text-xs text-gray-400 font-normal">{LANG_LABELS[lang]}</span>
+                            <span className="block text-xs text-gray-400 font-normal ecriture-locale">{LANG_LABELS[lang]}</span>
                           </span>
                         </span>
                         <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{showLang ? '▲' : '▼'}</span>
@@ -158,7 +158,7 @@ export default function IdentiteModal({
                                       : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
                                   }`}
                                 >
-                                  <span className="flex-1 text-left">{label}</span>
+                                  <span className="flex-1 text-left ecriture-locale">{label}</span>
                                   {isSelected && <span className="text-emerald-600">✓</span>}
                                 </button>
                               );

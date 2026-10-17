@@ -43,13 +43,11 @@ const ar: Record<string, string> = {
   "Erreur de connexion. Vérifiez internet puis réessayez.": "خطأ في الاتصال. تحقّقوا من الإنترنت ثم أعيدوا المحاولة.",
   "Rejoignez {nom} sur son application :": "انضمّوا إلى {nom} على تطبيقه:",
   "Votre gestion complète est dans votre propre application, avec votre logo.": "إدارتكم الكاملة موجودة في تطبيقكم الخاص، بشعاركم.",
-  "⏳ Préparation…": "⏳ جارٍ التجهيز…",
   "⏳ Ouverture…": "⏳ جارٍ الفتح…",
   "📲 Installer ma gestion interne": "📲 تثبيت إدارتي الداخلية",
   "Votre application s'ouvre et propose l'installation : confirmez, c'est tout.": "يُفتح تطبيقكم ويقترح التثبيت: أكّدوا، وهذا كل شيء.",
   "📂 Ouvrir ma gestion": "📂 فتح إدارتي",
   "Déjà installée, ou installation impossible sur cet appareil ? Ouvrez-la directement.": "مثبّتة مسبقًا، أو التثبيت غير ممكن على هذا الجهاز؟ افتحوها مباشرة.",
-  "✅ Lien copié": "✅ تم نسخ الرابط",
   "🔗 Partager le lien à mes membres": "🔗 مشاركة الرابط مع أعضائي",
   "← Retour à Moftal": "→ العودة إلى Moftal",
 
