@@ -51,7 +51,7 @@ const SITE_KNOWLEDGE = [
       'numero defunt', 'numéro défunt', 'identifiant defunt', 'hd', 'mort numero'
     ],
     response: `**Le Numéro HD — Identifiant des comptes Défunts** 🕊️\n\nLe **Numéro HD** est l'identifiant unique attribué aux **comptes mémoriels** de personnes décédées.\n\n**Format :** HD-XXXXX (ex: HD-00123)\n\n**Différence avec le Numéro H :**\n| Numéro H | Numéro HD |\n|---|---|\n| Pour les vivants | Pour les défunts |\n| Connexion personnelle | Géré par un proche |\n| H-XXXXX | HD-XXXXX |\n\n**À quoi sert le Numéro HD ?**\n✅ Créer un profil mémoriel pour un proche décédé\n✅ Intégrer le défunt dans l'arbre généalogique familial\n✅ Conserver les informations et photos du défunt\n✅ Permettre à toute la famille de se souvenir\n\n**Comment créer un compte Défunt ?**\n→ Cliquez sur "S'inscrire"\n→ Choisissez **"Défunt"**\n→ Renseignez les informations du proche décédé\n→ Un Numéro HD lui est attribué automatiquement`,
-    links: [{ label: "Créer un compte Défunt", path: '/choix' }, { label: 'Inscription', path: '/inscription-defunt' }]
+    links: [{ label: "Créer un compte Défunt", path: '/choix' }, { label: 'Inscription', path: '/defunt' }]
   },
 
   // ── CRÉER UN COMPTE ────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ const SITE_KNOWLEDGE = [
       'ouvrir un compte', 'nouveau compte', 'premiere fois'
     ],
     response: `**Comment créer un compte sur Moftal ?** 📝\n\nVous avez **2 types de comptes** :\n\n👤 **Compte Vivant** — Pour vous-même\n→ Cliquez sur "S'inscrire" puis choisissez **"Vivant"**\n→ Renseignez : prénom, nom, date de naissance, téléphone, mot de passe\n→ Un **Numéro H unique** vous est attribué automatiquement\n→ Conservez votre Numéro H ! Il sert à vous connecter\n\n🕊️ **Compte Défunt** — Pour un proche décédé\n→ Choisissez **"Défunt"** lors de l'inscription\n→ Renseignez les informations du défunt\n→ Un **Numéro HD unique** lui est attribué\n→ Vous gérez ce compte en son honneur\n\n**Étapes rapides :**\n1️⃣ Cliquez sur "Créer un compte"\n2️⃣ Choisissez Vivant ou Défunt\n3️⃣ Remplissez le formulaire\n4️⃣ Notez votre Numéro H ou HD\n5️⃣ Connectez-vous !`,
-    links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Inscription Vivant', path: '/inscription-vivant' }, { label: 'Inscription Défunt', path: '/inscription-defunt' }]
+    links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Inscription Vivant', path: '/vivant' }, { label: 'Inscription Défunt', path: '/defunt' }]
   },
 
   // ── CONNEXION ──────────────────────────────────────────────────────────────
@@ -71,9 +71,12 @@ const SITE_KNOWLEDGE = [
     keywords: [
       'connecter', 'connexion', 'login', 'se connecter', 'acceder', 'accéder',
       'entrer', 'ouvrir session', 'je veux me connecter', 'comment je me connecte',
-      'comment acceder', 'entrer dans mon compte', 'rejoindre mon compte'
+      'comment acceder', 'entrer dans mon compte', 'rejoindre mon compte',
+      'premiere connexion', 'première connexion', 'connexion telephone', 'connexion email',
+      'me connecte', 'me connecter', 'connecte avec', 'avec mon telephone', 'avec mon téléphone',
+      'avec mon email', 'avec mon e-mail', 'numero de telephone', 'numéro de téléphone'
     ],
-    response: `**Comment se connecter sur Moftal ?** 🔐\n\n**Étapes :**\n1️⃣ Cliquez sur **"Connexion"**\n2️⃣ Entrez votre **Numéro H** (ex: G96C1P1R1E1F2 1)\n3️⃣ Entrez votre **mot de passe**\n4️⃣ Cliquez sur **"Se connecter"**\n\n💡 **Astuce :** Votre identifiant est votre Numéro H — ce n'est pas un email !\n\n**Format du Numéro H :** G{génération}C{continent}P{pays}R{région}E{ethnie}F{famille} {séquence}\n\n**Problèmes fréquents :**\n❌ "Numéro incorrect" → Vérifiez le format exact de votre NumeroH\n❌ "Mot de passe incorrect" → Utilisez le lien "Mot de passe oublié"\n❌ "Compte introuvable" → Vérifiez que vous êtes bien inscrit`,
+    response: `**Comment se connecter sur Moftal ?** 🔐\n\n**Étapes :**\n1️⃣ Cliquez sur **"Connexion"**\n2️⃣ Entrez votre **téléphone**, votre **e-mail** ou votre **Numéro H** — les trois marchent\n3️⃣ Entrez votre **mot de passe**\n4️⃣ Cliquez sur **"Se connecter"**\n\n**Première connexion (vous avez été ajouté par un établissement) :**\nUne école, un restaurant, une entreprise… vous a ajouté avec votre téléphone ou votre e-mail ?\n→ Tapez ce téléphone / cet e-mail **sans mot de passe** et validez\n→ Moftal vous propose de **choisir votre mot de passe**\n→ Ensuite, vous vous connectez toujours avec ce téléphone / cet e-mail\n\n**Lien d'une application reçu ?** Ouvrez-le : après la connexion, vous revenez directement dans l'application, prête à être installée.\n\n**Problèmes fréquents :**\n❌ "Mot de passe incorrect" → lien "Mot de passe oublié"\n❌ "Compte introuvable" → vérifiez le numéro (avec l'indicatif, ex. +224) ou inscrivez-vous`,
     links: [{ label: 'Se connecter', path: '/login' }, { label: 'Mot de passe oublié', path: '/mot-de-passe-oublie' }]
   },
 
@@ -173,23 +176,22 @@ const SITE_KNOWLEDGE = [
   // ── COMPTES PROFESSIONNELS ─────────────────────────────────────────────────
   {
     keywords: [
-      'pro', 'professionnel', 'compte pro', 'espace pro', 'inscription pro',
-      'creer compte pro', 'créer compte pro', 'dashboard pro', 'espace professionnel',
-      'mon espace pro', 'gerer mon compte pro', 'compte enterprise',
+      'professionnel', 'compte pro', 'inscription pro',
+      'creer compte pro', 'créer compte pro', 'devenir professionnel', 'gerer mon compte pro', 'compte enterprise',
       'compte clinique', 'professionnel inscription'
     ],
     response: `**Les Comptes Professionnels** 💼\n\nEnregistrez votre activité professionnelle sur Moftal :\n\n**Types de comptes disponibles :**\n🏥 **Santé** — Médecins, cliniques, hôpitaux\n🏢 **Activité** — Entreprises, écoles, établissements\n🔬 **Science** — Chercheurs, laboratoires, scientifiques\n❤️ **Solidarité** — ONG, associations humanitaires\n🛡️ **Sécurité** — Agences de sécurité, protection\n🛒 **Échanges** — Fournisseurs, journalistes\n🕌 **Mosquée/Madrasa** — Établissements religieux\n🏪 **Commerce** — Boutiques, vendeurs, producteurs\n🍽️ **Restaurant** — Établissements de restauration\n🚌 **Transport** — Compagnies de transport\n💄 **Beauté** — Salons de beauté, coiffeurs\n🛠️ **Artisan** — Artisans et métiers manuels\n🏛️ **Mairie** — Collectivités locales\n\n**Étapes d'inscription pro :**\n1️⃣ Cliquez sur "Inscription Professionnelle"\n2️⃣ Choisissez votre type\n3️⃣ Renseignez les informations de votre organisation\n4️⃣ Soumettez pour validation`,
     links: [{ label: 'Inscription Professionnelle', path: '/inscription-pro' }, { label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Liste Professionnels', path: '/professionnels' }]
   },
 
-  // ── ESPACE PRO / DASHBOARD ─────────────────────────────────────────────────
+  // ── ESPACE PRO ────────────────────────────────────────────────────────────
   {
     keywords: [
-      'tableau de bord', 'dashboard', 'mes demandes', 'gerer rdv', 'gérer rdv',
-      'accepter rdv', 'refuser rdv', 'historique rdv', 'espace pro dashboard',
-      'voir mes rendez-vous', 'mes patients', 'notifications pro'
+      'espace pro', 'mon espace pro', 'bouton espace pro', 'espace professionnel', 'c est quoi espace pro', 'tableau de bord', 'dashboard', 'mes demandes', 'gerer rdv', 'gérer rdv',
+      'accepter rdv', 'refuser rdv', 'historique rdv', 'voir mes rendez-vous', 'mes patients',
+      'notifications pro', 'profil public', 'publication', 'publier', 'nouvelle publication', 'connecter un client'
     ],
-    response: `**L'Espace Professionnel (Dashboard)** 📊\n\nChaque compte professionnel dispose d'un tableau de bord complet :\n\n**Onglet Demandes :**\n📋 Liste de toutes les demandes de RDV reçues\n✅ **Accepter** — Confirmer le rendez-vous\n🎥 **Accepter + Vidéo** — Accepter avec une réponse vidéo\n❌ **Refuser** — Refuser avec une raison optionnelle\n\n**Onglet Historique :**\n📁 Tous vos anciens RDV (Acceptés / Refusés / Tous)\n\n**Onglet Profil :**\nℹ️ Informations de votre compte pro\n🔧 Services et spécialités proposés\n\n**Statistiques :**\n📊 Total RDV / En attente / Acceptés / Refusés\n\n**Vitrine publique :**\n→ Chaque compte pro a une page publique accessible par les membres`,
+    response: `**L'Espace Pro** 💼\n\nDans votre gestion, le bouton **« Espace Pro »** (en haut à droite) réunit tout ce qui concerne votre visibilité :\n\n🌐 **Voir le site client** — votre site public\n📩 **Messages du site** — ce que les visiteurs vous écrivent (le nombre de nouveaux est affiché)\n📍 **Coordonnées du site** — présentation, téléphone, e-mail, adresse, horaires → « Publier sur le site »\n🖼️ **Photos du site** — photo de couverture et galerie\n📅 **Demandes de rendez-vous** — accepter, accepter avec vidéo, refuser\n📢 **Nouvelle publication** — annonces, produits, promotions, événements (avec image)\n✏️ **Modifier le profil public** — nom, logo, description\n🤝 **Connecter un client**\n\n**Formule Visibilité + Rendez-vous :** onglets Demandes · Historique · Paramètres.\n**Formule Gestion Interne :** tout cela + votre application de gestion complète.`,
     links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Inscription Pro', path: '/inscription-pro' }]
   },
 
@@ -321,15 +323,15 @@ const SITE_KNOWLEDGE = [
     links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Mon Identité', path: '/identite' }, { label: 'Mon Profil', path: '/moi/profil' }]
   },
 
-  // ── GESTION INTERNE (ADMIN) ────────────────────────────────────────────────
+  // ── GESTION INTERNE (APPLICATION DE L'ÉTABLISSEMENT) ──────────────────────
   {
     keywords: [
-      'gestion interne', 'admin', 'administration', 'administrateur',
-      'gestion admin', 'panneau admin', 'back office', 'backoffice',
-      'moderation', 'modération', 'gerer membres', 'gérer membres'
+      'gestion interne', 'ma gestion', 'application de gestion', 'gerer mon etablissement',
+      'gérer mon établissement', 'logiciel de gestion', 'gestion ecole', 'gestion restaurant',
+      'gestion clinique', 'gestion boutique', 'gestion entreprise', 'formule gestion'
     ],
-    response: `**La Gestion Interne** ⚙️\n\nLa Gestion Interne est le **panneau d'administration** réservé aux administrateurs Moftal.\n\n**Fonctionnalités (admins uniquement) :**\n👥 Gestion des membres et comptes\n💼 Validation des comptes professionnels\n📊 Statistiques de la plateforme\n🔧 Configuration des services\n📝 Gestion des contenus\n\n⚠️ **Accès restreint** — Réservé aux administrateurs officiels de Moftal.\n\nSi vous pensez avoir besoin d'un accès admin, contactez l'équipe Moftal.`,
-    links: [{ label: 'Gestion Interne', path: '/gestion-interne' }]
+    response: `**La Gestion Interne — l'application de votre établissement** ⚙️\n\nAvec la formule **Visibilité + Gestion Interne**, votre établissement a **sa propre application**, à son logo : école, clinique, restaurant, boutique, entreprise, ONG, mosquée, transport…\n\n**Ce qu'on y fait :** élèves, patients, plats, commandes, ventes, stocks, personnel, rapports du mois… selon votre secteur. Tout est enregistré sur le serveur.\n\n**En haut de la gestion :**\n🌐 **Site** — ouvre votre site public (un bouton « ‹ Retour à la gestion » vous ramène)\n💼 **Espace Pro** — messages du site, coordonnées, photos, rendez-vous, publications\n\n**Votre équipe :** ajoutez vos employés avec leur téléphone ou e-mail et choisissez leur accès (limité, complet, tous les droits).\n\n**Partout, même sans connexion :** vous continuez à travailler, tout est envoyé au retour d'internet.\n\nSeule la page « Interfaces » de l'administration Moftal est réservée aux administrateurs de la plateforme.`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Gestion Interne', path: '/gestion-interne' }]
   },
 
   // ── AJOUTER DES MEMBRES FAMILLE ────────────────────────────────────────────
@@ -413,6 +415,119 @@ const SITE_KNOWLEDGE = [
     links: [{ label: 'Mon Compte', path: '/compte' }]
   },
 
+  // ── MON SITE : COORDONNÉES, PHOTOS, IMAGES ─────────────────────────────────
+  {
+    keywords: [
+      'mon site', 'site vitrine', 'alimenter mon site', 'remplir mon site', 'mettre a jour mon site',
+      'coordonnees', 'coordonnées', 'publier mes coordonnees', 'horaires', 'adresse du site',
+      'photo du site', 'photos du site', 'photo de couverture', 'couverture', 'galerie',
+      'ajouter une photo', 'ajouter des images', 'images du site', 'carreau photo', 'photo produit',
+      'photo article', 'photo service', 'photo du bien', 'site vide'
+    ],
+    response: `**Remplir votre site** 🌐🖼️\n\nC'est vous qui alimentez votre site, depuis votre gestion :\n\n📍 **Coordonnées** — Espace Pro → « Coordonnées du site » (à l'école : rubrique « 🌐 Mon site ») : présentation, téléphone, e-mail, adresse, horaires → **« 📢 Publier sur le site »**.\n\n🖼️ **Photos du site** — Espace Pro → « Photos du site » : ajoutez plusieurs photos, une légende, une rubrique (Nos produits, Nos services, Nos réalisations, Nos locaux, Notre équipe…). La première devient la **photo de couverture** en haut du site ; vous pouvez en choisir une autre (⭐).\n\n📷 **Une photo par article** — à côté de chaque produit, service, plat ou bien, un **carreau en pointillés « 📷 Ajouter une photo »** : touchez-le, choisissez la photo, elle apparaît tout de suite sur le site.\n\n💡 Un site avec des images attire beaucoup plus : mettez une belle couverture et une photo pour chaque article.`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
+  // ── MESSAGES DU SITE / NOUS ÉCRIRE ─────────────────────────────────────────
+  {
+    keywords: [
+      'nous ecrire', 'nous écrire', 'ecrire a un etablissement', 'écrire à', 'contacter un professionnel',
+      'messages du site', 'message du site', 'demande de devis', 'devis', 'demande d information',
+      'repondre aux messages', 'marquer traite', 'contacter le restaurant', 'contacter l ecole'
+    ],
+    response: `**« Nous écrire » et les Messages du site** 📩\n\n**Vous êtes visiteur :** sur le site d'un établissement, touchez **« ✉️ Nous écrire »** (ou « Demander un devis », « Réserver », « Commander »). Donnez votre nom, votre téléphone et votre message → **Envoyer**. Le message arrive directement à l'établissement, qui vous rappelle.\n\n**Vous êtes l'établissement :** vous recevez une notification 🔔. Ouvrez **Espace Pro → « 📩 Messages du site »** : chaque message avec le téléphone (touchez-le pour appeler) et **« ✓ Marquer traité »** quand c'est fait.`,
+    links: [{ label: 'Professionnels', path: '/professionnels' }]
+  },
+
+  // ── RESTAURANT : MENU, PLATS, COMMANDES ────────────────────────────────────
+  {
+    keywords: [
+      'restaurant', 'menu', 'plat', 'plats', 'ajouter un plat', 'ajouter des plats', 'photo du plat',
+      'prix du plat', 'commande', 'commandes', 'commander', 'commander en ligne', 'panier',
+      'livraison', 'a emporter', 'à emporter', 'sur place', 'nouvelle commande', 'plat disparu'
+    ],
+    response: `**Restaurant : menu et commandes** 🍽️\n\n**Ajouter vos plats (gestion → Menu → « + Ajouter plat ») :**\n→ Jusqu'à **10 plats d'un coup** : pour chacun **photo 📷, nom, prix**, catégorie, description\n→ « + Un autre plat » ajoute une ligne, puis **« Enregistrer les N plats »**\n→ Un bilan s'affiche : ✅ enregistrés (visibles tout de suite sur votre site), ou ⚠️ la raison en rouge (ex. « Le prix manque »)\n→ Un plat sans photo ? Touchez **📷 Photo** à côté de lui dans la liste\n\n**Le client commande sur votre site :** « + Ajouter » sur chaque plat → panier en bas → nom, téléphone, à emporter / livraison / sur place → **Envoyer la commande**.\n\n**Vous recevez la commande :** notification 🔔 et onglet **Commandes**, marquée « Nouvelle (à confirmer) », avec le nom, le téléphone et l'adresse du client. Changez ensuite le statut : en préparation → prêt → servi.`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
+  // ── EMPLOYÉS, PERSONNEL ET ACCÈS ───────────────────────────────────────────
+  {
+    keywords: [
+      'employe', 'employé', 'employes', 'employés', 'personnel', 'ajouter un employe', 'ajouter un employé',
+      'acces employe', 'accès employé', 'droits', 'niveau d acces', 'co-responsable', 'coresponsable',
+      'acces limite', 'acces complet', 'tous les droits', 'enseignant ajoute', 'ajouter par telephone'
+    ],
+    response: `**Votre équipe : employés et accès** 👥\n\n**Ajouter quelqu'un :** son **téléphone ou son e-mail suffit** (le NuméroH aussi). S'il n'a pas de compte Moftal, un compte lui est préparé : à sa **première connexion**, il tape ce téléphone / cet e-mail et choisit son mot de passe. Il complète son profil quand il veut — rien ne le bloque.\n\n**Niveaux d'accès :**\n🔹 **Limité** — voir et ajouter, sans modifier ni supprimer\n🔸 **Complet** — tout, sauf les paramètres et les accès\n⭐ **Tous les droits (co-responsable)** — exactement comme le propriétaire\n\nSeul le responsable change les accès. À l'**école / madrasa**, le **Personnel** est la liste des employés : chaque fiche a son « Accès à la gestion » (par défaut : espace enseignant seulement).\n\n**Envoyez-lui le lien de l'application** (« Copier le lien de l'application ») : il l'ouvre, se connecte et l'installe.`,
+    links: [{ label: 'Se connecter', path: '/login' }]
+  },
+
+  // ── ÉCOLE / MADRASA : ENSEIGNANTS, MATIÈRES, CLASSES, PARENTS ─────────────
+  {
+    keywords: [
+      'ecole', 'école', 'madrasa', 'enseignant', 'enseignants', 'professeur', 'prof', 'eleve', 'élève',
+      'eleves', 'élèves', 'classe', 'classes', 'matiere', 'matière', 'matieres', 'matières', 'parent',
+      'parents', 'bulletin', 'notes', 'inscription eleve', 'photo enseignant', 'profil enseignant',
+      'photo d un enseignant', 'photo de l enseignant', 'photo des enseignants', 'photo du professeur'
+    ],
+    response: `**École et madrasa** 🏫\n\n**Le site de l'école se remplit avec la gestion :**\n👨‍🏫 **Enseignants** — Personnel → fiche : **photo**, matière, **profil** (ex. « Professeur de mathématiques, licence, 8 ans d'expérience ») et ✔️ « Afficher sur le site ». Sur le site : grande photo, nom, matière, profil.\n📚 **Matières** — celles indiquées sur les fiches des enseignants\n🏫 **Classes** — nom, niveau, places, et une **photo de la salle** (facultative)\n🌐 **Mon site** — coordonnées à publier et photos de l'école\n\n**Ajouter un enseignant :** son téléphone ou son e-mail suffit ; il se connecte et voit **« Mes cours »** (début / fin de chaque cours).\n\n**Parents :** ils ont leur espace **« Mes enfants »** dans l'application de l'école (notes, présences, bulletins, frais) et reçoivent les notifications de l'école.\n\n**Visiteurs :** pré-inscription d'un enfant et « Nous écrire » depuis le site.`,
+    links: [{ label: 'Écoles', path: '/ecoles' }, { label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
+  // ── INSTALLER L'APPLICATION ────────────────────────────────────────────────
+  {
+    keywords: [
+      'installer', 'installation', 'installer l application', 'installer l appli', 'icone', 'icône',
+      'ecran d accueil', 'écran d accueil', 'telecharger', 'télécharger', 'application installee',
+      'ordinateur', 'pc', 'navigateur', 'lien de l application', 'copier le lien', 'iphone', 'android'
+    ],
+    response: `**Installer l'application** 📲\n\n**Sur téléphone Android :** ouvrez la gestion → **« 📲 Installer maintenant »**. Si rien ne se passe : menu **⋮** → « Installer l'application » ou « Ajouter à l'écran d'accueil ».\n\n**Sur iPhone :** dans Safari, bouton **Partager ⎙** → « **Sur l'écran d'accueil** » → Ajouter.\n\n**Sur ordinateur :** utilisez **Microsoft Edge** (déjà sur Windows) ou **Google Chrome** :\n→ Edge : menu **⋯** → Applications → « Installer ce site en tant qu'application »\n→ Chrome : icône d'installation à droite de la barre d'adresse (ou menu ⋮ → Caster, enregistrer et partager → Installer la page en tant qu'application)\n⚠️ Certains navigateurs d'ordinateur ne savent pas installer : copiez le lien et ouvrez-le dans Edge ou Chrome.\n\n**Pour vos employés, parents, enseignants, clients :** « 🔗 Copier le lien de l'application » et envoyez-le. En l'ouvrant, ils se connectent puis installent l'application, avec votre logo.`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
+  // ── SANS CONNEXION (HORS LIGNE) ────────────────────────────────────────────
+  {
+    keywords: [
+      'hors ligne', 'hors connexion', 'sans connexion', 'sans internet', 'pas de connexion',
+      'pas d internet', 'offline', 'reseau coupe', 'réseau coupé', 'operations en attente',
+      'opérations en attente', 'synchronisation', 'envoi automatique', 'internet', 'pas internet',
+      'n ai pas internet', 'sans reseau', 'sans réseau', 'connexion coupee', 'connexion coupée', 'reseau faible'
+    ],
+    response: `**Travailler sans connexion** 📴\n\nDans les gestions, vous pouvez continuer **même sans internet** :\n→ Ce que vous avez déjà ouvert reste consultable\n→ Ce que vous enregistrez est **gardé sur l'appareil**, puis **envoyé automatiquement au serveur** dès le retour de la connexion\n→ Un bandeau indique : « Hors connexion », « N opération(s) en attente », puis « Synchronisé »\n\nSi le serveur refuse une opération, elle reste affichée avec la raison (rien n'est effacé en silence) : vous pouvez la corriger, la renvoyer ou la retirer.\n\nCertaines actions demandent la connexion : paiement, ajout d'un membre, accès des employés, pointage des cours, commandes et messages envoyés depuis un site.`,
+    links: []
+  },
+
+  // ── BOUTON SITE / RETOUR À LA GESTION ──────────────────────────────────────
+  {
+    keywords: [
+      'bouton site', 'voir mon site', 'retour a la gestion', 'retour à la gestion', 'revenir a la gestion',
+      'revenir à la gestion', 'je suis bloque', 'je suis bloqué', 'pas de bouton retour', 'quitter le site',
+      'retour sur moftal', 'revenir sur moftal'
+    ],
+    response: `**Passer de la gestion au site, et revenir** 🔁\n\n→ Dans la barre en haut de votre gestion, **« 🌐 Site »** ouvre votre site public.\n→ Sur le site, le bouton **« ‹ Retour à la gestion »** (en bas à gauche) vous ramène exactement où vous étiez — même dans l'application installée.\n→ **« Retour sur Moftal »** (avec le petit logo Moftal) vous ramène sur la plateforme Moftal.`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
+  // ── COMMANDER / RÉSERVER CHEZ UN PRO (VISITEUR) ────────────────────────────
+  {
+    keywords: [
+      'reserver', 'réserver', 'reservation', 'réservation', 'prendre rendez-vous chez', 'acheter chez',
+      'commander un produit', 'demander un devis', 'artisan', 'salon de beaute', 'beauté', 'fournisseur',
+      'vendeur', 'producteur', 'immobilier', 'louer', 'location maison'
+    ],
+    response: `**Commander, réserver ou demander un devis** 🛒\n\nSur le site d'un professionnel, chaque article a son bouton :\n🔧 **Artisan** → « Demander un devis »\n💅 **Beauté** → « Réserver »\n🛍️ **Vendeur, producteur, fournisseur, boutique** → « Commander » (le panier de la boutique est envoyé comme commande)\n🏠 **Immobilier** → biens avec photo, prix et quartier ; « Nous écrire » pour une visite\n🍽️ **Restaurant** → panier et commande en ligne\n\nVotre demande arrive directement chez le professionnel (jamais par une autre application) ; il vous rappelle au numéro donné.`,
+    links: [{ label: 'Professionnels', path: '/professionnels' }]
+  },
+
+  // ── FORMULES (VISIBILITÉ / GESTION INTERNE) ────────────────────────────────
+  {
+    keywords: [
+      'formule', 'formules', 'visibilite', 'visibilité', 'abonnement', 'prix abonnement',
+      'gestion interne payante', 'passer a la gestion', 'quelle formule', 'plan pro'
+    ],
+    response: `**Les deux formules professionnelles** 📦\n\n**1. Visibilité + Rendez-vous**\n→ Votre page publique et les demandes de rendez-vous\n→ Onglets : Demandes · Historique · Paramètres\n\n**2. Visibilité + Gestion Interne**\n→ Tout de la formule 1\n→ **Votre site** complet (couverture, photos, articles, commandes, messages)\n→ **Votre application de gestion**, à votre logo, installable, utilisable sans connexion\n→ Employés avec niveaux d'accès, rapports, Moftal Pay\n\nL'abonnement se gère dans Espace Pro → Paramètres (ou les Paramètres de votre gestion). Vos données restent conservées même si un paiement est en retard.`,
+    links: [{ label: 'Inscription Pro', path: '/inscription-pro' }, { label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }]
+  },
+
   // ── VIVANT VS DÉFUNT ────────────────────────────────────────────────────────
   {
     keywords: [
@@ -421,7 +536,7 @@ const SITE_KNOWLEDGE = [
       'type compte', 'quel type', 'vivant ou defunt', 'vivant ou défunt'
     ],
     response: `**Compte Vivant vs Compte Défunt** 🌿🕊️\n\n**Compte Vivant :**\n👤 Pour vous-même, une personne vivante\n🆔 Reçoit un **Numéro H** (ex : G96C1P1R1E1F2 1)\n✅ Accès complet à tous les services\n💬 Peut se connecter et interagir\n\n**Compte Défunt :**\n🕊️ Pour un proche décédé — compte mémoriel\n🆔 Reçoit un **Numéro HD** (format HD-XXXXX)\n📸 Conserve photos, informations et histoire\n👨‍👩‍👧 Géré par un proche vivant\n🌳 Intégré dans l'arbre généalogique familial\n\n**Lequel choisir ?**\n→ **Vous êtes vivant ?** → Compte Vivant\n→ **Pour honorer un proche décédé ?** → Compte Défunt`,
-    links: [{ label: 'Créer un compte Vivant', path: '/inscription-vivant' }, { label: 'Créer un compte Défunt', path: '/inscription-defunt' }]
+    links: [{ label: 'Créer un compte Vivant', path: '/vivant' }, { label: 'Créer un compte Défunt', path: '/defunt' }]
   },
 ];
 
@@ -445,7 +560,9 @@ interface Message {
 let _id = 0;
 
 function normalize(str: string) {
-  return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  // Accents, apostrophes et ponctuation retirés : « d'un » se lit comme « d un »
+  return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[’'`´]/g, ' ').replace(/[?!.,;:()«»"]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function findBestAnswer(question: string) {
