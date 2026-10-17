@@ -95,6 +95,42 @@ function ConsignesIPhone({ couleur }: { couleur: string }) {
   );
 }
 
+// Ordinateur (ni téléphone ni tablette) : l'installation se fait par le menu
+// du navigateur, et seuls certains navigateurs savent installer une application.
+function estOrdinateur() {
+  return !isIOS() && !/Android|Mobi|Tablet/i.test(navigator.userAgent);
+}
+
+function ConsignesOrdinateur({ couleur }: { couleur: string }) {
+  const { tr } = useTraduction();
+  const ua = navigator.userAgent;
+  const edge = /Edg\//.test(ua);
+  const chrome = !edge && /Chrome\//.test(ua) && !/OPR\/|Opera|YaBrowser|SamsungBrowser/.test(ua);
+  if (!edge && !chrome) return (
+    <>
+      <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Ce navigateur ne sait pas installer d'application sur l'ordinateur.")}</div>
+      <div>{gras(tr("1. Copiez le lien ci-dessous"))}</div>
+      <BoutonCopierLien couleur={couleur} />
+      <div>{gras(tr("2. Ouvrez **Microsoft Edge** (déjà présent sur Windows) ou **Google Chrome**, collez le lien dans la barre d'adresse et connectez-vous"))}</div>
+      <div>{gras(tr("3. Cliquez de nouveau sur « **Installer l'application** »"))}</div>
+    </>
+  );
+  return (
+    <>
+      <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Sur l'ordinateur, installez-la par le navigateur :")}</div>
+      {edge ? (<>
+        <div>{gras(tr("1. Cliquez sur le menu **⋯** en haut à droite"))}</div>
+        <div>{gras(tr("2. Choisissez « **Applications** », puis « **Installer ce site en tant qu'application** »"))}</div>
+      </>) : (<>
+        <div>{gras(tr("1. Cliquez sur l'icône **d'installation** (un écran avec une flèche) à droite de la barre d'adresse"))}</div>
+        <div style={{ color: "#64748b" }}>{gras(tr("(Pas d'icône ? Menu **⋮** → « **Caster, enregistrer et partager** » → « **Installer la page en tant qu'application** »)"))}</div>
+      </>)}
+      <div>{gras(tr("{n}. Cliquez sur « **Installer** ». L'application s'ouvre dans sa propre fenêtre, avec votre logo, et une icône est ajoutée au bureau et au menu Démarrer.", { n: edge ? 3 : 2 }))}</div>
+      <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si le menu propose « Ouvrir dans l'application », elle est déjà installée.")}</div>
+    </>
+  );
+}
+
 function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
@@ -390,6 +426,10 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
         ) : isIOS() ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             <ConsignesIPhone couleur={themeColor} />
+          </div>
+        ) : etat === "manuel" && estOrdinateur() ? (
+          <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            <ConsignesOrdinateur couleur={themeColor} />
           </div>
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
@@ -888,7 +928,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tr("Si rien ne s'ouvre :")}</div>
             </>
           )}
-          {isIOS() ? <ConsignesIPhone couleur={themeColor} /> : (<>
+          {isIOS() ? <ConsignesIPhone couleur={themeColor} /> : estOrdinateur() ? <ConsignesOrdinateur couleur={themeColor} /> : (<>
           {!android && <strong>{tr("Le téléphone n'a pas ouvert l'installation. Faites-le à la main :")}</strong>}
           <div>{gras(tr("1. Menu **⋮** du navigateur (en haut à droite)"))}</div>
           {android && <div>{gras(tr("2. Si vous voyez « **Ouvrir dans Chrome** », choisissez-le, puis rouvrez le menu **⋮**"))}</div>}
