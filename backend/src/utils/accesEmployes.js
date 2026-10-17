@@ -57,6 +57,30 @@ export async function estEmployeDeLaGestion(numeroH, url) {
   try { return !!(await accesActif(decodeURIComponent(m[1]), numeroH)); } catch { return false; }
 }
 
+// Enseignants, parents et élèves d'une école / madrasa : ajoutés par
+// l'établissement avec un simple téléphone ou e-mail, ils travaillent tout de
+// suite dans l'application de CETTE école, profil complété ou non (chacun le
+// complète quand il veut). Leurs droits restent contrôlés par chaque route.
+const TABLES_MEMBRES_ECOLE = {
+  school: { staff: 'school_staff', membres: 'school_members', eleves: 'school_students' },
+  madrasa: { staff: 'madrasa_staff', membres: 'madrasa_members', eleves: 'madrasa_students' },
+};
+
+export async function estMembreEcoleDeLaGestion(numeroH, url) {
+  const m = /^\/api\/(school|madrasa)-mgmt\/([^/?]+)/.exec(url || '');
+  if (!m || !numeroH) return false;
+  const T = TABLES_MEMBRES_ECOLE[m[1]];
+  const rep = { code: decodeURIComponent(m[2]), nh: String(numeroH) };
+  const existe = (sql) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
+    .then((rows) => rows.length > 0).catch(() => false);
+  const resultats = await Promise.all([
+    existe(`SELECT 1 FROM ${T.staff} WHERE tenant_code = :code AND LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1`),
+    existe(`SELECT 1 FROM ${T.membres} WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`),
+    existe(`SELECT 1 FROM ${T.eleves} WHERE tenant_code = :code AND (LOWER(numero_h) = LOWER(:nh) OR LOWER(parent_numero_h) = LOWER(:nh)) LIMIT 1`),
+  ]);
+  return resultats.some(Boolean);
+}
+
 // Ce qu'un employé n'a pas le droit de faire, selon son niveau (null = autorisé).
 function refusEmploye(req, niveau) {
   if (niveau === 'total') return null;

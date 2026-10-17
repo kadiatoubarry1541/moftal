@@ -18,7 +18,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
-import { ajouterRoutesCoursEtBibliotheque, numeroHComplet, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
+import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 // Photo facultative des apprenants et des enseignants
@@ -321,9 +321,12 @@ router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) =>
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
-  const { prenom, nom, role, specialite, telephone, numero_h, photo_url } = req.body;
-  if (!prenom || !nom) return res.status(400).json({ message: 'Prénom et nom requis.' });
-  const nh = await numeroHComplet(numero_h);
+  const { role, specialite, telephone, email, numero_h, photo_url } = req.body;
+  if (!String(telephone || email || numero_h || '').trim() && !(req.body.prenom && req.body.nom)) {
+    return res.status(400).json({ message: "Indiquez au moins le téléphone, l'e-mail ou le nom de l'enseignant." });
+  }
+  const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+  const { prenom, nom } = nomPersonnel({ ...req.body }, personne);
   await ensureColonnesPhoto();
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-personnel' });
   const [rows] = await sequelize.query(
@@ -339,9 +342,9 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
 });
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
-  const { prenom, nom, role, specialite, telephone, numero_h, photo_url } = req.body;
-  if (!prenom || !nom) return res.status(400).json({ success: false, message: 'Prénom et nom requis.' });
-  const nh = await numeroHComplet(numero_h);
+  const { role, specialite, telephone, email, numero_h, photo_url } = req.body;
+  const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+  const { prenom, nom } = nomPersonnel({ ...req.body }, personne);
   await ensureColonnesPhoto();
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
   await sequelize.query(

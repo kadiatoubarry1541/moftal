@@ -69,6 +69,9 @@ export async function aEteAjoutee(numeroH) {
     `SELECT 1 FROM management_staff_access WHERE LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`,
     `SELECT 1 FROM school_members WHERE LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`,
     `SELECT 1 FROM madrasa_members WHERE LOWER(numero_h) = LOWER(:nh) LIMIT 1`,
+    // Enseignants ajoutés par l'école / la madrasa avec leur téléphone ou e-mail
+    `SELECT 1 FROM school_staff WHERE LOWER(TRIM(numero_h)) = LOWER(:nh) AND is_active = true LIMIT 1`,
+    `SELECT 1 FROM madrasa_staff WHERE LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1`,
   ];
   for (const q of requetes) {
     const r = await sequelize.query(q, { replacements: { nh: numeroH }, type: sequelize.QueryTypes.SELECT }).catch(() => []);

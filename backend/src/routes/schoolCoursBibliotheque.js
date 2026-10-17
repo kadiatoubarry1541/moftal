@@ -3,6 +3,7 @@ import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 
 /**
  * École — pointage des cours et bibliothèque.
@@ -73,6 +74,28 @@ export async function numeroHComplet(saisie) {
     { replacements: { t }, type: Q.SELECT }
   );
   return proches.length === 1 ? proches[0].numero_h : t;
+}
+
+/**
+ * Enseignant ajouté par l'établissement : relié au compte de la personne par
+ * son NuméroH, sinon par son téléphone ou son e-mail (compte préparé s'il n'en
+ * a pas : elle choisit son mot de passe à sa première connexion). Nom et prénom
+ * restent facultatifs — il complète son profil lui-même plus tard.
+ */
+export async function personnelRelie({ numero_h, telephone, email }) {
+  if (String(numero_h || '').trim()) return { nh: await numeroHComplet(numero_h), personne: null };
+  const contact = String(email || '').trim() || String(telephone || '').trim();
+  if (!contact) return { nh: null, personne: null };
+  const trouve = await trouverOuPreparerPersonne(contact);
+  if (trouve.erreur) return { nh: null, personne: null };
+  return { nh: trouve.personne.numero_h || trouve.personne.numeroH || null, personne: trouve.personne };
+}
+
+/** Prénom / nom à afficher : ceux saisis, sinon ceux du compte, sinon le contact. */
+export function nomPersonnel({ prenom, nom, telephone, email }, personne) {
+  const p = String(prenom || '').trim() || (personne?.prenom && personne.prenom !== 'Nouveau' ? personne.prenom : '');
+  const n = String(nom || '').trim() || (personne?.nom || personne?.nomFamille || '');
+  return { prenom: p || String(telephone || email || '').trim(), nom: n === 'membre' ? '' : n };
 }
 
 const jourSemaine = () => {

@@ -289,7 +289,10 @@ export default function GestionEnseignement({ mode }: Props) {
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-staff") {
-        if (!form.nom || !form.prenom) { showToast(tr("Nom et prénom obligatoires"), false); return; }
+        // Le téléphone ou l'e-mail suffit : l'enseignant complète son profil lui-même
+        if (!form.telephone?.trim() && !form.email?.trim() && !form.numero_h?.trim() && !(form.nom && form.prenom)) {
+          showToast(tr("Indiquez au moins le téléphone, l'e-mail ou le nom de l'enseignant"), false); return;
+        }
         if (form.id) {
           const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1] });
           if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); }
@@ -535,7 +538,7 @@ export default function GestionEnseignement({ mode }: Props) {
         {modal === "add-staff" && (<>
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'enseignant", "Modifier le professeur") : M("Nouvel enseignant", "Nouveau professeur")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {(["Prénom *|prenom|text","Nom *|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","Téléphone|telephone|text","NuméroH|numero_h|text"] as string[]).map(raw => {
+            {(["Téléphone|telephone|tel","E-mail|email|email","Prénom|prenom|text","Nom|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","NuméroH|numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|");
               return (
                 <div key={key}>
@@ -555,6 +558,9 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>
+            {tr("Le téléphone ou l'e-mail suffit : l'enseignant se connecte avec, choisit son mot de passe et complète lui-même le reste.")}
+          </p>
           {champPhoto}
         </>)}
 
