@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -16,6 +18,7 @@ function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR")
 
 export default function MosqueeVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const [mosque, setMosque]   = useState<any>(null);
   const [data, setData]       = useState<any>(null);
@@ -105,6 +108,9 @@ export default function MosqueeVitrine() {
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={mosque?.name} />
 
       {/* HERO */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -236,6 +242,8 @@ export default function MosqueeVitrine() {
           </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#059669" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#059669" accentDark="#064e3b" />
 

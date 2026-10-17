@@ -2,7 +2,8 @@
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser } from "../utils/auth";
+import { getSessionUser, getPhotoUrl } from "../utils/auth";
+import { compressImage } from "../utils/compressImage";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
@@ -32,6 +33,12 @@ const ORDER_STATUS: Record<string, { bg: string; color: string; label: string }>
   annule:         { bg: "#fef2f2", color: "#dc2626", label: "Annulé" },
 };
 // Service d'une commande, et en-tête : la table, ou le client pour une commande du site
+// Photo choisie → image compressée (data URL) envoyée au serveur, qui l'enregistre en base
+const lirePhoto = async (f: File) => {
+  const petite = await compressImage(f, 1200, 0.82);
+  return new Promise<string>((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = ko; r.readAsDataURL(petite); });
+};
+
 const SERVICES: Record<string, string> = { sur_place: "Sur place", emporter: "À emporter", livraison: "Livraison" };
 const enteteCommande = (o: any) => o.source === "site" ? `🌐 ${o.client_nom || "Commande du site"}` : `Table ${o.table_num || "—"}`;
 
@@ -66,7 +73,7 @@ export default function GestionRestaurant() {
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showAddAnn, setShowAddAnn] = useState(false);
 
-  const [dForm, setDForm] = useState({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true });
+  const [dForm, setDForm] = useState({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true, image: "" });
   const [tForm, setTForm] = useState({ numero: "", capacite: "4", zone: "Salle" });
   const [oForm, setOForm] = useState({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] });
   const [sForm, setSForm] = useState({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" });
@@ -288,10 +295,18 @@ export default function GestionRestaurant() {
                 </label>
               </div>
               <textarea style={{ ...inp, minHeight: 60, resize: "vertical", marginBottom: 10 }} placeholder="Description (ingrédients, allergènes…)" value={dForm.description} onChange={e => setDForm(p => ({ ...p, description: e.target.value }))} />
+              {/* Photo du plat : sur le site, les clients choisissent en voyant */}
+              <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                {dForm.image
+                  ? <img src={dForm.image} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover" }} />
+                  : <span style={{ width: 64, height: 64, borderRadius: 10, border: `1.5px dashed ${ORANGE_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📷</span>}
+                {dForm.image ? "Changer la photo du plat" : "Ajouter une photo du plat (conseillé)"}
+                <input type="file" accept="image/*" hidden onChange={async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; try { const image = await lirePhoto(f); setDForm(p => ({ ...p, image })); } catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); } }} />
+              </label>
               <button onClick={async () => {
                 if (!dForm.nom || !dForm.prix) return;
                 const d = await post(`${BASE(tenantCode!)}/dishes`, { ...dForm, prix: +dForm.prix });
-                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
+                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true, image: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -304,8 +319,22 @@ export default function GestionRestaurant() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>{cat}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {catDishes.map(d => (
-                    <div key={d.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
+                    <div key={d.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <label title="Photo du plat" style={{ flexShrink: 0, cursor: "pointer" }}>
+                        {d.image_url
+                          ? <img src={getPhotoUrl(d.image_url) || ""} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", display: "block" }} />
+                          : <span style={{ width: 56, height: 56, borderRadius: 10, border: `1.5px dashed ${ORANGE_BORDER}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: 18, color: ORANGE }}>📷<span style={{ fontSize: 9, fontWeight: 700 }}>Photo</span></span>}
+                        <input type="file" accept="image/*" hidden onChange={async e => {
+                          const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+                          let image = "";
+                          try { image = await lirePhoto(f); } catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); return; }
+                          if (await envoyerGestion(`${BASE(tenantCode!)}/dishes/${d.id}/photo`, { method: "PUT", headers: auth(), body: JSON.stringify({ image }) })) {
+                            const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
+                            fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || []));
+                          }
+                        }} />
+                      </label>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{d.nom}</div>
                         {d.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{d.description}</div>}
                         <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginTop: 4 }}>{fmtMoney(d.prix)}</div>

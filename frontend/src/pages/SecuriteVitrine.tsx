@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
@@ -14,6 +16,7 @@ function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ be
 
 export default function SecuriteVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const [agency, setAgency]   = useState<any>(null);
   const [data, setData]       = useState<any>(null);
@@ -98,6 +101,9 @@ export default function SecuriteVitrine() {
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={agency?.name} />
 
       {/* HERO */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -224,6 +230,8 @@ export default function SecuriteVitrine() {
             </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#334155" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#334155" accentDark="#020617" />
 

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
@@ -41,6 +43,7 @@ function getCatIcon(cat: string) {
 
 export default function CommerceVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
 
   const [store, setStore]         = useState<any>(null);
@@ -225,6 +228,9 @@ export default function CommerceVitrine() {
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={store?.name} />
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section id="hero" style={{ background: "#f8fafc", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -458,6 +464,8 @@ export default function CommerceVitrine() {
           </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#d97706" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#d97706" accentDark="#78350f" />
 

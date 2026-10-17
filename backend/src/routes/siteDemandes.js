@@ -4,6 +4,7 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { avecAccesEmployes } from '../utils/accesEmployes.js';
 import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
+import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
 
 // Messages envoyés depuis le site d'un établissement (demande d'information,
 // devis, réservation, commande d'une boutique…). Ils arrivent directement dans
@@ -119,3 +120,7 @@ siteMgmtRouter.patch('/:tenantCode/demandes/:id', authenticate, verifyTenant, as
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+// Photos du site (couverture + galerie) pour tous les établissements :
+// /api/site-mgmt/:tenantCode/photos-site (Espace Pro → Photos du site)
+ajouterRoutesPhotosSite(siteMgmtRouter, authenticate, verifyTenant);

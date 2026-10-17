@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -24,6 +26,7 @@ function getInitials(prenom: string, nom: string) {
 
 export default function MaireVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
 
   const [mairie, setMairie]   = useState<any>(null);
@@ -151,6 +154,9 @@ export default function MaireVitrine() {
           </div>
         )}
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={mairie?.name} />
 
       {/* ── HERO ── */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 110px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -389,6 +395,8 @@ export default function MaireVitrine() {
           </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#1d4ed8" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#1d4ed8" accentDark="#1e3a8a" />
 

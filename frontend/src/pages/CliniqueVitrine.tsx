@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -36,6 +38,7 @@ function getInitials(nom: string, prenom: string) {
 
 export default function CliniqueVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const [clinic, setClinic] = useState<any>(null);
   const [staff, setStaff] = useState<any[]>([]);
@@ -219,6 +222,9 @@ export default function CliniqueVitrine() {
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={clinic?.name} />
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -519,6 +525,8 @@ export default function CliniqueVitrine() {
           </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#1a8f1a" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#1a8f1a" accentDark="#14532d" />
 

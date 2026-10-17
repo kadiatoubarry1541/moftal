@@ -3,10 +3,10 @@ import { getPhotoUrl } from "../../utils/auth";
 import { useTraduction } from "../../i18n/traduction";
 import type { PhotoSite } from "./PhotosSite";
 
-// Site vitrine d'une école / madrasa : galerie des photos ajoutées depuis son
+// Site vitrine d'un établissement : galerie des photos ajoutées depuis son
 // application. Filtre par rubrique, et la photo s'agrandit au toucher.
 
-export default function GaleriePhotosSite({ photos, couleur }: { photos: PhotoSite[]; couleur: string }) {
+export default function GaleriePhotosSite({ photos, couleur, sousTitre }: { photos: PhotoSite[]; couleur: string; sousTitre?: string }) {
   const { tr } = useTraduction();
   const [filtre, setFiltre] = useState("");
   const [ouverte, setOuverte] = useState<number | null>(null);
@@ -32,7 +32,7 @@ export default function GaleriePhotosSite({ photos, couleur }: { photos: PhotoSi
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", margin: "0 0 8px" }}>{tr("Notre établissement en images")}</h2>
-          <p style={{ fontSize: 15, color: "#64748b", margin: 0 }}>{tr("Découvrez nos locaux, notre vie scolaire et nos moments forts.")}</p>
+          <p style={{ fontSize: 15, color: "#64748b", margin: 0 }}>{sousTitre || tr("Découvrez nos locaux, notre vie scolaire et nos moments forts.")}</p>
         </div>
         {rubriques.length > 1 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 20 }}>

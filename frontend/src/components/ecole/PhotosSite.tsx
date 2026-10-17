@@ -10,7 +10,9 @@ import { useTraduction } from "../../i18n/traduction";
 
 export interface PhotoSite { id: number; image_url: string; legende?: string | null; categorie?: string | null; est_couverture?: boolean }
 
-const CATEGORIES = ["Nos locaux", "Vie scolaire", "Activités", "Événements", "Résultats", "Autre"];
+// Rubriques proposées : celles d'une école, ou celles de tous les établissements
+const CATEGORIES_ECOLE = ["Nos locaux", "Vie scolaire", "Activités", "Événements", "Résultats", "Autre"];
+const CATEGORIES_PRO = ["Nos locaux", "Nos produits", "Nos services", "Nos réalisations", "Notre équipe", "Événements", "Autre"];
 const jeton = () => ({ Authorization: `Bearer ${localStorage.getItem("token") || ""}`, "Content-Type": "application/json" });
 
 const lireImage = (f: File) => new Promise<string>((ok, ko) => {
@@ -20,13 +22,14 @@ const lireImage = (f: File) => new Promise<string>((ok, ko) => {
   r.readAsDataURL(f);
 });
 
-export default function PhotosSite({ tenantCode, apiName, couleur, lienSite }: { tenantCode: string; apiName: string; couleur: string; lienSite: string }) {
+export default function PhotosSite({ tenantCode, apiName, couleur, lienSite, ecole = true }: { tenantCode: string; apiName: string; couleur: string; lienSite?: string; ecole?: boolean }) {
   const { tr } = useTraduction();
+  const CATEGORIES = ecole ? CATEGORIES_ECOLE : CATEGORIES_PRO;
   const base = `${config.API_BASE_URL}/${apiName}/${encodeURIComponent(tenantCode)}/photos-site`;
   const [photos, setPhotos] = useState<PhotoSite[] | null>(null);
   const [erreur, setErreur] = useState("");
   const [legende, setLegende] = useState("");
-  const [categorie, setCategorie] = useState("Vie scolaire");
+  const [categorie, setCategorie] = useState(ecole ? "Vie scolaire" : "Nos produits");
   const [envoi, setEnvoi] = useState<string>("");
 
   const charger = useCallback(() => {
@@ -75,7 +78,9 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite }: {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
         <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{tr("📸 Ajouter des photos à votre site")}</p>
-        <p style={{ margin: "0 0 12px", fontSize: 12, color: "#64748b" }}>{tr("Les images parlent mieux : montrez vos locaux, vos élèves en activité, vos fêtes et vos résultats. Elles apparaissent sur votre site, visible par tout le monde.")}</p>
+        <p style={{ margin: "0 0 12px", fontSize: 12, color: "#64748b" }}>{ecole
+          ? tr("Les images parlent mieux : montrez vos locaux, vos élèves en activité, vos fêtes et vos résultats. Elles apparaissent sur votre site, visible par tout le monde.")
+          : tr("Les images parlent mieux que les mots : montrez vos produits, vos services, vos réalisations et vos locaux. Elles apparaissent sur votre site, visible par tout le monde.")}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input value={legende} onChange={e => setLegende(e.target.value)} placeholder={tr("Légende (facultatif) — ex. Remise des prix 2026")} style={{ ...champ, flex: "1 1 220px" }} maxLength={255} />
           <select value={categorie} onChange={e => setCategorie(e.target.value)} style={{ ...champ, flex: "0 1 160px" }}>
@@ -86,7 +91,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite }: {
             <input type="file" accept="image/*" multiple hidden disabled={!!envoi} onChange={e => { const f = e.target.files; e.target.value = ""; void ajouter(f); }} />
           </label>
         </div>
-        <a href={lienSite} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: couleur, fontWeight: 600 }}>{tr("🌐 Voir mon site")}</a>
+        {lienSite && <a href={lienSite} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: 12, color: couleur, fontWeight: 600 }}>{tr("🌐 Voir mon site")}</a>}
       </div>
 
       {erreur && <p style={{ margin: 0, fontSize: 13, color: "#b91c1c", background: "#fef2f2", borderRadius: 8, padding: "10px 12px" }}>{tr(erreur)}</p>}
@@ -108,7 +113,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite }: {
               <input defaultValue={p.legende || ""} placeholder={tr("Légende")} maxLength={255}
                 onBlur={e => { if (e.target.value !== (p.legende || "")) void modifier(p, { legende: e.target.value }); }} style={{ ...champ, padding: "6px 8px", fontSize: 12 }} />
               <select value={p.categorie || "Autre"} onChange={e => void modifier(p, { categorie: e.target.value })} style={{ ...champ, padding: "6px 8px", fontSize: 12 }}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{tr(c)}</option>)}
+                {(CATEGORIES.includes(p.categorie || "Autre") ? CATEGORIES : [p.categorie as string, ...CATEGORIES]).map(c => <option key={c} value={c}>{tr(c)}</option>)}
               </select>
               <div style={{ display: "flex", gap: 6 }}>
                 {!p.est_couverture && (

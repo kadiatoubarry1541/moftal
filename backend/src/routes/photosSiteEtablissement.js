@@ -2,7 +2,7 @@ import { sequelize } from '../config/database.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 /**
- * Photos du site vitrine d'un établissement (école, madrasa) : le responsable
+ * Photos du site vitrine d'un établissement (tous les secteurs) : le responsable
  * les ajoute depuis son application (gestion interne) ; tout le monde les voit
  * sur le site. Les images sont enregistrées en base (table « fichiers »).
  * Une photo peut servir de couverture (grande image en haut du site).
@@ -10,7 +10,8 @@ import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const Q = sequelize.QueryTypes;
 const MAX_PHOTOS = 40;
-export const CATEGORIES_PHOTOS = ['Nos locaux', 'Vie scolaire', 'Activités', 'Événements', 'Résultats', 'Autre'];
+// Rubriques des photos : communes à tous les établissements, plus celles des écoles
+export const CATEGORIES_PHOTOS = ['Nos locaux', 'Nos produits', 'Nos services', 'Nos réalisations', 'Notre équipe', 'Vie scolaire', 'Activités', 'Événements', 'Résultats', 'Autre'];
 
 let tablePrete = null;
 function preparerTable() {
