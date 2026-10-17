@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { normaliserLogo } from "../utils/logoImage";
+import { useTraduction } from "../i18n/traduction";
 
 // Outils de l'Espace Pro partagés entre la page « Activité » (GestionInterne) et
 // le panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement.
@@ -81,6 +82,7 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
   onDelete: (pubId: string) => void;
   onClose: () => void;
 }) {
+  const { tr } = useTraduction();
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -98,26 +100,26 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
         {/* Header */}
         <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>Nouvelle publication</h2>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>{tr("Nouvelle publication")}</h2>
             <p style={{ margin:"4px 0 0", fontSize:13, color:"#64748b" }}>{modal.name}</p>
           </div>
           <button onClick={onClose} style={{ width:32, height:32, borderRadius:"50%", border:"none", background:"#f1f5f9", cursor:"pointer", fontSize:18, color:"#64748b", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
 
         {modal.step === "loading" ? (
-          <div style={{ padding:48, textAlign:"center", color:"#64748b" }}>Chargement...</div>
+          <div style={{ padding:48, textAlign:"center", color:"#64748b" }}>{tr("Chargement...")}</div>
         ) : (
           <div style={{ padding:"16px 24px 24px" }}>
 
             {/* Type de publication */}
             <div style={{ marginBottom:16 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:8 }}>Type de publication</label>
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:8 }}>{tr("Type de publication")}</label>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
                 {PUB_TYPES.map(pt => (
                   <button key={pt.value} onClick={() => onChange({ ...modal.form, type: pt.value })}
                     style={{ padding:"8px 6px", border:`2px solid ${modal.form.type === pt.value ? "#2563eb" : "#e2e8f0"}`, background: modal.form.type === pt.value ? "#eff6ff" : "white", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:700, color: modal.form.type === pt.value ? "#1d4ed8" : "#475569", textAlign:"center", transition:"all 0.15s" }}>
                     <div style={{ fontSize:18, marginBottom:2 }}>{pt.emoji}</div>
-                    {pt.label}
+                    {tr(pt.label)}
                   </button>
                 ))}
               </div>
@@ -125,8 +127,8 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
 
             {/* Titre */}
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Titre <span style={{ color:"#ef4444" }}>*</span></label>
-              <input value={modal.form.titre} onChange={e => onChange({ ...modal.form, titre: e.target.value })} placeholder="Titre de votre publication..."
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Titre")} <span style={{ color:"#ef4444" }}>*</span></label>
+              <input value={modal.form.titre} onChange={e => onChange({ ...modal.form, titre: e.target.value })} placeholder={tr("Titre de votre publication...")}
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit", transition:"border-color 0.15s" }}
                 onFocus={e => e.currentTarget.style.borderColor = "#2563eb"}
                 onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
@@ -135,8 +137,8 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
 
             {/* Contenu */}
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Contenu</label>
-              <textarea value={modal.form.contenu} onChange={e => onChange({ ...modal.form, contenu: e.target.value })} placeholder="Description, détails de votre publication..." rows={4}
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Contenu")}</label>
+              <textarea value={modal.form.contenu} onChange={e => onChange({ ...modal.form, contenu: e.target.value })} placeholder={tr("Description, détails de votre publication...")} rows={4}
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", resize:"vertical", boxSizing:"border-box", fontFamily:"inherit", minHeight:90, transition:"border-color 0.15s" }}
                 onFocus={e => e.currentTarget.style.borderColor = "#2563eb"}
                 onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
@@ -145,8 +147,8 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
 
             {/* Prix */}
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Prix (optionnel)</label>
-              <input value={modal.form.prix} onChange={e => onChange({ ...modal.form, prix: e.target.value })} placeholder="Ex: 50 000 GNF"
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Prix (optionnel)")}</label>
+              <input value={modal.form.prix} onChange={e => onChange({ ...modal.form, prix: e.target.value })} placeholder={tr("Ex: 50 000 GNF")}
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit", transition:"border-color 0.15s" }}
                 onFocus={e => e.currentTarget.style.borderColor = "#2563eb"}
                 onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
@@ -155,18 +157,18 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
 
             {/* Image */}
             <div style={{ marginBottom:20 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Image (optionnelle)</label>
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Image (optionnelle)")}</label>
               <input type="file" accept="image/*" ref={fileRef} onChange={handleImage} style={{ display:"none" }} />
               {modal.form.image ? (
                 <div style={{ position:"relative", display:"inline-block" }}>
-                  <img src={modal.form.image} alt="preview" style={{ height:100, borderRadius:10, objectFit:"cover", border:"1.5px solid #e2e8f0" }} />
+                  <img src={modal.form.image} alt={tr("Aperçu")} style={{ height:100, borderRadius:10, objectFit:"cover", border:"1.5px solid #e2e8f0" }} />
                   <button onClick={() => onChange({ ...modal.form, image: "" })}
                     style={{ position:"absolute", top:-8, right:-8, width:24, height:24, borderRadius:"50%", background:"#ef4444", color:"white", border:"none", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
                 </div>
               ) : (
                 <button onClick={() => fileRef.current?.click()}
                   style={{ padding:"10px 18px", border:"1.5px dashed #cbd5e1", borderRadius:10, background:"#f8fafc", cursor:"pointer", fontSize:13, color:"#64748b", fontWeight:600, display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:18 }}>🖼️</span> Choisir une image
+                  <span style={{ fontSize:18 }}>🖼️</span> {tr("Choisir une image")}
                 </button>
               )}
             </div>
@@ -174,18 +176,18 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
             {/* Boutons action */}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={onClose} style={{ flex:1, padding:"12px 0", border:"1.5px solid #e2e8f0", borderRadius:12, background:"white", cursor:"pointer", fontSize:14, fontWeight:700, color:"#475569" }}>
-                Annuler
+                {tr("Annuler")}
               </button>
               <button onClick={onSubmit} disabled={modal.step === "saving" || !modal.form.titre.trim()}
                 style={{ flex:2, padding:"12px 0", border:"none", borderRadius:12, background: modal.form.titre.trim() ? "#2563eb" : "#94a3b8", color:"white", cursor: modal.form.titre.trim() ? "pointer" : "not-allowed", fontSize:14, fontWeight:800, transition:"background 0.15s" }}>
-                {modal.step === "saving" ? "Publication en cours..." : "Publier maintenant"}
+                {modal.step === "saving" ? tr("Publication en cours...") : tr("Publier maintenant")}
               </button>
             </div>
 
             {/* Publications récentes */}
             {modal.pubs.length > 0 && (
               <div style={{ marginTop:24, borderTop:"1.5px solid #f1f5f9", paddingTop:16 }}>
-                <h3 style={{ margin:"0 0 12px", fontSize:13, fontWeight:800, color:"#0f172a", textTransform:"uppercase", letterSpacing:"0.05em" }}>Publications récentes ({modal.pubs.length})</h3>
+                <h3 style={{ margin:"0 0 12px", fontSize:13, fontWeight:800, color:"#0f172a", textTransform:"uppercase", letterSpacing:"0.05em" }}>{tr("Publications récentes ({n})", { n: modal.pubs.length })}</h3>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {modal.pubs.slice(0, 5).map((p: any) => (
                     <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f8fafc", borderRadius:10, border:"1px solid #e2e8f0" }}>
@@ -194,9 +196,9 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
                         <div style={{ fontWeight:700, fontSize:13, color:"#0f172a", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.titre}</div>
                         <div style={{ fontSize:11, color:"#94a3b8" }}>{new Date(p.created_at).toLocaleDateString("fr-FR")}</div>
                       </div>
-                      <button onClick={() => { if (confirm("Supprimer cette publication ?")) onDelete(p.id); }}
+                      <button onClick={() => { if (confirm(tr("Supprimer cette publication ?"))) onDelete(p.id); }}
                         style={{ padding:"4px 10px", background:"#fef2f2", color:"#dc2626", border:"1px solid #fecaca", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:700, flexShrink:0 }}>
-                        Suppr.
+                        {tr("Suppr.")}
                       </button>
                     </div>
                   ))}
@@ -218,6 +220,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
   onSubmit: () => void;
   onClose: () => void;
 }) {
+  const { tr } = useTraduction();
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -226,20 +229,20 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
     if (!file) return;
     normaliserLogo(file)
       .then(logo => onChange({ ...modal.form, photo: logo }))
-      .catch(err => alert(err.message));
+      .catch(err => alert(tr(err.message)));
   }
 
   const field = (label: string, key: keyof typeof DEFAULT_PROFIL_FORM, placeholder: string, type: "input" | "textarea" = "input") => (
     <div style={{ marginBottom:14 }}>
-      <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{label}</label>
+      <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr(label)}</label>
       {type === "textarea" ? (
-        <textarea value={modal.form[key]} onChange={e => onChange({ ...modal.form, [key]: e.target.value })} placeholder={placeholder} rows={3}
+        <textarea value={modal.form[key]} onChange={e => onChange({ ...modal.form, [key]: e.target.value })} placeholder={tr(placeholder)} rows={3}
           style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", resize:"vertical", boxSizing:"border-box", fontFamily:"inherit", transition:"border-color 0.15s" }}
           onFocus={e => e.currentTarget.style.borderColor = "#2563eb"}
           onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
         />
       ) : (
-        <input value={modal.form[key]} onChange={e => onChange({ ...modal.form, [key]: e.target.value })} placeholder={placeholder}
+        <input value={modal.form[key]} onChange={e => onChange({ ...modal.form, [key]: e.target.value })} placeholder={tr(placeholder)}
           style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit", transition:"border-color 0.15s" }}
           onFocus={e => e.currentTarget.style.borderColor = "#2563eb"}
           onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
@@ -255,7 +258,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
         {/* Header */}
         <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>Modifier le profil</h2>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>{tr("Modifier le profil")}</h2>
             <p style={{ margin:"4px 0 0", fontSize:13, color:"#64748b" }}>{modal.name}</p>
           </div>
           <button onClick={onClose} style={{ width:32, height:32, borderRadius:"50%", border:"none", background:"#f1f5f9", cursor:"pointer", fontSize:18, color:"#64748b", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
@@ -268,13 +271,13 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Adresse (quartier)</label>
-              <input value={modal.form.address} onChange={e => onChange({ ...modal.form, address: e.target.value })} placeholder="Ex : quartier Madina, près du marché"
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Adresse (quartier)")}</label>
+              <input value={modal.form.address} onChange={e => onChange({ ...modal.form, address: e.target.value })} placeholder={tr("Ex : quartier Madina, près du marché")}
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}
               />
             </div>
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Ville</label>
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Ville")}</label>
               <input value={modal.form.city} onChange={e => onChange({ ...modal.form, city: e.target.value })} placeholder="Conakry"
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}
               />
@@ -283,13 +286,13 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Téléphone</label>
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Téléphone")}</label>
               <input value={modal.form.phone} onChange={e => onChange({ ...modal.form, phone: e.target.value })} placeholder="+224 6xx xx xx xx"
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}
               />
             </div>
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Email</label>
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Email")}</label>
               <input value={modal.form.email} onChange={e => onChange({ ...modal.form, email: e.target.value })} placeholder="contact@etablissement.com" type="email"
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}
               />
@@ -298,7 +301,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 
           {/* Photo / Logo */}
           <div style={{ marginBottom:20 }}>
-            <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Photo / Logo</label>
+            <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>{tr("Photo / Logo")}</label>
             <input type="file" accept="image/*" ref={fileRef} onChange={handlePhoto} style={{ display:"none" }} />
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               {modal.form.photo ? (
@@ -312,7 +315,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
               )}
               <button onClick={() => fileRef.current?.click()}
                 style={{ padding:"10px 16px", border:"1.5px dashed #cbd5e1", borderRadius:10, background:"#f8fafc", cursor:"pointer", fontSize:13, color:"#64748b", fontWeight:600 }}>
-                {modal.form.photo ? "Changer la photo" : "Ajouter une photo"}
+                {modal.form.photo ? tr("Changer la photo") : tr("Ajouter une photo")}
               </button>
             </div>
           </div>
@@ -320,11 +323,11 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
           {/* Boutons */}
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={onClose} style={{ flex:1, padding:"12px 0", border:"1.5px solid #e2e8f0", borderRadius:12, background:"white", cursor:"pointer", fontSize:14, fontWeight:700, color:"#475569" }}>
-              Annuler
+              {tr("Annuler")}
             </button>
             <button onClick={onSubmit} disabled={modal.step === "saving"}
               style={{ flex:2, padding:"12px 0", border:"none", borderRadius:12, background:"#059669", color:"white", cursor:"pointer", fontSize:14, fontWeight:800 }}>
-              {modal.step === "saving" ? "Enregistrement..." : "Enregistrer les modifications"}
+              {modal.step === "saving" ? tr("Enregistrement...") : tr("Enregistrer les modifications")}
             </button>
           </div>
         </div>
@@ -344,6 +347,7 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
   onChoisir: (periode: PeriodeGI) => void;
   onVisibilite: () => void;
 }) {
+  const { tr } = useTraduction();
   return (
     <div style={{ borderRadius:16, overflow:"hidden", marginBottom:16, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
       {/* En-tête gradient */}
@@ -351,14 +355,14 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
           <span style={{ fontSize:28 }}>⚡</span>
           <div>
-            <p style={{ margin:0, fontSize:16, fontWeight:900 }}>Gestion Interne — Service Complet</p>
-            <p style={{ margin:"2px 0 0", fontSize:12, color:"#bfdbfe" }}>Le service central de la plateforme</p>
+            <p style={{ margin:0, fontSize:16, fontWeight:900 }}>{tr("Gestion Interne — Service Complet")}</p>
+            <p style={{ margin:"2px 0 0", fontSize:12, color:"#bfdbfe" }}>{tr("Le service central de la plateforme")}</p>
           </div>
         </div>
 
         {/* Ce qui est inclus */}
         <div style={{ background:"rgba(255,255,255,0.12)", borderRadius:10, padding:"10px 14px", marginBottom:14 }}>
-          <p style={{ margin:"0 0 7px", fontSize:11, fontWeight:700, color:"#93c5fd", textTransform:"uppercase", letterSpacing:"0.06em" }}>Tout inclus :</p>
+          <p style={{ margin:"0 0 7px", fontSize:11, fontWeight:700, color:"#93c5fd", textTransform:"uppercase", letterSpacing:"0.06em" }}>{tr("Tout inclus :")}</p>
           {[
             "👁️ Visibilité + profil public sur la plateforme",
             "📅 Réception et gestion des rendez-vous",
@@ -368,7 +372,7 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
           ].map(f => (
             <div key={f} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4, fontSize:12, color:"white" }}>
               <span style={{ flexShrink:0, color:"#86efac" }}>✓</span>
-              <span>{f}</span>
+              <span>{tr(f)}</span>
             </div>
           ))}
         </div>
@@ -383,11 +387,11 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
           ]).map(opt => (
             <button key={opt.periode} onClick={() => onChoisir(opt.periode)} disabled={disabled}
               style={{ width:"100%", padding:"12px 16px", background:"white", color:"#1e3a5f", border:"none", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:800, opacity: disabled ? 0.6 : 1, display:"flex", justifyContent:"space-between", alignItems:"center", transition:"opacity 0.15s", boxSizing:"border-box" }}>
-              <span>{opt.label}</span>
+              <span>{tr(opt.label)}</span>
               <span style={{ display:"flex", alignItems:"center", gap:6 }}>
                 {opt.badge && (
                   <span style={{ fontSize:11, background:"#22c55e", color:"white", padding:"2px 8px", borderRadius:999, fontWeight:700 }}>
-                    {opt.badge}
+                    {tr(opt.badge)}
                   </span>
                 )}
                 <span style={{ color:"#1e3a5f", fontWeight:900 }}>
@@ -406,13 +410,13 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
       <div style={{ background:"#f0f4ff", padding:"10px 16px", display:"flex", alignItems:"flex-start", gap:10 }}>
         <span style={{ fontSize:14, flexShrink:0, marginTop:1 }}>💡</span>
         <p style={{ margin:0, fontSize:12, color:"#3730a3", lineHeight:1.5 }}>
-          <strong>Vous voulez seulement la visibilité ?</strong>{" "}
+          <strong>{tr("Vous voulez seulement la visibilité ?")}</strong>{" "}
           <button
             onClick={onVisibilite}
             style={{ background:"none", border:"none", color:"#2563eb", fontWeight:700, cursor:"pointer", fontSize:12, textDecoration:"underline", padding:0 }}>
-            Mes comptes pro
+            {tr("Mes comptes pro")}
           </button>{" "}
-          propose la formule Visibilité + Rendez-vous (moins cher, sans la gestion interne).
+          {tr("propose la formule Visibilité + Rendez-vous (moins cher, sans la gestion interne).")}
         </p>
       </div>
     </div>

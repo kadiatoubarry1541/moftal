@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -40,6 +41,7 @@ function Avatar({ member }: { member: Member }) {
 }
 
 function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
+  const { tr } = useTraduction();
   const location = [member.ville, member.pays].filter(Boolean).join(", ");
   return (
     <div style={{
@@ -59,7 +61,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
           {member.prenom} {member.nomFamille}
           {isMe && (
             <span style={{ marginLeft: 8, fontSize: 11, background: "#dcfcdc", color: "#0f4b0f", padding: "1px 8px", borderRadius: 20, fontWeight: 600 }}>
-              Moi
+              {tr("Moi")}
             </span>
           )}
         </div>
@@ -74,7 +76,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
         )}
         {member.generation && (
           <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-            Génération {member.generation}
+            {tr("Génération {g}", { g: member.generation })}
           </div>
         )}
       </div>
@@ -84,6 +86,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
 
 export default function Racines() {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const user = getSessionUser() as any;
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -145,10 +148,10 @@ export default function Racines() {
         </svg>
       </div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1e293b", marginBottom: 12 }}>
-        Tes Racines t'attendent
+        {tr("Tes Racines t'attendent")}
       </h2>
       <p style={{ color: "#64748b", fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
-        Pour rejoindre ta communauté automatiquement, tu dois renseigner ton ethnie dans ton profil.
+        {tr("Pour rejoindre ta communauté automatiquement, tu dois renseigner ton ethnie dans ton profil.")}
       </p>
       <button
         onClick={() => navigate("/moi/profil")}
@@ -159,7 +162,7 @@ export default function Racines() {
           cursor: "pointer"
         }}
       >
-        Compléter mon profil
+        {tr("Compléter mon profil")}
       </button>
     </div>
   );
@@ -178,7 +181,7 @@ export default function Racines() {
             textDecoration: "none", border: "1px solid #e2e8f0"
           }}
         >
-          ← Solidarité
+          ← {tr("Solidarité")}
         </Link>
       </div>
 
@@ -192,11 +195,10 @@ export default function Racines() {
           <span style={{ fontSize: 26, flexShrink: 0 }}>👑</span>
           <div>
             <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15, marginBottom: 6 }}>
-              Mode aperçu administrateur
+              {tr("Mode aperçu administrateur")}
             </div>
             <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
-              Votre ethnie n'est pas renseignée. Vos utilisateurs verront ici tous les membres qui partagent leur ethnie — avec leurs noms, photos, villes et générations.
-              Ajoutez votre ethnie dans votre profil pour voir votre vraie communauté.
+              {tr("Votre ethnie n'est pas renseignée. Vos utilisateurs verront ici tous les membres qui partagent leur ethnie — avec leurs noms, photos, villes et générations. Ajoutez votre ethnie dans votre profil pour voir votre vraie communauté.")}
             </div>
             <button
               onClick={() => navigate("/moi/profil")}
@@ -206,7 +208,7 @@ export default function Racines() {
                 fontSize: 13, fontWeight: 600, cursor: "pointer"
               }}
             >
-              Compléter mon profil
+              {tr("Compléter mon profil")}
             </button>
           </div>
         </div>
@@ -233,23 +235,23 @@ export default function Racines() {
           </div>
           <div>
             <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 500, textTransform: "uppercase", letterSpacing: 1 }}>
-              Tes Racines
+              {tr("Tes Racines")}
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              {ethnie ? `Communauté ${ethnie}` : "Aperçu — Page Racines"}
+              {ethnie ? tr("Communauté {ethnie}", { ethnie }) : tr("Aperçu — Page Racines")}
             </h1>
           </div>
         </div>
         <div style={{ display: "flex", gap: 20, marginTop: 8 }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 28, fontWeight: 800 }}>{total}</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>membre{total > 1 ? "s" : ""}</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>{total > 1 ? tr("membres") : tr("membre")}</div>
           </div>
           <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }} />
           <div style={{ fontSize: 14, opacity: 0.9, lineHeight: 1.5, maxWidth: 340 }}>
             {ethnie
-              ? <>Tous les membres de la plateforme qui partagent l'ethnie <strong>{ethnie}</strong> sont automatiquement ici.</>
-              : "Ici s'affichent automatiquement tous les membres qui partagent la même ethnie que l'utilisateur."
+              ? <>{tr("Tous les membres de la plateforme qui partagent l'ethnie")} <strong>{ethnie}</strong> {tr("sont automatiquement ici.")}</>
+              : tr("Ici s'affichent automatiquement tous les membres qui partagent la même ethnie que l'utilisateur.")
             }
           </div>
         </div>
@@ -276,11 +278,10 @@ export default function Racines() {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "#065f46", marginBottom: 6 }}>
-            Problèmes familiaux & sociaux
+            {tr("Problèmes familiaux & sociaux")}
           </div>
           <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-            Conflits, séparations, difficultés sociales — ta communauté ethnique est là pour t'écouter et t'aider.
-            Retrouve ci-dessous les membres qui partagent tes racines.
+            {tr("Conflits, séparations, difficultés sociales — ta communauté ethnique est là pour t'écouter et t'aider. Retrouve ci-dessous les membres qui partagent tes racines.")}
           </p>
         </div>
       </div>
@@ -295,7 +296,7 @@ export default function Racines() {
             </svg>
             <input
               type="text"
-              placeholder="Rechercher un membre..."
+              placeholder={tr("Rechercher un membre...")}
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
@@ -308,7 +309,7 @@ export default function Racines() {
           </div>
           {search && (
             <div style={{ marginTop: 8, fontSize: 13, color: "#64748b" }}>
-              {filtered.length} résultat{filtered.length > 1 ? "s" : ""} pour « {search} »
+              {filtered.length > 1 ? tr("{n} résultats pour « {q} »", { n: filtered.length, q: search }) : tr("{n} résultat pour « {q} »", { n: filtered.length, q: search })}
             </div>
           )}
         </div>
@@ -318,8 +319,8 @@ export default function Racines() {
       {filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: 15 }}>
           {!ethnie && userIsAdmin
-            ? <><div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>Les membres s'afficheront ici selon leur ethnie commune</>
-            : "Aucun membre trouvé"
+            ? <><div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>{tr("Les membres s'afficheront ici selon leur ethnie commune")}</>
+            : tr("Aucun membre trouvé")
           }
         </div>
       ) : (

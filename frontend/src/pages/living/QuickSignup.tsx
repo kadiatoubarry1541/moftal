@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { config } from '../../config/api'
+import { useTraduction } from '../../i18n/traduction'
 
 // Inscription rapide : un seul champ (téléphone ou e-mail, reconnu tout seul)
 // + mot de passe.
@@ -8,6 +9,7 @@ import { config } from '../../config/api'
 // « Mettre mon profil à jour ».
 export function QuickSignup() {
   const navigate = useNavigate()
+  const { tr } = useTraduction()
   const [identifiant, setIdentifiant] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -38,16 +40,16 @@ export function QuickSignup() {
           ? { email: saisie, password }
           : { telephone: saisie, password })
       })
-      if (res.status === 404) { setError("L'inscription est momentanément indisponible. Réessayez dans quelques minutes."); return }
+      if (res.status === 404) { setError(tr("L'inscription est momentanément indisponible. Réessayez dans quelques minutes.")); return }
       const data = await res.json()
-      if (!data.success) { setError(data.message || "Impossible de créer le compte."); return }
+      if (!data.success) { setError(tr(data.message || "Impossible de créer le compte.")); return }
       localStorage.setItem('token', data.token)
       localStorage.setItem('session_user', JSON.stringify({
         numeroH: data.user.numeroH, userData: data.user, token: data.token, type: 'vivant', source: 'registration_quick'
       }))
       navigate('/compte')
     } catch {
-      setError('Erreur de connexion. Vérifiez votre connexion internet et réessayez.')
+      setError(tr('Erreur de connexion. Vérifiez votre connexion internet et réessayez.'))
     } finally {
       setLoading(false)
     }
@@ -58,43 +60,43 @@ export function QuickSignup() {
   return (
     <div className="max-w-md mx-auto w-full px-4 py-8">
       <Link to="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm font-medium mb-4">
-        ← Retour
+        ← {tr("Retour")}
       </Link>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h1 className="text-2xl font-black text-gray-900 mb-5">Créer mon compte</h1>
+        <h1 className="text-2xl font-black text-gray-900 mb-5">{tr("Créer mon compte")}</h1>
 
         <form onSubmit={submit} className="space-y-4">
           {/* Un seul champ : téléphone ou e-mail, sans choix à faire */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">📱 Téléphone ou e-mail</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">📱 {tr("Téléphone ou e-mail")}</label>
             <input type="text" inputMode="email" autoComplete="username" autoCapitalize="none" value={identifiant}
-              onChange={e => { setIdentifiant(e.target.value); setError(null) }} placeholder="Ex : 620 00 00 00 ou nom@exemple.com"
+              onChange={e => { setIdentifiant(e.target.value); setError(null) }} placeholder={tr("Ex : 620 00 00 00 ou nom@exemple.com")}
               className={`${field} ${saisie && !identifiantOk ? 'border-red-400' : 'border-gray-300'}`} />
-            {saisie && !identifiantOk && <p className="text-xs text-red-500 mt-1">{estEmail ? 'Adresse e-mail invalide.' : 'Numéro de téléphone trop court.'}</p>}
+            {saisie && !identifiantOk && <p className="text-xs text-red-500 mt-1">{estEmail ? tr('Adresse e-mail invalide.') : tr('Numéro de téléphone trop court.')}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">🔒 Mot de passe</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">🔒 {tr("Mot de passe")}</label>
             <div className="flex gap-2">
               <input type={show ? 'text' : 'password'} autoComplete="new-password" value={password}
-                onChange={e => setPassword(e.target.value)} placeholder="Au moins 6 caractères"
+                onChange={e => setPassword(e.target.value)} placeholder={tr("Au moins 6 caractères")}
                 className={`${field} ${password && !pwOk ? 'border-red-400' : 'border-gray-300'}`} />
-              <button type="button" onClick={() => setShow(v => !v)} aria-label={show ? 'Masquer' : 'Afficher'}
+              <button type="button" onClick={() => setShow(v => !v)} aria-label={show ? tr('Masquer') : tr('Afficher')}
                 className="px-3 rounded-xl border border-gray-300 bg-white text-lg">{show ? '🙈' : '👁️'}</button>
             </div>
-            {password && !pwOk && <p className="text-xs text-red-500 mt-1">Au moins 6 caractères.</p>}
+            {password && !pwOk && <p className="text-xs text-red-500 mt-1">{tr("Au moins 6 caractères.")}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">🔒 Confirmer le mot de passe</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">🔒 {tr("Confirmer le mot de passe")}</label>
             <input type={show ? 'text' : 'password'} autoComplete="new-password" value={confirm}
-              onChange={e => setConfirm(e.target.value)} placeholder="Retapez le mot de passe"
+              onChange={e => setConfirm(e.target.value)} placeholder={tr("Retapez le mot de passe")}
               className={`${field} ${confirm && !same ? 'border-red-400' : 'border-gray-300'}`} />
-            {confirm && !same && <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>}
+            {confirm && !same && <p className="text-xs text-red-500 mt-1">{tr("Les mots de passe ne correspondent pas.")}</p>}
           </div>
 
           {/* Seulement sans e-mail : le mot de passe oublié se récupère par e-mail */}
           {!estEmail && (
             <p className="text-[11px] leading-snug text-amber-700">
-              ⚠️ Ajoutez ensuite un e-mail dans votre profil : sans e-mail, un compte perdu ne peut pas être récupéré.
+              ⚠️ {tr("Ajoutez ensuite un e-mail dans votre profil : sans e-mail, un compte perdu ne peut pas être récupéré.")}
             </p>
           )}
 
@@ -103,12 +105,12 @@ export function QuickSignup() {
           <button type="submit" disabled={!canSubmit}
             className="w-full py-3.5 rounded-xl font-bold text-white text-base disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
-            {loading ? 'Création du compte…' : '✅ Créer mon compte'}
+            {loading ? tr('Création du compte…') : `✅ ${tr('Créer mon compte')}`}
           </button>
         </form>
 
         <p className="text-sm text-gray-500 text-center mt-5">
-          Déjà un compte ? <Link to="/login" className="font-semibold text-emerald-700">Se connecter</Link>
+          {tr("Déjà un compte ?")} <Link to="/login" className="font-semibold text-emerald-700">{tr("Se connecter")}</Link>
         </p>
       </div>
     </div>

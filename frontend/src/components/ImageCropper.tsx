@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { getCroppedImageFile, getCroppedPreviewDataUrl, type PixelCrop } from '../utils/cropImage';
+import { useTraduction } from '../i18n/traduction';
 
 interface Props {
   file: File;
@@ -24,6 +25,7 @@ const PREVIEW_WIDTH = 240;
  * direct de ce qui sera exactement publié — pour bien cadrer avant l'envoi.
  */
 export default function ImageCropper({ file, aspect, outputWidth, outputHeight, title, onCancel, onConfirm }: Props) {
+  const { tr } = useTraduction();
   const [imageSrc] = useState(() => URL.createObjectURL(file));
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -62,21 +64,21 @@ export default function ImageCropper({ file, aspect, outputWidth, outputHeight, 
     <div className="fixed inset-0 bg-black z-[200] flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 bg-black/80 text-white flex-shrink-0">
         <button type="button" onClick={onCancel} className="text-sm font-semibold text-gray-300 hover:text-white">
-          Annuler
+          {tr("Annuler")}
         </button>
-        <h3 className="font-semibold text-sm">{title || "Ajuster l'image"}</h3>
+        <h3 className="font-semibold text-sm">{title || tr("Ajuster l'image")}</h3>
         <button
           type="button"
           onClick={handleConfirm}
           disabled={processing || !croppedAreaPixels}
           className="text-emerald-400 font-bold text-sm disabled:opacity-40"
         >
-          {processing ? '...' : 'Valider'}
+          {processing ? '...' : tr('Valider')}
         </button>
       </div>
 
       <p className="text-center text-gray-300 text-xs px-6 py-2 flex-shrink-0">
-        Faites glisser l'image et zoomez pour bien la cadrer dans le cadre.
+        {tr("Faites glisser l'image et zoomez pour bien la cadrer dans le cadre.")}
       </p>
 
       <div className="relative flex-1 min-h-0">
@@ -102,7 +104,7 @@ export default function ImageCropper({ file, aspect, outputWidth, outputHeight, 
             type="button"
             onClick={() => setZoom(z => Math.max(MIN_ZOOM, Number((z - ZOOM_STEP).toFixed(2))))}
             className="w-8 h-8 flex-shrink-0 rounded-full bg-white/15 hover:bg-white/25 text-white text-lg font-bold flex items-center justify-center"
-            aria-label="Dézoomer"
+            aria-label={tr("Dézoomer")}
           >
             −
           </button>
@@ -114,13 +116,13 @@ export default function ImageCropper({ file, aspect, outputWidth, outputHeight, 
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="w-full accent-emerald-500"
-            aria-label="Zoom"
+            aria-label={tr("Zoom")}
           />
           <button
             type="button"
             onClick={() => setZoom(z => Math.min(MAX_ZOOM, Number((z + ZOOM_STEP).toFixed(2))))}
             className="w-8 h-8 flex-shrink-0 rounded-full bg-white/15 hover:bg-white/25 text-white text-lg font-bold flex items-center justify-center"
-            aria-label="Zoomer"
+            aria-label={tr("Zoomer")}
           >
             +
           </button>
@@ -132,22 +134,22 @@ export default function ImageCropper({ file, aspect, outputWidth, outputHeight, 
             onClick={() => setRotation(r => (r + 90) % 360)}
             className="text-xs font-semibold text-gray-300 hover:text-white flex items-center gap-1"
           >
-            ↻ Pivoter
+            ↻ {tr("Pivoter")}
           </button>
           <button
             type="button"
             onClick={handleReset}
             className="text-xs font-semibold text-gray-300 hover:text-white flex items-center gap-1"
           >
-            ↺ Réinitialiser
+            ↺ {tr("Réinitialiser")}
           </button>
           {/* Aperçu en direct — exactement ce qui sera publié */}
           {previewUrl && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400">Aperçu :</span>
+              <span className="text-[10px] text-gray-400">{tr("Aperçu :")}</span>
               <img
                 src={previewUrl}
-                alt="Aperçu du cadrage"
+                alt={tr("Aperçu du cadrage")}
                 className="rounded border border-white/30"
                 style={{ width: 64, height: Math.round(64 / aspect) }}
               />

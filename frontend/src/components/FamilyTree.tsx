@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getNumeroHForDisplay } from '../utils/auth'
 import { FamilyTreeNode } from './FamilyTreeNode'
+import { useTraduction } from '../i18n/traduction'
 
 interface FamilyMember {
   id: string
@@ -26,6 +27,7 @@ interface FamilyTreeProps {
 }
 
 export function FamilyTree({ userData }: FamilyTreeProps) {
+  const { tr } = useTraduction()
   const [familyData, setFamilyData] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
   const [treeView, setTreeView] = useState<'ancestors' | 'descendants' | 'full'>('full')
@@ -94,7 +96,7 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
     return (
       <div className="family-tree-loading">
         <div className="loading-spinner"></div>
-        <p>Chargement de l'arbre généalogique...</p>
+        <p>{tr("Chargement de l'arbre généalogique...")}</p>
       </div>
     )
   }
@@ -102,25 +104,25 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
   return (
     <div className="family-tree-container">
       <div className="family-tree-header">
-        <h3>Arbre Généalogique des {userData.nomFamille}</h3>
+        <h3>{tr("Arbre Généalogique des {nom}", { nom: userData.nomFamille })}</h3>
         <div className="tree-controls">
           <button 
             className={`btn ${treeView === 'ancestors' ? 'active' : ''}`}
             onClick={() => setTreeView('ancestors')}
           >
-            Ancêtres
+            {tr("Ancêtres")}
           </button>
           <button 
             className={`btn ${treeView === 'descendants' ? 'active' : ''}`}
             onClick={() => setTreeView('descendants')}
           >
-            Descendants
+            {tr("Descendants")}
           </button>
           <button 
             className={`btn ${treeView === 'full' ? 'active' : ''}`}
             onClick={() => setTreeView('full')}
           >
-            Complet
+            {tr("Complet")}
           </button>
         </div>
       </div>
@@ -129,19 +131,19 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
         <div className="tree-legend">
           <div className="legend-item">
             <div className="legend-color" style={{ backgroundColor: '#8B4513' }}></div>
-            <span>Générations 1-10 (Anciennes)</span>
+            <span>{tr("Générations 1-10 (Anciennes)")}</span>
           </div>
           <div className="legend-item">
             <div className="legend-color" style={{ backgroundColor: '#D2691E' }}></div>
-            <span>Générations 11-50 (Moyennes)</span>
+            <span>{tr("Générations 11-50 (Moyennes)")}</span>
           </div>
           <div className="legend-item">
             <div className="legend-color" style={{ backgroundColor: '#228B22' }}></div>
-            <span>Générations 51-100 (Récentes)</span>
+            <span>{tr("Générations 51-100 (Récentes)")}</span>
           </div>
           <div className="legend-item">
             <div className="legend-color" style={{ backgroundColor: '#4169E1' }}></div>
-            <span>Générations 101+ (Très récentes)</span>
+            <span>{tr("Générations 101+ (Très récentes)")}</span>
           </div>
         </div>
 
@@ -174,7 +176,7 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
         return (
           <div className="member-details-panel">
             <div className="panel-header">
-              <h4>Détails du Membre</h4>
+              <h4>{tr("Détails du Membre")}</h4>
               <button 
                 className="close-btn"
                 onClick={() => setSelectedMember(null)}
@@ -186,7 +188,7 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
             <div className="member-info">
               <div className="member-photo">
                 {selectedMember.photo ? (
-                  <img src={selectedMember.photo} alt="Photo" />
+                  <img src={selectedMember.photo} alt={tr("Photo")} />
                 ) : (
                   <div className="photo-placeholder">
                     {selectedMember.prenom.charAt(0)}
@@ -204,16 +206,16 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
                 <p><strong>NumeroH:</strong> {getNumeroHForDisplay(selectedMember.numeroH, isCurrentUser)}</p>
                 {isCurrentUser && (
                   <>
-                    <p><strong>Génération:</strong> {selectedMember.generation}</p>
+                    <p><strong>{tr("Génération:")}</strong> {selectedMember.generation}</p>
                     {selectedMember.decet && (
-                      <p><strong>Décet:</strong> {selectedMember.decet}</p>
+                      <p><strong>{tr("Décet:")}</strong> {selectedMember.decet}</p>
                     )}
-                    <p><strong>Date de naissance:</strong> {selectedMember.dateNaissance}</p>
+                    <p><strong>{tr("Date de naissance:")}</strong> {selectedMember.dateNaissance}</p>
                     {selectedMember.dateDeces && (
-                      <p><strong>Date de décès:</strong> {selectedMember.dateDeces}</p>
+                      <p><strong>{tr("Date de décès:")}</strong> {selectedMember.dateDeces}</p>
                     )}
-                    <p><strong>Statut:</strong> {selectedMember.isAlive ? 'Vivant' : 'Décédé'}</p>
-                    <p><strong>Genre:</strong> {selectedMember.genre}</p>
+                    <p><strong>{tr("Statut:")}</strong> {selectedMember.isAlive ? tr('Vivant') : tr('Décédé')}</p>
+                    <p><strong>{tr("Genre:")}</strong> {tr(selectedMember.genre)}</p>
                   </>
                 )}
               </div>
@@ -221,9 +223,9 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
             
             {isCurrentUser && (
               <div className="member-actions">
-                <button className="btn">Voir la fiche complète</button>
-                <button className="btn secondary">Ajouter un enfant</button>
-                <button className="btn secondary">Modifier les informations</button>
+                <button className="btn">{tr("Voir la fiche complète")}</button>
+                <button className="btn secondary">{tr("Ajouter un enfant")}</button>
+                <button className="btn secondary">{tr("Modifier les informations")}</button>
               </div>
             )}
           </div>
@@ -234,25 +236,25 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
       <div className="tree-statistics">
         <div className="stat-item">
           <span className="stat-number">{familyData.length}</span>
-          <span className="stat-label">Membres enregistrés</span>
+          <span className="stat-label">{tr("Membres enregistrés")}</span>
         </div>
         <div className="stat-item">
           <span className="stat-number">
             {familyData.filter(m => m.isAlive).length}
           </span>
-          <span className="stat-label">Vivants</span>
+          <span className="stat-label">{tr("Vivants")}</span>
         </div>
         <div className="stat-item">
           <span className="stat-number">
             {familyData.filter(m => !m.isAlive).length}
           </span>
-          <span className="stat-label">Décédés</span>
+          <span className="stat-label">{tr("Décédés")}</span>
         </div>
         <div className="stat-item">
           <span className="stat-number">
             {new Set(familyData.map(m => m.generation)).size}
           </span>
-          <span className="stat-label">Générations</span>
+          <span className="stat-label">{tr("Générations")}</span>
         </div>
       </div>
     </div>
