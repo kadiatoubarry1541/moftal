@@ -49,7 +49,7 @@ export function LangButton() {
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <span className="flex-1">{label}</span>
+                <span className="flex-1 ecriture-locale">{label}</span>
                 {lang === code && <span className="text-blue-600">✓</span>}
               </button>
             ))}

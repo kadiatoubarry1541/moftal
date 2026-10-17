@@ -1,9 +1,10 @@
 import { useCallback } from "react";
 import { useI18n } from "./useI18n";
 import AR_ECOLE from "./ar-ecole";
+import EN_TR from "./tr-en";
 
-// Traduction des pages de l'école (gestion interne, espaces parent / enseignant,
-// bibliothèque, site vitrine). La clé est le texte français lui-même : sans
+// Traduction des textes tr("…") : pages de l'école, gestions, sites des pros,
+// installation, hors connexion. La clé est le texte français lui-même : sans
 // traduction connue, le français s'affiche tel quel (jamais une clé technique).
 // Variables : tr("Supprimer {nom} ?", { nom }) — les {…} sont gardées dans la traduction.
 export type Tr = (fr: string, vars?: Record<string, string | number | null | undefined>) => string;
@@ -14,7 +15,9 @@ function remplir(texte: string, vars?: Record<string, string | number | null | u
 }
 
 export function traduire(lang: string, fr: string, vars?: Record<string, string | number | null | undefined>) {
-  const base = lang === "ar" ? (AR_ECOLE[fr] ?? AR_ECOLE[fr.trim()] ?? fr) : fr;
+  // Arabe et anglais : traduction complète. Sans traduction connue, le français s'affiche.
+  const dico = lang === "ar" ? AR_ECOLE : lang === "en" ? EN_TR : null;
+  const base = dico ? (dico[fr] ?? dico[fr.trim()] ?? fr) : fr;
   return remplir(base, vars);
 }
 
@@ -31,6 +34,7 @@ export function useTraduction() {
   const tr: Tr = useCallback((fr, vars) => traduire(lang, fr, vars), [lang]);
   const isAr = lang === "ar";
   // Dates et nombres : chiffres latins (0-9) même en arabe, comme sur les documents guinéens
-  const locale = isAr ? "ar-u-nu-latn" : "fr-FR";
-  return { tr, lang, setLang, isAr, dir: (isAr ? "rtl" : "ltr") as "rtl" | "ltr", locale };
+  const locale = isAr ? "ar-u-nu-latn" : lang === "en" ? "en-GB" : "fr-FR";
+  // Même disposition dans toutes les langues : la page n'est jamais retournée (voir I18nProvider)
+  return { tr, lang, setLang, isAr, dir: "ltr" as "rtl" | "ltr", locale };
 }
