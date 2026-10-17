@@ -6,6 +6,7 @@ import LogoEtablissement from "./LogoEtablissement";
 import EcrireAuSite from "./EcrireAuSite";
 import { CouverturePhotoSite, GalerieVitrine } from "./PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { getPhotoUrl } from "../utils/auth";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -191,7 +192,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
                 const prix = prixDe(a);
                 return (
                   <div key={a.id ?? i} className="vs-carte" style={{ background: "white", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                    <div style={{ height: 110, background: `linear-gradient(135deg, ${m.fond}, ${m.couleur}22)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 52 }}>{iconeDe(a)}</div>
+                    {a.image_url
+                      ? <img src={getPhotoUrl(a.image_url) || ""} alt={nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
+                      : <div style={{ aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${m.fond}, ${m.couleur}22)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{iconeDe(a)}</div>}
                     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
                       {a.categorie && <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".05em" }}>{a.categorie}</div>}
                       <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{nom}</div>

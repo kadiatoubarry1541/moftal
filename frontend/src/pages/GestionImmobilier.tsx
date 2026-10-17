@@ -11,6 +11,7 @@ import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
+import CarreauPhoto from "../components/CarreauPhoto";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -288,6 +289,10 @@ export default function GestionImmobilier() {
                 const sc = STATUT_PROP[p.statut] || { bg: "#f8fafc", color: "#64748b", label: p.statut };
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
+                    {/* Case photo : la photo apparaît sur le site */}
+                    <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={AMBER}
+                      onChange={url => setProperties(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))}
+                      style={{ float: "left", marginInlineEnd: 12 }} />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{p.nom}</div>
