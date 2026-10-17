@@ -6,6 +6,7 @@ import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -25,6 +26,7 @@ export default function RestaurantVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [resto, setResto]      = useState<any>(null);
   const [data, setData]        = useState<any>(null);
   const [loading, setLoading]  = useState(true);
@@ -46,9 +48,9 @@ export default function RestaurantVitrine() {
       fetch(`${API}/api/pro-public/restaurant/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setResto(t.tenant);
-      else setError(t.message || "Restaurant introuvable");
+      else setError(tr(t.message || "Restaurant introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger le restaurant."))
+    }).catch(() => setError(tr("Impossible de charger le restaurant.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -70,8 +72,8 @@ export default function RestaurantVitrine() {
   };
   const envoyerCommande = async () => {
     if (envoi) return;
-    if (!client.nom.trim() || client.telephone.replace(/\D/g, "").length < 8) { setErreurCommande("Indiquez votre nom et votre numéro de téléphone."); return; }
-    if (client.type_service === "livraison" && !client.adresse.trim()) { setErreurCommande("Indiquez l'adresse de livraison."); return; }
+    if (!client.nom.trim() || client.telephone.replace(/\D/g, "").length < 8) { setErreurCommande(tr("Indiquez votre nom et votre numéro de téléphone.")); return; }
+    if (client.type_service === "livraison" && !client.adresse.trim()) { setErreurCommande(tr("Indiquez l'adresse de livraison.")); return; }
     setEnvoi(true); setErreurCommande("");
     try {
       const r = await fetch(`${API}/api/pro-public/restaurant/${tenantCode}/commande`, {
@@ -83,11 +85,11 @@ export default function RestaurantVitrine() {
         }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.success) { setErreurCommande(d.message || "La commande n'a pas été envoyée. Réessayez."); return; }
+      if (!r.ok || !d.success) { setErreurCommande(tr(d.message || "La commande n'a pas été envoyée. Réessayez.")); return; }
       setCommandeEnvoyee({ total: d.commande?.total ?? totalPanier });
       setPanier({});
     } catch {
-      setErreurCommande("Pas de connexion : la commande n'a pas été envoyée. Vérifiez internet puis réessayez.");
+      setErreurCommande(tr("Pas de connexion : la commande n'a pas été envoyée. Vérifiez internet puis réessayez."));
     } finally { setEnvoi(false); }
   };
 
@@ -104,7 +106,7 @@ export default function RestaurantVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #fecaca`, borderTopColor: RED, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: RED_DARK, fontSize: 14, fontWeight: 600 }}>Chargement du menu...</p>
+        <p style={{ color: RED_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement du menu…")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -114,9 +116,9 @@ export default function RestaurantVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🍽️</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Restaurant introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Restaurant introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: RED, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: RED, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -153,12 +155,12 @@ export default function RestaurantVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{resto.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Restaurant</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Restaurant")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Menu","menu"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -175,16 +177,16 @@ export default function RestaurantVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{resto.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {resto.description || "Une cuisine savoureuse préparée avec passion. Des plats authentiques pour satisfaire toutes vos envies gourmandes."}
+            {resto.description || tr("Une cuisine savoureuse préparée avec passion. Des plats authentiques pour satisfaire toutes vos envies gourmandes.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("menu")} style={{ background: RED, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(220,38,38,0.25)" }}>
-              Voir le menu
+              {tr("Voir le menu")}
             </button>
             {dishes.length > 0 && (
               <button onClick={commander}
                 style={{ background: "white", color: RED, border: `2px solid ${RED}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                🛒 Commander
+                🛒 {tr("Commander")}
               </button>
             )}
           </div>
@@ -200,10 +202,10 @@ export default function RestaurantVitrine() {
       <section style={{ background: "white", padding: "0 20px 48px" }}>
         <div className="stats-g" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
           {[
-            { icon: "🍽️", val: `${stats.dishes || 0}`, label: "Plats au menu" },
-            { icon: "🪑", val: `${stats.tables || 0}`, label: "Tables disponibles" },
-            { icon: "👨‍🍳", val: `${stats.staff || 0}`, label: "Équipe de cuisine" },
-            { icon: "⭐", val: "Saveur", label: "Notre signature" },
+            { icon: "🍽️", val: `${stats.dishes || 0}`, label: tr("Plats au menu") },
+            { icon: "🪑", val: `${stats.tables || 0}`, label: tr("Tables disponibles") },
+            { icon: "👨‍🍳", val: `${stats.staff || 0}`, label: tr("Équipe de cuisine") },
+            { icon: "⭐", val: tr("Saveur"), label: tr("Notre signature") },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -218,15 +220,15 @@ export default function RestaurantVitrine() {
       <section id="menu" style={{ background: "#fafaf9", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <span style={{ background: `${RED}18`, color: RED, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Notre carte</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 10px", color: "#0f172a" }}>Notre Menu</h2>
+            <span style={{ background: `${RED}18`, color: RED, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Notre carte")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 10px", color: "#0f172a" }}>{tr("Notre menu")}</h2>
           </div>
 
           {/* Recherche */}
           <div style={{ display: "flex", gap: 12, marginBottom: 20, maxWidth: 400 }}>
             <div style={{ flex: 1, position: "relative" }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Chercher un plat…"
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr("Chercher un plat…")}
                 style={{ width: "100%", padding: "10px 12px 10px 38px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", background: "white" }} />
             </div>
           </div>
@@ -237,7 +239,7 @@ export default function RestaurantVitrine() {
               {categories.map(cat => (
                 <button key={cat} onClick={() => setActiveCat(cat)}
                   style={{ padding: "6px 16px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontWeight: activeCat === cat ? 700 : 500, fontSize: 13, whiteSpace: "nowrap", background: activeCat === cat ? RED : "white", color: activeCat === cat ? "white" : "#374151", transition: "all 0.15s" }}>
-                  {cat !== "Tous" && (CAT_ICONS[cat] || "🍽️")} {cat}
+                  {cat !== "Tous" && (CAT_ICONS[cat] || "🍽️")} {tr(cat)}
                 </button>
               ))}
             </div>
@@ -246,7 +248,7 @@ export default function RestaurantVitrine() {
           {filtered.length === 0 ? (
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🍽️</div>
-              {search ? `Aucun plat trouvé pour "${search}"` : "Aucun plat disponible."}
+              {search ? tr("Aucun plat trouvé pour « {q} »", { q: search }) : tr("Aucun plat disponible.")}
             </div>
           ) : (
             <div className="dish-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -262,18 +264,18 @@ export default function RestaurantVitrine() {
                     </div>
                   )}
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{d.nom}</div>
-                  {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.categorie}</div>}
+                  {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{tr(d.categorie)}</div>}
                   {d.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "0 0 10px" }}>{d.description}</p>}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(d.prix)}</div>
                     {panier[d.id] ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <button onClick={() => changerQuantite(d.id, -1)} aria-label="Retirer" style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>−</button>
+                        <button onClick={() => changerQuantite(d.id, -1)} aria-label={tr("Retirer")} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>−</button>
                         <span style={{ minWidth: 20, textAlign: "center", fontWeight: 800 }}>{panier[d.id]}</span>
-                        <button onClick={() => changerQuantite(d.id, 1)} aria-label="Ajouter" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>+</button>
+                        <button onClick={() => changerQuantite(d.id, 1)} aria-label={tr("Ajouter")} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>+</button>
                       </div>
                     ) : (
-                      <button onClick={() => changerQuantite(d.id, 1)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: RED, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>+ Ajouter</button>
+                      <button onClick={() => changerQuantite(d.id, 1)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: RED, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>+ {tr("Ajouter")}</button>
                     )}
                   </div>
                 </div>
@@ -287,14 +289,14 @@ export default function RestaurantVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 780, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>Réserver ou Commander</h2>
-            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>Commandez en ligne ou contactez-nous pour réserver une table.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>{tr("Réserver ou commander")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>{tr("Commandez en ligne ou contactez-nous pour réserver une table.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
             {[
-              { icon: "📞", label: "Téléphone", val: resto.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: resto.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: resto.address || "Non renseignée" },
+              { icon: "📞", label: tr("Téléphone"), val: resto.phone || tr("Non renseigné") },
+              { icon: "✉️", label: tr("E-mail"), val: resto.email || tr("Non renseigné") },
+              { icon: "📍", label: tr("Adresse"), val: resto.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
@@ -307,9 +309,9 @@ export default function RestaurantVitrine() {
             <div style={{ textAlign: "center" }}>
               <button onClick={commander}
                 style={{ background: RED, color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(220,38,38,0.25)" }}>
-                🛒 Commander en ligne
+                🛒 {tr("Commander en ligne")}
               </button>
-              <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>Choisissez vos plats dans le menu : la commande arrive directement au restaurant.</p>
+              <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>{tr("Choisissez vos plats dans le menu : la commande arrive directement au restaurant.")}</p>
             </div>
           )}
         </div>
@@ -323,7 +325,7 @@ export default function RestaurantVitrine() {
       {nbArticles > 0 && !commandeOuverte && (
         <button onClick={commander}
           style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "max(16px, env(safe-area-inset-bottom, 0px))", zIndex: 70, background: RED, color: "white", border: "none", borderRadius: 999, padding: "14px 22px", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 24px rgba(220,38,38,0.4)", whiteSpace: "nowrap" }}>
-          🛒 {nbArticles} article{nbArticles > 1 ? "s" : ""} · {fmtMoney(totalPanier)} — Commander
+          🛒 {tr(nbArticles > 1 ? "{n} articles" : "{n} article", { n: nbArticles })} · {fmtMoney(totalPanier)} — {tr("Commander")}
         </button>
       )}
 
@@ -333,16 +335,16 @@ export default function RestaurantVitrine() {
           style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: "white", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", borderRadius: "20px 20px 0 0", padding: "20px 18px 28px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>🛒 Ma commande</div>
-              <button onClick={() => setCommandeOuverte(false)} disabled={envoi} aria-label="Fermer" style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18 }}>✕</button>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>🛒 {tr("Ma commande")}</div>
+              <button onClick={() => setCommandeOuverte(false)} disabled={envoi} aria-label={tr("Fermer")} style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
 
             {commandeEnvoyee ? (
               <div style={{ textAlign: "center", padding: "12px 0" }}>
                 <div style={{ fontSize: 48 }}>✅</div>
-                <p style={{ fontSize: 16, fontWeight: 800, margin: "8px 0" }}>Commande envoyée à {resto.name}</p>
-                <p style={{ fontSize: 14, color: "#475569", margin: "0 0 16px" }}>Total : {fmtMoney(commandeEnvoyee.total)}. Le restaurant vous contactera au {client.telephone} pour la confirmer.</p>
-                <button onClick={() => { setCommandeOuverte(false); setCommandeEnvoyee(null); }} style={{ width: "100%", padding: 14, background: RED, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Fermer</button>
+                <p style={{ fontSize: 16, fontWeight: 800, margin: "8px 0" }}>{tr("Commande envoyée à {nom}", { nom: resto.name })}</p>
+                <p style={{ fontSize: 14, color: "#475569", margin: "0 0 16px" }}>{tr("Total : {total}. Le restaurant vous contactera au {tel} pour la confirmer.", { total: fmtMoney(commandeEnvoyee.total), tel: client.telephone })}</p>
+                <button onClick={() => { setCommandeOuverte(false); setCommandeEnvoyee(null); }} style={{ width: "100%", padding: 14, background: RED, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>{tr("Fermer")}</button>
               </div>
             ) : (<>
               <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
@@ -354,44 +356,44 @@ export default function RestaurantVitrine() {
                       <div style={{ fontSize: 12, color: "#64748b" }}>{fmtMoney((+l.prix || 0) * l.quantite)}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      <button onClick={() => changerQuantite(l.id, -1)} aria-label="Retirer" style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, cursor: "pointer" }}>−</button>
+                      <button onClick={() => changerQuantite(l.id, -1)} aria-label={tr("Retirer")} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, cursor: "pointer" }}>−</button>
                       <span style={{ minWidth: 18, textAlign: "center", fontWeight: 800 }}>{l.quantite}</span>
-                      <button onClick={() => changerQuantite(l.id, 1)} aria-label="Ajouter" style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, cursor: "pointer" }}>+</button>
+                      <button onClick={() => changerQuantite(l.id, 1)} aria-label={tr("Ajouter")} style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, cursor: "pointer" }}>+</button>
                     </div>
                   </div>
                 ))}
-                {lignesPanier.length === 0 && <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>Votre panier est vide : ajoutez des plats depuis le menu.</p>}
+                {lignesPanier.length === 0 && <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>{tr("Votre panier est vide : ajoutez des plats depuis le menu.")}</p>}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
-                <span>Total</span><span style={{ color: RED }}>{fmtMoney(totalPanier)}</span>
+                <span>{tr("Total")}</span><span style={{ color: RED }}>{fmtMoney(totalPanier)}</span>
               </div>
 
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {[["emporter", "🥡 À emporter"], ["livraison", "🛵 Livraison"], ["sur_place", "🪑 Sur place"]].map(([v, lbl]) => (
+                  {[["emporter", tr("🥡 À emporter")], ["livraison", tr("🛵 Livraison")], ["sur_place", tr("🪑 Sur place")]].map(([v, lbl]) => (
                     <button key={v} onClick={() => setClient(c => ({ ...c, type_service: v }))}
                       style={{ flex: 1, minWidth: 100, padding: "10px 8px", borderRadius: 10, border: `1.5px solid ${client.type_service === v ? RED : "#e2e8f0"}`, background: client.type_service === v ? `${RED}10` : "white", color: client.type_service === v ? RED : "#334155", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                       {lbl}
                     </button>
                   ))}
                 </div>
-                <input value={client.nom} onChange={e => setClient(c => ({ ...c, nom: e.target.value }))} placeholder="Votre nom *" autoComplete="name"
+                <input value={client.nom} onChange={e => setClient(c => ({ ...c, nom: e.target.value }))} placeholder={tr("Votre nom *")} autoComplete="name"
                   style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
-                <input value={client.telephone} onChange={e => setClient(c => ({ ...c, telephone: e.target.value }))} placeholder="Votre téléphone *" type="tel" autoComplete="tel"
+                <input value={client.telephone} onChange={e => setClient(c => ({ ...c, telephone: e.target.value }))} placeholder={tr("Votre téléphone *")} type="tel" autoComplete="tel"
                   style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
                 {client.type_service === "livraison" && (
-                  <input value={client.adresse} onChange={e => setClient(c => ({ ...c, adresse: e.target.value }))} placeholder="Adresse de livraison *" autoComplete="street-address"
+                  <input value={client.adresse} onChange={e => setClient(c => ({ ...c, adresse: e.target.value }))} placeholder={tr("Adresse de livraison *")} autoComplete="street-address"
                     style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
                 )}
                 <textarea value={client.notes} onChange={e => setClient(c => ({ ...c, notes: e.target.value }))} rows={2}
-                  placeholder={client.type_service === "sur_place" ? "Heure d'arrivée, nombre de personnes… (facultatif)" : "Précisions (facultatif)"}
+                  placeholder={client.type_service === "sur_place" ? tr("Heure d'arrivée, nombre de personnes… (facultatif)") : tr("Précisions (facultatif)")}
                   style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", resize: "vertical" }} />
               </div>
 
               {erreurCommande && <p style={{ color: "#b91c1c", fontSize: 13, fontWeight: 600, margin: "12px 0 0" }}>{erreurCommande}</p>}
               <button onClick={envoyerCommande} disabled={envoi || lignesPanier.length === 0}
                 style={{ width: "100%", marginTop: 14, padding: 14, background: RED, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: envoi || lignesPanier.length === 0 ? 0.6 : 1 }}>
-                {envoi ? "⏳ Envoi…" : `Envoyer la commande au restaurant`}
+                {envoi ? tr("⏳ Envoi…") : tr("Envoyer la commande au restaurant")}
               </button>
             </>)}
           </div>
@@ -401,9 +403,9 @@ export default function RestaurantVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{resto.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Restaurant</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Restaurant")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", border: "1px solid #e2e8f0", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", border: "1px solid #e2e8f0", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>
