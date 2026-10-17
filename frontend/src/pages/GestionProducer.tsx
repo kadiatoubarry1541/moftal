@@ -11,6 +11,7 @@ import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import CarreauPhoto from "../components/CarreauPhoto";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -312,6 +313,10 @@ export default function GestionProducer() {
             {products.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun produit encore.</p>}
             {filtrer(products, recherche).map(p => (
               <div key={p.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
+                {/* Case photo : la photo apparaît sur le site */}
+                <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={COLOR}
+                  onChange={url => setProducts(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))}
+                  style={{ float: "left", marginInlineEnd: 12 }} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{p.nom}</div>

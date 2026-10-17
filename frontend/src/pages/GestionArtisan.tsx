@@ -11,6 +11,7 @@ import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import CarreauPhoto from "../components/CarreauPhoto";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -397,6 +398,10 @@ export default function GestionArtisan() {
             {services.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun service encore.</p>}
             {filtrer(services, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
+                {/* Case photo : la photo apparaît sur le site */}
+                <CarreauPhoto tenantCode={tenantCode!} articleId={s.id} imageUrl={s.image_url} couleur={COLOR}
+                  onChange={url => setServices(xs => xs.map(x => x.id === s.id ? { ...x, image_url: url } : x))}
+                  style={{ float: "left", marginInlineEnd: 12 }} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{s.nom}</div>

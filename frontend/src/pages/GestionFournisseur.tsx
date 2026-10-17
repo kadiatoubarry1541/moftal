@@ -11,6 +11,7 @@ import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import CarreauPhoto from "../components/CarreauPhoto";
 
 const BASE = (code: string) => `/api/supplier-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -293,7 +294,7 @@ export default function GestionFournisseur() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: CYAN_BG }}>
-                    {["Produit","Catégorie","Prix gros","Prix détail","Stock","Unité","Action"].map(h => (
+                    {["Photo","Produit","Catégorie","Prix gros","Prix détail","Stock","Unité","Action"].map(h => (
                       <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontWeight: 700, color: "#0f172a", borderBottom: `2px solid ${CYAN_BORDER}` }}>{h}</th>
                     ))}
                   </tr>
@@ -301,6 +302,11 @@ export default function GestionFournisseur() {
                 <tbody>
                   {filtrer(products, recherche).map(p => (
                     <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "6px 12px" }}>
+                        {/* Case photo : la photo apparaît sur le site */}
+                        <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={CYAN} taille={56}
+                          onChange={url => setProducts(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))} />
+                      </td>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a" }}>{p.nom}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>
                       <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(p.prix_gros || 0).toLocaleString("fr-FR")} GNF</td>

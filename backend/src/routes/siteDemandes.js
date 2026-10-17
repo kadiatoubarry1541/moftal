@@ -7,6 +7,7 @@ import { notifierMembreEtablissement } from '../utils/notificationsEtablissement
 import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 // Messages envoyés depuis le site d'un établissement (demande d'information,
 // devis, réservation, commande d'une boutique…). Ils arrivent directement dans
@@ -162,5 +163,34 @@ siteMgmtRouter.put('/:tenantCode/coordonnees', authenticate, verifyTenant, async
     );
     await syncAccountFromTenant(req.params.tenantCode);
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── Photo de chaque article (produit, service, bien) ───────────────────────
+// Une case photo à côté de chaque article de la gestion ; la photo apparaît
+// sur le site. La table vient du secteur de l'établissement (jamais du client).
+const TABLE_ARTICLES = {
+  artisan: 'artisan_services', beauty: 'beauty_services', producer: 'producer_products',
+  vendor: 'retailer_products', retailer: 'retailer_products', supplier: 'supplier_products',
+  broker: 'immo_properties', immobilier: 'immo_properties',
+};
+const colonnesPhotoArticle = {};
+const preparerPhotoArticle = (table) => (colonnesPhotoArticle[table] ||= sequelize.query(
+  `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS image_url TEXT`
+).catch((e) => { delete colonnesPhotoArticle[table]; throw e; }));
+
+siteMgmtRouter.put('/:tenantCode/articles/:id/photo', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const table = TABLE_ARTICLES[req.tenant?.type];
+    if (!table) return res.status(400).json({ success: false, message: "Les photos d'articles ne sont pas prévues pour ce secteur." });
+    await preparerPhotoArticle(table);
+    const image = req.body?.image ? await photoDepuisFormulaire(req.body.image, { proprietaire: req.params.tenantCode, usage: 'photo-article' }) : null;
+    if (req.body?.image && !image) return res.status(400).json({ success: false, message: 'Image illisible. Essayez une autre photo.' });
+    const [rows] = await sequelize.query(
+      `UPDATE ${table} SET image_url = :image WHERE id = :id AND tenant_code = :code RETURNING id, image_url`,
+      { replacements: { image, id: req.params.id, code: req.params.tenantCode } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Article introuvable.' });
+    res.json({ success: true, article: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
