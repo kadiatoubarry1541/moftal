@@ -369,6 +369,12 @@ export default function GestionRestaurant() {
               📷 <b>{dishes.filter(d => !d.image_url).length} plat(s) sans photo.</b> Les clients choisissent avec les yeux : touchez « 📷 Photo » à côté d'un plat pour ajouter sa photo, elle apparaît tout de suite sur votre site.
             </div>
           )}
+          {/* Rappel : un menu sans photos ne donne pas envie */}
+          {dishes.some(d => !d.image_url) && (
+            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#9a3412" }}>
+              📷 <b>{dishes.filter(d => !d.image_url).length} plat(s) sans photo.</b> Les clients choisissent avec les yeux : touchez « 📷 Photo » à côté d'un plat pour ajouter sa photo, elle apparaît tout de suite sur votre site.
+            </div>
+          )}
           {/* Group by category */}
           {[...CATEGORIES, "Autres"].map(cat => {
             // « Autres » : plats d'une catégorie qui n'est pas dans la liste (jamais cachés)
