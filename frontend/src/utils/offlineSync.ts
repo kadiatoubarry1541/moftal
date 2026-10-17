@@ -520,9 +520,15 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
     return queuedResponse(item ?? (tempId ? { ...(body || {}), id: tempId, _horsLigne: true } : body));
   };
 
-  // S'il reste des opérations en attente, les nouvelles passent derrière (ordre conservé)
-  if (!navigator.onLine || status.pending > 0) {
-    if (status.pending > 0 && navigator.onLine) void syncNow();
+  // Des opérations attendent encore ? Avec la connexion, on les envoie d'abord.
+  if (navigator.onLine && status.pending > 0) await syncNow().catch(() => {});
+  // Sans connexion : sur l'appareil. Avec la connexion, une opération qui dépend
+  // d'un enregistrement pas encore envoyé passe derrière lui ; toutes les autres
+  // partent tout de suite au serveur. Une opération restée bloquée dans la file
+  // ne retient jamais les suivantes (sinon l'écran disait « enregistré » et rien
+  // n'arrivait en base).
+  const dependDUneAttente = [req.url, bodyText || ""].some((t) => t.includes(TEMP_PREFIX));
+  if (!navigator.onLine || (status.pending > 0 && dependDUneAttente)) {
     return enqueue();
   }
   try {
