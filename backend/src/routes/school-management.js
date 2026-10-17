@@ -10,7 +10,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
-import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel } from './schoolCoursBibliotheque.js';
+import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const router = attraperErreursAsync(express.Router());
@@ -242,6 +242,7 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureStaffPhotoColumn();
+    await preparerColonnesSite('school_staff');
     // Le personnel est aussi la liste des employés : chacun avec son accès à la gestion
     await employesDansLePersonnel(req.params.tenantCode, 'school_staff');
     const rows = await sequelize.query(`SELECT * FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
@@ -265,10 +266,11 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const mats = matieres || (specialite ? [specialite] : []);
+    await preparerColonnesSite('school_staff');
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-personnel' });
     const [rows] = await sequelize.query(
-      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo, nh }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h,profil,sur_site) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh,:profil,COALESCE(:surSite,true)) RETURNING *`,
+      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo, nh, ...champsSitePersonnel(req.body) }, type: sequelize.QueryTypes.INSERT }
     );
     if (nh) {
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
@@ -290,12 +292,14 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
     // Fiche reliée à une autre personne : l'ancienne perd son accès
     if (ancien?.numero_h && String(ancien.numero_h).toLowerCase() !== String(nh || '').toLowerCase()) await retirerAccesPersonnel(req.params.tenantCode, ancien.numero_h);
     const mats = matieres || (specialite ? [specialite] : []);
+    await preparerColonnesSite('school_staff');
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
     await sequelize.query(
       `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=COALESCE(:role,role),matieres=:mats::jsonb,specialite=:spec,matiere=:spec,
-         telephone=:tel,email=COALESCE(:email,email),photo_url=COALESCE(:photo,photo_url),numero_h=:nh
+         telephone=:tel,email=COALESCE(:email,email),photo_url=COALESCE(:photo,photo_url),numero_h=:nh,
+         profil=COALESCE(:profil,profil),sur_site=COALESCE(:surSite,sur_site)
        WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, id: req.params.id, code: req.params.tenantCode } }
+      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, ...champsSitePersonnel(req.body), id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -333,9 +337,12 @@ router.post('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, r
   try {
     const { nom, niveau, capacite, professeur_principal_id, professeur_id } = req.body;
     if (!nom) return res.status(400).json({ success: false, message: 'Nom obligatoire.' });
+    // Photo de la salle (facultative), montrée sur le site
+    await preparerColonnesSite('school_classrooms');
+    const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-classe' });
     const [rows] = await sequelize.query(
-      `INSERT INTO school_classrooms (tenant_code,nom,niveau,capacite,professeur_principal_id) VALUES(:code,:nom,:niveau,:cap,:prof) RETURNING *, professeur_principal_id as professeur_id`,
-      { replacements: { code: req.params.tenantCode, nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_classrooms (tenant_code,nom,niveau,capacite,professeur_principal_id,photo_url) VALUES(:code,:nom,:niveau,:cap,:prof,:photo) RETURNING *, professeur_principal_id as professeur_id`,
+      { replacements: { code: req.params.tenantCode, nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null, photo }, type: sequelize.QueryTypes.INSERT }
     );
     const [nb] = await sequelize.query(
       `SELECT COUNT(*)::int as c FROM school_students WHERE tenant_code=:code AND statut='actif' AND classroom_id IS NULL AND niveau=:niveau`,
@@ -349,9 +356,11 @@ router.put('/:tenantCode/classrooms/:id', authenticate, verifyTenant, async (req
   try {
     const { nom, niveau, capacite, professeur_principal_id, professeur_id } = req.body;
     if (!nom) return res.status(400).json({ success: false, message: 'Nom obligatoire.' });
+    await preparerColonnesSite('school_classrooms');
+    const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-classe' });
     await sequelize.query(
-      `UPDATE school_classrooms SET nom=:nom,niveau=:niveau,capacite=:cap,professeur_principal_id=:prof WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE school_classrooms SET nom=:nom,niveau=:niveau,capacite=:cap,professeur_principal_id=:prof,photo_url=COALESCE(:photo,photo_url) WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null, photo, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }

@@ -98,6 +98,19 @@ router.get('/:type/:tenantCode', async (req, res) => {
   }
 });
 
+// Matières distinctes d'après les fiches du personnel (matiere, specialite, matieres[])
+function matieresDe(rows) {
+  const vues = new Map();
+  for (const r of rows) {
+    const liste = [r.matiere, r.specialite, ...(Array.isArray(r.matieres) ? r.matieres : [])];
+    for (const m of liste) {
+      const t = String(m || '').trim();
+      if (t && !vues.has(t.toLowerCase())) vues.set(t.toLowerCase(), t);
+    }
+  }
+  return [...vues.values()].sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
 // ─── GET /api/pro-public/:type/:tenantCode/data ────────────────────────────
 // Données publiques spécifiques au type (staff, projets, articles, biens…)
 router.get('/:type/:tenantCode/data', async (req, res) => {
@@ -111,11 +124,17 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(DISTINCT niveau) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role,matiere,photo_url FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
-          q(`SELECT nom,niveau,capacite FROM school_classrooms WHERE tenant_code=:code ORDER BY nom`, { code }),
+          // Enseignants montrés sur le site (photo, nom, rôle, matières, profil)
+          q(`SELECT s.nom, s.prenom, s.role, to_jsonb(s)->>'matiere' AS matiere, to_jsonb(s)->>'specialite' AS specialite, to_jsonb(s)->'matieres' AS matieres,
+                    to_jsonb(s)->>'photo_url' AS photo_url, to_jsonb(s)->>'profil' AS profil
+               FROM school_staff s WHERE s.tenant_code=:code AND s.is_active=true AND COALESCE((to_jsonb(s)->>'sur_site')::boolean, true)
+              ORDER BY s.role, s.nom LIMIT 60`, { code }),
+          q(`SELECT c.nom, c.niveau, c.capacite, to_jsonb(c)->>'photo_url' AS photo_url FROM school_classrooms c WHERE c.tenant_code=:code ORDER BY c.niveau, c.nom`, { code }),
           q(`SELECT type_frais, MIN(montant) as min_montant, MAX(montant) as max_montant FROM school_fees WHERE tenant_code=:code GROUP BY type_frais`, { code }),
         ]);
-        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), classes: +(clsCnt.c||0), niveaux: +(niveauxCnt.c||0) }, staff, classrooms, feeTypes });
+        // Matières réellement enseignées : celles des fiches du personnel
+        const matieresEcole = await q(`SELECT to_jsonb(s)->>'matiere' AS matiere, to_jsonb(s)->>'specialite' AS specialite, to_jsonb(s)->'matieres' AS matieres FROM school_staff s WHERE s.tenant_code=:code AND s.is_active=true`, { code });
+        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), classes: +(clsCnt.c||0), niveaux: +(niveauxCnt.c||0) }, staff, classrooms, feeTypes, matieres: matieresDe(matieresEcole) });
       }
 
       case 'madrasa': {
@@ -123,9 +142,14 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM madrasa_staff WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM madrasa_students WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM madrasa_halaqas WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role FROM madrasa_staff WHERE tenant_code=:code ORDER BY nom LIMIT 12`, { code }),
+          q(`SELECT s.nom, s.prenom, s.role, s.specialite, to_jsonb(s)->>'photo_url' AS photo_url, to_jsonb(s)->>'profil' AS profil
+               FROM madrasa_staff s WHERE s.tenant_code=:code AND COALESCE((to_jsonb(s)->>'sur_site')::boolean, true) ORDER BY s.nom LIMIT 60`, { code }),
         ]);
-        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), halaqas: +(halCnt.c||0) }, staff });
+        const [halaqas, specialites] = await Promise.all([
+          q(`SELECT h.nom, h.niveau, h.capacite, to_jsonb(h)->>'photo_url' AS photo_url FROM madrasa_halaqas h WHERE h.tenant_code=:code ORDER BY h.nom`, { code }),
+          q(`SELECT to_jsonb(s)->>'specialite' AS specialite FROM madrasa_staff s WHERE s.tenant_code=:code`, { code }),
+        ]);
+        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), halaqas: +(halCnt.c||0) }, staff, halaqas, matieres: matieresDe(specialites) });
       }
 
       case 'mosque': {

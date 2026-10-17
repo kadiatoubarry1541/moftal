@@ -5,6 +5,8 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { avecAccesEmployes } from '../utils/accesEmployes.js';
 import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
 import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
+import { syncAccountFromTenant } from '../utils/tenantSync.js';
 
 // Messages envoyés depuis le site d'un établissement (demande d'information,
 // devis, réservation, commande d'une boutique…). Ils arrivent directement dans
@@ -124,3 +126,41 @@ siteMgmtRouter.patch('/:tenantCode/demandes/:id', authenticate, verifyTenant, as
 // Photos du site (couverture + galerie) pour tous les établissements :
 // /api/site-mgmt/:tenantCode/photos-site (Espace Pro → Photos du site)
 ajouterRoutesPhotosSite(siteMgmtRouter, authenticate, verifyTenant);
+
+// ─── Coordonnées publiées sur le site ───────────────────────────────────────
+// Le responsable écrit lui-même ce que le site affiche : présentation,
+// téléphone, e-mail, adresse, horaires. Enregistré dans la gestion (et recopié
+// sur le compte pro), le site est à jour tout de suite.
+const CHAMPS_COORDONNEES = { description: 2000, phone: 50, email: 255, address: 500, horaires: 255, phone_urgence: 50 };
+
+siteMgmtRouter.get('/:tenantCode/coordonnees', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureTenantExtraColumns();
+    const [t] = await sequelize.query(
+      `SELECT name, description, phone, email, address, horaires, phone_urgence FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, coordonnees: t || {} });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+siteMgmtRouter.put('/:tenantCode/coordonnees', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureTenantExtraColumns();
+    const valeurs = {};
+    for (const [champ, max] of Object.entries(CHAMPS_COORDONNEES)) {
+      if (req.body?.[champ] !== undefined) valeurs[champ] = String(req.body[champ] || '').trim().slice(0, max);
+    }
+    if (valeurs.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valeurs.email)) {
+      return res.status(400).json({ success: false, message: "Adresse e-mail invalide." });
+    }
+    const champs = Object.keys(valeurs);
+    if (!champs.length) return res.status(400).json({ success: false, message: 'Aucune information envoyée.' });
+    await sequelize.query(
+      `UPDATE management_tenants SET ${champs.map((c) => `${c} = :${c}`).join(', ')} WHERE tenant_code = :code`,
+      { replacements: { ...valeurs, code: req.params.tenantCode } }
+    );
+    await syncAccountFromTenant(req.params.tenantCode);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});

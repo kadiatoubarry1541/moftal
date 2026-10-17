@@ -14,6 +14,7 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelMessage";
 import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
 import PhotosSite from "../components/ecole/PhotosSite";
+import CoordonneesSite from "../components/CoordonneesSite";
 import NotificationsApp from "../components/ecole/NotificationsApp";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
@@ -149,7 +150,7 @@ export default function GestionEnseignement({ mode }: Props) {
       { id: "inscriptions" as Section, label: tr("Inscriptions"),          icon: "M12 4v16m8-8H4" },
       { id: "avis"         as Section, label: tr("Avis parents/élèves"),   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
     ] : []),
-    { id: "photos",        label: tr("Photos du site"),  icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
+    { id: "photos",        label: tr("🌐 Mon site"),  icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
     { id: "notifications", label: tr("Notifications"),   icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
     { id: "settings",    label: tr("Paramètres"),             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
@@ -241,6 +242,7 @@ export default function GestionEnseignement({ mode }: Props) {
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
     if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
+    if (s === "photos")      { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "groupes")     { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "presences")   { loadG(); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "notes")       { get("/grades").then(d => d.grades && setGrades(d.grades)); get("/students").then(d => d.students && setStudents(d.students)); }
@@ -317,6 +319,8 @@ export default function GestionEnseignement({ mode }: Props) {
         if (!form.nom) { showToast(tr("Nom obligatoire"), false); return; }
         const body: any = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
         if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
+        // Photo de la salle (facultative) : montrée sur le site
+        if (typeof form.photo_url === "string" && form.photo_url.startsWith("data:")) body.photo_url = form.photo_url;
         if (form.id) {
           const d = await put(`/${groupEP}/${form.id}`, body);
           if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(M("Halaqa modifiée", "Classe modifiée")); }
@@ -569,6 +573,15 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Profil affiché sur le site")}</label>
+            <textarea value={form.profil || ""} maxLength={600} rows={3} onChange={e=>setForm((f:any)=>({...f,profil:e.target.value}))}
+              placeholder={tr("Ex. Professeur de mathématiques, licence de l'Université de Conakry, 8 ans d'expérience.")} className={inp} style={{ ...inpSt, resize: "vertical", fontFamily: "inherit" }} />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+            <input type="checkbox" checked={form.sur_site !== false} onChange={e=>setForm((f:any)=>({...f,sur_site:e.target.checked}))} />
+            {tr("Afficher sur le site (photo, nom, matière et profil)")}
+          </label>
           {peutDonnerAcces && (
             <div style={{ marginTop: 12 }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Accès à la gestion")}</label>
@@ -608,6 +621,8 @@ export default function GestionEnseignement({ mode }: Props) {
               </select>
             </div>
           </div>
+          <p style={{ margin: "12px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Photo de la salle : facultative, elle rend votre site plus vivant.")}</p>
+          {champPhoto}
         </>)}
 
         {modal === "edit-schedule" && (<>
@@ -998,6 +1013,12 @@ export default function GestionEnseignement({ mode }: Props) {
                         {s.telephone && <div>📞 {s.telephone}</div>}
                         {s.numero_h && <div style={{ fontFamily:"monospace",color:"#94a3b8",fontSize:11 }}>H: {s.numero_h}</div>}
                       </div>
+                      <div style={{ marginTop:8, display:"flex", gap:6, flexWrap:"wrap" }}>
+                        {s.sur_site === false
+                          ? <span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#64748b",borderRadius:20,fontSize:11,fontWeight:700 }}>{tr("Pas sur le site")}</span>
+                          : <span style={{ padding:"2px 8px",background:"#f0fdf4",color:"#166534",borderRadius:20,fontSize:11,fontWeight:700 }}>🌐 {tr("Sur le site")}</span>}
+                        {s.sur_site !== false && !s.photo_url && <span style={{ padding:"2px 8px",background:"#fff7ed",color:"#c2410c",borderRadius:20,fontSize:11,fontWeight:700 }}>📷 {tr("Ajoutez sa photo")}</span>}
+                      </div>
                       {s.acces_gestion && s.acces_gestion !== "aucun" && (
                         <div style={{ marginTop:8 }}><span style={{ padding:"2px 8px",background:"#eff6ff",color:"#1d4ed8",borderRadius:20,fontSize:11,fontWeight:700 }}>🔑 {tr(ACCES_GESTION.find(a=>a.v===s.acces_gestion)?.court || "")}</span></div>
                       )}
@@ -1325,7 +1346,30 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── AVIS PARENTS / ÉLÈVES ── */}
           {section === "cours" && tenantCode && <PointageCours tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
           {section === "bibliotheque" && tenantCode && <BibliothequeGestion tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
-          {section === "photos" && tenantCode && <PhotosSite tenantCode={tenantCode} apiName={apiName} couleur={V.color} lienSite={`https://moftal.com/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />}
+          {section === "photos" && tenantCode && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* Ce que le site montre, venu de la gestion : à compléter ici ou dans chaque rubrique */}
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
+                <p style={{ margin: "0 0 10px", fontWeight: 800, fontSize: 15, color: "#0f172a" }}>{tr("🌐 Votre site se remplit avec votre gestion")}</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+                  {[
+                    { icone: "👨‍🏫", titre: tr(V.staffLabel), detail: tr("{n} sur le site, dont {p} avec photo", { n: staff.filter(x => x.sur_site !== false).length, p: staff.filter(x => x.sur_site !== false && x.photo_url).length }), aller: "staff" as Section },
+                    { icone: "🏫", titre: tr(V.groupes), detail: tr("{n} proposée(s), {p} avec photo", { n: groupes.length, p: groupes.filter((g: any) => g.photo_url).length }), aller: "groupes" as Section },
+                    { icone: "📚", titre: tr("Matières"), detail: tr("Celles de vos enseignants (fiche Personnel → Matière)"), aller: "staff" as Section },
+                  ].map(c => (
+                    <button key={c.titre} onClick={() => loadSection(c.aller)}
+                      style={{ textAlign: "start", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>{c.icone} {c.titre}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{c.detail}</div>
+                      <div style={{ fontSize: 12, color: V.color, fontWeight: 700, marginTop: 4 }}>{tr("Compléter →")}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <CoordonneesSite tenantCode={tenantCode} couleur={V.color} lienSite={`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />
+              <PhotosSite tenantCode={tenantCode} apiName={apiName} couleur={V.color} lienSite={`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />
+            </div>
+          )}
           {section === "notifications" && tenantCode && <NotificationsApp tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
 
           {section === "avis" && (() => {

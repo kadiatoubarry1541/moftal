@@ -91,6 +91,26 @@ export async function personnelRelie({ numero_h, telephone, email }) {
   return { nh: trouve.personne.numero_h || trouve.personne.numeroH || null, personne: trouve.personne };
 }
 
+// Ce que le site de l'école montre de son personnel et de ses classes : un
+// court profil par enseignant (diplômes, expérience…), le choix de l'afficher
+// ou non sur le site, et une photo par classe (facultative).
+const colonnesSitePretes = {};
+export function preparerColonnesSite(table) {
+  colonnesSitePretes[table] ||= sequelize.query(
+    /_staff$/.test(table)
+      ? `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS profil TEXT; ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS sur_site BOOLEAN NOT NULL DEFAULT true;`
+      : `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS photo_url TEXT;`
+  ).catch((e) => { delete colonnesSitePretes[table]; throw e; });
+  return colonnesSitePretes[table];
+}
+/** Profil et affichage sur le site envoyés par le formulaire (null = inchangé). */
+export function champsSitePersonnel(body = {}) {
+  return {
+    profil: body.profil === undefined ? null : String(body.profil || '').trim().slice(0, 600),
+    surSite: typeof body.sur_site === 'boolean' ? body.sur_site : null,
+  };
+}
+
 /** Prénom / nom à afficher : ceux saisis, sinon ceux du compte, sinon le contact. */
 export function nomPersonnel({ prenom, nom, telephone, email }, personne) {
   const p = String(prenom || '').trim() || (personne?.prenom && personne.prenom !== 'Nouveau' ? personne.prenom : '');
