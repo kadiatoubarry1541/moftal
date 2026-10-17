@@ -26,8 +26,10 @@ function evolution(actuel: number, avant: number) {
 
 // Barre d'outils en tête du tableau de bord : « 📊 Rapport du mois » et
 // « 👥 Employés » (propriétaire seulement). Un employé voit son niveau d'accès.
-export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rapport = true }: {
-  base: string; etablissement?: { name?: string; logo_url?: string | null; acces_employe?: string }; couleur?: string; rapport?: boolean;
+// onEmployes : l'établissement a sa propre liste (école / madrasa : le Personnel
+// est la liste des employés), le bouton y mène au lieu d'ouvrir une 2e liste.
+export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rapport = true, onEmployes }: {
+  base: string; etablissement?: { name?: string; logo_url?: string | null; acces_employe?: string }; couleur?: string; rapport?: boolean; onEmployes?: () => void;
 }) {
   const { tr } = useTraduction();
   const [ouvert, setOuvert] = useState(false);
@@ -43,7 +45,7 @@ export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rappor
             👤 {tr("Accès employé")} · {employe === "complet" ? tr("complet") : tr("limité")}
           </span>
         ) : (
-          <button onClick={() => setEmployes(true)} style={bouton}>{tr("👥 Employés")}</button>
+          <button onClick={() => onEmployes ? onEmployes() : setEmployes(true)} style={bouton}>{tr("👥 Employés")}</button>
         )}
         {rapport && employe !== "limite" && <button onClick={() => setOuvert(true)} style={bouton}>{tr("📊 Rapport du mois")}</button>}
       </div>

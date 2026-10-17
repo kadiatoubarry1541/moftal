@@ -17,7 +17,7 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
-import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
@@ -312,11 +312,16 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 
 // ── Personnel enseignant ───────────────────────────────────────────────────────
 router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) => {
-  const [staff] = await sequelize.query(
-    `SELECT * FROM madrasa_staff WHERE tenant_code = :tc ORDER BY nom`,
-    { replacements: { tc: req.params.tenantCode } }
-  );
-  res.json({ success: true, staff });
+  try {
+    // Le personnel est aussi la liste des employés : chacun avec son accès à la gestion
+    await employesDansLePersonnel(req.params.tenantCode, 'madrasa_staff');
+    const [staff] = await sequelize.query(
+      `SELECT * FROM madrasa_staff WHERE tenant_code = :tc ORDER BY nom`,
+      { replacements: { tc: req.params.tenantCode } }
+    );
+    const acces = await accesDuPersonnel(req.params.tenantCode);
+    res.json({ success: true, staff: staff.map((r) => ({ ...r, acces_gestion: acces.get(String(r.numero_h || '').trim().toLowerCase()) || 'aucun' })) });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
@@ -327,6 +332,8 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
   }
   const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
   const { prenom, nom } = nomPersonnel({ ...req.body }, personne);
+  const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
+  if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
   await ensureColonnesPhoto();
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-personnel' });
   const [rows] = await sequelize.query(
@@ -345,6 +352,11 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
   const { role, specialite, telephone, email, numero_h, photo_url } = req.body;
   const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
   const { prenom, nom } = nomPersonnel({ ...req.body }, personne);
+  const [[ancien]] = await sequelize.query(`SELECT numero_h FROM madrasa_staff WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
+  const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role, niveau: req.body.acces_gestion });
+  if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
+  // Fiche reliée à une autre personne : l'ancienne perd son accès
+  if (ancien?.numero_h && String(ancien.numero_h).toLowerCase() !== String(nh || '').toLowerCase()) await retirerAccesPersonnel(req.params.tenantCode, ancien.numero_h);
   await ensureColonnesPhoto();
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
   await sequelize.query(
@@ -357,10 +369,12 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
 });
 
 router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
-  await sequelize.query(
-    `DELETE FROM madrasa_staff WHERE id = :id AND tenant_code = :tc`,
+  const [rows] = await sequelize.query(
+    `DELETE FROM madrasa_staff WHERE id = :id AND tenant_code = :tc RETURNING numero_h`,
     { replacements: { id: req.params.id, tc: req.params.tenantCode } }
   );
+  // Retiré du personnel = plus d'accès à la gestion
+  await retirerAccesPersonnel(req.params.tenantCode, rows?.[0]?.numero_h);
   res.json({ success: true });
 });
 
