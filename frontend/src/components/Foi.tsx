@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTraduction } from '../i18n/traduction'
 
 interface FoiProps {
   userData: any
@@ -6,6 +7,7 @@ interface FoiProps {
 
 export function Foi({ userData }: FoiProps) {
   const [activeTab, setActiveTab] = useState('prayers')
+  const { tr } = useTraduction()
 
   const tabs = [
     { id: 'prayers', label: 'Prières', icon: '🕌' },
@@ -17,7 +19,7 @@ export function Foi({ userData }: FoiProps) {
   return (
     <div className="p-5 max-w-6xl mx-auto">
       <div className="text-center mb-8">
-        <h3 className="text-purple-600 mb-2 text-3xl font-bold">🕌 Foi de {userData.prenom} {userData.nomFamille}</h3>
+        <h3 className="text-purple-600 mb-2 text-3xl font-bold">🕌 {tr("Foi de {prenom} {nom}", { prenom: userData.prenom, nom: userData.nomFamille })}</h3>
         <p className="text-purple-400 text-lg">NumeroH: {userData.numeroH}</p>
       </div>
 
@@ -33,7 +35,7 @@ export function Foi({ userData }: FoiProps) {
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="text-lg">{tab.icon}</span>
-            <span>{tab.label}</span>
+            <span>{tr(tab.label)}</span>
           </button>
         ))}
       </div>
@@ -41,15 +43,15 @@ export function Foi({ userData }: FoiProps) {
       <div className="foi-content">
         {activeTab === 'prayers' && (
           <div className="prayers-tab">
-            <h4>🕌 Prières</h4>
+            <h4>🕌 {tr("Prières")}</h4>
             <div className="prayers-grid">
               <div className="prayer-card">
-                <h5>Prière du Matin</h5>
-                <p>Bénédictions pour commencer la journée</p>
+                <h5>{tr("Prière du Matin")}</h5>
+                <p>{tr("Bénédictions pour commencer la journée")}</p>
               </div>
               <div className="prayer-card">
-                <h5>Prière du Soir</h5>
-                <p>Remerciements pour la journée</p>
+                <h5>{tr("Prière du Soir")}</h5>
+                <p>{tr("Remerciements pour la journée")}</p>
               </div>
             </div>
           </div>
@@ -57,10 +59,10 @@ export function Foi({ userData }: FoiProps) {
 
         {activeTab === 'verses' && (
           <div className="verses-tab">
-            <h4>📖 Versets Inspirants</h4>
+            <h4>📖 {tr("Versets Inspirants")}</h4>
             <div className="verses-list">
               <div className="verse-item">
-                <p>"La patience est la clé de toutes les bénédictions"</p>
+                <p>"{tr("La patience est la clé de toutes les bénédictions")}"</p>
               </div>
             </div>
           </div>
@@ -68,18 +70,18 @@ export function Foi({ userData }: FoiProps) {
 
         {activeTab === 'guidance' && (
           <div className="guidance-tab">
-            <h4>🌟 Guidance Spirituelle</h4>
+            <h4>🌟 {tr("Guidance Spirituelle")}</h4>
             <div className="guidance-content">
-              <p>Conseils spirituels et guidance</p>
+              <p>{tr("Conseils spirituels et guidance")}</p>
             </div>
           </div>
         )}
 
         {activeTab === 'community' && (
           <div className="community-tab">
-            <h4>👥 Communauté de Foi</h4>
+            <h4>👥 {tr("Communauté de Foi")}</h4>
             <div className="community-content">
-              <p>Rejoignez la communauté spirituelle</p>
+              <p>{tr("Rejoignez la communauté spirituelle")}</p>
             </div>
           </div>
         )}

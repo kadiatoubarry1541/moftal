@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTraduction } from '../i18n/traduction';
 
 const TERMS_KEY = 'terms_accepted_v1';
 
@@ -102,6 +103,7 @@ interface TermsModalProps {
 }
 
 export function TermsModal({ onAccept, onDecline }: TermsModalProps) {
+  const { tr } = useTraduction();
   const [checked, setChecked] = useState(false);
   const [canAccept, setCanAccept] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -139,8 +141,8 @@ export function TermsModal({ onAccept, onDecline }: TermsModalProps) {
           style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
           <span style={{ fontSize: 24 }}>⚖️</span>
           <div>
-            <h2 className="text-white font-bold text-base leading-tight">Conditions d'Utilisation</h2>
-            <p className="text-blue-200 text-xs">Moftal — À lire attentivement avant de continuer</p>
+            <h2 className="text-white font-bold text-base leading-tight">{tr("Conditions d'Utilisation")}</h2>
+            <p className="text-blue-200 text-xs">{tr("Moftal — À lire attentivement avant de continuer")}</p>
           </div>
         </div>
 
@@ -154,20 +156,20 @@ export function TermsModal({ onAccept, onDecline }: TermsModalProps) {
                 {p.num}
               </span>
               <div>
-                <p className="font-bold text-gray-900 text-sm">{p.titre}</p>
-                <p className="text-gray-600 text-sm leading-relaxed">{p.texte}</p>
+                <p className="font-bold text-gray-900 text-sm">{tr(p.titre)}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{tr(p.texte)}</p>
               </div>
             </div>
           ))}
           <div className="text-center text-xs text-gray-400 pt-2 pb-1 border-t">
-            En acceptant, vous confirmez avoir lu et compris ces conditions.
+            {tr("En acceptant, vous confirmez avoir lu et compris ces conditions.")}
           </div>
         </div>
 
         {/* Pied */}
         <div className="px-5 py-4 border-t flex-shrink-0 bg-gray-50 space-y-3">
           {!canAccept && (
-            <p className="text-xs text-amber-600 text-center">⬇️ Faites défiler pour activer l'acceptation</p>
+            <p className="text-xs text-amber-600 text-center">⬇️ {tr("Faites défiler pour activer l'acceptation")}</p>
           )}
           <label className={`flex items-center gap-3 cursor-pointer select-none ${!canAccept ? 'opacity-40 pointer-events-none' : ''}`}>
             <input
@@ -177,19 +179,19 @@ export function TermsModal({ onAccept, onDecline }: TermsModalProps) {
               className="w-5 h-5 accent-blue-700 flex-shrink-0 cursor-pointer"
             />
             <span className="text-sm text-gray-700">
-              J'ai lu et j'accepte les <strong>Conditions d'Utilisation</strong> de la plateforme.
+              {tr("J'ai lu et j'accepte les")} <strong>{tr("Conditions d'Utilisation")}</strong> {tr("de la plateforme.")}
             </span>
           </label>
           <div className="flex gap-3">
             <button onClick={onDecline}
               className="flex-1 py-2.5 rounded-xl border-2 font-semibold text-sm text-gray-500 border-gray-200 hover:bg-gray-100 transition-all">
-              Refuser
+              {tr("Refuser")}
             </button>
             <button onClick={handleAccept}
               disabled={!checked || !canAccept}
               className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
-              Accepter ✓
+              {tr("Accepter")} ✓
             </button>
           </div>
         </div>

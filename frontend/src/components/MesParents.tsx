@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MediaUploader } from './MediaUploader'
 import { MediaReactions } from './MediaReactions'
+import { useTraduction } from '../i18n/traduction'
 
 interface UserData {
   numeroH: string
@@ -30,6 +31,7 @@ interface MediaItem {
 }
 
 export function MesParents({ userData }: { userData: UserData }) {
+  const { tr, locale } = useTraduction()
   const [activeSession, setActiveSession] = useState('enfance')
   const [showMediaUploader, setShowMediaUploader] = useState(false)
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
@@ -101,16 +103,16 @@ export function MesParents({ userData }: { userData: UserData }) {
   }
 
   const isForPartner = userData.genre === 'FEMME'
-  const title = isForPartner ? '👰 Ma Femme' : '👨‍👩‍👦 Mes Parents'
+  const title = isForPartner ? `👰 ${tr('Ma Femme')}` : `👨‍👩‍👦 ${tr('Mes Parents')}`
   const subtitle = isForPartner 
-    ? 'Partagez vos moments et recevez les notes de votre femme' 
-    : 'Partagez vos souvenirs et recevez les notes de vos parents'
+    ? tr('Partagez vos moments et recevez les notes de votre femme') 
+    : tr('Partagez vos souvenirs et recevez les notes de vos parents')
   const souvenirTitle = isForPartner
-    ? 'Nos souvenirs d\'ensemble'
-    : 'Nos souvenirs d\'ensemble'
+    ? tr("Nos souvenirs d'ensemble")
+    : tr("Nos souvenirs d'ensemble")
   const souvenirSubtitle = isForPartner
-    ? 'Moments précieux partagés avec ma femme'
-    : 'Moments précieux partagés avec mes parents'
+    ? tr('Moments précieux partagés avec ma femme')
+    : tr('Moments précieux partagés avec mes parents')
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -140,7 +142,7 @@ export function MesParents({ userData }: { userData: UserData }) {
               onClick={() => setActiveSession(session.id)}
             >
               <span className="text-2xl block mb-1">{session.icon}</span>
-              <span className="font-semibold text-sm block">{session.title}</span>
+              <span className="font-semibold text-sm block">{tr(session.title)}</span>
             </button>
           ))}
         </div>
@@ -149,13 +151,13 @@ export function MesParents({ userData }: { userData: UserData }) {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-slate-800">
-              {sessions.find(s => s.id === activeSession)?.title}
+              {tr(sessions.find(s => s.id === activeSession)?.title || '')}
             </h3>
             <button 
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm"
               onClick={() => setShowMediaUploader(true)}
             >
-              📷 Ajouter média
+              📷 {tr("Ajouter média")}
             </button>
           </div>
 
@@ -163,12 +165,12 @@ export function MesParents({ userData }: { userData: UserData }) {
           <div>
             {mediaItems.length === 0 ? (
               <div className="text-center py-12 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
-                <p className="text-slate-600 mb-4 text-lg">Aucun média partagé dans cette session</p>
+                <p className="text-slate-600 mb-4 text-lg">{tr("Aucun média partagé dans cette session")}</p>
                 <button 
                   className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md"
                   onClick={() => setShowMediaUploader(true)}
                 >
-                  🚀 Commencer à partager
+                  🚀 {tr("Commencer à partager")}
                 </button>
               </div>
             ) : (
@@ -198,7 +200,7 @@ export function MesParents({ userData }: { userData: UserData }) {
                         <p className="text-slate-700 mb-2">{media.caption}</p>
                       )}
                       <div className="text-xs text-slate-500 mb-3">
-                        📅 {new Date(media.date).toLocaleDateString('fr-FR', { 
+                        📅 {new Date(media.date).toLocaleDateString(locale, { 
                           year: 'numeric', 
                           month: 'long', 
                           day: 'numeric' 
@@ -224,22 +226,22 @@ export function MesParents({ userData }: { userData: UserData }) {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <h3 className="text-2xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
           <span className="text-slate-500" aria-hidden>☆</span>
-          Notes de {isForPartner ? 'ma femme' : 'mes parents'}
+          {isForPartner ? tr('Notes de ma femme') : tr('Notes de mes parents')}
         </h3>
         <div className="overflow-x-auto rounded-xl border-2 border-slate-300 bg-white shadow-sm">
-          <table className="min-w-full text-sm" aria-label="Notes">
+          <table className="min-w-full text-sm" aria-label={tr("Notes")}>
             <thead className="bg-slate-200 text-slate-800 border-b-2 border-slate-300">
               <tr>
-                {!isForPartner && <th scope="col" className="px-4 py-3 text-left font-semibold">Parents</th>}
-                <th scope="col" className="px-4 py-3 text-left font-semibold">Année</th>
-                <th scope="col" className="px-4 py-3 text-left font-semibold">Note</th>
+                {!isForPartner && <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Parents")}</th>}
+                <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Année")}</th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Note")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {parentNotes.length === 0 ? (
                 <tr>
                   <td colSpan={isForPartner ? 2 : 3} className="px-4 py-8 text-center text-slate-500 bg-slate-50">
-                    Aucune note. Renseignez une année et une note ci-dessus puis cliquez sur « Ajouter la note ».
+                    {tr("Aucune note. Renseignez une année et une note ci-dessus puis cliquez sur « Ajouter la note ».")}
                   </td>
                 </tr>
               ) : (
@@ -249,7 +251,7 @@ export function MesParents({ userData }: { userData: UserData }) {
                       <td className="px-4 py-3">
                         <span className="font-medium text-slate-800 flex items-center gap-2">
                           <span className="text-xl">{note.parent === 'papa' ? '👨' : '👩'}</span>
-                          {note.parent === 'papa' ? 'Papa' : 'Maman'}
+                          {note.parent === 'papa' ? tr('Papa') : tr('Maman')}
                         </span>
                       </td>
                     )}
@@ -284,9 +286,9 @@ export function MesParents({ userData }: { userData: UserData }) {
             </tbody>
           </table>
           <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 text-xs font-medium text-slate-600 rounded-b-xl flex flex-wrap items-center justify-between gap-2">
-            <span>Tableau Notes — {parentNotes.length} note{parentNotes.length !== 1 ? 's' : ''}</span>
+            <span>{parentNotes.length !== 1 ? tr("Tableau Notes — {n} notes", { n: parentNotes.length }) : tr("Tableau Notes — {n} note", { n: parentNotes.length })}</span>
             <span className="bg-purple-50 text-purple-800 px-3 py-1 rounded-lg font-semibold">
-              Note moyenne : {parentNotes.length > 0 ? (parentNotes.reduce((sum, note) => sum + note.note, 0) / parentNotes.length).toFixed(1) : '0.0'}/5 ★
+              {tr("Note moyenne : {moyenne}/5", { moyenne: parentNotes.length > 0 ? (parentNotes.reduce((sum, note) => sum + note.note, 0) / parentNotes.length).toFixed(1) : '0.0' })} ★
             </span>
           </div>
         </div>
@@ -303,7 +305,7 @@ export function MesParents({ userData }: { userData: UserData }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-2xl font-semibold text-slate-800">📷 Ajouter un média</h3>
+              <h3 className="text-2xl font-semibold text-slate-800">📷 {tr("Ajouter un média")}</h3>
               <button 
                 className="text-slate-400 hover:text-slate-600 text-2xl"
                 onClick={() => setShowMediaUploader(false)}

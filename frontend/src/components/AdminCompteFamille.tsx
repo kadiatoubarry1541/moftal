@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTraduction } from '../i18n/traduction';
 
 interface Props {
   token: string;
@@ -22,6 +23,7 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
   const [testMontant, setTestMontant] = useState('10000');
   const [testLoading, setTestLoading] = useState(false);
   const [testMsg, setTestMsg] = useState('');
+  const { tr } = useTraduction();
 
   useEffect(() => { charger(); }, []);
 
@@ -71,16 +73,16 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
   const fmt = (n: number) => n.toLocaleString('fr-GN') + ' FG';
 
   if (loading) return (
-    <div className="text-center py-10 text-gray-400">Chargement des comptes famille...</div>
+    <div className="text-center py-10 text-gray-400">{tr("Chargement des comptes famille...")}</div>
   );
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">💰 Moftal Pay — Comptes Famille</h2>
-        <p className="text-blue-600 text-xs font-bold">Système de paiement interne Moftal</p>
+        <h2 className="text-xl font-bold text-gray-800">{tr("💰 Moftal Pay — Comptes Famille")}</h2>
+        <p className="text-blue-600 text-xs font-bold">{tr("Système de paiement interne Moftal")}</p>
         <p className="text-sm text-gray-500 mt-1">
-          Tous les Moftal Pay familiaux de Moftal. Vue admin complète sans limite.
+          {tr("Tous les Moftal Pay familiaux de Moftal. Vue admin complète sans limite.")}
         </p>
       </div>
 
@@ -88,7 +90,7 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
       {total && (
         <div className="rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
           <p className="text-blue-200 text-sm mb-3 font-semibold">
-            Totaux sur toute la plateforme — {comptes.length} famille{comptes.length > 1 ? 's' : ''}
+            {comptes.length > 1 ? tr("Totaux sur toute la plateforme — {n} familles", { n: comptes.length }) : tr("Totaux sur toute la plateforme — {n} famille", { n: comptes.length })}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
@@ -100,7 +102,7 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
               { label: 'Fonds nourriture', val: total.nourriture, icon: '🌾' },
             ].map(item => (
               <div key={item.label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.12)' }}>
-                <p className="text-blue-200 text-xs mb-0.5">{item.icon} {item.label}</p>
+                <p className="text-blue-200 text-xs mb-0.5">{item.icon} {tr(item.label)}</p>
                 <p className="text-white font-black text-sm">{fmt(item.val)}</p>
               </div>
             ))}
@@ -111,14 +113,14 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
       {/* Recherche */}
       <input
         value={search} onChange={e => setSearch(e.target.value)}
-        placeholder="Rechercher une famille..."
+        placeholder={tr("Rechercher une famille...")}
         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
       />
 
       {/* Liste des comptes */}
       <div className="space-y-3">
         {filtrés.length === 0 && (
-          <p className="text-center text-gray-400 py-6">Aucun compte famille trouvé.</p>
+          <p className="text-center text-gray-400 py-6">{tr("Aucun compte famille trouvé.")}</p>
         )}
         {filtrés.map(c => (
           <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -126,12 +128,12 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
             <div className="p-4 flex items-center justify-between gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-black text-gray-900">Famille {c.nomFamille}</span>
+                  <span className="font-black text-gray-900">{tr("Famille {nom}", { nom: c.nomFamille })}</span>
                 </div>
                 <p className="text-blue-700 font-black text-lg mt-0.5">{fmt(c.soldes.total)}</p>
                 <div className="flex gap-3 text-xs text-gray-400 mt-1">
-                  <span>Déposé : {fmt(c.totalDepose)}</span>
-                  <span>Dépensé : {fmt(c.totalDepense)}</span>
+                  <span>{tr("Déposé : {montant}", { montant: fmt(c.totalDepose) })}</span>
+                  <span>{tr("Dépensé : {montant}", { montant: fmt(c.totalDepense) })}</span>
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 flex-shrink-0">
@@ -139,12 +141,12 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
                   onClick={() => voirTransactions(c.id)}
                   className="px-4 py-2 rounded-xl text-sm font-bold text-white"
                   style={{ background: selected === c.id ? '#dc2626' : 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
-                  {selected === c.id ? 'Fermer' : 'Détails'}
+                  {selected === c.id ? tr('Fermer') : tr('Détails')}
                 </button>
                 <button
                   onClick={() => { setTestFundId(testFundId === c.id ? null : c.id); setTestMsg(''); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold border-2 border-amber-400 text-amber-600 hover:bg-amber-50 transition-all">
-                  🧪 Tester
+                  {tr("🧪 Tester")}
                 </button>
               </div>
             </div>
@@ -169,30 +171,30 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
             {/* Gérants */}
             {(c.gerant1 || c.gerant2) && (
               <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500 border-t border-gray-100">
-                Gérants : {[c.gerant1, c.gerant2].filter(Boolean).join(' · ')}
+                {tr("Gérants : {noms}", { noms: [c.gerant1, c.gerant2].filter(Boolean).join(' · ') })}
               </div>
             )}
 
             {/* Panneau test admin */}
             {testFundId === c.id && (
               <div className="border-t border-amber-100 bg-amber-50 px-4 py-3">
-                <p className="text-xs font-bold text-amber-700 mb-2">🧪 Dépôt de test</p>
+                <p className="text-xs font-bold text-amber-700 mb-2">{tr("🧪 Dépôt de test")}</p>
                 <div className="flex gap-2 items-center">
                   <input
                     type="number" min="1000" step="1000"
                     value={testMontant} onChange={e => setTestMontant(e.target.value)}
                     className="flex-1 rounded-xl border border-amber-300 px-3 py-2 text-sm outline-none focus:border-amber-500 bg-white"
-                    placeholder="Montant (FG)"
+                    placeholder={tr("Montant (FG)")}
                   />
                   <button
                     onClick={() => depotTest(c.id)} disabled={testLoading}
                     className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 transition-all">
-                    {testLoading ? '...' : 'Créditer'}
+                    {testLoading ? '...' : tr('Créditer')}
                   </button>
                 </div>
                 {testMsg && (
                   <p className={`text-xs mt-2 font-semibold ${testMsg.includes('TEST') || testMsg.includes('crédités') ? 'text-green-700' : 'text-red-600'}`}>
-                    {testMsg}
+                    {tr(testMsg)}
                   </p>
                 )}
               </div>
@@ -201,11 +203,11 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
             {/* Transactions */}
             {selected === c.id && (
               <div className="border-t border-gray-100 p-4">
-                <h4 className="font-bold text-gray-800 text-sm mb-3">Historique complet</h4>
+                <h4 className="font-bold text-gray-800 text-sm mb-3">{tr("Historique complet")}</h4>
                 {txLoading ? (
-                  <p className="text-gray-400 text-sm text-center py-3">Chargement...</p>
+                  <p className="text-gray-400 text-sm text-center py-3">{tr("Chargement...")}</p>
                 ) : transactions.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-3">Aucune transaction.</p>
+                  <p className="text-gray-400 text-sm text-center py-3">{tr("Aucune transaction.")}</p>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {transactions.map(t => (
@@ -213,12 +215,12 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
                         <span className="text-lg">{t.type === 'depot' ? '⬆️' : '⬇️'}</span>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-gray-700">{TYPE_FR[t.type] || t.type}</span>
+                            <span className="text-xs font-bold text-gray-700">{TYPE_FR[t.type] ? tr(TYPE_FR[t.type]) : t.type}</span>
                             <span className={`text-xs font-black ${t.type === 'depot' ? 'text-green-600' : 'text-red-500'}`}>
                               {t.type === 'depot' ? '+' : '-'}{t.montant.toLocaleString()} FG
                             </span>
                           </div>
-                          {t.acteurNom && <p className="text-xs text-gray-400">Par : {t.acteurNom}</p>}
+                          {t.acteurNom && <p className="text-xs text-gray-400">{tr("Par : {nom}", { nom: t.acteurNom })}</p>}
                           {t.beneficiaireNom && <p className="text-xs text-gray-400">→ {t.beneficiaireNom}</p>}
                           {t.description && <p className="text-xs text-gray-300 italic">{t.description}</p>}
                           <p className="text-xs text-gray-300">

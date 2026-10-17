@@ -26,11 +26,11 @@ export default function CoordonneesSite({ tenantCode, couleur, lienSite }: { ten
     fetch(base, { headers: entetes() })
       .then(async r => ({ ok: r.ok, d: await r.json().catch(() => ({})) }))
       .then(({ ok, d }) => {
-        if (!ok || !d.success) { setErreur(d.message || "Impossible de charger vos coordonnées."); return; }
+        if (!ok || !d.success) { setErreur(d.message || tr("Impossible de charger vos coordonnées.")); return; }
         const c = d.coordonnees || {};
         setForm(Object.fromEntries(CHAMPS.map(ch => [ch.cle, c[ch.cle] || ""])));
       })
-      .catch(() => setErreur("Erreur de connexion. Réessayez."));
+      .catch(() => setErreur(tr("Erreur de connexion. Réessayez.")));
   }, [base]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const publier = async () => {
@@ -39,10 +39,10 @@ export default function CoordonneesSite({ tenantCode, couleur, lienSite }: { ten
     try {
       const r = await fetch(base, { method: "PUT", headers: entetes(), body: JSON.stringify(form) });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.success) { setErreur(d.message || "Rien n'a été publié. Réessayez."); setEtat(""); return; }
+      if (!r.ok || !d.success) { setErreur(d.message || tr("Rien n'a été publié. Réessayez.")); setEtat(""); return; }
       setEtat("publie");
       setTimeout(() => setEtat(""), 4000);
-    } catch { setErreur("Pas de connexion : rien n'a été publié. Réessayez."); setEtat(""); }
+    } catch { setErreur(tr("Pas de connexion : rien n'a été publié. Réessayez.")); setEtat(""); }
   };
 
   const champ = { width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "white" } as const;

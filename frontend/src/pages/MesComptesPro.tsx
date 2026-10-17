@@ -4,6 +4,7 @@ import PaymentModal from "../components/PaymentModal";
 import { VerifiedBadge } from "../components/VerifiedBadge";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
+import { useTraduction } from "../i18n/traduction";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -100,6 +101,7 @@ const SUBSCRIPTION_LABELS: Record<string, string> = {
 
 export default function MesComptesPro() {
   const navigate = useNavigate();
+  const { tr, locale } = useTraduction();
   const [accounts, setAccounts]   = useState<ProAccount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [paying, setPaying]       = useState<string | null>(null); // id du compte en cours de paiement
@@ -195,14 +197,14 @@ export default function MesComptesPro() {
             onClick={() => navigate("/compte")}
             className="min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-200 font-medium transition-colors"
           >
-            ← Retour
+            {tr("← Retour")}
           </button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Mes comptes professionnels
+              {tr("Mes comptes professionnels")}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Gérez et accédez à vos dashboards par service
+              {tr("Gérez et accédez à vos dashboards par service")}
             </p>
           </div>
         </div>
@@ -211,24 +213,24 @@ export default function MesComptesPro() {
         {loading ? (
           <div className="flex justify-center items-center py-16 gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            <span className="text-gray-500 dark:text-gray-400">Chargement...</span>
+            <span className="text-gray-500 dark:text-gray-400">{tr("Chargement...")}</span>
           </div>
         ) : accounts.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
             <div className="text-6xl mb-4">🏢</div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Aucun compte professionnel
+              {tr("Aucun compte professionnel")}
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-1 text-sm">
-              Vous n'avez pas encore de compte professionnel.
+              {tr("Vous n'avez pas encore de compte professionnel.")}
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              Créez-en un dans{" "}
+              {tr("Créez-en un dans")}{" "}
               <button
                 onClick={() => navigate("/inscription-pro")}
                 className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
-                Inscription Pro
+                {tr("Inscription Pro")}
               </button>
             </p>
           </div>
@@ -276,50 +278,50 @@ export default function MesComptesPro() {
                         <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{acc.name}</span>
                         {(acc.validationPercent ?? 100) >= 100 ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-300">
-                            <VerifiedBadge size={16} title="Compte validé à 100 %" /> 100 %
+                            <VerifiedBadge size={16} title={tr("Compte validé à 100 %")} /> 100 %
                           </span>
                         ) : (
                           <button type="button" onClick={() => navigate(PAGE_MAJ_PROFIL)}
-                            title="Mettez votre profil à jour pour passer à 100 %"
+                            title={tr("Mettez votre profil à jour pour passer à 100 %")}
                             className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                            Validé à {acc.validationPercent} % · mettre le profil à jour
+                            {tr("Validé à {p} % · mettre le profil à jour", { p: acc.validationPercent })}
                           </button>
                         )}
                         {svcLabel && (
                           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeClass}`}>
-                            {svcLabel}
+                            {tr(svcLabel)}
                           </span>
                         )}
                         {/* Badge tier actif */}
                         {hasGI && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">
-                            ⚡ Gestion Interne
+                            {tr("⚡ Gestion Interne")}
                           </span>
                         )}
                         {hasVisibilite && !hasGI && (
                           <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
-                            👁️ Visibilité
+                            {tr("👁️ Visibilité")}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {typeInfo.label}{acc.city ? ` · ${acc.city}` : ""}
+                        {tr(typeInfo.label)}{acc.city ? ` · ${acc.city}` : ""}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Créé le {new Date(acc.created_at).toLocaleDateString("fr-FR")}
+                        {tr("Créé le {date}", { date: new Date(acc.created_at).toLocaleDateString(locale) })}
                       </p>
                     </div>
 
                     {/* Statut compte + dates d'expiration */}
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${statusInfo.cls}`}>
-                        {statusInfo.label}
+                        {tr(statusInfo.label)}
                       </span>
                       {acc.status === "approved" && hasGI && giDaysLeft !== null && (
                         <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
                           giDaysLeft <= 7 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"
                         }`}>
-                          {giDaysLeft <= 7 ? `⚠️ GI expire dans ${giDaysLeft}j` : `⚡ GI valide ${giDaysLeft}j`}
+                          {giDaysLeft <= 7 ? tr("⚠️ GI expire dans {n}j", { n: giDaysLeft }) : tr("⚡ GI valide {n}j", { n: giDaysLeft })}
                         </span>
                       )}
                       {acc.status === "approved" && hasVisibilite && !(hasGI && giDaysLeft !== null) && expiry && (
@@ -327,7 +329,7 @@ export default function MesComptesPro() {
                           <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
                             expiringSoon ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
                           }`}>
-                            {expiringSoon ? `⚠️ Expire dans ${daysLeft}j` : `👁️ Valide ${daysLeft}j`}
+                            {expiringSoon ? tr("⚠️ Expire dans {n}j", { n: daysLeft }) : tr("👁️ Valide {n}j", { n: daysLeft })}
                           </span>
                         </>
                       )}
@@ -335,7 +337,7 @@ export default function MesComptesPro() {
                         <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
                           isExpired ? "bg-red-100 text-red-700" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
                         }`}>
-                          {isExpired ? "⛔ Expiré" : SUBSCRIPTION_LABELS[subStatus] || "🔒 Non activé"}
+                          {isExpired ? tr("⛔ Expiré") : tr(SUBSCRIPTION_LABELS[subStatus] || "🔒 Non activé")}
                         </span>
                       )}
                     </div>
@@ -348,14 +350,14 @@ export default function MesComptesPro() {
                             onClick={() => navigate(`/gestion-interne?tab=pro&ouvrir=${acc.id}`)}
                             className="min-h-[40px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
                           >
-                            ⚡ Gestion Interne
+                            {tr("⚡ Gestion Interne")}
                           </button>
                         )}
                         <button
                           onClick={() => navigate(hasGI ? `/espace-pro/${acc.id}?rdv=1` : `/espace-pro/${acc.id}`)}
                           className={`min-h-[40px] px-4 py-2 ${hasGI ? "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200" : `${btnClass} text-white`} text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap`}
                         >
-                          📅 Mes Rendez-vous
+                          {tr("📅 Mes Rendez-vous")}
                         </button>
                       </div>
                     )}
@@ -366,16 +368,16 @@ export default function MesComptesPro() {
                     <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                       <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                         <p className="text-xs text-red-700 dark:text-red-300 font-semibold">
-                          ⛔ Compte bloqué — {regul[acc.id]
-                            ? `${regul[acc.id].moisDus} mois impayé${regul[acc.id].moisDus > 1 ? 's' : ''} : ${regul[acc.id].montant.toLocaleString('fr-GN')} GNF`
-                            : 'calcul du montant dû...'}
+                          {regul[acc.id]
+                            ? tr(regul[acc.id].moisDus > 1 ? "⛔ Compte bloqué — {n} mois impayés : {montant} GNF" : "⛔ Compte bloqué — {n} mois impayé : {montant} GNF", { n: regul[acc.id].moisDus, montant: regul[acc.id].montant.toLocaleString('fr-GN') })
+                            : tr("⛔ Compte bloqué — calcul du montant dû...")}
                         </p>
                         <button
                           onClick={() => handlePayRegularisation(acc)}
                           disabled={!regul[acc.id] || paying === acc.id}
                           className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                         >
-                          Payer et débloquer
+                          {tr("Payer et débloquer")}
                         </button>
                       </div>
                     </div>
@@ -385,9 +387,9 @@ export default function MesComptesPro() {
                   {acc.status === "approved" && !canOpenDashboard && subStatus !== "blocked" && (
                     <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                       {isExpired ? (
-                        <p className="text-xs font-bold text-red-600 mb-3">⛔ Abonnement expiré — choisissez une formule pour réactiver</p>
+                        <p className="text-xs font-bold text-red-600 mb-3">{tr("⛔ Abonnement expiré — choisissez une formule pour réactiver")}</p>
                       ) : (
-                        <p className="text-xs font-bold text-amber-600 mb-3">🔒 Choisissez votre formule pour activer votre compte</p>
+                        <p className="text-xs font-bold text-amber-600 mb-3">{tr("🔒 Choisissez votre formule pour activer votre compte")}</p>
                       )}
 
                       {prix[acc.id] ? (
@@ -395,9 +397,9 @@ export default function MesComptesPro() {
 
                           {/* ── Niveau 1 : Visibilité + Rendez-vous ── */}
                           <div className="border border-blue-200 rounded-xl p-3 bg-blue-50 dark:bg-blue-900/10">
-                            <p className="font-bold text-blue-800 dark:text-blue-300 text-xs mb-0.5">👁️ Visibilité + Rendez-vous</p>
+                            <p className="font-bold text-blue-800 dark:text-blue-300 text-xs mb-0.5">{tr("👁️ Visibilité + Rendez-vous")}</p>
                             <p className="text-[11px] text-blue-600 dark:text-blue-400 mb-2 leading-tight">
-                              Profil public · Recevoir des rendez-vous · Vitrine
+                              {tr("Profil public · Recevoir des rendez-vous · Vitrine")}
                             </p>
                             {(['mois','troisMois','an'] as const).map(p => (
                               <button key={p}
@@ -405,7 +407,7 @@ export default function MesComptesPro() {
                                 disabled={paying === acc.id}
                                 className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-gray-700 border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'troisMois' ? '🗓️ 3 mois' : '📆 Annuel'}</span>
+                                <span>{p === 'mois' ? tr('📅 Mensuel') : p === 'troisMois' ? tr('🗓️ 3 mois') : tr('📆 Annuel')}</span>
                                 <span className="text-blue-700 dark:text-blue-300 font-bold">
                                   {prix[acc.id].visibilite[p].toLocaleString('fr-GN')} GNF
                                 </span>
@@ -416,11 +418,11 @@ export default function MesComptesPro() {
                           {/* ── Niveau 2 : Gestion Interne (tout inclus) ── */}
                           <div className="border-2 border-green-400 rounded-xl p-3 bg-green-50 dark:bg-green-900/10">
                             <div className="flex items-center gap-1 mb-0.5">
-                              <p className="font-bold text-green-800 dark:text-green-300 text-xs">⚡ Gestion Interne</p>
-                              <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Complet</span>
+                              <p className="font-bold text-green-800 dark:text-green-300 text-xs">{tr("⚡ Gestion Interne")}</p>
+                              <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">{tr("Complet")}</span>
                             </div>
                             <p className="text-[11px] text-green-700 dark:text-green-400 mb-2 leading-tight">
-                              Inclut Visibilité + Rendez-vous + Gestion complète
+                              {tr("Inclut Visibilité + Rendez-vous + Gestion complète")}
                             </p>
                             {(['mois','troisMois','an'] as const).map(p => (
                               <button key={p}
@@ -428,24 +430,24 @@ export default function MesComptesPro() {
                                 disabled={paying === acc.id}
                                 className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'troisMois' ? '🗓️ 3 mois' : '📆 Annuel'}</span>
+                                <span>{p === 'mois' ? tr('📅 Mensuel') : p === 'troisMois' ? tr('🗓️ 3 mois') : tr('📆 Annuel')}</span>
                                 <span>{prix[acc.id].gestionInterne[p].toLocaleString('fr-GN')} GNF</span>
                               </button>
                             ))}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-400 animate-pulse">Chargement des prix...</div>
+                        <div className="text-xs text-gray-400 animate-pulse">{tr("Chargement des prix...")}</div>
                       )}
                       {paying === acc.id && (
-                        <p className="text-xs text-blue-600 mt-2 text-center">⏳ Redirection vers le paiement...</p>
+                        <p className="text-xs text-blue-600 mt-2 text-center">{tr("⏳ Redirection vers le paiement...")}</p>
                       )}
                     </div>
                   )}
 
                   {acc.status === "pending" && (
                     <div className="flex-shrink-0 text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-xl">
-                      ⏳ En cours de vérification par l'équipe
+                      {tr("⏳ En cours de vérification par l'équipe")}
                     </div>
                   )}
                 </div>
@@ -458,7 +460,7 @@ export default function MesComptesPro() {
         {payError && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
             <span>❌</span>
-            <span>{payError}</span>
+            <span>{tr(payError)}</span>
             <button onClick={() => setPayError(null)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
           </div>
         )}
@@ -469,7 +471,7 @@ export default function MesComptesPro() {
             onClick={() => navigate("/inscription-pro")}
             className="min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors text-sm"
           >
-            + Créer un nouveau compte professionnel
+            {tr("+ Créer un nouveau compte professionnel")}
           </button>
         </div>
       </div>

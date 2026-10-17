@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -29,6 +30,7 @@ const MATIERES_MADRASA: { re: RegExp; icon: string; desc: string }[] = [
 export default function MadrasaVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [madrasa, setMadrasa] = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -42,9 +44,9 @@ export default function MadrasaVitrine() {
       fetch(`${API}/api/pro-public/madrasa/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setMadrasa(t.tenant);
-      else setError(t.message || "Madrasa introuvable");
+      else setError(tr(t.message || "Madrasa introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger la madrasa."))
+    }).catch(() => setError(tr("Impossible de charger la madrasa.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -55,7 +57,7 @@ export default function MadrasaVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #99f6e4`, borderTopColor: TEAL, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
+        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -65,9 +67,9 @@ export default function MadrasaVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🕌</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Madrasa introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Madrasa introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour à l'accueil</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>
   );
@@ -109,12 +111,12 @@ export default function MadrasaVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{madrasa.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Madrasa</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Madrasa")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             {[["Accueil","hero"],...(photos.length ? [["Photos","photos"]] : []),["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -139,14 +141,14 @@ export default function MadrasaVitrine() {
           <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8, letterSpacing: "0.1em" }}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{madrasa.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {madrasa.description || "Un établissement d'enseignement islamique dédié à la transmission du Coran et des sciences islamiques dans un cadre bienveillant et rigoureux."}
+            {madrasa.description || tr("Un établissement d'enseignement islamique dédié à la transmission du Coran et des sciences islamiques dans un cadre bienveillant et rigoureux.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("enroll")} style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Inscrire mon enfant
+              {tr("Inscrire mon enfant")}
             </button>
             <button onClick={() => scrollTo("contact")} style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Nous contacter
+              {tr("Nous contacter")}
             </button>
           </div>
         </div>
@@ -169,7 +171,7 @@ export default function MadrasaVitrine() {
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: TEAL, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -180,8 +182,8 @@ export default function MadrasaVitrine() {
         <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Programme</span>
-              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Matières Enseignées</h2>
+              <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Programme")}</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Matières Enseignées")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))", gap: 16 }}>
               {matieres.map((m: string) => {
@@ -190,7 +192,7 @@ export default function MadrasaVitrine() {
                   <div key={m} style={{ background: "white", borderRadius: 16, padding: "22px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                     <div style={{ width: 52, height: 52, borderRadius: 14, background: `${TEAL}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 12 }}>{connue?.icon || "📘"}</div>
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 6px" }}>{m}</h3>
-                    {connue && <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{connue.desc}</p>}
+                    {connue && <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{tr(connue.desc)}</p>}
                   </div>
                 );
               })}
@@ -204,8 +206,8 @@ export default function MadrasaVitrine() {
         <section id="teachers" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Enseignants</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Des enseignants qualifiés pour transmettre la science islamique.</p>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos Enseignants")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des enseignants qualifiés pour transmettre la science islamique.")}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 20 }}>
               {staff.map((s: any, i: number) => (
@@ -232,8 +234,8 @@ export default function MadrasaVitrine() {
         <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Halaqas</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>{halaqas.length} halaqa(s) proposée(s).</p>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos Halaqas")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("{n} halaqa(s) proposée(s).", { n: halaqas.length })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
               {halaqas.map((h: any, i: number) => (
@@ -243,7 +245,7 @@ export default function MadrasaVitrine() {
                     : <div style={{ aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${TEAL}12, ${TEAL}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📖</div>}
                   <div style={{ padding: "12px 14px" }}>
                     <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>{h.nom}</div>
-                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{[h.niveau, h.capacite && `${h.capacite} places`].filter(Boolean).join(" · ")}</div>
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{[h.niveau, h.capacite && tr("{n} places", { n: h.capacite })].filter(Boolean).join(" · ")}</div>
                   </div>
                 </div>
               ))}
@@ -259,23 +261,23 @@ export default function MadrasaVitrine() {
       <section id="enroll" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>Inscrire votre enfant</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Inscrire votre enfant")}</h2>
           <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.7, marginBottom: 32 }}>
-            Offrez à votre enfant une éducation islamique de qualité. Présentez-vous avec votre numéro Moftal pour démarrer l'inscription.
+            {tr("Offrez à votre enfant une éducation islamique de qualité. Présentez-vous avec votre numéro Moftal pour démarrer l'inscription.")}
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             {isLoggedIn ? (
               <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 32px", fontSize: 14, color: "#334155", fontWeight: 600 }}>
-                ✅ Vous êtes connecté — présentez-vous à la madrasa avec votre numéro Moftal.
+                ✅ {tr("Vous êtes connecté — présentez-vous à la madrasa avec votre numéro Moftal.")}
               </div>
             ) : null}
             {isLoggedIn ? null : (
               <>
                 <button onClick={() => navigate("/login-membre")} style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                  Se connecter
+                  {tr("Se connecter")}
                 </button>
                 <button onClick={() => navigate("/vivant")} style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                  Créer un compte Moftal
+                  {tr("Créer un compte Moftal")}
                 </button>
               </>
             )}
@@ -287,17 +289,17 @@ export default function MadrasaVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nous Contacter")}</h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: madrasa.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: madrasa.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: madrasa.address || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: madrasa.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: madrasa.email || tr("Non renseigné") },
+              { icon: "📍", label: "Adresse", val: madrasa.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
               </div>
             ))}
@@ -311,9 +313,9 @@ export default function MadrasaVitrine() {
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{madrasa.name}</div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Madrasa Islamique</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Madrasa Islamique")}</p>
           <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
           </div>
         </div>
       </footer>

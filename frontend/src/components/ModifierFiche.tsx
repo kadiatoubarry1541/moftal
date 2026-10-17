@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { useTraduction } from "../i18n/traduction";
 
 // Fenêtre « Modifier » commune aux gestions internes : reprend la fiche,
 // laisse corriger chaque champ modifiable et l'enregistre sur le serveur
@@ -40,6 +41,7 @@ export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#
   onSaved: (item: Record<string, any>) => void;
 }) {
   // Le statut se change avec son propre sélecteur (valeurs fixes) : pas ici.
+  const { tr } = useTraduction();
   const champs = colonnes.filter(c => !c.endsWith("_id") && c !== "est_paye" && c !== "statut");
   const [form, setForm] = useState<Record<string, any>>(() =>
     Object.fromEntries(champs.map(c => {
@@ -68,7 +70,7 @@ export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#
         <h3 style={{ margin: "0 0 14px", fontSize: 17, fontWeight: 800, color: "#0f172a" }}>✏️ {titre}</h3>
         {champs.map(c => (
           <label key={c} style={{ display: "block", marginBottom: 10 }}>
-            <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>{LIBELLES[c] || c}</span>
+            <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>{LIBELLES[c] ? tr(LIBELLES[c]) : c}</span>
             {typeChamp(c) === "textarea" ? (
               <textarea value={form[c]} onChange={e => setForm(f => ({ ...f, [c]: e.target.value }))} rows={3} style={{ ...inp, resize: "vertical" }} />
             ) : (
@@ -77,9 +79,9 @@ export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#
           </label>
         ))}
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 11, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>Annuler</button>
+          <button onClick={onClose} style={{ flex: 1, padding: 11, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>{tr("Annuler")}</button>
           <button onClick={enregistrer} disabled={saving} style={{ flex: 1, padding: 11, background: couleur, color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Enregistrement…" : "Enregistrer"}
+            {saving ? tr("Enregistrement…") : tr("Enregistrer")}
           </button>
         </div>
       </div>

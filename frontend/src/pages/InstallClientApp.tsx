@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { useTraduction } from "../i18n/traduction";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -79,6 +80,7 @@ interface ProInfo {
 export default function InstallClientApp() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [pro, setPro] = useState<ProInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -91,10 +93,10 @@ export default function InstallClientApp() {
         if (data.success && data.account) {
           setPro(data.account);
         } else {
-          setError("Établissement introuvable.");
+          setError(tr("Établissement introuvable."));
         }
       })
-      .catch(() => setError("Impossible de charger les informations."))
+      .catch(() => setError(tr("Impossible de charger les informations.")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -110,9 +112,9 @@ export default function InstallClientApp() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
         <p className="text-5xl mb-4">😕</p>
-        <p className="text-gray-700 font-semibold mb-4">{error || "Lien invalide."}</p>
+        <p className="text-gray-700 font-semibold mb-4">{error || tr("Lien invalide.")}</p>
         <button onClick={() => navigate("/")} className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-semibold">
-          Retour à l'accueil
+          {tr("Retour à l'accueil")}
         </button>
       </div>
     );
@@ -141,7 +143,7 @@ export default function InstallClientApp() {
       {hasGestionInterne && (
         <DynamicAppManifest
           name={pro.name}
-          description={`${typeInfo.icon} ${pro.name} — Accès direct`}
+          description={tr("{icone} {nom} — Accès direct", { icone: typeInfo.icon, nom: pro.name })}
           proId={pro.id}
           startUrl={startUrl}
           themeColor={typeInfo.color}
@@ -164,7 +166,7 @@ export default function InstallClientApp() {
                 <LogoEtablissement src={pro.photo} name={pro.name} color={typeInfo.color} fontSize={44} />
               </div>
               <h1 className="text-white font-bold text-xl leading-tight">{pro.name}</h1>
-              <p className="text-white/80 text-sm mt-1">{typeInfo.icon} {typeInfo.label}</p>
+              <p className="text-white/80 text-sm mt-1">{typeInfo.icon} {tr(typeInfo.label)}</p>
               {pro.city && <p className="text-white/70 text-xs mt-0.5">📍 {pro.city}</p>}
             </div>
 
@@ -182,7 +184,7 @@ export default function InstallClientApp() {
               {hasGestionInterne ? (
                 <>
                   <p className="text-xs text-gray-400 text-center font-medium uppercase tracking-wide pt-1">
-                    Accès disponibles
+                    {tr("Accès disponibles")}
                   </p>
 
                   {/* 1. Voir le profil / vitrine */}
@@ -192,7 +194,7 @@ export default function InstallClientApp() {
                       className="w-full py-3 px-4 rounded-xl font-bold text-white text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                       style={{ backgroundColor: typeInfo.color }}
                     >
-                      🌐 Voir le profil complet
+                      {tr("🌐 Voir le profil complet")}
                     </button>
                   )}
 
@@ -203,7 +205,7 @@ export default function InstallClientApp() {
                       className="w-full py-3 px-4 rounded-xl font-bold text-sm border-2 transition-all active:scale-95 flex items-center justify-center gap-2"
                       style={{ borderColor: typeInfo.color, color: typeInfo.color, backgroundColor: `${typeInfo.color}10` }}
                     >
-                      {clientPortal!.icon} {clientPortal!.label}
+                      {clientPortal!.icon} {tr(clientPortal!.label)}
                     </button>
                   )}
 
@@ -212,7 +214,7 @@ export default function InstallClientApp() {
                     onClick={() => navigate(`/rendez-vous/${pro.id}`)}
                     className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    📅 Prendre rendez-vous
+                    {tr("📅 Prendre rendez-vous")}
                   </button>
                 </>
               ) : (
@@ -222,7 +224,7 @@ export default function InstallClientApp() {
                   className="w-full py-3 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
                   style={{ backgroundColor: typeInfo.color }}
                 >
-                  📅 Prendre rendez-vous →
+                  {tr("📅 Prendre rendez-vous →")}
                 </button>
               )}
 
@@ -234,7 +236,7 @@ export default function InstallClientApp() {
                 >
                   <span className="text-xl">📞</span>
                   <div>
-                    <p className="text-xs font-semibold text-gray-700">Appeler directement</p>
+                    <p className="text-xs font-semibold text-gray-700">{tr("Appeler directement")}</p>
                     <p className="text-sm text-gray-600">{pro.phone}</p>
                   </div>
                 </a>
@@ -243,9 +245,9 @@ export default function InstallClientApp() {
               {/* Installer comme app — Gestion Interne uniquement */}
               {hasGestionInterne && (
                 <div className="bg-blue-50 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs font-semibold text-blue-700 mb-0.5">Installez l'app</p>
+                  <p className="text-xs font-semibold text-blue-700 mb-0.5">{tr("Installez l'app")}</p>
                   <p className="text-[11px] text-blue-500">
-                    Ajoutez <strong>{pro.name}</strong> à votre écran d'accueil pour un accès direct sans navigateur.
+                    {tr("Ajoutez")} <strong>{pro.name}</strong> {tr("à votre écran d'accueil pour un accès direct sans navigateur.")}
                   </p>
                 </div>
               )}
@@ -258,7 +260,7 @@ export default function InstallClientApp() {
               onClick={() => navigate("/")}
               className="text-gray-500 text-sm hover:text-gray-700 underline underline-offset-2"
             >
-              ← Retour à Les Enfants d'Adam
+              {tr("← Retour à Les Enfants d'Adam")}
             </button>
           </div>
         </div>

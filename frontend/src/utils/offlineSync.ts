@@ -1,3 +1,4 @@
+import { trHors } from "../i18n/traduction";
 // ─────────────────────────────────────────────────────────────────────────────
 // Mode hors connexion — toutes les gestions internes (/api/<secteur>-mgmt)
 //
@@ -367,7 +368,7 @@ function queuedResponse(item: any) {
     success: true,
     queued: true,
     offline: true,
-    message: "Enregistré sur l'appareil — sera envoyé dès le retour de la connexion",
+    message: trHors("Enregistré sur l'appareil — sera envoyé dès le retour de la connexion"),
   };
   const falsy = new Set(["conflict", "error", "errors", "then", "toJSON", "generated"]);
   const proxy = new Proxy(base, {
@@ -436,7 +437,7 @@ function offlineMissing() {
     {
       success: false,
       offline: true,
-      message: "Pas de connexion — ces données n'ont pas encore été ouvertes sur cet appareil.",
+      message: trHors("Pas de connexion — ces données n'ont pas encore été ouvertes sur cet appareil."),
     },
     503
   );
@@ -462,7 +463,7 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
   const enqueue = async () => {
     if (matches(req.url, ONLINE_ONLY_PATTERNS)) {
       return jsonResponse(
-        { success: false, offline: true, message: "Cette action a besoin d'une connexion internet." },
+        { success: false, offline: true, message: trHors("Cette action a besoin d'une connexion internet.") },
         503
       );
     }
@@ -472,7 +473,7 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
       const champs = await lireFormulaire(formulaire);
       if (!champs) {
         return jsonResponse(
-          { success: false, offline: true, message: "Fichier trop lourd pour être gardé sans connexion (30 Mo max.). Réessayez avec internet." },
+          { success: false, offline: true, message: trHors("Fichier trop lourd pour être gardé sans connexion (30 Mo max.). Réessayez avec internet.") },
           503
         );
       }

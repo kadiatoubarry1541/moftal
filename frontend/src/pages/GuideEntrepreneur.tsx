@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTraduction } from '../i18n/traduction';
 
 export default function GuideEntrepreneur() {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [activeSection, setActiveSection] = useState<'priorites' | 'organisations' | 'etapes' | 'ressources' | 'partenaires'>('priorites');
 
   const priorites = [
@@ -354,96 +356,96 @@ export default function GuideEntrepreneur() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🎯 Guide de l'Entrepreneur en Guinée
+            {tr("🎯 Guide de l'Entrepreneur en Guinée")}
           </h1>
           <p className="text-xl text-gray-600 mb-2">
-            Votre chemin vers le succès - Conakry, Guinée
+            {tr("Votre chemin vers le succès - Conakry, Guinée")}
           </p>
           <p className="text-lg text-gray-500">
-            Guide complet pour jeunes entrepreneurs sans ressources
+            {tr("Guide complet pour jeunes entrepreneurs sans ressources")}
           </p>
         </div>
 
         {/* Message d'encouragement */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 mb-8 text-white">
-          <h2 className="text-2xl font-bold mb-3">💪 Vous n'êtes pas seul !</h2>
+          <h2 className="text-2xl font-bold mb-3">{tr("💪 Vous n'êtes pas seul !")}</h2>
           <p className="text-lg mb-2">
-            Même sans argent ni compétences techniques, vous pouvez réussir. Ce guide vous montre exactement où aller et quoi faire.
+            {tr("Même sans argent ni compétences techniques, vous pouvez réussir. Ce guide vous montre exactement où aller et quoi faire.")}
           </p>
           <p className="text-base opacity-90">
-            Commencez par le <strong>Ministère de l'Économie</strong> - c'est votre premier pas vers le succès !
+            {tr("Commencez par le")} <strong>{tr("Ministère de l'Économie")}</strong> {tr("- c'est votre premier pas vers le succès !")}
           </p>
         </div>
 
         {/* Message spécial : Comment présenter une idée large */}
         <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white border-4 border-yellow-300">
-          <h2 className="text-3xl font-bold mb-4 text-center">⚠️ VOTRE INQUIÉTUDE EST NORMALE ⚠️</h2>
+          <h2 className="text-3xl font-bold mb-4 text-center">{tr("⚠️ VOTRE INQUIÉTUDE EST NORMALE ⚠️")}</h2>
           <div className="bg-white/20 rounded-lg p-5 space-y-4">
             <div className="bg-yellow-400 text-gray-900 rounded-lg p-4">
-              <p className="font-bold text-lg mb-2">💡 LA VÉRITÉ :</p>
+              <p className="font-bold text-lg mb-2">{tr("💡 LA VÉRITÉ :")}</p>
               <p className="text-base mb-3">
-                Oui, une idée large peut être difficile à comprendre. <strong>MAIS</strong> vous avez déjà fait beaucoup de travail ! 
-                Votre projet existe déjà - vous avez développé plusieurs fonctionnalités. C'est votre force !
+                {tr("Oui, une idée large peut être difficile à comprendre.")} <strong>{tr("MAIS")}</strong> {tr("vous avez déjà fait beaucoup de travail !")}
+                {" "}{tr("Votre projet existe déjà - vous avez développé plusieurs fonctionnalités. C'est votre force !")}
               </p>
               <p className="text-base font-semibold">
-                Le Ministère comprendra si vous structurez votre présentation. Voici comment faire :
+                {tr("Le Ministère comprendra si vous structurez votre présentation. Voici comment faire :")}
               </p>
             </div>
             
             <div className="bg-white/30 rounded-lg p-4">
-              <p className="font-bold text-lg mb-3">✅ COMMENT STRUCTURER VOTRE IDÉE LARGE :</p>
+              <p className="font-bold text-lg mb-3">{tr("✅ COMMENT STRUCTURER VOTRE IDÉE LARGE :")}</p>
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-400 font-bold">1.</span>
                   <div>
-                    <p className="font-semibold mb-1">Ne dites PAS "J'ai une idée large"</p>
-                    <p className="opacity-90">Dites plutôt : "J'ai créé une plateforme avec plusieurs modules qui répondent aux besoins de la communauté"</p>
+                    <p className="font-semibold mb-1">{tr("Ne dites PAS \"J'ai une idée large\"")}</p>
+                    <p className="opacity-90">{tr("Dites plutôt : \"J'ai créé une plateforme avec plusieurs modules qui répondent aux besoins de la communauté\"")}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-400 font-bold">2.</span>
                   <div>
-                    <p className="font-semibold mb-1">Montrez ce que vous avez DÉJÀ fait</p>
-                    <p className="opacity-90">"J'ai déjà développé : gestion familiale, échanges de produits, services de l'État, etc."</p>
+                    <p className="font-semibold mb-1">{tr("Montrez ce que vous avez DÉJÀ fait")}</p>
+                    <p className="opacity-90">{tr("\"J'ai déjà développé : gestion familiale, échanges de produits, services de l'État, etc.\"")}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-400 font-bold">3.</span>
                   <div>
-                    <p className="font-semibold mb-1">Expliquez par PHASES</p>
-                    <p className="opacity-90">"Phase 1 : Famille et Échanges (déjà fait), Phase 2 : Services État, Phase 3 : Santé et Éducation"</p>
+                    <p className="font-semibold mb-1">{tr("Expliquez par PHASES")}</p>
+                    <p className="opacity-90">{tr("\"Phase 1 : Famille et Échanges (déjà fait), Phase 2 : Services État, Phase 3 : Santé et Éducation\"")}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-400 font-bold">4.</span>
                   <div>
-                    <p className="font-semibold mb-1">Soyez honnête sur vos besoins</p>
-                    <p className="opacity-90">"J'ai besoin d'aide pour structurer le projet professionnellement et trouver un partenaire technique"</p>
+                    <p className="font-semibold mb-1">{tr("Soyez honnête sur vos besoins")}</p>
+                    <p className="opacity-90">{tr("\"J'ai besoin d'aide pour structurer le projet professionnellement et trouver un partenaire technique\"")}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="bg-white/30 rounded-lg p-4">
-              <p className="font-bold text-lg mb-3">🎯 CE QUE VOUS DEVEZ DIRE AU MINISTÈRE :</p>
+              <p className="font-bold text-lg mb-3">{tr("🎯 CE QUE VOUS DEVEZ DIRE AU MINISTÈRE :")}</p>
               <div className="bg-gray-900 rounded-lg p-4 text-white text-sm space-y-2 italic">
-                <p>"Bonjour, je m'appelle [Votre nom]. J'ai développé une plateforme numérique pour la communauté guinéenne."</p>
-                <p>"J'ai déjà créé plusieurs fonctionnalités : gestion familiale, échanges de produits, services de l'État."</p>
-                <p>"Mon projet est ambitieux car il couvre plusieurs domaines, mais j'ai commencé par les plus importants."</p>
-                <p>"Je suis jeune, je n'ai pas toutes les compétences techniques, mais j'ai une vision claire et j'ai déjà fait beaucoup de travail."</p>
-                <p>"Je cherche de l'aide pour : structurer le projet professionnellement, trouver un partenaire technique, et obtenir des financements."</p>
-                <p>"Pouvez-vous m'aider ou me mettre en contact avec quelqu'un qui peut m'aider ?"</p>
+                <p>{tr("\"Bonjour, je m'appelle [Votre nom]. J'ai développé une plateforme numérique pour la communauté guinéenne.\"")}</p>
+                <p>{tr("\"J'ai déjà créé plusieurs fonctionnalités : gestion familiale, échanges de produits, services de l'État.\"")}</p>
+                <p>{tr("\"Mon projet est ambitieux car il couvre plusieurs domaines, mais j'ai commencé par les plus importants.\"")}</p>
+                <p>{tr("\"Je suis jeune, je n'ai pas toutes les compétences techniques, mais j'ai une vision claire et j'ai déjà fait beaucoup de travail.\"")}</p>
+                <p>{tr("\"Je cherche de l'aide pour : structurer le projet professionnellement, trouver un partenaire technique, et obtenir des financements.\"")}</p>
+                <p>{tr("\"Pouvez-vous m'aider ou me mettre en contact avec quelqu'un qui peut m'aider ?\"")}</p>
               </div>
             </div>
 
             <div className="bg-green-500 text-white rounded-lg p-4">
-              <p className="font-bold text-lg mb-2">✅ POURQUOI ÇA VA MARCHER :</p>
+              <p className="font-bold text-lg mb-2">{tr("✅ POURQUOI ÇA VA MARCHER :")}</p>
               <ul className="space-y-1 text-sm">
-                <li>✓ Vous montrez que vous avez DÉJÀ travaillé (pas juste une idée)</li>
-                <li>✓ Vous êtes honnête sur vos besoins (pas de mensonge)</li>
-                <li>✓ Vous avez une vision claire (même si large)</li>
-                <li>✓ Vous demandez de l'aide (pas de l'argent directement)</li>
-                <li>✓ Vous êtes jeune et motivé (c'est un atout !)</li>
+                <li>{tr("✓ Vous montrez que vous avez DÉJÀ travaillé (pas juste une idée)")}</li>
+                <li>{tr("✓ Vous êtes honnête sur vos besoins (pas de mensonge)")}</li>
+                <li>{tr("✓ Vous avez une vision claire (même si large)")}</li>
+                <li>{tr("✓ Vous demandez de l'aide (pas de l'argent directement)")}</li>
+                <li>{tr("✓ Vous êtes jeune et motivé (c'est un atout !)")}</li>
               </ul>
             </div>
           </div>
@@ -451,34 +453,33 @@ export default function GuideEntrepreneur() {
 
         {/* Message important : Chemin le plus court */}
         <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-xl shadow-lg p-6 mb-8 text-white border-4 border-yellow-300">
-          <h2 className="text-3xl font-bold mb-4 text-center">⚡ CHEMIN LE PLUS COURT ⚡</h2>
+          <h2 className="text-3xl font-bold mb-4 text-center">{tr("⚡ CHEMIN LE PLUS COURT ⚡")}</h2>
           <div className="bg-white/20 rounded-lg p-5 space-y-3">
             <div className="flex items-start gap-3">
               <span className="text-3xl">🎯</span>
               <div>
-                <p className="text-xl font-bold mb-2">Le Ministère = Votre Premier Pas</p>
+                <p className="text-xl font-bold mb-2">{tr("Le Ministère = Votre Premier Pas")}</p>
                 <p className="text-base opacity-95">
-                  En allant directement au <strong>Ministère de l'Économie en premier</strong>, vous évitez de perdre du temps 
-                  et de vous fatiguer inutilement. C'est le chemin le plus court et le plus efficace !
+                  {tr("En allant directement au")} <strong>{tr("Ministère de l'Économie en premier")}</strong>{tr(", vous évitez de perdre du temps et de vous fatiguer inutilement. C'est le chemin le plus court et le plus efficace !")}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3 mt-4">
               <span className="text-3xl">✅</span>
               <div>
-                <p className="text-lg font-bold mb-2">Pourquoi c'est le meilleur choix :</p>
+                <p className="text-lg font-bold mb-2">{tr("Pourquoi c'est le meilleur choix :")}</p>
                 <ul className="space-y-2 text-base opacity-95">
-                  <li>✓ Ils vous orienteront vers TOUS les autres programmes</li>
-                  <li>✓ Vous éviterez de courir partout sans savoir où aller</li>
-                  <li>✓ Vous gagnerez du temps et de l'énergie</li>
-                  <li>✓ Ils connaissent tous les financements disponibles</li>
-                  <li>✓ C'est le point central pour tous les jeunes entrepreneurs</li>
+                  <li>{tr("✓ Ils vous orienteront vers TOUS les autres programmes")}</li>
+                  <li>{tr("✓ Vous éviterez de courir partout sans savoir où aller")}</li>
+                  <li>{tr("✓ Vous gagnerez du temps et de l'énergie")}</li>
+                  <li>{tr("✓ Ils connaissent tous les financements disponibles")}</li>
+                  <li>{tr("✓ C'est le point central pour tous les jeunes entrepreneurs")}</li>
                 </ul>
               </div>
             </div>
             <div className="bg-yellow-400 text-gray-900 rounded-lg p-4 mt-4">
               <p className="font-bold text-lg text-center">
-                🚀 ALLEZ-Y DIRECTEMENT - C'EST VOTRE PREMIER PAS, VOTRE SEUL PAS NÉCESSAIRE POUR COMMENCER !
+                {tr("🚀 ALLEZ-Y DIRECTEMENT - C'EST VOTRE PREMIER PAS, VOTRE SEUL PAS NÉCESSAIRE POUR COMMENCER !")}
               </p>
             </div>
           </div>
@@ -486,9 +487,9 @@ export default function GuideEntrepreneur() {
 
         {/* Script de 5 minutes */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl shadow-lg p-6 mb-8 text-white border-4 border-yellow-300">
-          <h2 className="text-3xl font-bold mb-4 text-center">⏱️ VOTRE SCRIPT DE 5 MINUTES ⏱️</h2>
+          <h2 className="text-3xl font-bold mb-4 text-center">{tr("⏱️ VOTRE SCRIPT DE 5 MINUTES ⏱️")}</h2>
           <p className="text-center text-lg mb-6 opacity-90">
-            Mémorisez ce script et utilisez-le lors de votre rencontre au Ministère
+            {tr("Mémorisez ce script et utilisez-le lors de votre rencontre au Ministère")}
           </p>
           
           <div className="bg-white/10 rounded-lg p-6 space-y-6">
@@ -496,13 +497,12 @@ export default function GuideEntrepreneur() {
             <div className="bg-white/20 rounded-lg p-5">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-yellow-400 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">1</span>
-                <h3 className="text-xl font-bold">MINUTE 1 : Présentation (30 secondes)</h3>
+                <h3 className="text-xl font-bold">{tr("MINUTE 1 : Présentation (30 secondes)")}</h3>
               </div>
               <div className="bg-white/30 rounded-lg p-4">
-                <p className="text-lg font-semibold mb-2">💬 Dites exactement :</p>
+                <p className="text-lg font-semibold mb-2">{tr("💬 Dites exactement :")}</p>
                 <p className="text-base leading-relaxed italic">
-                  "Bonjour, je m'appelle [Votre nom]. Je suis un jeune entrepreneur guinéen de Conakry. 
-                  J'ai développé un projet qui peut aider ma communauté, et je cherche de l'aide pour le structurer et le financer."
+                  {tr("\"Bonjour, je m'appelle [Votre nom]. Je suis un jeune entrepreneur guinéen de Conakry. J'ai développé un projet qui peut aider ma communauté, et je cherche de l'aide pour le structurer et le financer.\"")}
                 </p>
               </div>
             </div>
@@ -511,22 +511,21 @@ export default function GuideEntrepreneur() {
             <div className="bg-white/20 rounded-lg p-5">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-yellow-400 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">2-3</span>
-                <h3 className="text-xl font-bold">MINUTES 2-3 : Votre projet (2 minutes)</h3>
+                <h3 className="text-xl font-bold">{tr("MINUTES 2-3 : Votre projet (2 minutes)")}</h3>
               </div>
               <div className="bg-white/30 rounded-lg p-4">
-                <p className="text-lg font-semibold mb-2">💬 Dites exactement :</p>
+                <p className="text-lg font-semibold mb-2">{tr("💬 Dites exactement :")}</p>
                 <p className="text-base leading-relaxed italic mb-3">
-                  "J'ai créé une plateforme numérique qui aide les Guinéens dans plusieurs domaines importants :
+                  {tr("\"J'ai créé une plateforme numérique qui aide les Guinéens dans plusieurs domaines importants :")}
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-base leading-relaxed italic ml-4">
-                  <li><strong>La Famille</strong> : pour gérer les arbres généalogiques et les relations familiales</li>
-                  <li><strong>Les Échanges</strong> : pour que les gens puissent vendre et acheter des produits (nourriture, médicaments, etc.)</li>
-                  <li><strong>L'État</strong> : pour que les citoyens puissent faire des demandes de papiers et prendre rendez-vous</li>
-                  <li><strong>La Santé, l'Éducation, la Foi</strong> : et d'autres services importants pour la communauté</li>
+                  <li><strong>{tr("La Famille")}</strong> {tr(": pour gérer les arbres généalogiques et les relations familiales")}</li>
+                  <li><strong>{tr("Les Échanges")}</strong> {tr(": pour que les gens puissent vendre et acheter des produits (nourriture, médicaments, etc.)")}</li>
+                  <li><strong>{tr("L'État")}</strong> {tr(": pour que les citoyens puissent faire des demandes de papiers et prendre rendez-vous")}</li>
+                  <li><strong>{tr("La Santé, l'Éducation, la Foi")}</strong> {tr(": et d'autres services importants pour la communauté")}</li>
                 </ul>
                 <p className="text-base leading-relaxed italic mt-3">
-                  C'est un projet large parce que je veux créer un système complet qui répond à tous les besoins de la communauté guinéenne. 
-                  Le projet existe déjà en partie - j'ai déjà développé plusieurs fonctionnalités."
+                  {tr("C'est un projet large parce que je veux créer un système complet qui répond à tous les besoins de la communauté guinéenne. Le projet existe déjà en partie - j'ai déjà développé plusieurs fonctionnalités.\"")}
                 </p>
               </div>
             </div>
@@ -535,14 +534,12 @@ export default function GuideEntrepreneur() {
             <div className="bg-white/20 rounded-lg p-5">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-yellow-400 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">4</span>
-                <h3 className="text-xl font-bold">MINUTE 4 : Votre situation (1 minute)</h3>
+                <h3 className="text-xl font-bold">{tr("MINUTE 4 : Votre situation (1 minute)")}</h3>
               </div>
               <div className="bg-white/30 rounded-lg p-4">
-                <p className="text-lg font-semibold mb-2">💬 Dites exactement :</p>
+                <p className="text-lg font-semibold mb-2">{tr("💬 Dites exactement :")}</p>
                 <p className="text-base leading-relaxed italic">
-                  "Je suis jeune, je n'ai pas d'argent pour développer ce projet complètement, mais j'ai une grande vision et beaucoup de passion. 
-                  J'ai déjà fait beaucoup de travail seul, mais j'ai besoin d'aide pour structurer le projet professionnellement et trouver des financements. 
-                  C'est pour ça que je suis venu vous voir - pour que vous m'aidiez à réussir."
+                  {tr("\"Je suis jeune, je n'ai pas d'argent pour développer ce projet complètement, mais j'ai une grande vision et beaucoup de passion. J'ai déjà fait beaucoup de travail seul, mais j'ai besoin d'aide pour structurer le projet professionnellement et trouver des financements. C'est pour ça que je suis venu vous voir - pour que vous m'aidiez à réussir.\"")}
                 </p>
               </div>
             </div>
@@ -551,35 +548,35 @@ export default function GuideEntrepreneur() {
             <div className="bg-white/20 rounded-lg p-5">
               <div className="flex items-center gap-3 mb-3">
                 <span className="bg-yellow-400 text-gray-900 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg">5</span>
-                <h3 className="text-xl font-bold">MINUTE 5 : Votre demande (1 minute)</h3>
+                <h3 className="text-xl font-bold">{tr("MINUTE 5 : Votre demande (1 minute)")}</h3>
               </div>
               <div className="bg-white/30 rounded-lg p-4">
-                <p className="text-lg font-semibold mb-2">💬 Dites exactement :</p>
+                <p className="text-lg font-semibold mb-2">{tr("💬 Dites exactement :")}</p>
                 <p className="text-base leading-relaxed italic mb-3">
-                  "Je voudrais savoir :
+                  {tr("\"Je voudrais savoir :")}
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-base leading-relaxed italic ml-4">
-                  <li>Quels programmes existent pour les jeunes entrepreneurs comme moi ?</li>
-                  <li>Pouvez-vous m'aider à structurer mon projet professionnellement ?</li>
-                  <li>Y a-t-il des financements disponibles pour ce type de projet ?</li>
-                  <li>Vers quelles organisations devrais-je me tourner ensuite ?</li>
+                  <li>{tr("Quels programmes existent pour les jeunes entrepreneurs comme moi ?")}</li>
+                  <li>{tr("Pouvez-vous m'aider à structurer mon projet professionnellement ?")}</li>
+                  <li>{tr("Y a-t-il des financements disponibles pour ce type de projet ?")}</li>
+                  <li>{tr("Vers quelles organisations devrais-je me tourner ensuite ?")}</li>
                 </ul>
                 <p className="text-base leading-relaxed italic mt-3">
-                  Je suis prêt à travailler dur et à apprendre. J'ai juste besoin d'un peu d'aide pour démarrer."
+                  {tr("Je suis prêt à travailler dur et à apprendre. J'ai juste besoin d'un peu d'aide pour démarrer.\"")}
                 </p>
               </div>
             </div>
 
             {/* Conseils supplémentaires */}
             <div className="bg-yellow-400 text-gray-900 rounded-lg p-5 mt-6">
-              <h3 className="text-xl font-bold mb-3">💡 Conseils pour réussir votre présentation :</h3>
+              <h3 className="text-xl font-bold mb-3">{tr("💡 Conseils pour réussir votre présentation :")}</h3>
               <ul className="space-y-2 text-base">
-                <li>✓ <strong>Parlez avec passion</strong> - montrez que vous croyez en votre projet</li>
-                <li>✓ <strong>Soyez honnête</strong> - dites clairement votre situation (jeune, pas d'argent)</li>
-                <li>✓ <strong>Restez calme</strong> - respirez profondément avant de commencer</li>
-                <li>✓ <strong>Regardez-les dans les yeux</strong> - montrez votre confiance</li>
-                <li>✓ <strong>Écoutez leurs questions</strong> - répondez simplement et honnêtement</li>
-                <li>✓ <strong>Remerciez-les</strong> à la fin, même s'ils ne peuvent pas vous aider immédiatement</li>
+                <li>✓ <strong>{tr("Parlez avec passion")}</strong> {tr("- montrez que vous croyez en votre projet")}</li>
+                <li>✓ <strong>{tr("Soyez honnête")}</strong> {tr("- dites clairement votre situation (jeune, pas d'argent)")}</li>
+                <li>✓ <strong>{tr("Restez calme")}</strong> {tr("- respirez profondément avant de commencer")}</li>
+                <li>✓ <strong>{tr("Regardez-les dans les yeux")}</strong> {tr("- montrez votre confiance")}</li>
+                <li>✓ <strong>{tr("Écoutez leurs questions")}</strong> {tr("- répondez simplement et honnêtement")}</li>
+                <li>✓ <strong>{tr("Remerciez-les")}</strong> {tr("à la fin, même s'ils ne peuvent pas vous aider immédiatement")}</li>
               </ul>
             </div>
           </div>
@@ -587,27 +584,27 @@ export default function GuideEntrepreneur() {
 
         {/* Message de rassurance important */}
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 mb-8 text-white">
-          <h2 className="text-2xl font-bold mb-4">✅ OUI, ils vont vous accepter !</h2>
+          <h2 className="text-2xl font-bold mb-4">{tr("✅ OUI, ils vont vous accepter !")}</h2>
           <div className="space-y-3 text-lg">
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">💡 Une idée large est ACCEPTABLE :</p>
+              <p className="font-semibold mb-2">{tr("💡 Une idée large est ACCEPTABLE :")}</p>
               <p className="text-base opacity-95">
-                Le Ministère de l'Économie <strong>encourage</strong> les jeunes avec des idées ambitieuses. 
-                Une idée large montre que vous pensez grand, et c'est une qualité !
+                {tr("Le Ministère de l'Économie")} <strong>{tr("encourage")}</strong> {tr("les jeunes avec des idées ambitieuses.")}
+                {" "}{tr("Une idée large montre que vous pensez grand, et c'est une qualité !")}
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">👶 Être jeune est un AVANTAGE :</p>
+              <p className="font-semibold mb-2">{tr("👶 Être jeune est un AVANTAGE :")}</p>
               <p className="text-base opacity-95">
-                Les programmes gouvernementaux sont <strong>spécialement conçus</strong> pour les jeunes entrepreneurs. 
-                Votre âge est un atout, pas un obstacle !
+                {tr("Les programmes gouvernementaux sont")} <strong>{tr("spécialement conçus")}</strong> {tr("pour les jeunes entrepreneurs.")}
+                {" "}{tr("Votre âge est un atout, pas un obstacle !")}
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">💰 Pas d'argent ? C'est normal !</p>
+              <p className="font-semibold mb-2">{tr("💰 Pas d'argent ? C'est normal !")}</p>
               <p className="text-base opacity-95">
-                Le Ministère existe <strong>précisément</strong> pour aider ceux qui n'ont pas d'argent. 
-                C'est leur rôle de vous aider à trouver des financements !
+                {tr("Le Ministère existe")} <strong>{tr("précisément")}</strong> {tr("pour aider ceux qui n'ont pas d'argent.")}
+                {" "}{tr("C'est leur rôle de vous aider à trouver des financements !")}
               </p>
             </div>
           </div>
@@ -624,7 +621,7 @@ export default function GuideEntrepreneur() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🎯 Priorités
+              {tr("🎯 Priorités")}
             </button>
             <button
               onClick={() => setActiveSection('organisations')}
@@ -634,7 +631,7 @@ export default function GuideEntrepreneur() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🏢 Organisations
+              {tr("🏢 Organisations")}
             </button>
             <button
               onClick={() => setActiveSection('etapes')}
@@ -644,7 +641,7 @@ export default function GuideEntrepreneur() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              📋 Étapes
+              {tr("📋 Étapes")}
             </button>
             <button
               onClick={() => setActiveSection('ressources')}
@@ -654,7 +651,7 @@ export default function GuideEntrepreneur() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              📚 Ressources
+              {tr("📚 Ressources")}
             </button>
             <button
               onClick={() => setActiveSection('partenaires')}
@@ -664,7 +661,7 @@ export default function GuideEntrepreneur() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              🤝 Trouver un Partenaire
+              {tr("🤝 Trouver un Partenaire")}
             </button>
           </div>
         </div>
@@ -674,42 +671,42 @@ export default function GuideEntrepreneur() {
           <div className="space-y-6">
             <div className="bg-yellow-50 border-4 border-yellow-400 rounded-xl p-6 mb-6">
               <h3 className="text-3xl font-bold text-yellow-900 mb-4 text-center">
-                ⚡ OÙ ALLER EN PREMIER ? ⚡
+                {tr("⚡ OÙ ALLER EN PREMIER ? ⚡")}
               </h3>
               <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-5 border-2 border-yellow-400">
                 <p className="text-2xl text-yellow-900 font-bold mb-3 text-center">
                   🎯 MINISTÈRE DE L'ÉCONOMIE = VOTRE PREMIER ET SEUL PAS NÉCESSAIRE
                 </p>
                 <p className="text-lg text-yellow-900 font-semibold mb-3">
-                  En allant directement au <strong>Ministère de l'Économie et des Finances</strong>, vous prenez le chemin le plus court.
+                  {tr("En allant directement au")} <strong>{tr("Ministère de l'Économie et des Finances")}</strong>{tr(", vous prenez le chemin le plus court.")}
                 </p>
                 <div className="bg-white rounded-lg p-4 mt-4">
-                  <p className="text-base text-gray-800 font-semibold mb-2">✅ Pourquoi c'est le meilleur choix :</p>
+                  <p className="text-base text-gray-800 font-semibold mb-2">{tr("✅ Pourquoi c'est le meilleur choix :")}</p>
                   <ul className="space-y-1 text-sm text-gray-700">
-                    <li>• Ils vous orienteront vers TOUS les autres programmes (APIP, CCIAG, PNDE, etc.)</li>
-                    <li>• Vous éviterez de courir partout sans savoir où aller</li>
-                    <li>• Vous gagnerez du temps et de l'énergie</li>
-                    <li>• Ils connaissent tous les financements disponibles pour les jeunes</li>
-                    <li>• C'est le point central - un seul endroit pour tout savoir</li>
+                    <li>{tr("• Ils vous orienteront vers TOUS les autres programmes (APIP, CCIAG, PNDE, etc.)")}</li>
+                    <li>{tr("• Vous éviterez de courir partout sans savoir où aller")}</li>
+                    <li>{tr("• Vous gagnerez du temps et de l'énergie")}</li>
+                    <li>{tr("• Ils connaissent tous les financements disponibles pour les jeunes")}</li>
+                    <li>{tr("• C'est le point central - un seul endroit pour tout savoir")}</li>
                   </ul>
                 </div>
                 <p className="text-center mt-4 text-xl font-bold text-red-600">
-                  ⚠️ NE VOUS FATIGUEZ PAS INUTILEMENT - ALLEZ DIRECTEMENT AU MINISTÈRE !
+                  {tr("⚠️ NE VOUS FATIGUEZ PAS INUTILEMENT - ALLEZ DIRECTEMENT AU MINISTÈRE !")}
                 </p>
               </div>
             </div>
 
             {/* Message spécial pour rassurer */}
             <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-xl shadow-lg p-6 mb-6 text-white">
-              <h3 className="text-xl font-bold mb-3">💬 Ce que vous devez dire au Ministère :</h3>
+              <h3 className="text-xl font-bold mb-3">{tr("💬 Ce que vous devez dire au Ministère :")}</h3>
               <div className="bg-white/20 rounded-lg p-4 space-y-2">
-                <p className="font-semibold">"Bonjour, je suis un jeune entrepreneur guinéen."</p>
-                <p className="font-semibold">"J'ai une idée de projet qui couvre plusieurs domaines (Famille, Échange, État, etc.)."</p>
-                <p className="font-semibold">"Je n'ai pas d'argent mais j'ai une grande vision pour aider ma communauté."</p>
-                <p className="font-semibold">"Pouvez-vous m'aider à structurer mon projet et trouver des financements ?"</p>
+                <p className="font-semibold">{tr("\"Bonjour, je suis un jeune entrepreneur guinéen.\"")}</p>
+                <p className="font-semibold">{tr("\"J'ai une idée de projet qui couvre plusieurs domaines (Famille, Échange, État, etc.).\"")}</p>
+                <p className="font-semibold">{tr("\"Je n'ai pas d'argent mais j'ai une grande vision pour aider ma communauté.\"")}</p>
+                <p className="font-semibold">{tr("\"Pouvez-vous m'aider à structurer mon projet et trouver des financements ?\"")}</p>
               </div>
               <p className="mt-4 text-sm opacity-90">
-                ✅ Ils vont vous écouter ! ✅ Ils vont vous aider ! ✅ C'est leur travail !
+                {tr("✅ Ils vont vous écouter ! ✅ Ils vont vous aider ! ✅ C'est leur travail !")}
               </p>
             </div>
 
@@ -718,24 +715,24 @@ export default function GuideEntrepreneur() {
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">{priorite.icon}</div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{priorite.title}</h3>
-                    <p className="text-gray-700 mb-3">{priorite.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{tr(priorite.title)}</h3>
+                    <p className="text-gray-700 mb-3">{tr(priorite.description)}</p>
                     {(priorite as any).reassurance && (
                       <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-3">
-                        <p className="text-sm font-bold text-green-800">{(priorite as any).reassurance}</p>
+                        <p className="text-sm font-bold text-green-800">{tr((priorite as any).reassurance)}</p>
                       </div>
                     )}
                     <div className="bg-blue-50 rounded-lg p-4 mb-3">
-                      <p className="text-sm font-semibold text-blue-800 mb-1">📍 Contact :</p>
-                      <p className="text-blue-900">{priorite.contact}</p>
+                      <p className="text-sm font-semibold text-blue-800 mb-1">{tr("📍 Contact :")}</p>
+                      <p className="text-blue-900">{tr(priorite.contact)}</p>
                     </div>
                     <div className="bg-green-50 rounded-lg p-4 mb-3">
-                      <p className="text-sm font-semibold text-green-800 mb-1">✅ Action à faire :</p>
-                      <p className="text-green-900">{priorite.action}</p>
+                      <p className="text-sm font-semibold text-green-800 mb-1">{tr("✅ Action à faire :")}</p>
+                      <p className="text-green-900">{tr(priorite.action)}</p>
                     </div>
                     <div className="bg-purple-50 rounded-lg p-4">
-                      <p className="text-sm font-semibold text-purple-800 mb-1">💡 Pourquoi :</p>
-                      <p className="text-purple-900">{priorite.why}</p>
+                      <p className="text-sm font-semibold text-purple-800 mb-1">{tr("💡 Pourquoi :")}</p>
+                      <p className="text-purple-900">{tr(priorite.why)}</p>
                     </div>
                   </div>
                 </div>
@@ -750,13 +747,13 @@ export default function GuideEntrepreneur() {
             {organisations.map((org, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">
-                  {org.category}
+                  {tr(org.category)}
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   {org.items.map((item, idx) => (
                     <div key={idx} className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-bold text-gray-900 mb-2">{item.name}</h4>
-                      <p className="text-sm text-gray-600">{item.role}</p>
+                      <h4 className="font-bold text-gray-900 mb-2">{tr(item.name)}</h4>
+                      <p className="text-sm text-gray-600">{tr(item.role)}</p>
                     </div>
                   ))}
                 </div>
@@ -775,15 +772,15 @@ export default function GuideEntrepreneur() {
                     {etape.step}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{etape.title}</h3>
-                    <p className="text-gray-700 mb-4">{etape.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{tr(etape.title)}</h3>
+                    <p className="text-gray-700 mb-4">{tr(etape.description)}</p>
                     <div className="bg-blue-50 rounded-lg p-4">
-                      <p className="font-semibold text-blue-800 mb-2">Actions concrètes :</p>
+                      <p className="font-semibold text-blue-800 mb-2">{tr("Actions concrètes :")}</p>
                       <ul className="space-y-2">
                         {etape.actions.map((action, idx) => (
                           <li key={idx} className="flex items-start gap-2 text-blue-900">
                             <span className="text-blue-600 mt-1">✓</span>
-                            <span>{action}</span>
+                            <span>{tr(action)}</span>
                           </li>
                         ))}
                       </ul>
@@ -801,13 +798,13 @@ export default function GuideEntrepreneur() {
             {ressources.map((ressource, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-4 border-b-2 border-gray-200 pb-2">
-                  {ressource.type}
+                  {tr(ressource.type)}
                 </h3>
                 <ul className="space-y-3">
                   {ressource.items.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-gray-700">
                       <span className="text-green-600 mt-1">•</span>
-                      <span>{item}</span>
+                      <span>{tr(item)}</span>
                     </li>
                   ))}
                 </ul>
@@ -822,20 +819,20 @@ export default function GuideEntrepreneur() {
             {/* Message d'introduction */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl shadow-lg p-6 mb-8 text-white border-4 border-yellow-300">
               <h2 className="text-3xl font-bold mb-4 text-center">
-                🤝 TROUVER UN COMPAGNON SOLIDE
+                {tr("🤝 TROUVER UN COMPAGNON SOLIDE")}
               </h2>
               <p className="text-lg text-center mb-4 opacity-95">
-                Vous n'êtes pas seul ! Voici comment trouver quelqu'un qui vous aidera à réaliser votre projet.
+                {tr("Vous n'êtes pas seul ! Voici comment trouver quelqu'un qui vous aidera à réaliser votre projet.")}
               </p>
               <div className="bg-white/20 rounded-lg p-5">
-                <p className="text-xl font-bold mb-3 text-center">🎯 OÙ ALLER EN PREMIER ?</p>
+                <p className="text-xl font-bold mb-3 text-center">{tr("🎯 OÙ ALLER EN PREMIER ?")}</p>
                 <p className="text-base opacity-95 text-center mb-4">
-                  <strong>Le Ministère de l'Économie</strong> est votre meilleur point de départ. 
-                  Ils connaissent tous les développeurs, mentors et partenaires qui peuvent vous aider.
+                  <strong>{tr("Le Ministère de l'Économie")}</strong> {tr("est votre meilleur point de départ.")}
+                  {" "}{tr("Ils connaissent tous les développeurs, mentors et partenaires qui peuvent vous aider.")}
                 </p>
                 <div className="bg-yellow-400 text-gray-900 rounded-lg p-4">
                   <p className="font-bold text-lg text-center">
-                    ⚡ COMMENCEZ PAR LE MINISTÈRE - ILS VOUS METTRONT EN CONTACT AVEC LES BONNES PERSONNES !
+                    {tr("⚡ COMMENCEZ PAR LE MINISTÈRE - ILS VOUS METTRONT EN CONTACT AVEC LES BONNES PERSONNES !")}
                   </p>
                 </div>
               </div>
@@ -844,7 +841,7 @@ export default function GuideEntrepreneur() {
             {/* Où trouver un partenaire */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 border-b-2 border-gray-200 pb-3">
-                📍 Où trouver un partenaire technique
+                {tr("📍 Où trouver un partenaire technique")}
               </h3>
               <div className="space-y-4">
                 {partenaires.map((partenaire) => (
@@ -853,23 +850,23 @@ export default function GuideEntrepreneur() {
                       <div className="text-3xl">{partenaire.icon}</div>
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-xl font-bold text-gray-900">{partenaire.title}</h4>
+                          <h4 className="text-xl font-bold text-gray-900">{tr(partenaire.title)}</h4>
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                             partenaire.priorite === 'HAUTE' 
                               ? 'bg-red-500 text-white' 
                               : 'bg-yellow-500 text-gray-900'
                           }`}>
-                            {partenaire.priorite}
+                            {tr(partenaire.priorite)}
                           </span>
                         </div>
-                        <p className="text-gray-700 mb-3">{partenaire.description}</p>
+                        <p className="text-gray-700 mb-3">{tr(partenaire.description)}</p>
                         <div className="bg-white rounded-lg p-4 mb-3">
-                          <p className="text-sm font-semibold text-purple-800 mb-1">💡 Pourquoi :</p>
-                          <p className="text-purple-900 text-sm">{partenaire.pourquoi}</p>
+                          <p className="text-sm font-semibold text-purple-800 mb-1">{tr("💡 Pourquoi :")}</p>
+                          <p className="text-purple-900 text-sm">{tr(partenaire.pourquoi)}</p>
                         </div>
                         <div className="bg-green-50 rounded-lg p-4">
-                          <p className="text-sm font-semibold text-green-800 mb-1">✅ Action à faire :</p>
-                          <p className="text-green-900 text-sm">{partenaire.action}</p>
+                          <p className="text-sm font-semibold text-green-800 mb-1">{tr("✅ Action à faire :")}</p>
+                          <p className="text-green-900 text-sm">{tr(partenaire.action)}</p>
                         </div>
                       </div>
                     </div>
@@ -881,7 +878,7 @@ export default function GuideEntrepreneur() {
             {/* Qualités d'un bon partenaire */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 border-b-2 border-gray-200 pb-3">
-                ⭐ Qualités d'un bon partenaire
+                {tr("⭐ Qualités d'un bon partenaire")}
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 {qualitesPartenaire.map((qualite, index) => (
@@ -891,16 +888,16 @@ export default function GuideEntrepreneur() {
                       : 'bg-yellow-50 border-yellow-300'
                   }`}>
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-bold text-gray-900">{qualite.qualite}</h4>
+                      <h4 className="font-bold text-gray-900">{tr(qualite.qualite)}</h4>
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
                         qualite.importance === 'ESSENTIEL' 
                           ? 'bg-red-500 text-white' 
                           : 'bg-yellow-500 text-gray-900'
                       }`}>
-                        {qualite.importance}
+                        {tr(qualite.importance)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700">{qualite.description}</p>
+                    <p className="text-sm text-gray-700">{tr(qualite.description)}</p>
                   </div>
                 ))}
               </div>
@@ -909,7 +906,7 @@ export default function GuideEntrepreneur() {
             {/* Comment approcher un partenaire */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 border-b-2 border-gray-200 pb-3">
-                💬 Comment approcher un partenaire
+                {tr("💬 Comment approcher un partenaire")}
               </h3>
               <div className="space-y-4">
                 {commentApprocher.map((item) => (
@@ -919,12 +916,12 @@ export default function GuideEntrepreneur() {
                         {item.etape}
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-lg font-bold text-gray-900 mb-3">{item.titre}</h4>
+                        <h4 className="text-lg font-bold text-gray-900 mb-3">{tr(item.titre)}</h4>
                         <ul className="space-y-2">
                           {item.details.map((detail, idx) => (
                             <li key={idx} className="flex items-start gap-2 text-gray-700">
                               <span className="text-green-600 mt-1">✓</span>
-                              <span className="text-sm">{detail}</span>
+                              <span className="text-sm">{tr(detail)}</span>
                             </li>
                           ))}
                         </ul>
@@ -938,28 +935,25 @@ export default function GuideEntrepreneur() {
             {/* Script pour demander un partenaire */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
               <h3 className="text-2xl font-bold mb-4 text-center">
-                📝 Script pour demander un partenaire
+                {tr("📝 Script pour demander un partenaire")}
               </h3>
               <div className="bg-white/20 rounded-lg p-5 space-y-4">
                 <div className="bg-white/30 rounded-lg p-4">
-                  <p className="font-semibold mb-2">💬 Ce que vous devez dire :</p>
+                  <p className="font-semibold mb-2">{tr("💬 Ce que vous devez dire :")}</p>
                   <p className="text-sm italic leading-relaxed mb-3">
-                    "Bonjour, je m'appelle [Votre nom]. J'ai développé un projet qui peut aider la communauté guinéenne. 
-                    J'ai déjà fait beaucoup de travail, mais j'ai besoin d'un partenaire technique qui peut m'aider à le développer complètement."
+                    {tr("\"Bonjour, je m'appelle [Votre nom]. J'ai développé un projet qui peut aider la communauté guinéenne. J'ai déjà fait beaucoup de travail, mais j'ai besoin d'un partenaire technique qui peut m'aider à le développer complètement.\"")}
                   </p>
                 </div>
                 <div className="bg-white/30 rounded-lg p-4">
-                  <p className="font-semibold mb-2">💬 Continuez :</p>
+                  <p className="font-semibold mb-2">{tr("💬 Continuez :")}</p>
                   <p className="text-sm italic leading-relaxed mb-3">
-                    "Je suis jeune et je n'ai pas toutes les compétences techniques, mais j'ai une grande vision et beaucoup de passion. 
-                    Je cherche quelqu'un de fiable qui croit en mon projet et qui veut m'aider à le réaliser."
+                    {tr("\"Je suis jeune et je n'ai pas toutes les compétences techniques, mais j'ai une grande vision et beaucoup de passion. Je cherche quelqu'un de fiable qui croit en mon projet et qui veut m'aider à le réaliser.\"")}
                   </p>
                 </div>
                 <div className="bg-white/30 rounded-lg p-4">
-                  <p className="font-semibold mb-2">💬 Demandez :</p>
+                  <p className="font-semibold mb-2">{tr("💬 Demandez :")}</p>
                   <p className="text-sm italic leading-relaxed">
-                    "Pouvez-vous me mettre en contact avec quelqu'un qui pourrait être intéressé ? 
-                    Ou connaissez-vous un développeur, un mentor ou un entrepreneur expérimenté qui pourrait m'aider ?"
+                    {tr("\"Pouvez-vous me mettre en contact avec quelqu'un qui pourrait être intéressé ? Ou connaissez-vous un développeur, un mentor ou un entrepreneur expérimenté qui pourrait m'aider ?\"")}
                   </p>
                 </div>
               </div>
@@ -967,31 +961,31 @@ export default function GuideEntrepreneur() {
 
             {/* Conseils finaux */}
             <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl shadow-lg p-6 text-white">
-              <h3 className="text-2xl font-bold mb-4">💎 Conseils pour trouver le bon partenaire</h3>
+              <h3 className="text-2xl font-bold mb-4">{tr("💎 Conseils pour trouver le bon partenaire")}</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Soyez patient</p>
-                  <p className="text-sm opacity-90">Trouver le bon partenaire prend du temps. Ne vous précipitez pas.</p>
+                  <p className="font-semibold mb-2">{tr("✓ Soyez patient")}</p>
+                  <p className="text-sm opacity-90">{tr("Trouver le bon partenaire prend du temps. Ne vous précipitez pas.")}</p>
                 </div>
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Faites confiance à votre instinct</p>
-                  <p className="text-sm opacity-90">Si quelque chose ne va pas, écoutez votre intuition.</p>
+                  <p className="font-semibold mb-2">{tr("✓ Faites confiance à votre instinct")}</p>
+                  <p className="text-sm opacity-90">{tr("Si quelque chose ne va pas, écoutez votre intuition.")}</p>
                 </div>
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Commencez par le Ministère</p>
-                  <p className="text-sm opacity-90">Ils vous mettront en contact avec des personnes fiables et vérifiées.</p>
+                  <p className="font-semibold mb-2">{tr("✓ Commencez par le Ministère")}</p>
+                  <p className="text-sm opacity-90">{tr("Ils vous mettront en contact avec des personnes fiables et vérifiées.")}</p>
                 </div>
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Soyez clair sur vos attentes</p>
-                  <p className="text-sm opacity-90">Expliquez exactement ce que vous cherchez et ce que vous offrez.</p>
+                  <p className="font-semibold mb-2">{tr("✓ Soyez clair sur vos attentes")}</p>
+                  <p className="text-sm opacity-90">{tr("Expliquez exactement ce que vous cherchez et ce que vous offrez.")}</p>
                 </div>
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Ne vous découragez pas</p>
-                  <p className="text-sm opacity-90">Si quelqu'un refuse, continuez à chercher. Le bon partenaire existe !</p>
+                  <p className="font-semibold mb-2">{tr("✓ Ne vous découragez pas")}</p>
+                  <p className="text-sm opacity-90">{tr("Si quelqu'un refuse, continuez à chercher. Le bon partenaire existe !")}</p>
                 </div>
                 <div className="bg-white/20 rounded-lg p-4">
-                  <p className="font-semibold mb-2">✓ Montrez votre projet</p>
-                  <p className="text-sm opacity-90">Montrez ce que vous avez déjà fait. C'est votre meilleur argument.</p>
+                  <p className="font-semibold mb-2">{tr("✓ Montrez votre projet")}</p>
+                  <p className="text-sm opacity-90">{tr("Montrez ce que vous avez déjà fait. C'est votre meilleur argument.")}</p>
                 </div>
               </div>
             </div>
@@ -1000,34 +994,30 @@ export default function GuideEntrepreneur() {
 
         {/* Section spéciale : Comment présenter votre idée large */}
         <div className="mt-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl shadow-lg p-6 text-white mb-6">
-          <h3 className="text-2xl font-bold mb-4">📝 Comment présenter votre idée large au Ministère</h3>
+          <h3 className="text-2xl font-bold mb-4">{tr("📝 Comment présenter votre idée large au Ministère")}</h3>
           <div className="space-y-4">
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">1. Commencez par votre vision :</p>
+              <p className="font-semibold mb-2">{tr("1. Commencez par votre vision :")}</p>
               <p className="text-sm opacity-95">
-                "J'ai créé une plateforme qui aide les Guinéens dans plusieurs domaines : la famille, les échanges commerciaux, 
-                les services de l'État, la santé, l'éducation, etc."
+                {tr("\"J'ai créé une plateforme qui aide les Guinéens dans plusieurs domaines : la famille, les échanges commerciaux, les services de l'État, la santé, l'éducation, etc.\"")}
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">2. Expliquez pourquoi c'est large :</p>
+              <p className="font-semibold mb-2">{tr("2. Expliquez pourquoi c'est large :")}</p>
               <p className="text-sm opacity-95">
-                "Je veux créer un système complet qui répond à tous les besoins de la communauté guinéenne. 
-                C'est ambitieux, mais c'est ma vision."
+                {tr("\"Je veux créer un système complet qui répond à tous les besoins de la communauté guinéenne. C'est ambitieux, mais c'est ma vision.\"")}
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">3. Montrez ce que vous avez déjà :</p>
+              <p className="font-semibold mb-2">{tr("3. Montrez ce que vous avez déjà :")}</p>
               <p className="text-sm opacity-95">
-                "J'ai déjà développé plusieurs fonctionnalités : gestion familiale, échanges de produits, 
-                services de l'État, etc. Le projet existe déjà en partie."
+                {tr("\"J'ai déjà développé plusieurs fonctionnalités : gestion familiale, échanges de produits, services de l'État, etc. Le projet existe déjà en partie.\"")}
               </p>
             </div>
             <div className="bg-white/20 rounded-lg p-4">
-              <p className="font-semibold mb-2">4. Demandez de l'aide :</p>
+              <p className="font-semibold mb-2">{tr("4. Demandez de l'aide :")}</p>
               <p className="text-sm opacity-95">
-                "Je suis jeune, je n'ai pas d'argent, mais j'ai une grande vision. 
-                Pouvez-vous m'aider à structurer ce projet et trouver des financements ?"
+                {tr("\"Je suis jeune, je n'ai pas d'argent, mais j'ai une grande vision. Pouvez-vous m'aider à structurer ce projet et trouver des financements ?\"")}
               </p>
             </div>
           </div>
@@ -1035,31 +1025,31 @@ export default function GuideEntrepreneur() {
 
         {/* Conseils finaux */}
         <div className="mt-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl shadow-lg p-6 text-white">
-          <h3 className="text-2xl font-bold mb-4">💎 Conseils d'Or</h3>
+          <h3 className="text-2xl font-bold mb-4">{tr("💎 Conseils d'Or")}</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <p className="font-semibold mb-2">✓ Soyez persistant</p>
-              <p className="text-sm opacity-90">Ne vous découragez pas si on vous dit "non". Continuez à essayer.</p>
+              <p className="font-semibold mb-2">{tr("✓ Soyez persistant")}</p>
+              <p className="text-sm opacity-90">{tr("Ne vous découragez pas si on vous dit \"non\". Continuez à essayer.")}</p>
             </div>
             <div>
-              <p className="font-semibold mb-2">✓ Soyez honnête</p>
-              <p className="text-sm opacity-90">Dites clairement que vous êtes jeune, sans argent, mais avec une vision. C'est une force !</p>
+              <p className="font-semibold mb-2">{tr("✓ Soyez honnête")}</p>
+              <p className="text-sm opacity-90">{tr("Dites clairement que vous êtes jeune, sans argent, mais avec une vision. C'est une force !")}</p>
             </div>
             <div>
-              <p className="font-semibold mb-2">✓ Montrez votre passion</p>
-              <p className="text-sm opacity-90">Parlez avec enthousiasme de votre projet. La passion est contagieuse !</p>
+              <p className="font-semibold mb-2">{tr("✓ Montrez votre passion")}</p>
+              <p className="text-sm opacity-90">{tr("Parlez avec enthousiasme de votre projet. La passion est contagieuse !")}</p>
             </div>
             <div>
-              <p className="font-semibold mb-2">✓ N'ayez pas peur</p>
-              <p className="text-sm opacity-90">Le Ministère est là pour vous aider, pas pour vous rejeter. Allez-y avec confiance !</p>
+              <p className="font-semibold mb-2">{tr("✓ N'ayez pas peur")}</p>
+              <p className="text-sm opacity-90">{tr("Le Ministère est là pour vous aider, pas pour vous rejeter. Allez-y avec confiance !")}</p>
             </div>
             <div>
-              <p className="font-semibold mb-2">✓ Construisez votre réseau</p>
-              <p className="text-sm opacity-90">Chaque personne que vous rencontrez peut vous aider.</p>
+              <p className="font-semibold mb-2">{tr("✓ Construisez votre réseau")}</p>
+              <p className="text-sm opacity-90">{tr("Chaque personne que vous rencontrez peut vous aider.")}</p>
             </div>
             <div>
-              <p className="font-semibold mb-2">✓ Apprenez continuellement</p>
-              <p className="text-sm opacity-90">Les compétences s'acquièrent avec le temps et la pratique.</p>
+              <p className="font-semibold mb-2">{tr("✓ Apprenez continuellement")}</p>
+              <p className="text-sm opacity-90">{tr("Les compétences s'acquièrent avec le temps et la pratique.")}</p>
             </div>
           </div>
         </div>
@@ -1070,7 +1060,7 @@ export default function GuideEntrepreneur() {
             onClick={() => navigate('/moi')}
             className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
-            ← Retour
+            {tr("← Retour")}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
+import { useTraduction } from "../i18n/traduction";
 
 type Secteur = 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire';
 
@@ -22,6 +23,7 @@ const FOURNISSEUR_PATH: Record<Secteur, string | null> = {
 
 export function DevenirVendeurButton({ secteur, className }: Props) {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [open, setOpen] = useState(false);
   const [choix, setChoix] = useState<'menu' | 'vendeur'>('menu');
   const [nomBoutique, setNomBoutique] = useState('');
@@ -51,7 +53,7 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
 
   const soumettreVendeur = async () => {
     if (!nomBoutique.trim()) {
-      setMessage('Le nom de la boutique est obligatoire.');
+      setMessage(tr('Le nom de la boutique est obligatoire.'));
       return;
     }
     setLoading(true);
@@ -64,9 +66,9 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
         body: JSON.stringify({ nomBoutique, description, secteur: secteurVendeur, telephone, ville }),
       });
       const data = await res.json();
-      setMessage(data.message || (data.success ? 'Demande envoyée avec succès.' : 'Erreur lors de l\'inscription.'));
+      setMessage(tr(data.message || (data.success ? 'Demande envoyée avec succès.' : 'Erreur lors de l\'inscription.')));
     } catch {
-      setMessage('Erreur réseau. Vérifiez votre connexion.');
+      setMessage(tr('Erreur réseau. Vérifiez votre connexion.'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +81,7 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
         onClick={() => setOpen(true)}
         className={className || 'flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors'}
       >
-        🛒 Vendre ou fournir
+        {tr('🛒 Vendre ou fournir')}
       </button>
 
       {open && (
@@ -89,27 +91,27 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
               <>
                 <div className="text-center py-2">
                   <div className="text-4xl mb-3">🛒</div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Participer à Échange</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{tr("Participer à Échange")}</h3>
                   <p className="text-sm text-gray-600">
-                    Choisissez comment vous voulez participer : vendre directement aux clients, ou fournir/approvisionner la plateforme.
+                    {tr("Choisissez comment vous voulez participer : vendre directement aux clients, ou fournir/approvisionner la plateforme.")}
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 mt-5">
                   <button onClick={() => setChoix('vendeur')} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-colors">
-                    💰 Devenir vendeur
+                    {tr("💰 Devenir vendeur")}
                   </button>
                   <button
                     onClick={goToFournisseur}
                     disabled={!fournisseurPath}
                     className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
                   >
-                    🚚 Devenir fournisseur
+                    {tr("🚚 Devenir fournisseur")}
                   </button>
                   {!fournisseurPath && (
-                    <p className="text-xs text-amber-600 -mt-1">L'inscription fournisseur pour ce secteur arrive bientôt.</p>
+                    <p className="text-xs text-amber-600 -mt-1">{tr("L'inscription fournisseur pour ce secteur arrive bientôt.")}</p>
                   )}
                   <button onClick={resetEtFermer} className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors">
-                    Fermer
+                    {tr("Fermer")}
                   </button>
                 </div>
               </>
@@ -119,32 +121,32 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
               <>
                 <div className="text-center py-1">
                   <div className="text-3xl mb-2">💰</div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Devenir vendeur</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{tr("Devenir vendeur")}</h3>
                 </div>
                 <div className="flex flex-col gap-2.5">
                   <input
                     type="text"
-                    placeholder="Nom de la boutique *"
+                    placeholder={tr("Nom de la boutique *")}
                     value={nomBoutique}
                     onChange={e => setNomBoutique(e.target.value)}
                     className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <input
                     type="text"
-                    placeholder="Téléphone"
+                    placeholder={tr("Téléphone")}
                     value={telephone}
                     onChange={e => setTelephone(e.target.value)}
                     className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <input
                     type="text"
-                    placeholder="Ville"
+                    placeholder={tr("Ville")}
                     value={ville}
                     onChange={e => setVille(e.target.value)}
                     className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <textarea
-                    placeholder="Description (optionnel)"
+                    placeholder={tr("Description (optionnel)")}
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     rows={2}
@@ -154,10 +156,10 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
                 </div>
                 <div className="flex gap-3 mt-5">
                   <button onClick={() => setChoix('menu')} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors">
-                    Retour
+                    {tr("Retour")}
                   </button>
                   <button onClick={soumettreVendeur} disabled={loading} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold transition-colors">
-                    {loading ? 'Envoi...' : 'Envoyer'}
+                    {loading ? tr('Envoi...') : tr('Envoyer')}
                   </button>
                 </div>
               </>

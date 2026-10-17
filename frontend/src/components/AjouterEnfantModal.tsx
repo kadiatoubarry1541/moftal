@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { compressImage } from "../utils/compressImage";
 import { getAllLocationsForGroups } from "../utils/worldGeography";
+import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -47,6 +48,7 @@ function lireFichier(file: File): Promise<string> {
 const champ = "w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
 
 export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Props) {
+  const { tr } = useTraduction();
   const modif = !!fiche;
   const estFemme = String(user?.genre || "").toUpperCase() === "FEMME";
   const [prenom, setPrenom] = useState(fiche?.prenom || "");
@@ -102,23 +104,23 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
       setPhoto(data);
       setApercu(data);
     } catch {
-      setErreur("Impossible de lire cette photo. Essayez une autre image.");
+      setErreur(tr("Impossible de lire cette photo. Essayez une autre image."));
     }
   };
 
-  const libelleAutre = estFemme ? "Le père de l'enfant" : "La mère de l'enfant";
+  const libelleAutre = estFemme ? tr("Le père de l'enfant") : tr("La mère de l'enfant");
 
   const enregistrer = async (confirmerMemeEnfant = false) => {
     setErreur("");
-    if (!prenom.trim()) return setErreur("Écrivez le prénom de l'enfant.");
-    if (!genre) return setErreur("Choisissez garçon ou fille.");
-    if (estVivant === null) return setErreur("Indiquez si l'enfant est vivant ou décédé.");
-    if (!modif && !autreChoix) return setErreur(`Indiquez ${estFemme ? "le père" : "la mère"} de l'enfant.`);
-    if (autreChoix === "nom" && !autreNom.trim()) return setErreur(`Écrivez le nom ${estFemme ? "du père" : "de la mère"}.`);
+    if (!prenom.trim()) return setErreur(tr("Écrivez le prénom de l'enfant."));
+    if (!genre) return setErreur(tr("Choisissez garçon ou fille."));
+    if (estVivant === null) return setErreur(tr("Indiquez si l'enfant est vivant ou décédé."));
+    if (!modif && !autreChoix) return setErreur(estFemme ? tr("Indiquez le père de l'enfant.") : tr("Indiquez la mère de l'enfant."));
+    if (autreChoix === "nom" && !autreNom.trim()) return setErreur(estFemme ? tr("Écrivez le nom du père.") : tr("Écrivez le nom de la mère."));
     const papiers = [extraitNumero, extraitCommune, extraitAnnee].filter((v) => v.trim()).length;
-    if (papiers > 0 && papiers < 3) return setErreur("Pour l'extrait de naissance, remplissez les trois : numéro, commune et année.");
-    if (papiers === 3 && !/^\d{4}$/.test(extraitAnnee.trim())) return setErreur("L'année de l'extrait doit avoir 4 chiffres (ex : 2015).");
-    if (papiers === 3 && !dateNaissance) return setErreur("Avec l'extrait de naissance, la date de naissance est obligatoire.");
+    if (papiers > 0 && papiers < 3) return setErreur(tr("Pour l'extrait de naissance, remplissez les trois : numéro, commune et année."));
+    if (papiers === 3 && !/^\d{4}$/.test(extraitAnnee.trim())) return setErreur(tr("L'année de l'extrait doit avoir 4 chiffres (ex : 2015)."));
+    if (papiers === 3 && !dateNaissance) return setErreur(tr("Avec l'extrait de naissance, la date de naissance est obligatoire."));
 
     const corps: Record<string, unknown> = {
       prenom: prenom.trim(),
@@ -147,13 +149,13 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && data.code === "CONFIRMER_MEME_ENFANT") {
-        if (window.confirm(data.message)) return enregistrer(true);
-        return setErreur("Vérifiez le numéro, la commune et l'année de l'extrait de naissance.");
+        if (window.confirm(tr(data.message))) return enregistrer(true);
+        return setErreur(tr("Vérifiez le numéro, la commune et l'année de l'extrait de naissance."));
       }
-      if (!res.ok || !data.success) return setErreur(data.message || "L'enregistrement a échoué. Réessayez.");
-      onSaved(data.message || "Enregistré.");
+      if (!res.ok || !data.success) return setErreur(tr(data.message || "L'enregistrement a échoué. Réessayez."));
+      onSaved(tr(data.message || "Enregistré."));
     } catch {
-      setErreur("Erreur de connexion. Vérifiez votre connexion internet et réessayez.");
+      setErreur(tr("Erreur de connexion. Vérifiez votre connexion internet et réessayez."));
     } finally {
       setEnvoi(false);
     }
@@ -163,11 +165,11 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
     <div className="fixed inset-0 z-[120] bg-black/50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-white w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-lg font-bold text-slate-800">{modif ? "✏️ Modifier la fiche de l'enfant" : "👶 Ajouter un enfant"}</h3>
-          <button type="button" onClick={onClose} aria-label="Fermer" className="w-9 h-9 rounded-lg hover:bg-slate-100 text-lg">✕</button>
+          <h3 className="text-lg font-bold text-slate-800">{modif ? tr("✏️ Modifier la fiche de l'enfant") : tr("👶 Ajouter un enfant")}</h3>
+          <button type="button" onClick={onClose} aria-label={tr("Fermer")} className="w-9 h-9 rounded-lg hover:bg-slate-100 text-lg">✕</button>
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Pour un enfant sans compte Moftal (bébé, enfant mineur, enfant décédé). Seuls les champs avec * sont obligatoires.
+          {tr("Pour un enfant sans compte Moftal (bébé, enfant mineur, enfant décédé). Seuls les champs avec * sont obligatoires.")}
         </p>
 
         {erreur && <p className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{erreur}</p>}
@@ -180,52 +182,52 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
             </button>
             <div className="text-xs text-slate-500">
               <button type="button" onClick={() => inputPhoto.current?.click()} className="font-semibold text-emerald-700">
-                {apercu ? "Changer la photo" : "Ajouter une photo"}
+                {apercu ? tr("Changer la photo") : tr("Ajouter une photo")}
               </button>
-              <div>(facultatif)</div>
+              <div>{tr("(facultatif)")}</div>
             </div>
             <input ref={inputPhoto} type="file" accept="image/*" className="hidden" onChange={choisirPhoto} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Prénom *</label>
-              <input className={champ} value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Ex : Fatou" />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Prénom *")}</label>
+              <input className={champ} value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder={tr("Ex : Fatou")} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Nom de famille</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Nom de famille")}</label>
               <input className={champ} value={nomFamille} onChange={(e) => setNomFamille(e.target.value)} />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Sexe *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Sexe *")}</label>
             <div className="grid grid-cols-2 gap-2">
               {([["HOMME", "👦 Garçon"], ["FEMME", "👧 Fille"]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setGenre(v)}
-                  className={`py-2.5 rounded-lg border-2 text-sm font-semibold ${genre === v ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>{l}</button>
+                  className={`py-2.5 rounded-lg border-2 text-sm font-semibold ${genre === v ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>{tr(l)}</button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">L'enfant est *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("L'enfant est *")}</label>
             <div className="grid grid-cols-2 gap-2">
               {([[true, "🌱 Vivant"], [false, "🕊️ Décédé"]] as const).map(([v, l]) => (
                 <button key={String(v)} type="button" onClick={() => setEstVivant(v)}
-                  className={`py-2.5 rounded-lg border-2 text-sm font-semibold ${estVivant === v ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>{l}</button>
+                  className={`py-2.5 rounded-lg border-2 text-sm font-semibold ${estVivant === v ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>{tr(l)}</button>
               ))}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Date de naissance</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Date de naissance")}</label>
               <input type="date" className={champ} value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />
             </div>
             {estVivant === false && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Date de décès</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Date de décès")}</label>
                 <input type="date" className={champ} value={dateDeces} onChange={(e) => setDateDeces(e.target.value)} />
               </div>
             )}
@@ -234,51 +236,49 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">{libelleAutre} {modif ? "" : "*"}</label>
             <select className={champ} value={autreChoix} onChange={(e) => setAutreChoix(e.target.value)}>
-              <option value="">{modif ? "— Ne pas changer —" : "— Choisir —"}</option>
+              <option value="">{modif ? tr("— Ne pas changer —") : tr("— Choisir —")}</option>
               {conjoints.map((c) => (
-                <option key={c.numeroH} value={c.numeroH}>{`${c.prenom || ""} ${c.nomFamille || ""}`.trim()} (sur Moftal)</option>
+                <option key={c.numeroH} value={c.numeroH}>{tr("{nom} (sur Moftal)", { nom: `${c.prenom || ""} ${c.nomFamille || ""}`.trim() })}</option>
               ))}
-              <option value="nom">{estFemme ? "Il" : "Elle"} n'est pas sur Moftal : j'écris son nom</option>
-              {!modif && <option value="inconnu">Je préfère ne pas l'indiquer</option>}
+              <option value="nom">{estFemme ? tr("Il n'est pas sur Moftal : j'écris son nom") : tr("Elle n'est pas sur Moftal : j'écris son nom")}</option>
+              {!modif && <option value="inconnu">{tr("Je préfère ne pas l'indiquer")}</option>}
             </select>
             {autreChoix === "nom" && (
-              <input className={`${champ} mt-2`} value={autreNom} onChange={(e) => setAutreNom(e.target.value)} placeholder="Prénom et nom" />
+              <input className={`${champ} mt-2`} value={autreNom} onChange={(e) => setAutreNom(e.target.value)} placeholder={tr("Prénom et nom")} />
             )}
             {autreChoix && autreChoix !== "nom" && autreChoix !== "inconnu" && (
-              <p className="text-xs text-emerald-700 mt-1">✓ L'enfant apparaîtra aussi automatiquement chez {estFemme ? "lui" : "elle"}.</p>
+              <p className="text-xs text-emerald-700 mt-1">✓ {estFemme ? tr("L'enfant apparaîtra aussi automatiquement chez lui.") : tr("L'enfant apparaîtra aussi automatiquement chez elle.")}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Quartier de naissance</label>
-            <input className={champ} value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder="Facultatif" />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Quartier de naissance")}</label>
+            <input className={champ} value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder={tr("Facultatif")} />
           </div>
 
           <div className="border border-slate-200 rounded-xl">
             <button type="button" onClick={() => setVoirExtrait((v) => !v)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-700">
-              <span>📄 Extrait de naissance <span className="font-normal text-slate-400">(facultatif)</span></span>
+              <span>📄 {tr("Extrait de naissance")} <span className="font-normal text-slate-400">{tr("(facultatif)")}</span></span>
               <span className="text-slate-400">{voirExtrait ? "▲" : "▼"}</span>
             </button>
             {voirExtrait && (
               <div className="px-3 pb-3 space-y-2">
                 <p className="text-xs text-slate-500">
-                  Permet à votre enfant, devenu grand, de retrouver cette fiche avec son propre compte.
-                  Le numéro n'est unique que dans une commune et une année : remplissez les trois.
-                  Seuls les parents voient ces informations.
+                  {tr("Permet à votre enfant, devenu grand, de retrouver cette fiche avec son propre compte. Le numéro n'est unique que dans une commune et une année : remplissez les trois. Seuls les parents voient ces informations.")}
                 </p>
-                <input className={champ} value={extraitNumero} onChange={(e) => setExtraitNumero(e.target.value)} placeholder="Numéro de l'extrait (ex : 125)" />
-                <input className={champ} list="communes-extrait" value={extraitCommune} onChange={(e) => setExtraitCommune(e.target.value)} placeholder="Commune de l'extrait (ex : Dabola)" />
+                <input className={champ} value={extraitNumero} onChange={(e) => setExtraitNumero(e.target.value)} placeholder={tr("Numéro de l'extrait (ex : 125)")} />
+                <input className={champ} list="communes-extrait" value={extraitCommune} onChange={(e) => setExtraitCommune(e.target.value)} placeholder={tr("Commune de l'extrait (ex : Dabola)")} />
                 <datalist id="communes-extrait">{communes.map((c) => <option key={c} value={c} />)}</datalist>
-                <input className={champ} inputMode="numeric" maxLength={4} value={extraitAnnee} onChange={(e) => setExtraitAnnee(e.target.value.replace(/\D/g, ""))} placeholder="Année de l'extrait (ex : 2015)" />
+                <input className={champ} inputMode="numeric" maxLength={4} value={extraitAnnee} onChange={(e) => setExtraitAnnee(e.target.value.replace(/\D/g, ""))} placeholder={tr("Année de l'extrait (ex : 2015)")} />
               </div>
             )}
           </div>
         </div>
 
         <div className="flex gap-2 mt-5">
-          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold">Annuler</button>
+          <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-700 font-semibold">{tr("Annuler")}</button>
           <button type="button" disabled={envoi} onClick={() => enregistrer()} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-60">
-            {envoi ? "Enregistrement…" : modif ? "✓ Enregistrer" : "✓ Ajouter l'enfant"}
+            {envoi ? tr("Enregistrement…") : modif ? tr("✓ Enregistrer") : tr("✓ Ajouter l'enfant")}
           </button>
         </div>
       </div>

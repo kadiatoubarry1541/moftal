@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -18,6 +19,7 @@ export default function SecuriteVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [agency, setAgency]   = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,9 +32,9 @@ export default function SecuriteVitrine() {
       fetch(`${API}/api/pro-public/security_agency/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setAgency(t.tenant);
-      else setError(t.message || "Agence introuvable");
+      else setError(tr(t.message || "Agence introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger l'agence."))
+    }).catch(() => setError(tr("Impossible de charger l'agence.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -40,7 +42,7 @@ export default function SecuriteVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: DARK, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+        <p style={{ color: DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -50,9 +52,9 @@ export default function SecuriteVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🛡️</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Agence introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Agence introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: DARK, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: DARK, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -75,7 +77,7 @@ export default function SecuriteVitrine() {
       <div style={{ background: "#f8fafc", color: "#64748b", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            {agency.phone   && <span>🚨 {agency.phone} (urgences)</span>}
+            {agency.phone   && <span>🚨 {agency.phone} {tr("(urgences)")}</span>}
             {agency.email   && <span>✉ {agency.email}</span>}
             {agency.address && <span>📍 {agency.address}</span>}
           </div>
@@ -91,12 +93,12 @@ export default function SecuriteVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{agency.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Sécurité</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Sécurité")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Services","services"],["Équipe","team"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -113,16 +115,16 @@ export default function SecuriteVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{agency.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {agency.description || "Votre sécurité, notre priorité absolue. Des agents professionnels et une couverture sécuritaire de qualité pour protéger ce qui compte."}
+            {agency.description || tr("Votre sécurité, notre priorité absolue. Des agents professionnels et une couverture sécuritaire de qualité pour protéger ce qui compte.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("services")} style={{ background: DARK, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Nos Services
+              {tr("Nos Services")}
             </button>
             {agency.phone && (
               <button onClick={() => window.open(`tel:${agency.phone}`, "_blank")}
                 style={{ background: "#dc2626", color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                🚨 Urgence
+                {tr("🚨 Urgence")}
               </button>
             )}
           </div>
@@ -145,8 +147,8 @@ export default function SecuriteVitrine() {
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 4 }}>{tr(s.val)}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -156,8 +158,8 @@ export default function SecuriteVitrine() {
       <section id="services" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>Nos Services de Sécurité</h2>
-            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>Solutions de protection complètes pour particuliers et entreprises.</p>
+            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Nos Services de Sécurité")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>{tr("Solutions de protection complètes pour particuliers et entreprises.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
             {[
@@ -170,8 +172,8 @@ export default function SecuriteVitrine() {
             ].map((item, i) => (
               <div key={i} className="svc-card" style={{ background: "white", borderRadius: 16, padding: "24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: `${DARK}08`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 14 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{item.title}</h3>
-                <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -183,7 +185,7 @@ export default function SecuriteVitrine() {
         <section id="team" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>Nos Agents</h2>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Nos Agents")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {agents.map((a: any, i: number) => (
@@ -205,27 +207,27 @@ export default function SecuriteVitrine() {
       <section id="contact" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>Demander un devis</h2>
-            <p style={{ color: "#334155", fontSize: 15 }}>Contactez-nous pour une évaluation gratuite de vos besoins en sécurité.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>{tr("Demander un devis")}</h2>
+            <p style={{ color: "#334155", fontSize: 15 }}>{tr("Contactez-nous pour une évaluation gratuite de vos besoins en sécurité.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "🚨", label: "Urgences 24h/24", val: agency.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: agency.email || "Non renseigné" },
-              { icon: "📍", label: "Siège", val: agency.address || "Non renseignée" },
+              { icon: "🚨", label: "Urgences 24h/24", val: agency.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: agency.email || tr("Non renseigné") },
+              { icon: "📍", label: "Siège", val: agency.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "24px 16px", background: "white", borderRadius: 16, border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 34, marginBottom: 10 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{item.val}</div>
               </div>
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 32 }}>
               <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={agency.name} couleur={DARK} objet={"Demande de devis"}
-                messageInitial={"Bonjour, je souhaite un devis pour vos services de sécurité."}
+                messageInitial={tr("Bonjour, je souhaite un devis pour vos services de sécurité.")}
                 style={{ background: DARK, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                ✉️ Demander un devis
+                {tr("✉️ Demander un devis")}
               </EcrireAuSite>
             </div>
         </div>
@@ -238,9 +240,9 @@ export default function SecuriteVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "28px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{agency.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Agence de Sécurité</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Agence de Sécurité")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ACTIVITES_PROFIL } from "../utils/activitesProfil";
+import { useTraduction } from "../i18n/traduction";
 
 const TOUTES = new Set(ACTIVITES_PROFIL.flatMap((g) => g.activites));
 const AUTRE = "__autre__";
@@ -18,6 +19,7 @@ export default function ActiviteChoix({
   placeholder?: string;
   className?: string;
 }) {
+  const { tr } = useTraduction();
   const v = value === "Autre" ? "" : value || "";
   const [autre, setAutre] = useState(value === "Autre" || (!!v && !TOUTES.has(v)));
   useEffect(() => { if (v) setAutre(!TOUTES.has(v)); }, [v]);
@@ -33,13 +35,13 @@ export default function ActiviteChoix({
         }}
         className={className}
       >
-        <option value="">{placeholder}</option>
+        <option value="">{tr(placeholder)}</option>
         {ACTIVITES_PROFIL.map((g) => (
-          <optgroup key={g.groupe} label={g.groupe}>
-            {g.activites.map((a) => <option key={a} value={a}>{a}</option>)}
+          <optgroup key={g.groupe} label={tr(g.groupe)}>
+            {g.activites.map((a) => <option key={a} value={a}>{tr(a)}</option>)}
           </optgroup>
         ))}
-        <option value={AUTRE}>✏️ Autre (j'écris mon activité)</option>
+        <option value={AUTRE}>{tr("✏️ Autre (j'écris mon activité)")}</option>
       </select>
       {autre && (
         <input
@@ -47,7 +49,7 @@ export default function ActiviteChoix({
           autoFocus={!v}
           value={v}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Écrivez votre activité (ex. Chef de quartier, Imam, Enseignant…)"
+          placeholder={tr("Écrivez votre activité (ex. Chef de quartier, Imam, Enseignant…)")}
           className={`mt-2 ${className || ""}`}
         />
       )}

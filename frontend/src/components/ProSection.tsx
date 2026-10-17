@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 import { GESTION_VITRINE_PATHS } from "../utils/gestionVitrines";
 import LogoEtablissement from "./LogoEtablissement";
+import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -46,6 +47,7 @@ interface ProSectionProps {
 
 export default function ProSection({ type, title, icon, description, hideEmptyMessage }: ProSectionProps) {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [rawAccounts, setRawAccounts] = useState<ProAccount[]>([]);
   const [tenants, setTenants] = useState<GestionTenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,10 +128,10 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
       {/* Titre section */}
       <div className="mb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {icon} {title}
+          {icon} {tr(title)}
         </h2>
       </div>
-      {description && <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{description}</p>}
+      {description && <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{tr(description)}</p>}
 
       {/* Bannière proximité géographique */}
       {(userGeo.city || userGeo.country || gpsActive) && accounts.length > 0 && (
@@ -137,8 +139,8 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
           <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
           <span>
             {gpsActive
-              ? "Les résultats les plus proches de vous apparaissent en premier"
-              : `Résultats personnalisés — ceux de ${userGeo.city || userGeo.country} apparaissent en premier`}
+              ? tr("Les résultats les plus proches de vous apparaissent en premier")
+              : tr("Résultats personnalisés — ceux de {lieu} apparaissent en premier", { lieu: userGeo.city || userGeo.country })}
           </span>
         </div>
       )}
@@ -146,29 +148,28 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
       {/* Recherche */}
       {accounts.length > 0 && (
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Rechercher par nom, adresse ou ville..."
+          placeholder={tr("Rechercher par nom, adresse ou ville...")}
           className="w-full min-h-[40px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4 text-sm" />
       )}
 
       {/* Liste */}
       {loading ? (
-        <div className="text-center py-6 text-gray-500 text-sm">Chargement...</div>
+        <div className="text-center py-6 text-gray-500 text-sm">{tr("Chargement...")}</div>
       ) : filtered.length === 0 && filteredTenants.length === 0 ? (
         hideEmptyMessage ? null : (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
             <div className="text-6xl mb-4">{icon}</div>
             <h3 className="text-base font-bold text-gray-700 mb-2">
-              Aucun {title.toLowerCase()} inscrit pour l'instant
+              {tr("Aucun {titre} inscrit pour l'instant", { titre: tr(title).toLowerCase() })}
             </h3>
             <p className="text-sm text-gray-500 mb-6 max-w-xs leading-relaxed">
-              Les professionnels rejoignent bientôt la plateforme dans votre région.
-              Vous proposez ce service ? Soyez parmi les premiers à vous inscrire !
+              {tr("Les professionnels rejoignent bientôt la plateforme dans votre région. Vous proposez ce service ? Soyez parmi les premiers à vous inscrire !")}
             </p>
             <button
               onClick={() => navigate('/inscription-pro')}
               className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
             >
-              ➕ Proposer votre service
+              {tr("➕ Proposer votre service")}
             </button>
           </div>
         )
@@ -185,7 +186,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                   onClick={() => navigate(`/${vitrinePath}/${t.tenant_code}`)}
                   className="mt-2 mx-1 mb-2 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
                 >
-                  🌐 Voir le site
+                  {tr("🌐 Voir le site")}
                 </button>
               </div>
               <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
@@ -194,7 +195,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                     {t.name}
                   </h3>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800">
-                    Espace Gestion
+                    {tr("Espace Gestion")}
                   </span>
                 </div>
                 {t.description && (
@@ -234,14 +235,14 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                       onClick={() => navigate(`/${vitrinePath}/${site.tenant_code}`)}
                       className="mt-2 mx-1 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
                     >
-                      🌐 Voir le site
+                      {tr("🌐 Voir le site")}
                     </button>
                   )}
                   <button
                     onClick={() => navigate(`/rendez-vous/${pro.id}`)}
                     className="mt-2 mx-1 mb-2 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
                   >
-                    📅 Prendre rendez-vous
+                    {tr("📅 Prendre rendez-vous")}
                   </button>
                 </div>
 
@@ -255,7 +256,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                     </h3>
                     {site && vitrinePath && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800">
-                        Espace Gestion
+                        {tr("Espace Gestion")}
                       </span>
                     )}
                     {prox && (
@@ -263,7 +264,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                         className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
                         style={{ color: prox.color, backgroundColor: `${prox.color}1A`, border: `1px solid ${prox.color}33` }}
                       >
-                        {prox.text}
+                        {tr(prox.text)}
                       </span>
                     )}
                   </div>
@@ -272,7 +273,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                   {pro.services?.length > 0 ? (
                     <div className="mb-2">
                       <div className="text-[11px] text-gray-600 dark:text-gray-300 mb-0.5">
-                        <span className="font-semibold">Services principaux :</span>{" "}
+                        <span className="font-semibold">{tr("Services principaux :")}</span>{" "}
                         <span>
                           {pro.services.slice(0, 2).join(", ")}
                           {pro.services.length > 2 && " ..."}
@@ -296,8 +297,8 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                     </div>
                   ) : (
                     <div className="mb-2 text-[11px] text-gray-500 dark:text-gray-400">
-                      <span className="font-semibold">Services principaux :</span>{" "}
-                      <span>non renseignés pour le moment</span>
+                      <span className="font-semibold">{tr("Services principaux :")}</span>{" "}
+                      <span>{tr("non renseignés pour le moment")}</span>
                     </div>
                   )}
 
@@ -329,7 +330,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                           : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
                       }`}
                     >
-                      {isExpanded ? "✕ Fermer" : "＋ Plus d'infos"}
+                      {isExpanded ? tr("✕ Fermer") : tr("＋ Plus d'infos")}
                     </button>
                   </div>
 
@@ -340,7 +341,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                       {/* Description */}
                       {pro.description && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</p>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{tr("Description")}</p>
                           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{pro.description}</p>
                         </div>
                       )}
@@ -348,7 +349,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                       {/* Spécialités */}
                       {pro.specialties?.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Spécialités</p>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{tr("Spécialités")}</p>
                           <div className="flex flex-wrap gap-1">
                             {pro.specialties.map((s, i) => (
                               <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full border border-purple-100 dark:border-purple-800">
@@ -374,7 +375,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                         onClick={() => navigate(`/rendez-vous/${pro.id}`)}
                         className="w-full min-h-[40px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors mt-2"
                       >
-                        📅 Prendre rendez-vous
+                        {tr("📅 Prendre rendez-vous")}
                       </button>
                     </div>
                   )}

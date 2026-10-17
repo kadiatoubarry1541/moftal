@@ -11,6 +11,7 @@ import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import { useTraduction } from "../i18n/traduction";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -30,6 +31,7 @@ const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "
 const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 
 export default function GestionReseau() {
+  const { tr } = useTraduction();
   const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
@@ -80,11 +82,11 @@ export default function GestionReseau() {
         fetch(`${BASE(tenantCode!)}/dashboard`, { headers: auth() }),
       ]);
       const tData = await tRes.json();
-      if (!tData.success) { setError(tData.message || "Accès refusé"); setLoading(false); return; }
+      if (!tData.success) { setError(tr(tData.message || "Accès refusé")); setLoading(false); return; }
       setTenant(tData.tenant);
       const dData = await dRes.json();
       if (dData.success) setDash(dData);
-    } catch { setError("Erreur de connexion au serveur"); }
+    } catch { setError(tr("Erreur de connexion au serveur")); }
     setLoading(false);
   }
 
@@ -99,9 +101,9 @@ export default function GestionReseau() {
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
       const d = await r.json().catch(() => null);
-      return d || { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      return d || { success: false, message: tr("Erreur de connexion : rien n'a été enregistré.") };
     } catch {
-      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      return { success: false, message: tr("Erreur de connexion : rien n'a été enregistré.") };
     } finally {
       setSaving(false);
     }
@@ -110,11 +112,11 @@ export default function GestionReseau() {
   async function saveMembre() {
     if (!mForm.nom) return;
     const d = await envoyerPost(`${BASE(tenantCode!)}/members`, mForm);
-    if (d.success) { setShowAddMembre(false); setMForm({ nom: "", prenom: "", telephone: "", email: "", numero_h: "", role: "membre" }); loadMembres(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (d.success) { setShowAddMembre(false); setMForm({ nom: "", prenom: "", telephone: "", email: "", numero_h: "", role: "membre" }); loadMembres(); } else alert(tr(d.message || "Erreur : rien n'a été enregistré"));
   }
 
   async function deleteMembre(id: number) {
-    if (!confirm("Retirer ce membre ?")) return;
+    if (!confirm(tr("Retirer ce membre ?"))) return;
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembres();
   }
@@ -122,7 +124,7 @@ export default function GestionReseau() {
   async function saveProjet() {
     if (!pForm.titre) return;
     const d = await envoyerPost(`${BASE(tenantCode!)}/projets`, pForm);
-    if (d.success) { setShowAddProjet(false); setPForm({ titre: "", description: "", responsable: "", date_debut: "", date_fin: "", statut: "en_cours" }); loadProjets(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (d.success) { setShowAddProjet(false); setPForm({ titre: "", description: "", responsable: "", date_debut: "", date_fin: "", statut: "en_cours" }); loadProjets(); } else alert(tr(d.message || "Erreur : rien n'a été enregistré"));
   }
 
   async function updateStatutProjet(id: number, statut: string) {
@@ -131,7 +133,7 @@ export default function GestionReseau() {
   }
 
   async function deleteProjet(id: number) {
-    if (!confirm("Supprimer ce projet ?")) return;
+    if (!confirm(tr("Supprimer ce projet ?"))) return;
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/projets/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProjets();
   }
@@ -139,17 +141,17 @@ export default function GestionReseau() {
   async function saveCotisation() {
     if (!cForm.montant) return;
     const d = await envoyerPost(`${BASE(tenantCode!)}/cotisations`, { ...cForm, montant: +cForm.montant });
-    if (d.success) { setShowAddCot(false); setCForm({ membre_nom: "", montant: "", type_cot: "mensuelle", periode: "" }); loadCotisations(); loadDashboard(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (d.success) { setShowAddCot(false); setCForm({ membre_nom: "", montant: "", type_cot: "mensuelle", periode: "" }); loadCotisations(); loadDashboard(); } else alert(tr(d.message || "Erreur : rien n'a été enregistré"));
   }
 
   async function saveAnnonce() {
     if (!aForm.titre || !aForm.contenu) return;
     const d = await envoyerPost(`${BASE(tenantCode!)}/announcements`, aForm);
-    if (d.success) { setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" }); loadAnnonces(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (d.success) { setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" }); loadAnnonces(); } else alert(tr(d.message || "Erreur : rien n'a été enregistré"));
   }
 
   async function deleteAnnonce(id: number) {
-    if (!confirm("Supprimer cette annonce ?")) return;
+    if (!confirm(tr("Supprimer cette annonce ?"))) return;
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnonces();
   }
@@ -178,8 +180,8 @@ export default function GestionReseau() {
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
       <DynamicAppManifest
-        name={tenant?.name || "Gestion"}
-        description={`Gestion réseau — ${tenant?.name || ""}`}
+        name={tenant?.name || tr("Gestion")}
+        description={tr("Gestion réseau — {nom}", { nom: tenant?.name || "" })}
         startUrl={`/gestion-reseau/${tenantCode}`}
         themeColor={BLUE}
       />
@@ -188,7 +190,7 @@ export default function GestionReseau() {
       {/* Admin banner */}
       {isAdminViewing && (
         <div style={{ background: BLUE, color: "white", padding: "8px 20px", fontSize: 12, fontWeight: 600, borderRadius: 8, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          👁 Mode Administrateur — Consultation
+          {tr("👁 Mode Administrateur — Consultation")}
         </div>
       )}
 
@@ -197,14 +199,14 @@ export default function GestionReseau() {
         <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1, overflow: "hidden" }}>
           <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🌐" size={48} radius={12} style={{ background: "rgba(255,255,255,0.2)" }} />
           <div style={{ minWidth: 0, overflow: "hidden" }}>
-            <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Mon Réseau"}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Gestion Réseau</div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || tr("Mon Réseau")}</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{tr("Gestion Réseau")}</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} />
-          <button className="gestion-btn-secondary" onClick={() => navigate(`/reseau-vitrine/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Vitrine</button>
-          <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}><MoftalMark /> Moftal</button>
+          <button className="gestion-btn-secondary" onClick={() => navigate(`/reseau-vitrine/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{tr("🌐 Vitrine")}</button>
+          <button onClick={() => goToMoftal(navigate)} title={tr("Retour sur Moftal")} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}><MoftalMark /> Moftal</button>
         </div>
       </div>
 
@@ -213,7 +215,7 @@ export default function GestionReseau() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ flex: 1, minWidth: 80, padding: "8px 4px", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 700 : 500, background: tab === t.id ? "white" : "transparent", color: tab === t.id ? BLUE : "#64748b", boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.1)" : "none", whiteSpace: "nowrap" }}>
-            {t.icon} {t.label}
+            {t.icon} {tr(t.label)}
           </button>
         ))}
       </div>
@@ -232,13 +234,13 @@ export default function GestionReseau() {
               <div key={i} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ fontSize: 22 }}>{s.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: s.small ? 14 : 26, color: s.color, marginTop: 6 }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{tr(s.label)}</div>
               </div>
             ))}
           </div>
           {dash.recentAnnouncements?.length > 0 && (
             <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #f1f5f9" }}>
-              <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>Dernières annonces</div>
+              <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>{tr("Dernières annonces")}</div>
               {dash.recentAnnouncements.map((a: any) => (
                 <div key={a.id} style={{ padding: "10px 0", borderBottom: "1px solid #f8fafc" }}>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{a.titre}</div>
@@ -256,29 +258,29 @@ export default function GestionReseau() {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Membres ({membres.length})</div>
-            <button onClick={() => setShowAddMembre(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{tr("Membres ({n})", { n: membres.length })}</div>
+            <button onClick={() => setShowAddMembre(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>{tr("+ Ajouter")}</button>
           </div>
           {showAddMembre && (
             <div style={{ background: BLUE_BG, border: "1px solid #bfdbfe", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau membre</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouveau membre")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["Email", "email"], ["NuméroH", "numero_h"]].map(([label, key]) => (
                   <div key={key}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr(label)}</div>
                     <input value={(mForm as any)[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={inp} />
                   </div>
                 ))}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Rôle</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Rôle")}</div>
                   <select value={mForm.role} onChange={e => setMForm(f => ({ ...f, role: e.target.value }))} style={inp}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map(r => <option key={r} value={r}>{tr(r)}</option>)}
                   </select>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={saveMembre} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
-                <button onClick={() => setShowAddMembre(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveMembre} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : tr("Enregistrer")}</button>
+                <button onClick={() => setShowAddMembre(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>{tr("Annuler")}</button>
               </div>
             </div>
           )}
@@ -293,13 +295,13 @@ export default function GestionReseau() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ padding: "2px 10px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.role}</span>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "email"], onSaved: () => { loadMembres(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
-                  <button onClick={() => deleteMembre(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Retirer</button>
+                  <span style={{ padding: "2px 10px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{tr(m.role)}</span>
+                  <button onClick={() => setEdition({ titre: tr("Modifier"), url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "email"], onSaved: () => { loadMembres(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>{tr("✏️ Modifier")}</button>
+                  <button onClick={() => deleteMembre(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>{tr("Retirer")}</button>
                 </div>
               </div>
             ))}
-            {membres.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun membre enregistré.</div>}
+            {membres.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucun membre enregistré.")}</div>}
           </div>
         </div>
       )}
@@ -309,43 +311,43 @@ export default function GestionReseau() {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Projets ({projets.length})</div>
-            <button onClick={() => setShowAddProjet(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Nouveau projet</button>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{tr("Projets ({n})", { n: projets.length })}</div>
+            <button onClick={() => setShowAddProjet(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>{tr("+ Nouveau projet")}</button>
           </div>
           {showAddProjet && (
             <div style={{ background: BLUE_BG, border: "1px solid #bfdbfe", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau projet</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouveau projet")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Titre *</div>
-                  <input value={pForm.titre} onChange={e => setPForm(f => ({ ...f, titre: e.target.value }))} style={inp} placeholder="Ex : Construction du siège social" />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Titre *")}</div>
+                  <input value={pForm.titre} onChange={e => setPForm(f => ({ ...f, titre: e.target.value }))} style={inp} placeholder={tr("Ex : Construction du siège social")} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Responsable</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Responsable")}</div>
                   <input value={pForm.responsable} onChange={e => setPForm(f => ({ ...f, responsable: e.target.value }))} style={inp} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Statut</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Statut")}</div>
                   <select value={pForm.statut} onChange={e => setPForm(f => ({ ...f, statut: e.target.value }))} style={inp}>
-                    {STATUTS.map(s => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
+                    {STATUTS.map(s => <option key={s} value={s}>{tr(STATUT_LABELS[s])}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Date début</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Date début")}</div>
                   <input type="date" value={pForm.date_debut} onChange={e => setPForm(f => ({ ...f, date_debut: e.target.value }))} style={inp} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Date fin prévue</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Date fin prévue")}</div>
                   <input type="date" value={pForm.date_fin} onChange={e => setPForm(f => ({ ...f, date_fin: e.target.value }))} style={inp} />
                 </div>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Description</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Description")}</div>
                   <textarea value={pForm.description} onChange={e => setPForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ ...inp, resize: "vertical" }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={saveProjet} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Créer"}</button>
-                <button onClick={() => setShowAddProjet(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveProjet} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : tr("Créer")}</button>
+                <button onClick={() => setShowAddProjet(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>{tr("Annuler")}</button>
               </div>
             </div>
           )}
@@ -356,7 +358,7 @@ export default function GestionReseau() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{p.titre}</div>
                     <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                      <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${STATUT_COLORS[p.statut]}15`, color: STATUT_COLORS[p.statut] }}>{STATUT_LABELS[p.statut] || p.statut}</span>
+                      <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: `${STATUT_COLORS[p.statut]}15`, color: STATUT_COLORS[p.statut] }}>{tr(STATUT_LABELS[p.statut] || p.statut)}</span>
                       {p.responsable && <span style={{ fontSize: 12, color: "#64748b" }}>👤 {p.responsable}</span>}
                       {p.date_debut && <span style={{ fontSize: 12, color: "#94a3b8" }}>{fmtDate(p.date_debut)}{p.date_fin ? ` → ${fmtDate(p.date_fin)}` : ""}</span>}
                     </div>
@@ -364,9 +366,9 @@ export default function GestionReseau() {
                   </div>
                   <div style={{ display: "flex", gap: 6, marginLeft: 12 }}>
                     <select value={p.statut} onChange={e => updateStatutProjet(p.id, e.target.value)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer", outline: "none" }}>
-                      {STATUTS.map(s => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
+                      {STATUTS.map(s => <option key={s} value={s}>{tr(STATUT_LABELS[s])}</option>)}
                     </select>
-                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projets/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "responsable"], onSaved: () => { loadProjets(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={() => setEdition({ titre: tr("Modifier"), url: `${BASE(tenantCode!)}/projets/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "responsable"], onSaved: () => { loadProjets(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>{tr("✏️ Modifier")}</button>
                     <button onClick={() => deleteProjet(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
                   </div>
                 </div>
@@ -375,8 +377,8 @@ export default function GestionReseau() {
             {projets.length === 0 && (
               <div style={{ textAlign: "center", padding: "48px 20px", background: "white", borderRadius: 12, border: "1px solid #f1f5f9" }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>📋</div>
-                <div style={{ fontWeight: 600, color: "#0f172a" }}>Aucun projet créé</div>
-                <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Lancez votre premier projet collectif</div>
+                <div style={{ fontWeight: 600, color: "#0f172a" }}>{tr("Aucun projet créé")}</div>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>{tr("Lancez votre premier projet collectif")}</div>
               </div>
             )}
           </div>
@@ -389,37 +391,37 @@ export default function GestionReseau() {
           <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Cotisations ({cotisations.length})</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Total encaissé : {fmtMoney(cotisations.reduce((s, c) => s + +c.montant, 0))}</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{tr("Cotisations ({n})", { n: cotisations.length })}</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{tr("Total encaissé : {montant}", { montant: fmtMoney(cotisations.reduce((s, c) => s + +c.montant, 0)) })}</div>
             </div>
-            <button onClick={() => setShowAddCot(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Enregistrer</button>
+            <button onClick={() => setShowAddCot(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>{tr("+ Enregistrer")}</button>
           </div>
           {showAddCot && (
             <div style={{ background: BLUE_BG, border: "1px solid #bfdbfe", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle cotisation</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouvelle cotisation")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Nom du membre</div>
-                  <input value={cForm.membre_nom} onChange={e => setCForm(f => ({ ...f, membre_nom: e.target.value }))} style={inp} placeholder="Anonyme si vide" />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Nom du membre")}</div>
+                  <input value={cForm.membre_nom} onChange={e => setCForm(f => ({ ...f, membre_nom: e.target.value }))} style={inp} placeholder={tr("Anonyme si vide")} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Montant (GNF) *</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Montant (GNF) *")}</div>
                   <input type="number" value={cForm.montant} onChange={e => setCForm(f => ({ ...f, montant: e.target.value }))} style={inp} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Type</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Type")}</div>
                   <select value={cForm.type_cot} onChange={e => setCForm(f => ({ ...f, type_cot: e.target.value }))} style={inp}>
-                    {COT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {COT_TYPES.map(t => <option key={t} value={t}>{tr(t)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Période (ex : Janvier 2025)</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Période (ex : Janvier 2025)")}</div>
                   <input value={cForm.periode} onChange={e => setCForm(f => ({ ...f, periode: e.target.value }))} style={inp} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={saveCotisation} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
-                <button onClick={() => setShowAddCot(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveCotisation} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : tr("Enregistrer")}</button>
+                <button onClick={() => setShowAddCot(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>{tr("Annuler")}</button>
               </div>
             </div>
           )}
@@ -427,13 +429,13 @@ export default function GestionReseau() {
             {filtrer(cotisations, recherche).map(c => (
               <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || "Anonyme"}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.type_cot}{c.periode ? ` · ${c.periode}` : ""} · {fmtDate(c.date_paiement)}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || tr("Anonyme")}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr(c.type_cot)}{c.periode ? ` · ${c.periode}` : ""} · {fmtDate(c.date_paiement)}</div>
                 </div>
                 <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 15 }}>{fmtMoney(c.montant)}</div>
               </div>
             ))}
-            {cotisations.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune cotisation enregistrée.</div>}
+            {cotisations.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucune cotisation enregistrée.")}</div>}
           </div>
         </div>
       )}
@@ -443,29 +445,29 @@ export default function GestionReseau() {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Annonces ({annonces.length})</div>
-            <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Publier</button>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>{tr("Annonces ({n})", { n: annonces.length })}</div>
+            <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>{tr("+ Publier")}</button>
           </div>
           {showAddAnn && (
             <div style={{ background: BLUE_BG, border: "1px solid #bfdbfe", borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle annonce</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouvelle annonce")}</div>
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Titre *</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Titre *")}</div>
                 <input value={aForm.titre} onChange={e => setAForm(f => ({ ...f, titre: e.target.value }))} style={inp} />
               </div>
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Contenu *</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Contenu *")}</div>
                 <textarea value={aForm.contenu} onChange={e => setAForm(f => ({ ...f, contenu: e.target.value }))} rows={3} style={{ ...inp, resize: "vertical" }} />
               </div>
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>Type</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr("Type")}</div>
                 <select value={aForm.type} onChange={e => setAForm(f => ({ ...f, type: e.target.value }))} style={{ ...inp, width: "auto" }}>
-                  {["general", "urgent", "événement", "décision", "autre"].map(t => <option key={t} value={t}>{t}</option>)}
+                  {["general", "urgent", "événement", "décision", "autre"].map(t => <option key={t} value={t}>{tr(t)}</option>)}
                 </select>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={saveAnnonce} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Publier"}</button>
-                <button onClick={() => setShowAddAnn(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={saveAnnonce} disabled={saving} style={{ padding: "8px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : tr("Publier")}</button>
+                <button onClick={() => setShowAddAnn(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>{tr("Annuler")}</button>
               </div>
             </div>
           )}
@@ -474,17 +476,17 @@ export default function GestionReseau() {
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnonces(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
-                  <button onClick={() => deleteAnnonce(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
+                  <button onClick={() => setEdition({ titre: tr("Modifier"), url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnonces(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>{tr("✏️ Modifier")}</button>
+                  <button onClick={() => deleteAnnonce(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>{tr("Supprimer")}</button>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{a.contenu}</div>
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <span style={{ padding: "1px 8px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11 }}>{a.type}</span>
+                  <span style={{ padding: "1px 8px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11 }}>{tr(a.type)}</span>
                   <span style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(a.created_at)}</span>
                 </div>
               </div>
             ))}
-            {annonces.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune annonce publiée.</div>}
+            {annonces.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucune annonce publiée.")}</div>}
           </div>
         </div>
       )}

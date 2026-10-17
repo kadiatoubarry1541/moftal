@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import "./LieuxResidence.css";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
+import { useTraduction } from "../i18n/traduction";
 
 interface Residence {
   id: string;
@@ -33,6 +34,7 @@ interface LieuxResidenceProps {
 }
 
 export function LieuxResidence({ userData }: LieuxResidenceProps) {
+  const { tr } = useTraduction();
   const [activeTab, setActiveTab] = useState("lieu1");
   const [menuOpen, setMenuOpen] = useState(false);
   const [residences, setResidences] = useState<Residence[]>([]);
@@ -42,9 +44,9 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
   );
 
   // Récupérer les 3 lieux de résidence choisis lors de l'inscription
-  const lieu1 = userData.lieu1 || 'Non renseigné';
-  const lieu2 = userData.lieu2 || 'Non renseigné';
-  const lieu3 = userData.lieu3 || 'Non renseigné';
+  const lieu1 = String(userData.lieu1 || tr('Non renseigné'));
+  const lieu2 = String(userData.lieu2 || tr('Non renseigné'));
+  const lieu3 = String(userData.lieu3 || tr('Non renseigné'));
 
   // URL de la photo de profil de l'utilisateur (si disponible)
   const userPhotoUrl = getPhotoUrl(userData.photo as string | undefined);
@@ -97,12 +99,12 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
   }, []);
 
   const tabs = [
-    { id: "lieu1", label: `Lieu 1: ${lieu1}`, icon: "🥇", subtitle: "District" },
-    { id: "lieu2", label: `Lieu 2: ${lieu2}`, icon: "🥈", subtitle: "Sous-préfecture" },
-    { id: "lieu3", label: `Lieu 3: ${lieu3}`, icon: "🥉", subtitle: "Préfecture" },
-    { id: "actuel", label: "Résidence actuelle", icon: "🏠" },
-    { id: "carte", label: "Carte des lieux", icon: "🗺️" },
-    { id: "statistiques", label: "Statistiques", icon: "📊" },
+    { id: "lieu1", label: tr("Lieu 1: {lieu}", { lieu: lieu1 }), icon: "🥇", subtitle: tr("District") },
+    { id: "lieu2", label: tr("Lieu 2: {lieu}", { lieu: lieu2 }), icon: "🥈", subtitle: tr("Sous-préfecture") },
+    { id: "lieu3", label: tr("Lieu 3: {lieu}", { lieu: lieu3 }), icon: "🥉", subtitle: tr("Préfecture") },
+    { id: "actuel", label: tr("Résidence actuelle"), icon: "🏠" },
+    { id: "carte", label: tr("Carte des lieux"), icon: "🗺️" },
+    { id: "statistiques", label: tr("Statistiques"), icon: "📊" },
   ];
 
   const getResidencesByType = (type: string) => {
@@ -119,7 +121,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
           month: "long",
           year: "numeric",
         })
-      : "Présent";
+      : tr("Présent");
     return `${debut} - ${fin}`;
   };
 
@@ -132,9 +134,10 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
     const months = Math.floor((diffDays % 365) / 30);
 
     if (years > 0) {
-      return `${years} an${years > 1 ? "s" : ""} ${months > 0 ? `et ${months} mois` : ""}`;
+      if (months > 0) return years > 1 ? tr("{a} ans et {m} mois", { a: years, m: months }) : tr("{a} an et {m} mois", { a: years, m: months });
+      return years > 1 ? tr("{a} ans", { a: years }) : tr("{a} an", { a: years });
     }
-    return `${months} mois`;
+    return tr("{m} mois", { m: months });
   };
 
   const getStats = () => {
@@ -159,10 +162,10 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
       {/* Header Principal */}
       <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-slate-200 p-6 mb-8 text-center">
         <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center justify-center gap-3">
-          🏠 Lieux de résidence de {userData.prenom} {userData.nomFamille}
+          {tr("🏠 Lieux de résidence de {nom}", { nom: `${userData.prenom} ${userData.nomFamille}` })}
         </h2>
         <div className="text-slate-600">
-          <span className="font-medium">NuméroH:</span>{" "}
+          <span className="font-medium">{tr("NuméroH:")}</span>{" "}
           <span className="text-blue-600 font-semibold">
             {userData.numeroH}
           </span>
@@ -180,7 +183,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               <h3 className="text-xl font-semibold text-emerald-800 mb-0">
                 {stats.totalResidences}
               </h3>
-              <p className="text-slate-500">Total résidences</p>
+              <p className="text-slate-500">{tr("Total résidences")}</p>
             </div>
           </div>
         </div>
@@ -194,7 +197,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               <h3 className="text-xl font-semibold text-blue-800 mb-0">
                 {stats.paysVisites}
               </h3>
-              <p className="text-slate-500">Pays visités</p>
+              <p className="text-slate-500">{tr("Pays visités")}</p>
             </div>
           </div>
         </div>
@@ -208,7 +211,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               <h3 className="text-xl font-semibold text-amber-800 mb-0">
                 {stats.regionsVisitees}
               </h3>
-              <p className="text-slate-500">Régions visitées</p>
+              <p className="text-slate-500">{tr("Régions visitées")}</p>
             </div>
           </div>
         </div>
@@ -222,7 +225,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               <h3 className="text-xl font-semibold text-purple-800 mb-0">
                 {stats.villesVisitees}
               </h3>
-              <p className="text-slate-500">Villes visitées</p>
+              <p className="text-slate-500">{tr("Villes visitées")}</p>
             </div>
           </div>
         </div>
@@ -244,7 +247,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
             type="button"
             onClick={() => setMenuOpen(v => !v)}
             className="flex flex-col items-center justify-center gap-[4px] p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 transition"
-            aria-label="Menu"
+            aria-label={tr("Menu")}
           >
             <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
             <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
@@ -286,7 +289,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors duration-200"
           onClick={() => setShowAddModal(true)}
         >
-          ➕ Ajouter une résidence
+          {tr("➕ Ajouter une résidence")}
         </button>
       </div>
 
@@ -296,21 +299,21 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
         {activeTab === "lieu1" && (
           <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-slate-200 p-6">
             <h3 className="text-2xl font-semibold text-blue-800 mb-6 flex items-center gap-3">
-              🥇 Lieu de résidence 1 : {lieu1}
+              {tr("🥇 Lieu de résidence 1 : {lieu}", { lieu: lieu1 })}
             </h3>
             
             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 mb-6">
-              <h5 className="text-lg font-bold text-blue-900 mb-3">📍 Type de localisation</h5>
-              <p className="text-2xl font-semibold text-blue-700 mb-2">District</p>
+              <h5 className="text-lg font-bold text-blue-900 mb-3">{tr("📍 Type de localisation")}</h5>
+              <p className="text-2xl font-semibold text-blue-700 mb-2">{tr("District")}</p>
               <p className="text-slate-700">
-                Ce lieu correspond à votre <strong>district</strong> de résidence en Guinée.
+                {tr("Ce lieu correspond à votre")} <strong>{tr("district")}</strong> {tr("de résidence en Guinée.")}
               </p>
             </div>
 
             {/* Membres du même lieu */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h4 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                👥 Membres du même district ({lieu1})
+                {tr("👥 Membres du même district ({lieu})", { lieu: lieu1 })}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Simulation de membres */}
@@ -320,7 +323,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                       {userPhotoUrl ? (
                         <img
                           src={userPhotoUrl}
-                          alt="Photo de profil"
+                          alt={tr("Photo de profil")}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
@@ -334,7 +337,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center text-slate-500">
-                  Autres membres à venir...
+                  {tr("Autres membres à venir...")}
                 </div>
               </div>
             </div>
@@ -342,20 +345,20 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
             {/* Espace d'échange */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border-2 border-emerald-200">
               <h4 className="text-xl font-semibold text-emerald-900 mb-4 flex items-center gap-2">
-                💬 Espace d'échange - {lieu1}
+                {tr("💬 Espace d'échange - {lieu}", { lieu: lieu1 })}
               </h4>
               <p className="text-slate-700 mb-4">
-                Échangez avec les autres membres de votre district par écrit, audio ou vidéo.
+                {tr("Échangez avec les autres membres de votre district par écrit, audio ou vidéo.")}
               </p>
               <div className="flex gap-3">
                 <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
-                  ✍️ Écrire un message
+                  {tr("✍️ Écrire un message")}
                 </button>
                 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
-                  🎤 Message audio
+                  {tr("🎤 Message audio")}
                 </button>
                 <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg">
-                  🎥 Message vidéo
+                  {tr("🎥 Message vidéo")}
                 </button>
               </div>
             </div>
@@ -366,21 +369,21 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
         {activeTab === "lieu2" && (
           <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-green-500 border border-slate-200 p-6">
             <h3 className="text-2xl font-semibold text-green-800 mb-6 flex items-center gap-3">
-              🥈 Lieu de résidence 2 : {lieu2}
+              {tr("🥈 Lieu de résidence 2 : {lieu}", { lieu: lieu2 })}
             </h3>
             
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200 mb-6">
-              <h5 className="text-lg font-bold text-green-900 mb-3">📍 Type de localisation</h5>
-              <p className="text-2xl font-semibold text-green-700 mb-2">Sous-préfecture</p>
+              <h5 className="text-lg font-bold text-green-900 mb-3">{tr("📍 Type de localisation")}</h5>
+              <p className="text-2xl font-semibold text-green-700 mb-2">{tr("Sous-préfecture")}</p>
               <p className="text-slate-700">
-                Ce lieu correspond à votre <strong>sous-préfecture</strong> de résidence en Guinée.
+                {tr("Ce lieu correspond à votre")} <strong>{tr("sous-préfecture")}</strong> {tr("de résidence en Guinée.")}
               </p>
             </div>
 
             {/* Membres du même lieu */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h4 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                👥 Membres de la même sous-préfecture ({lieu2})
+                {tr("👥 Membres de la même sous-préfecture ({lieu})", { lieu: lieu2 })}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -389,7 +392,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                       {userPhotoUrl ? (
                         <img
                           src={userPhotoUrl}
-                          alt="Photo de profil"
+                          alt={tr("Photo de profil")}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
@@ -403,7 +406,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center text-slate-500">
-                  Autres membres à venir...
+                  {tr("Autres membres à venir...")}
                 </div>
               </div>
             </div>
@@ -411,20 +414,20 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
             {/* Espace d'échange */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border-2 border-emerald-200">
               <h4 className="text-xl font-semibold text-emerald-900 mb-4 flex items-center gap-2">
-                💬 Espace d'échange - {lieu2}
+                {tr("💬 Espace d'échange - {lieu}", { lieu: lieu2 })}
               </h4>
               <p className="text-slate-700 mb-4">
-                Échangez avec les autres membres de votre sous-préfecture par écrit, audio ou vidéo.
+                {tr("Échangez avec les autres membres de votre sous-préfecture par écrit, audio ou vidéo.")}
               </p>
               <div className="flex gap-3">
                 <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
-                  ✍️ Écrire un message
+                  {tr("✍️ Écrire un message")}
                 </button>
                 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
-                  🎤 Message audio
+                  {tr("🎤 Message audio")}
                 </button>
                 <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg">
-                  🎥 Message vidéo
+                  {tr("🎥 Message vidéo")}
                 </button>
               </div>
             </div>
@@ -435,21 +438,21 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
         {activeTab === "lieu3" && (
           <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-red-500 border border-slate-200 p-6">
             <h3 className="text-2xl font-semibold text-red-800 mb-6 flex items-center gap-3">
-              🥉 Lieu de résidence 3 : {lieu3}
+              {tr("🥉 Lieu de résidence 3 : {lieu}", { lieu: lieu3 })}
             </h3>
             
             <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-6 border-2 border-red-200 mb-6">
-              <h5 className="text-lg font-bold text-red-900 mb-3">📍 Type de localisation</h5>
-              <p className="text-2xl font-semibold text-red-700 mb-2">Préfecture</p>
+              <h5 className="text-lg font-bold text-red-900 mb-3">{tr("📍 Type de localisation")}</h5>
+              <p className="text-2xl font-semibold text-red-700 mb-2">{tr("Préfecture")}</p>
               <p className="text-slate-700">
-                Ce lieu correspond à votre <strong>préfecture</strong> de résidence en Guinée.
+                {tr("Ce lieu correspond à votre")} <strong>{tr("préfecture")}</strong> {tr("de résidence en Guinée.")}
               </p>
             </div>
 
             {/* Membres du même lieu */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h4 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                👥 Membres de la même préfecture ({lieu3})
+                {tr("👥 Membres de la même préfecture ({lieu})", { lieu: lieu3 })}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
@@ -458,7 +461,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                       {userPhotoUrl ? (
                         <img
                           src={userPhotoUrl}
-                          alt="Photo de profil"
+                          alt={tr("Photo de profil")}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
@@ -472,7 +475,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-center text-slate-500">
-                  Autres membres à venir...
+                  {tr("Autres membres à venir...")}
                 </div>
               </div>
             </div>
@@ -480,20 +483,20 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
             {/* Espace d'échange */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border-2 border-emerald-200">
               <h4 className="text-xl font-semibold text-emerald-900 mb-4 flex items-center gap-2">
-                💬 Espace d'échange - {lieu3}
+                {tr("💬 Espace d'échange - {lieu}", { lieu: lieu3 })}
               </h4>
               <p className="text-slate-700 mb-4">
-                Échangez avec les autres membres de votre préfecture par écrit, audio ou vidéo.
+                {tr("Échangez avec les autres membres de votre préfecture par écrit, audio ou vidéo.")}
               </p>
               <div className="flex gap-3">
                 <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
-                  ✍️ Écrire un message
+                  {tr("✍️ Écrire un message")}
                 </button>
                 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
-                  🎤 Message audio
+                  {tr("🎤 Message audio")}
                 </button>
                 <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg">
-                  🎥 Message vidéo
+                  {tr("🎥 Message vidéo")}
                 </button>
               </div>
             </div>
@@ -503,19 +506,19 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
         {activeTab === "actuel" && (
           <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-emerald-500 border border-slate-200 p-6">
             <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center gap-2">
-              🏠 Résidence actuelle
+              {tr("🏠 Résidence actuelle")}
             </h3>
             {getResidencesByType("actuel").length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed border-slate-300 rounded-xl">
                 <div className="text-6xl mb-4">🏠</div>
                 <p className="text-slate-600 mb-4">
-                  Aucune résidence actuelle renseignée
+                  {tr("Aucune résidence actuelle renseignée")}
                 </p>
                 <button
                   className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors duration-200"
                   onClick={() => setShowAddModal(true)}
                 >
-                  Ajouter votre résidence actuelle
+                  {tr("Ajouter votre résidence actuelle")}
                 </button>
               </div>
             ) : (
@@ -527,7 +530,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                   >
                     <div className="flex items-start justify-between mb-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                        🏠 Actuelle
+                        {tr("🏠 Actuelle")}
                       </span>
                       <button
                         className="px-4 py-2 hover:bg-slate-100 text-slate-700 font-medium rounded-lg transition-colors duration-200"
@@ -546,12 +549,12 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                       </p>
                       {residence.commune && (
                         <p className="text-slate-600">
-                          Commune: {residence.commune}
+                          {tr("Commune: {commune}", { commune: residence.commune })}
                         </p>
                       )}
                       {residence.quartier && (
                         <p className="text-slate-600">
-                          Quartier: {residence.quartier}
+                          {tr("Quartier: {quartier}", { quartier: residence.quartier })}
                         </p>
                       )}
                       {residence.adresse && (
@@ -563,11 +566,11 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
                     <div className="bg-slate-50 p-4 mb-4 rounded-xl">
                       <p className="text-slate-600">
-                        <span className="font-semibold">Période:</span>{" "}
+                        <span className="font-semibold">{tr("Période:")}</span>{" "}
                         {formatPeriode(residence.dateDebut, residence.dateFin)}
                       </p>
                       <p className="text-slate-600">
-                        <span className="font-semibold">Durée:</span>{" "}
+                        <span className="font-semibold">{tr("Durée:")}</span>{" "}
                         {calculateDuree(residence.dateDebut, residence.dateFin)}
                       </p>
                     </div>
@@ -589,24 +592,24 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
         {activeTab === "carte" && (
           <div className="carte-section">
-            <h4>🗺️ Carte des lieux de résidence</h4>
+            <h4>{tr("🗺️ Carte des lieux de résidence")}</h4>
             <div className="map-container">
               <div className="map-placeholder">
                 <div className="map-content">
-                  <h5>🗺️ Carte interactive</h5>
-                  <p>Visualisation de tous vos lieux de résidence</p>
+                  <h5>{tr("🗺️ Carte interactive")}</h5>
+                  <p>{tr("Visualisation de tous vos lieux de résidence")}</p>
                   <div className="map-legend">
                     <div className="legend-item">
                       <span className="legend-dot current"></span>
-                      <span>Résidence actuelle</span>
+                      <span>{tr("Résidence actuelle")}</span>
                     </div>
                     <div className="legend-item">
                       <span className="legend-dot previous"></span>
-                      <span>Résidences précédentes</span>
+                      <span>{tr("Résidences précédentes")}</span>
                     </div>
                     <div className="legend-item">
                       <span className="legend-dot future"></span>
-                      <span>Projets futurs</span>
+                      <span>{tr("Projets futurs")}</span>
                     </div>
                   </div>
                 </div>
@@ -617,11 +620,11 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
         {activeTab === "statistiques" && (
           <div className="statistiques-section">
-            <h4>📊 Statistiques de résidence</h4>
+            <h4>{tr("📊 Statistiques de résidence")}</h4>
 
             <div className="stats-detailed">
               <div className="stat-category">
-                <h5>📈 Répartition géographique</h5>
+                <h5>{tr("📈 Répartition géographique")}</h5>
                 <div className="stat-bars">
                   {[...new Set(residences.map((r) => r.region))].map(
                     (region) => (
@@ -645,7 +648,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               </div>
 
               <div className="stat-category">
-                <h5>⏱️ Durée des résidences</h5>
+                <h5>{tr("⏱️ Durée des résidences")}</h5>
                 <div className="duration-stats">
                   {residences
                     .filter((r) => r.dateFin)
@@ -664,22 +667,20 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               </div>
 
               <div className="stat-category">
-                <h5>🎯 Objectifs de mobilité</h5>
+                <h5>{tr("🎯 Objectifs de mobilité")}</h5>
                 <div className="mobility-goals">
                   <p>
-                    • Découvrir{" "}
                     {stats.paysVisites > 3
-                      ? "de nouveaux continents"
-                      : "de nouveaux pays africains"}
+                      ? tr("• Découvrir de nouveaux continents")
+                      : tr("• Découvrir de nouveaux pays africains")}
                   </p>
                   <p>
-                    • Établir des connexions dans{" "}
                     {stats.regionsVisitees > 5
-                      ? "toutes les régions guinéennes"
-                      : "plus de régions"}
+                      ? tr("• Établir des connexions dans toutes les régions guinéennes")
+                      : tr("• Établir des connexions dans plus de régions")}
                   </p>
                   <p>
-                    • Contribuer au développement local partout où je réside
+                    {tr("• Contribuer au développement local partout où je réside")}
                   </p>
                 </div>
               </div>
@@ -700,21 +701,21 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h4>
               {editingResidence
-                ? "Modifier la résidence"
-                : "Ajouter une résidence"}
+                ? tr("Modifier la résidence")
+                : tr("Ajouter une résidence")}
             </h4>
             <form className="residence-form">
               <div className="form-row">
                 <div className="form-field">
-                  <label>Type de résidence</label>
+                  <label>{tr("Type de résidence")}</label>
                   <select defaultValue={editingResidence?.type || "actuel"}>
-                    <option value="actuel">Résidence actuelle</option>
-                    <option value="precedent">Résidence précédente</option>
-                    <option value="futur">Projet futur</option>
+                    <option value="actuel">{tr("Résidence actuelle")}</option>
+                    <option value="precedent">{tr("Résidence précédente")}</option>
+                    <option value="futur">{tr("Projet futur")}</option>
                   </select>
                 </div>
                 <div className="form-field">
-                  <label>Pays</label>
+                  <label>{tr("Pays")}</label>
                   <input
                     type="text"
                     defaultValue={editingResidence?.pays || "Guinée"}
@@ -724,14 +725,14 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
               <div className="form-row">
                 <div className="form-field">
-                  <label>Région</label>
+                  <label>{tr("Région")}</label>
                   <input
                     type="text"
                     defaultValue={editingResidence?.region || ""}
                   />
                 </div>
                 <div className="form-field">
-                  <label>Ville</label>
+                  <label>{tr("Ville")}</label>
                   <input
                     type="text"
                     defaultValue={editingResidence?.ville || ""}
@@ -741,14 +742,14 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
               <div className="form-row">
                 <div className="form-field">
-                  <label>Commune</label>
+                  <label>{tr("Commune")}</label>
                   <input
                     type="text"
                     defaultValue={editingResidence?.commune || ""}
                   />
                 </div>
                 <div className="form-field">
-                  <label>Quartier</label>
+                  <label>{tr("Quartier")}</label>
                   <input
                     type="text"
                     defaultValue={editingResidence?.quartier || ""}
@@ -757,7 +758,7 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               </div>
 
               <div className="form-field">
-                <label>Adresse complète</label>
+                <label>{tr("Adresse complète")}</label>
                 <input
                   type="text"
                   defaultValue={editingResidence?.adresse || ""}
@@ -766,14 +767,14 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
 
               <div className="form-row">
                 <div className="form-field">
-                  <label>Date de début</label>
+                  <label>{tr("Date de début")}</label>
                   <input
                     type="date"
                     defaultValue={editingResidence?.dateDebut || ""}
                   />
                 </div>
                 <div className="form-field">
-                  <label>Date de fin (optionnel)</label>
+                  <label>{tr("Date de fin (optionnel)")}</label>
                   <input
                     type="date"
                     defaultValue={editingResidence?.dateFin || ""}
@@ -782,11 +783,11 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
               </div>
 
               <div className="form-field">
-                <label>Description</label>
+                <label>{tr("Description")}</label>
                 <textarea
                   rows={3}
                   defaultValue={editingResidence?.description || ""}
-                  placeholder="Contexte, raisons, souvenirs..."
+                  placeholder={tr("Contexte, raisons, souvenirs...")}
                 ></textarea>
               </div>
 
@@ -799,10 +800,10 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
                     setEditingResidence(null);
                   }}
                 >
-                  Annuler
+                  {tr("Annuler")}
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {editingResidence ? "Modifier" : "Ajouter"}
+                  {editingResidence ? tr("Modifier") : tr("Ajouter")}
                 </button>
               </div>
             </form>

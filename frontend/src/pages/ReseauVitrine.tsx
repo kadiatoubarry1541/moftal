@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -20,6 +21,7 @@ export default function ReseauVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [reseau, setReseau]   = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,9 +34,9 @@ export default function ReseauVitrine() {
       fetch(`${API}/api/pro-public/reseau/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setReseau(t.tenant);
-      else setError(t.message || "Réseau introuvable");
+      else setError(tr(t.message || "Réseau introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger ce réseau."))
+    }).catch(() => setError(tr("Impossible de charger ce réseau.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -42,7 +44,7 @@ export default function ReseauVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #ddd6fe`, borderTopColor: VIOLET, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: VIOLET_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+        <p style={{ color: VIOLET_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -52,9 +54,9 @@ export default function ReseauVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🌐</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Réseau introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Réseau introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: VIOLET, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: VIOLET, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -95,12 +97,12 @@ export default function ReseauVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{reseau.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Réseau Pro</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Réseau Pro")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Membres","members"],["Actualités","news"],["Rejoindre","join"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -117,14 +119,14 @@ export default function ReseauVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{reseau.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {reseau.description || "Un réseau de professionnels unis pour partager, collaborer et créer des opportunités ensemble. Rejoignez une communauté dynamique."}
+            {reseau.description || tr("Un réseau de professionnels unis pour partager, collaborer et créer des opportunités ensemble. Rejoignez une communauté dynamique.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("members")} style={{ background: VIOLET, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Voir les membres
+              {tr("Voir les membres")}
             </button>
             <button onClick={() => scrollTo("join")} style={{ background: "white", color: VIOLET, border: `1.5px solid ${VIOLET}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Nous rejoindre
+              {tr("Nous rejoindre")}
             </button>
           </div>
         </div>
@@ -142,12 +144,12 @@ export default function ReseauVitrine() {
             { icon: "👥", val: `${stats.members || 0}`, label: "Membres actifs" },
             { icon: "🚀", val: `${stats.projects || 0}`, label: "Projets collaboratifs" },
             { icon: "📢", val: `${stats.announcements || 0}`, label: "Annonces" },
-            { icon: "🤝", val: "Synergies", label: "Notre valeur ajoutée" },
+            { icon: "🤝", val: tr("Synergies"), label: "Notre valeur ajoutée" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: VIOLET, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -158,8 +160,8 @@ export default function ReseauVitrine() {
         <section id="members" style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <span style={{ background: `${VIOLET}18`, color: VIOLET, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>La communauté</span>
-              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Membres</h2>
+              <span style={{ background: `${VIOLET}18`, color: VIOLET, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("La communauté")}</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Membres")}</h2>
             </div>
             <div className="mem-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {members.map((m: any, i: number) => (
@@ -182,7 +184,7 @@ export default function ReseauVitrine() {
         <section id="news" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>Actualités du réseau</h2>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Actualités du réseau")}</h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {announces.map((ann: any, i: number) => (
@@ -201,14 +203,14 @@ export default function ReseauVitrine() {
       <section id="join" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🌐</div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>Rejoindre le réseau</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>{tr("Rejoindre le réseau")}</h2>
           <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.7, marginBottom: 32 }}>
-            Vous êtes professionnel et souhaitez rejoindre notre réseau ? Contactez-nous pour intégrer notre communauté et accéder à des opportunités exclusives.
+            {tr("Vous êtes professionnel et souhaitez rejoindre notre réseau ? Contactez-nous pour intégrer notre communauté et accéder à des opportunités exclusives.")}
           </p>
           <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={reseau.name} couleur={VIOLET} objet={"Demande d'adhésion"}
-                messageInitial={"Bonjour, je souhaite rejoindre votre réseau professionnel."}
+                messageInitial={tr("Bonjour, je souhaite rejoindre votre réseau professionnel.")}
                 style={{ background: VIOLET, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                ✉️ Nous écrire
+                {tr("✉️ Nous écrire")}
               </EcrireAuSite>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 36 }}>
             {[
@@ -218,7 +220,7 @@ export default function ReseauVitrine() {
             ].map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 12, padding: "16px 12px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
-                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{item.label}</div>
+                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>{item.val}</div>
               </div>
             ))}
@@ -233,9 +235,9 @@ export default function ReseauVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{reseau.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Réseau Professionnel</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Réseau Professionnel")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>

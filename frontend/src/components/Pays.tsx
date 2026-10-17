@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import './Pays.css'
+import { useTraduction } from '../i18n/traduction'
 
 interface PaysProps {
   userData: any
 }
 
 export function Pays({ userData }: PaysProps) {
+  const { tr } = useTraduction()
   const [activeTab, setActiveTab] = useState('monpays')
 
   // Récupérer le pays et les régions de Guinée depuis les données utilisateur
@@ -41,7 +43,7 @@ export function Pays({ userData }: PaysProps) {
   return (
     <div className="pays-page">
       <div className="pays-header">
-        <h3>🌍 Pays de {userData.prenom} {userData.nomFamille}</h3>
+        <h3>🌍 {tr("Pays de {prenom} {nom}", { prenom: userData.prenom, nom: userData.nomFamille })}</h3>
         <p className="numero-h">NumeroH: {userData.numeroH}</p>
       </div>
 
@@ -53,7 +55,7 @@ export function Pays({ userData }: PaysProps) {
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="tab-icon">{tab.icon}</span>
-            <span className="tab-label">{tab.label}</span>
+            <span className="tab-label">{tr(tab.label)}</span>
           </button>
         ))}
       </div>
@@ -62,7 +64,7 @@ export function Pays({ userData }: PaysProps) {
         {activeTab === 'monpays' && (
           <div className="monpays-tab">
             <h4 style={{ fontSize: '2rem', marginBottom: '2rem', color: '#2c3e50' }}>
-              ⭐ Mon Pays & Mes Régions
+              ⭐ {tr("Mon Pays & Mes Régions")}
             </h4>
 
             {/* Section Pays */}
@@ -76,10 +78,10 @@ export function Pays({ userData }: PaysProps) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🇬🇳</div>
                 <h5 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2e7d32', marginBottom: '1rem' }}>
-                  {paysPrincipal}
+                  {tr(paysPrincipal)}
                 </h5>
                 <p style={{ fontSize: '1.1rem', color: '#555' }}>
-                  Mon pays d'origine choisi lors de l'inscription
+                  {tr("Mon pays d'origine choisi lors de l'inscription")}
                 </p>
               </div>
             </div>
@@ -87,7 +89,7 @@ export function Pays({ userData }: PaysProps) {
             {/* Section Régions */}
             <div>
               <h5 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2c3e50', marginBottom: '1.5rem' }}>
-                📍 Mes 5 Régions de Guinée
+                📍 {tr("Mes 5 Régions de Guinée")}
               </h5>
               
               {regions.length === 0 ? (
@@ -100,7 +102,7 @@ export function Pays({ userData }: PaysProps) {
                 }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🗺️</div>
                   <p style={{ color: '#777', fontSize: '1.1rem' }}>
-                    Aucune région n'a été sélectionnée lors de votre inscription.
+                    {tr("Aucune région n'a été sélectionnée lors de votre inscription.")}
                   </p>
                 </div>
               ) : (
@@ -142,7 +144,7 @@ export function Pays({ userData }: PaysProps) {
                         </h6>
                         {regionInfo && (
                           <p style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>
-                            Capitale: {regionInfo.capitale}
+                            {tr("Capitale:")} {regionInfo.capitale}
                           </p>
                         )}
                         <div style={{ 
@@ -152,7 +154,7 @@ export function Pays({ userData }: PaysProps) {
                           fontSize: '0.85rem',
                           color: '#95a5a6'
                         }}>
-                          Région {index + 1}
+                          {tr("Région {n}", { n: index + 1 })}
                         </div>
                       </div>
                     )
@@ -169,12 +171,10 @@ export function Pays({ userData }: PaysProps) {
                 marginTop: '2rem'
               }}>
                 <h6 style={{ color: '#856404', fontWeight: 'bold', marginBottom: '1rem', fontSize: '1.1rem' }}>
-                  ℹ️ À propos de vos régions
+                  ℹ️ {tr("À propos de vos régions")}
                 </h6>
                 <p style={{ color: '#856404', lineHeight: '1.6' }}>
-                  Ces régions ont été sélectionnées lors de votre inscription. Elles représentent 
-                  les zones géographiques de Guinée avec lesquelles vous avez un lien (naissance, résidence, famille, etc.). 
-                  Cela vous permet de vous connecter avec d'autres membres de ces régions.
+                  {tr("Ces régions ont été sélectionnées lors de votre inscription. Elles représentent les zones géographiques de Guinée avec lesquelles vous avez un lien (naissance, résidence, famille, etc.). Cela vous permet de vous connecter avec d'autres membres de ces régions.")}
                 </p>
               </div>
             </div>
@@ -183,7 +183,7 @@ export function Pays({ userData }: PaysProps) {
 
         {activeTab === 'guinea' && (
           <div className="guinea-tab">
-            <h4>🇬🇳 Guinée - Les 8 Régions Administratives</h4>
+            <h4>🇬🇳 {tr("Guinée - Les 8 Régions Administratives")}</h4>
             <div style={{ marginTop: '2rem' }}>
               <div style={{ 
                 display: 'grid', 
@@ -209,26 +209,26 @@ export function Pays({ userData }: PaysProps) {
                       {region.nom}
                     </h5>
                     <p style={{ color: '#7f8c8d' }}>
-                      Capitale: {region.capitale}
+                      {tr("Capitale:")} {region.capitale}
                     </p>
                   </div>
                 ))}
               </div>
 
               <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: '#e8f5e9', borderRadius: '10px' }}>
-                <h5 style={{ color: '#2e7d32', marginBottom: '1rem' }}>🇬🇳 Informations sur la Guinée</h5>
+                <h5 style={{ color: '#2e7d32', marginBottom: '1rem' }}>🇬🇳 {tr("Informations sur la Guinée")}</h5>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <strong>Capitale:</strong> Conakry
+                    <strong>{tr("Capitale:")}</strong> Conakry
                   </div>
                   <div>
-                    <strong>Population:</strong> ~13.5 millions
+                    <strong>{tr("Population:")}</strong> {tr("~13.5 millions")}
                   </div>
                   <div>
-                    <strong>Superficie:</strong> 245 857 km²
+                    <strong>{tr("Superficie:")}</strong> 245 857 km²
                   </div>
                   <div>
-                    <strong>Langues:</strong> Français (officiel), Pular, Malinké, Soussou
+                    <strong>{tr("Langues:")}</strong> {tr("Français (officiel), Pular, Malinké, Soussou")}
                   </div>
                 </div>
               </div>
@@ -238,10 +238,10 @@ export function Pays({ userData }: PaysProps) {
 
         {activeTab === 'africa' && (
           <div className="africa-tab">
-            <h4>🌍 Afrique</h4>
+            <h4>🌍 {tr("Afrique")}</h4>
             <div className="africa-content" style={{ marginTop: '2rem' }}>
               <p style={{ fontSize: '1.1rem', color: '#555', marginBottom: '2rem' }}>
-                Découvrez les pays africains et leurs richesses culturelles
+                {tr("Découvrez les pays africains et leurs richesses culturelles")}
               </p>
               <div style={{ 
                 display: 'grid', 
@@ -257,7 +257,7 @@ export function Pays({ userData }: PaysProps) {
                     border: '1px solid #ddd'
                   }}>
                     <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🌍</div>
-                    <strong>{pays}</strong>
+                    <strong>{tr(pays)}</strong>
                   </div>
                 ))}
               </div>
@@ -267,10 +267,10 @@ export function Pays({ userData }: PaysProps) {
 
         {activeTab === 'world' && (
           <div className="world-tab">
-            <h4>🌎 Monde</h4>
+            <h4>🌎 {tr("Monde")}</h4>
             <div className="world-content" style={{ marginTop: '2rem' }}>
               <p style={{ fontSize: '1.1rem', color: '#555' }}>
-                Exploration mondiale - Connectez-vous avec la diaspora guinéenne à travers le monde
+                {tr("Exploration mondiale - Connectez-vous avec la diaspora guinéenne à travers le monde")}
               </p>
             </div>
           </div>
@@ -278,23 +278,23 @@ export function Pays({ userData }: PaysProps) {
 
         {activeTab === 'culture' && (
           <div className="culture-tab">
-            <h4>🎭 Culture Guinéenne</h4>
+            <h4>🎭 {tr("Culture Guinéenne")}</h4>
             <div className="culture-content" style={{ marginTop: '2rem' }}>
               <p style={{ fontSize: '1.1rem', color: '#555', marginBottom: '2rem' }}>
-                Traditions, musiques et cultures de Guinée
+                {tr("Traditions, musiques et cultures de Guinée")}
               </p>
               <div style={{ display: 'grid', gap: '1rem' }}>
                 <div style={{ padding: '1.5rem', backgroundColor: '#fff3cd', borderRadius: '10px' }}>
-                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🎵 Musique</h6>
-                  <p>Balafon, Kora, Djembé - Instruments traditionnels</p>
+                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🎵 {tr("Musique")}</h6>
+                  <p>{tr("Balafon, Kora, Djembé - Instruments traditionnels")}</p>
                 </div>
                 <div style={{ padding: '1.5rem', backgroundColor: '#d1ecf1', borderRadius: '10px' }}>
-                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🍲 Cuisine</h6>
-                  <p>Riz au gras, Fouti, Tô, Sauce feuille</p>
+                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🍲 {tr("Cuisine")}</h6>
+                  <p>{tr("Riz au gras, Fouti, Tô, Sauce feuille")}</p>
                 </div>
                 <div style={{ padding: '1.5rem', backgroundColor: '#f8d7da', borderRadius: '10px' }}>
-                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>👗 Traditions</h6>
-                  <p>Boubou, Cérémonies traditionnelles, Palabres</p>
+                  <h6 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>👗 {tr("Traditions")}</h6>
+                  <p>{tr("Boubou, Cérémonies traditionnelles, Palabres")}</p>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTraduction } from "../i18n/traduction";
 
 interface FavorisDropdownProps {
   headerLabel: string;
@@ -12,6 +13,7 @@ interface FavorisDropdownProps {
 export function FavorisDropdown({ headerLabel, ariaLabel, title, widthClassName, children }: FavorisDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { tr } = useTraduction();
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +35,7 @@ export function FavorisDropdown({ headerLabel, ariaLabel, title, widthClassName,
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span>Favoris</span>
+        <span>{tr("Favoris")}</span>
         <span className="text-[10px] opacity-70">▾</span>
       </button>
 

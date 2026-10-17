@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Education.css'
+import { useTraduction } from '../i18n/traduction'
 
 interface Course {
   id: string
@@ -32,6 +33,7 @@ interface EducationProps {
 
 export function Education({ userData }: EducationProps) {
   const navigate = useNavigate()
+  const { tr } = useTraduction()
   const [activeTab, setActiveTab] = useState('courses')
   const [courses, setCourses] = useState<Course[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -217,8 +219,8 @@ export function Education({ userData }: EducationProps) {
       <div className="education-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <h3>🎓 Éducation de {userData.prenom} {userData.nomFamille}</h3>
-            <p className="numero-h">NumeroH: {userData.numeroH}</p>
+            <h3>{tr("🎓 Éducation de {prenom} {nom}", { prenom: userData.prenom, nom: userData.nomFamille })}</h3>
+            <p className="numero-h">{tr("NumeroH: {numero}", { numero: userData.numeroH })}</p>
           </div>
         </div>
       </div>
@@ -230,28 +232,28 @@ export function Education({ userData }: EducationProps) {
             <div className="stat-icon">📚</div>
             <div className="stat-content">
               <h4>{courses.length}</h4>
-              <p>Cours disponibles</p>
+              <p>{tr("Cours disponibles")}</p>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">✅</div>
             <div className="stat-content">
               <h4>{courses.filter(c => c.isCompleted).length}</h4>
-              <p>Cours terminés</p>
+              <p>{tr("Cours terminés")}</p>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📊</div>
             <div className="stat-content">
               <h4>{Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length)}%</h4>
-              <p>Progrès moyen</p>
+              <p>{tr("Progrès moyen")}</p>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">⏱️</div>
             <div className="stat-content">
               <h4>{Math.round(courses.reduce((acc, c) => acc + c.duration, 0) / 60)}h</h4>
-              <p>Temps d'étude</p>
+              <p>{tr("Temps d'étude")}</p>
             </div>
           </div>
         </div>
@@ -266,7 +268,7 @@ export function Education({ userData }: EducationProps) {
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="tab-icon">{tab.icon}</span>
-            <span className="tab-label">{tab.label}</span>
+            <span className="tab-label">{tr(tab.label)}</span>
           </button>
         ))}
       </div>
@@ -276,9 +278,9 @@ export function Education({ userData }: EducationProps) {
         {activeTab === 'courses' && (
           <div className="courses-tab">
             <div className="tab-header">
-              <h4>📚 Mes Cours</h4>
+              <h4>{tr("📚 Mes Cours")}</h4>
               <button className="btn-primary">
-                + Nouveau cours
+                {tr("+ Nouveau cours")}
               </button>
             </div>
 
@@ -288,19 +290,19 @@ export function Education({ userData }: EducationProps) {
                   <div className="course-header">
                     <div className="course-category">
                       <span className="category-icon">{getCategoryIcon(course.category)}</span>
-                      <span className="category-label">{getCategoryLabel(course.category)}</span>
+                      <span className="category-label">{tr(getCategoryLabel(course.category))}</span>
                     </div>
                     <div 
                       className="course-level"
                       style={{ backgroundColor: getLevelColor(course.level) }}
                     >
-                      {getLevelLabel(course.level)}
+                      {tr(getLevelLabel(course.level))}
                     </div>
                   </div>
 
                   <div className="course-content">
-                    <h5>{course.title}</h5>
-                    <p className="course-description">{course.description}</p>
+                    <h5>{tr(course.title)}</h5>
+                    <p className="course-description">{tr(course.description)}</p>
                     
                     <div className="course-meta">
                       <div className="instructor">
@@ -309,7 +311,7 @@ export function Education({ userData }: EducationProps) {
                       </div>
                       <div className="duration">
                         <span className="meta-icon">⏱️</span>
-                        <span>{course.duration} min</span>
+                        <span>{tr("{n} min", { n: course.duration })}</span>
                       </div>
                       <div className="students">
                         <span className="meta-icon">👥</span>
@@ -324,7 +326,7 @@ export function Education({ userData }: EducationProps) {
 
                     <div className="course-progress">
                       <div className="progress-header">
-                        <span>Progrès</span>
+                        <span>{tr("Progrès")}</span>
                         <span>{course.progress}%</span>
                       </div>
                       <div className="progress-bar">
@@ -344,16 +346,16 @@ export function Education({ userData }: EducationProps) {
                         setShowCourseModal(true)
                       }}
                     >
-                      {course.isCompleted ? 'Revoir' : 'Continuer'}
+                      {course.isCompleted ? tr('Revoir') : tr('Continuer')}
                     </button>
                     <button className="btn-secondary">
-                      📖 Détails
+                      {tr("📖 Détails")}
                     </button>
                   </div>
 
                   {course.isCompleted && (
                     <div className="completion-badge">
-                      ✅ Terminé
+                      {tr("✅ Terminé")}
                     </div>
                   )}
                 </div>
@@ -364,11 +366,11 @@ export function Education({ userData }: EducationProps) {
 
         {activeTab === 'progress' && (
           <div className="progress-tab">
-            <h4>📊 Mes Progrès</h4>
+            <h4>{tr("📊 Mes Progrès")}</h4>
             
             <div className="progress-overview">
               <div className="overview-card">
-                <h5>Progrès Général</h5>
+                <h5>{tr("Progrès Général")}</h5>
                 <div className="overall-progress">
                   <div className="progress-circle">
                     <div className="circle-fill">
@@ -379,7 +381,7 @@ export function Education({ userData }: EducationProps) {
               </div>
 
               <div className="category-progress">
-                <h5>Progrès par Catégorie</h5>
+                <h5>{tr("Progrès par Catégorie")}</h5>
                 <div className="category-bars">
                   {['histoire', 'langue', 'culture', 'religion', 'art', 'science'].map(category => {
                     const categoryCourses = courses.filter(c => c.category === category)
@@ -391,7 +393,7 @@ export function Education({ userData }: EducationProps) {
                       <div key={category} className="category-bar">
                         <div className="bar-label">
                           <span className="category-icon">{getCategoryIcon(category)}</span>
-                          <span>{getCategoryLabel(category)}</span>
+                          <span>{tr(getCategoryLabel(category))}</span>
                         </div>
                         <div className="bar-progress">
                           <div 
@@ -408,27 +410,27 @@ export function Education({ userData }: EducationProps) {
             </div>
 
             <div className="recent-activity">
-              <h5>Activité Récente</h5>
+              <h5>{tr("Activité Récente")}</h5>
               <div className="activity-timeline">
                 <div className="timeline-item">
                   <div className="timeline-icon">📚</div>
                   <div className="timeline-content">
-                    <h6>Histoire des Peulhs - Leçon 2 terminée</h6>
-                    <p>Il y a 2 heures</p>
+                    <h6>{tr("Histoire des Peulhs - Leçon 2 terminée")}</h6>
+                    <p>{tr("Il y a 2 heures")}</p>
                   </div>
                 </div>
                 <div className="timeline-item">
                   <div className="timeline-icon">✅</div>
                   <div className="timeline-content">
-                    <h6>Quiz Culture Malinké réussi</h6>
-                    <p>Il y a 1 jour</p>
+                    <h6>{tr("Quiz Culture Malinké réussi")}</h6>
+                    <p>{tr("Il y a 1 jour")}</p>
                   </div>
                 </div>
                 <div className="timeline-item">
                   <div className="timeline-icon">🎓</div>
                   <div className="timeline-content">
-                    <h6>Certificat Langue Pular obtenu</h6>
-                    <p>Il y a 3 jours</p>
+                    <h6>{tr("Certificat Langue Pular obtenu")}</h6>
+                    <p>{tr("Il y a 3 jours")}</p>
                   </div>
                 </div>
               </div>
@@ -438,25 +440,25 @@ export function Education({ userData }: EducationProps) {
 
         {activeTab === 'certificates' && (
           <div className="certificates-tab">
-            <h4>🏆 Mes Certificats</h4>
+            <h4>{tr("🏆 Mes Certificats")}</h4>
             
             <div className="certificates-grid">
               <div className="certificate-card">
                 <div className="certificate-header">
                   <div className="certificate-icon">🏆</div>
                   <div className="certificate-info">
-                    <h5>Culture Malinké</h5>
-                    <p>Certificat de Completion</p>
+                    <h5>{tr("Culture Malinké")}</h5>
+                    <p>{tr("Certificat de Completion")}</p>
                   </div>
                 </div>
                 <div className="certificate-details">
-                  <p><strong>Date d'obtention:</strong> 15 Janvier 2024</p>
-                  <p><strong>Score:</strong> 95%</p>
-                  <p><strong>Instructeur:</strong> Prof. Camara</p>
+                  <p><strong>{tr("Date d'obtention:")}</strong> {tr("15 Janvier 2024")}</p>
+                  <p><strong>{tr("Score:")}</strong> 95%</p>
+                  <p><strong>{tr("Instructeur:")}</strong> Prof. Camara</p>
                 </div>
                 <div className="certificate-actions">
-                  <button className="btn-primary">📄 Voir le certificat</button>
-                  <button className="btn-secondary">📤 Partager</button>
+                  <button className="btn-primary">{tr("📄 Voir le certificat")}</button>
+                  <button className="btn-secondary">{tr("📤 Partager")}</button>
                 </div>
               </div>
 
@@ -464,18 +466,18 @@ export function Education({ userData }: EducationProps) {
                 <div className="certificate-header">
                   <div className="certificate-icon">🎓</div>
                   <div className="certificate-info">
-                    <h5>Langue Pular</h5>
-                    <p>Certificat de Completion</p>
+                    <h5>{tr("Langue Pular")}</h5>
+                    <p>{tr("Certificat de Completion")}</p>
                   </div>
                 </div>
                 <div className="certificate-details">
-                  <p><strong>Date d'obtention:</strong> 10 Janvier 2024</p>
-                  <p><strong>Score:</strong> 88%</p>
-                  <p><strong>Instructeur:</strong> Mme. Barry</p>
+                  <p><strong>{tr("Date d'obtention:")}</strong> {tr("10 Janvier 2024")}</p>
+                  <p><strong>{tr("Score:")}</strong> 88%</p>
+                  <p><strong>{tr("Instructeur:")}</strong> Mme. Barry</p>
                 </div>
                 <div className="certificate-actions">
-                  <button className="btn-primary">📄 Voir le certificat</button>
-                  <button className="btn-secondary">📤 Partager</button>
+                  <button className="btn-primary">{tr("📄 Voir le certificat")}</button>
+                  <button className="btn-secondary">{tr("📤 Partager")}</button>
                 </div>
               </div>
             </div>
@@ -484,59 +486,59 @@ export function Education({ userData }: EducationProps) {
 
         {activeTab === 'library' && (
           <div className="library-tab">
-            <h4>📖 Bibliothèque</h4>
+            <h4>{tr("📖 Bibliothèque")}</h4>
             
             <div className="library-sections">
               <div className="library-section">
-                <h5>📚 Livres Recommandés</h5>
+                <h5>{tr("📚 Livres Recommandés")}</h5>
                 <div className="books-grid">
                   <div className="book-card">
                     <div className="book-icon">📖</div>
-                    <h6>Histoire des Peulhs</h6>
+                    <h6>{tr("Histoire des Peulhs")}</h6>
                     <p>Dr. Diallo</p>
-                    <button className="btn-primary">Lire</button>
+                    <button className="btn-primary">{tr("Lire")}</button>
                   </div>
                   <div className="book-card">
                     <div className="book-icon">📖</div>
-                    <h6>Culture Malinké</h6>
+                    <h6>{tr("Culture Malinké")}</h6>
                     <p>Prof. Camara</p>
-                    <button className="btn-primary">Lire</button>
+                    <button className="btn-primary">{tr("Lire")}</button>
                   </div>
                 </div>
               </div>
 
               <div className="library-section">
-                <h5>🎥 Vidéos Éducatives</h5>
+                <h5>{tr("🎥 Vidéos Éducatives")}</h5>
                 <div className="videos-grid">
                   <div className="video-card">
                     <div className="video-icon">🎥</div>
-                    <h6>Documentaire sur les Traditions</h6>
-                    <p>45 min</p>
-                    <button className="btn-primary">Regarder</button>
+                    <h6>{tr("Documentaire sur les Traditions")}</h6>
+                    <p>{tr("{n} min", { n: 45 })}</p>
+                    <button className="btn-primary">{tr("Regarder")}</button>
                   </div>
                   <div className="video-card">
                     <div className="video-icon">🎥</div>
-                    <h6>Leçons de Langue Pular</h6>
-                    <p>30 min</p>
-                    <button className="btn-primary">Regarder</button>
+                    <h6>{tr("Leçons de Langue Pular")}</h6>
+                    <p>{tr("{n} min", { n: 30 })}</p>
+                    <button className="btn-primary">{tr("Regarder")}</button>
                   </div>
                 </div>
               </div>
 
               <div className="library-section">
-                <h5>🎧 Podcasts</h5>
+                <h5>{tr("🎧 Podcasts")}</h5>
                 <div className="podcasts-grid">
                   <div className="podcast-card">
                     <div className="podcast-icon">🎧</div>
-                    <h6>Histoire Orale Africaine</h6>
-                    <p>25 min</p>
-                    <button className="btn-primary">Écouter</button>
+                    <h6>{tr("Histoire Orale Africaine")}</h6>
+                    <p>{tr("{n} min", { n: 25 })}</p>
+                    <button className="btn-primary">{tr("Écouter")}</button>
                   </div>
                   <div className="podcast-card">
                     <div className="podcast-icon">🎧</div>
-                    <h6>Culture et Traditions</h6>
-                    <p>35 min</p>
-                    <button className="btn-primary">Écouter</button>
+                    <h6>{tr("Culture et Traditions")}</h6>
+                    <p>{tr("{n} min", { n: 35 })}</p>
+                    <button className="btn-primary">{tr("Écouter")}</button>
                   </div>
                 </div>
               </div>
@@ -550,18 +552,18 @@ export function Education({ userData }: EducationProps) {
         <div className="modal-overlay" onClick={() => setShowCourseModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedCourse.title}</h3>
+              <h3>{tr(selectedCourse.title)}</h3>
               <button onClick={() => setShowCourseModal(false)}>✕</button>
             </div>
             <div className="modal-body">
-              <p><strong>Description:</strong> {selectedCourse.description}</p>
-              <p><strong>Instructeur:</strong> {selectedCourse.instructor}</p>
-              <p><strong>Durée:</strong> {selectedCourse.duration} minutes</p>
-              <p><strong>Niveau:</strong> {getLevelLabel(selectedCourse.level)}</p>
-              <p><strong>Progrès:</strong> {selectedCourse.progress}%</p>
+              <p><strong>{tr("Description:")}</strong> {tr(selectedCourse.description)}</p>
+              <p><strong>{tr("Instructeur:")}</strong> {selectedCourse.instructor}</p>
+              <p><strong>{tr("Durée:")}</strong> {tr("{n} minutes", { n: selectedCourse.duration })}</p>
+              <p><strong>{tr("Niveau:")}</strong> {tr(getLevelLabel(selectedCourse.level))}</p>
+              <p><strong>{tr("Progrès:")}</strong> {selectedCourse.progress}%</p>
               
               <div className="course-lessons">
-                <h5>Leçons du cours:</h5>
+                <h5>{tr("Leçons du cours:")}</h5>
                 {getCourseLessons(selectedCourse.id).map(lesson => (
                   <div key={lesson.id} className="lesson-item">
                     <span className="lesson-icon">
@@ -569,17 +571,17 @@ export function Education({ userData }: EducationProps) {
                        lesson.type === 'text' ? '📄' : 
                        lesson.type === 'quiz' ? '❓' : '✏️'}
                     </span>
-                    <span className="lesson-title">{lesson.title}</span>
-                    <span className="lesson-duration">{lesson.duration} min</span>
+                    <span className="lesson-title">{tr(lesson.title)}</span>
+                    <span className="lesson-duration">{tr("{n} min", { n: lesson.duration })}</span>
                     {lesson.isCompleted && <span className="lesson-completed">✅</span>}
                   </div>
                 ))}
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn-primary">Continuer le cours</button>
+              <button className="btn-primary">{tr("Continuer le cours")}</button>
               <button className="btn-secondary" onClick={() => setShowCourseModal(false)}>
-                Fermer
+                {tr("Fermer")}
               </button>
             </div>
           </div>

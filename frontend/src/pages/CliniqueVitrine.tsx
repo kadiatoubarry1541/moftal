@@ -5,6 +5,7 @@ import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -40,6 +41,7 @@ export default function CliniqueVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [clinic, setClinic] = useState<any>(null);
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<string[]>([]);
@@ -67,12 +69,12 @@ export default function CliniqueVitrine() {
       fetch(`${API_BASE}/clinic-public/${code}/reviews`).then(r => r.json()),
     ]).then(([c, s, sv, ph, rv]) => {
       if (c.success) setClinic(c.clinic);
-      else setError(c.message || "Clinique introuvable");
+      else setError(tr(c.message || "Clinique introuvable"));
       if (s.success) setStaff(s.staff);
       if (sv.success) setServices(sv.services);
       if (ph.success) setHasPharmacy(ph.hasPharmacy);
       if (rv.success) { setReviews(rv.reviews); setReviewStats({ moyenne: rv.moyenne, total: rv.total }); }
-    }).catch(() => setError("Impossible de charger la clinique."))
+    }).catch(() => setError(tr("Impossible de charger la clinique.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -92,7 +94,7 @@ export default function CliniqueVitrine() {
   };
 
   const submitQuickRequest = async () => {
-    if (!quickForm.nom.trim() || !quickForm.telephone.trim()) { setQuickError("Nom et téléphone sont obligatoires."); return; }
+    if (!quickForm.nom.trim() || !quickForm.telephone.trim()) { setQuickError(tr("Nom et téléphone sont obligatoires.")); return; }
     setQuickError("");
     setQuickSending(true);
     try {
@@ -101,8 +103,8 @@ export default function CliniqueVitrine() {
       });
       const d = await r.json();
       if (d.success) { setQuickSent(true); }
-      else setQuickError(d.message || "Erreur lors de l'envoi.");
-    } catch { setQuickError("Impossible de joindre le serveur."); }
+      else setQuickError(tr(d.message || "Erreur lors de l'envoi."));
+    } catch { setQuickError(tr("Impossible de joindre le serveur.")); }
     finally { setQuickSending(false); }
   };
 
@@ -110,7 +112,7 @@ export default function CliniqueVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: TEAL, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
+        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -120,10 +122,10 @@ export default function CliniqueVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🏥</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Clinique introuvable</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || "Cette clinique n'existe pas ou n'est pas disponible."}</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Clinique introuvable")}</h2>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || tr("Cette clinique n'existe pas ou n'est pas disponible.")}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-          Retour à l'accueil
+          {tr("Retour à l'accueil")}
         </button>
       </div>
     </div>
@@ -170,13 +172,13 @@ export default function CliniqueVitrine() {
             {clinic.phone_urgence && (
               <a href={`tel:${clinic.phone_urgence}`}
                 style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, cursor: "pointer", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                🚨 Urgence 24/7
+                {tr("🚨 Urgence 24/7")}
               </a>
             )}
             {!isLoggedIn && (
               <button onClick={() => navigate("/login-membre", { state: { from: `/clinique/${tenantCode}/espace-patient` } })}
                 style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 6, padding: "3px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                Se connecter
+                {tr("Se connecter")}
               </button>
             )}
           </div>
@@ -193,7 +195,7 @@ export default function CliniqueVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{clinic.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Centre Médical</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Centre Médical")}</div>
             </div>
           </div>
 
@@ -201,22 +203,22 @@ export default function CliniqueVitrine() {
           <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
             <div style={{ display: "flex", gap: 20 }} className="nav-links">
               {[["Accueil", "hero"], ["Services", "services"], ["Médecins", "doctors"], ["Contact", "contact"]].map(([label, id]) => (
-                <button key={id} className="vitrine-nav-link" onClick={() => scrollTo(id)}>{label}</button>
+                <button key={id} className="vitrine-nav-link" onClick={() => scrollTo(id)}>{tr(label)}</button>
               ))}
             </div>
             {isLoggedIn && isPatient === true && (
               <button onClick={() => navigate(`/clinique/${tenantCode}/espace-patient`)}
                 style={{ background: TEAL, color: "white", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 8px rgba(15,23,42,0.12)" }}>
-                Mon Espace Patient
+                {tr("Mon Espace Patient")}
               </button>
             )}
             {isLoggedIn && isPatient === false && (
-              <div style={{ fontSize: 11, color: "#64748b", fontStyle: "italic" }}>Non enregistré</div>
+              <div style={{ fontSize: 11, color: "#64748b", fontStyle: "italic" }}>{tr("Non enregistré")}</div>
             )}
             {!isLoggedIn && (
               <button onClick={() => navigate("/login-membre", { state: { from: `/clinique/${tenantCode}/espace-patient` } })}
                 style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 8, padding: "8px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-                Espace Patient
+                {tr("Espace Patient")}
               </button>
             )}
           </div>
@@ -236,22 +238,22 @@ export default function CliniqueVitrine() {
             {clinic.name}
           </h1>
           <p className="hero-subtitle" style={{ fontSize: 18, color: "#334155", marginBottom: 32, lineHeight: 1.6 }}>
-            {clinic.description || "Votre santé est notre priorité. Des soins de qualité avec une équipe médicale expérimentée."}
+            {clinic.description || tr("Votre santé est notre priorité. Des soins de qualité avec une équipe médicale expérimentée.")}
           </p>
           <div className="hero-buttons" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("services")}
               style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Nos Services
+              {tr("Nos Services")}
             </button>
             {isLoggedIn && isPatient === true ? (
               <button onClick={() => navigate(`/clinique/${tenantCode}/espace-patient`)}
                 style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                Mon Espace Patient
+                {tr("Mon Espace Patient")}
               </button>
             ) : (
               <button onClick={() => scrollTo("contact")}
                 style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                Nous Contacter
+                {tr("Nous Contacter")}
               </button>
             )}
           </div>
@@ -268,12 +270,12 @@ export default function CliniqueVitrine() {
       <section style={{ background: "white", padding: "0 20px 48px" }}>
         <div className="stats-grid" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
           {[
-            { icon: "👨‍⚕️", val: `${doctors.length}+`, label: "Médecins spécialistes" },
-            { icon: "🏥", val: `${services.length}+`, label: "Services médicaux" },
-            { icon: "⏰", val: "7j/7", label: "Disponibilité" },
+            { icon: "👨‍⚕️", val: `${doctors.length}+`, label: tr("Médecins spécialistes") },
+            { icon: "🏥", val: `${services.length}+`, label: tr("Services médicaux") },
+            { icon: "⏰", val: tr("7j/7"), label: tr("Disponibilité") },
             reviewStats.total > 0
-              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: `${reviewStats.total} avis patients` }
-              : { icon: "🌟", val: "Excellence", label: "Soins de qualité" },
+              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: tr("{n} avis patients", { n: reviewStats.total }) }
+              : { icon: "🌟", val: tr("Excellence"), label: tr("Soins de qualité") },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -288,13 +290,13 @@ export default function CliniqueVitrine() {
       <section id="services" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Nos Spécialités</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Services Médicaux</h2>
-            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>Une équipe pluridisciplinaire pour prendre soin de vous à chaque étape de votre vie.</p>
+            <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Nos Spécialités")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Services Médicaux")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>{tr("Une équipe pluridisciplinaire pour prendre soin de vous à chaque étape de votre vie.")}</p>
           </div>
 
           {services.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0", fontSize: 14 }}>Aucun service encore affiché. Revenez bientôt !</div>
+            <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0", fontSize: 14 }}>{tr("Aucun service encore affiché. Revenez bientôt !")}</div>
           ) : (
             <div className="services-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {services.map((svc, i) => {
@@ -307,12 +309,12 @@ export default function CliniqueVitrine() {
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{svc}</h3>
                     {doctors_for_service.length > 0 && (
                       <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
-                        {doctors_for_service.map(d => `Dr. ${d.prenom} ${d.nom}`).join(", ")}
+                        {doctors_for_service.map(d => tr("Dr. {prenom} {nom}", { prenom: d.prenom, nom: d.nom })).join(", ")}
                       </p>
                     )}
                     <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 4, color: TEAL, fontSize: 12, fontWeight: 600 }}>
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      Disponible
+                      {tr("Disponible")}
                     </div>
                   </div>
                 );
@@ -327,9 +329,9 @@ export default function CliniqueVitrine() {
         <section id="doctors" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>L'équipe</span>
-              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Médecins</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Des professionnels de santé qualifiés et dévoués à votre bien-être.</p>
+              <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("L'équipe")}</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Médecins")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des professionnels de santé qualifiés et dévoués à votre bien-être.")}</p>
             </div>
             <div className="doctors-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {doctors.map((d, i) => (
@@ -337,7 +339,7 @@ export default function CliniqueVitrine() {
                   <div style={{ width: 72, height: 72, borderRadius: "50%", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 24, fontWeight: 700 }}>
                     {getInitials(d.nom, d.prenom)}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>Dr. {d.prenom} {d.nom}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{tr("Dr. {prenom} {nom}", { prenom: d.prenom, nom: d.nom })}</div>
                   <div style={{ fontSize: 12, color: TEAL, fontWeight: 600, marginBottom: 4 }}>{d.specialite || d.role}</div>
                   {d.service && <div style={{ fontSize: 11, color: "#94a3b8" }}>{d.service}</div>}
                 </div>
@@ -355,10 +357,10 @@ export default function CliniqueVitrine() {
           <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 20, padding: "36px 40px", color: "#334155" }}>
             <div style={{ width: 72, height: 72, borderRadius: 18, background: "white", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, flexShrink: 0 }}>💊</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Service inclus</div>
-              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px", color: "#0f172a" }}>Pharmacie intégrée</h2>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TEAL, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr("Service inclus")}</div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px", color: "#0f172a" }}>{tr("Pharmacie intégrée")}</h2>
               <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: 0, maxWidth: 500 }}>
-                Notre pharmacie dispose d'un stock complet de médicaments. Vos ordonnances sont traitées directement sur place — pas besoin de vous déplacer ailleurs.
+                {tr("Notre pharmacie dispose d'un stock complet de médicaments. Vos ordonnances sont traitées directement sur place — pas besoin de vous déplacer ailleurs.")}
               </p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
@@ -369,7 +371,7 @@ export default function CliniqueVitrine() {
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                   <svg width="14" height="14" fill="none" stroke={TEAL} strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  {item}
+                  {tr(item)}
                 </div>
               ))}
             </div>
@@ -381,8 +383,8 @@ export default function CliniqueVitrine() {
       {/* ── POURQUOI NOUS ─────────────────────────────────────────────────────── */}
       <section style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>Pourquoi nous choisir ?</h2>
-          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>Nous combinons expertise médicale et technologie pour vous offrir les meilleurs soins.</p>
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Pourquoi nous choisir ?")}</h2>
+          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Nous combinons expertise médicale et technologie pour vous offrir les meilleurs soins.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
             {[
               { icon: "🏆", title: "Expertise reconnue", desc: "Des médecins diplômés et expérimentés dans leurs domaines respectifs." },
@@ -391,8 +393,8 @@ export default function CliniqueVitrine() {
             ].map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{item.title}</h3>
-                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -403,33 +405,33 @@ export default function CliniqueVitrine() {
       <section style={{ background: "white", padding: "60px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>Espace Patient Numérique</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>{tr("Espace Patient Numérique")}</h2>
           <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
             {isLoggedIn && isPatient === true
-              ? `Bienvenue ! Consultez vos rendez-vous, ordonnances et dossiers médicaux directement en ligne.`
-              : `Consultez vos rendez-vous, ordonnances et dossiers médicaux directement en ligne. Disponible pour les patients enregistrés à ${clinic.name}.`
+              ? tr("Bienvenue ! Consultez vos rendez-vous, ordonnances et dossiers médicaux directement en ligne.")
+              : tr("Consultez vos rendez-vous, ordonnances et dossiers médicaux directement en ligne. Disponible pour les patients enregistrés à {nom}.", { nom: clinic.name })
             }
           </p>
           {isLoggedIn && isPatient === true && (
             <button onClick={() => navigate(`/clinique/${tenantCode}/espace-patient`)}
               style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: `0 4px 20px ${TEAL}44` }}>
-              Accéder à mon espace →
+              {tr("Accéder à mon espace →")}
             </button>
           )}
           {isLoggedIn && isPatient === false && (
             <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "16px 24px", fontSize: 14, color: "#92400e" }}>
-              Vous n'êtes pas encore enregistré dans cette clinique. Présentez-vous à l'accueil avec votre numéro Moftal pour vous inscrire.
+              {tr("Vous n'êtes pas encore enregistré dans cette clinique. Présentez-vous à l'accueil avec votre numéro Moftal pour vous inscrire.")}
             </div>
           )}
           {!isLoggedIn && (
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <button onClick={() => navigate("/login-membre", { state: { from: `/clinique/${tenantCode}/espace-patient` } })}
                 style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                Se connecter
+                {tr("Se connecter")}
               </button>
               <button onClick={() => navigate("/vivant")}
                 style={{ background: "white", color: TEAL, border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                S'inscrire sur Moftal
+                {tr("S'inscrire sur Moftal")}
               </button>
             </div>
           )}
@@ -441,15 +443,15 @@ export default function CliniqueVitrine() {
         <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1000, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis de nos patients</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Note moyenne : {reviewStats.moyenne}/5 sur {reviewStats.total} avis</p>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Avis de nos patients")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Note moyenne : {moyenne}/5 sur {n} avis", { moyenne: reviewStats.moyenne, n: reviewStats.total })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }} className="services-grid">
               {reviews.slice(0, 6).map((r, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 16, padding: "22px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 8 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
                   {r.commentaire && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 10px" }}>{r.commentaire}</p>}
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_patient || "Patient"}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_patient || tr("Patient")}</div>
                 </div>
               ))}
             </div>
@@ -461,25 +463,25 @@ export default function CliniqueVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
-            <p style={{ color: "#64748b", fontSize: 15 }}>Nos équipes sont disponibles pour répondre à vos questions.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nous Contacter")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Nos équipes sont disponibles pour répondre à vos questions.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, maxWidth: 1000, margin: "0 auto" }} className="services-grid">
             {[
-              { icon: "📞", label: "Téléphone", val: clinic.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: clinic.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: clinic.address || "Non renseignée",
+              { icon: "📞", label: "Téléphone", val: clinic.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: clinic.email || tr("Non renseigné") },
+              { icon: "📍", label: "Adresse", val: clinic.address || tr("Non renseignée"),
                 extra: clinic.address ? (
                   <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.address)}`} target="_blank" rel="noopener noreferrer"
                     style={{ display: "inline-block", marginTop: 8, fontSize: 12, color: TEAL, fontWeight: 700, textDecoration: "none" }}>
-                    🗺️ Voir sur Google Maps
+                    {tr("🗺️ Voir sur la carte")}
                   </a>
                 ) : null },
-              { icon: "🕐", label: "Horaires", val: clinic.horaires || "Non renseignés" },
+              { icon: "🕐", label: "Horaires", val: clinic.horaires || tr("Non renseignés") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
                 {(item as any).extra}
               </div>
@@ -488,37 +490,37 @@ export default function CliniqueVitrine() {
 
           {/* ── Demande de RDV rapide, sans compte requis ── */}
           <div style={{ maxWidth: 560, margin: "48px auto 0", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 16, padding: "28px 28px" }}>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>📅 Demander un rendez-vous rapide</h3>
-            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 18px" }}>Pas encore patient ici ? Laissez vos coordonnées, la clinique vous recontacte pour confirmer.</p>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>{tr("📅 Demander un rendez-vous rapide")}</h3>
+            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 18px" }}>{tr("Pas encore patient ici ? Laissez vos coordonnées, la clinique vous recontacte pour confirmer.")}</p>
             {quickSent ? (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
-                <p style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 700, margin: 0 }}>Demande envoyée !</p>
-                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>La clinique vous contactera prochainement au {quickForm.telephone}.</p>
+                <p style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 700, margin: 0 }}>{tr("Demande envoyée !")}</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{tr("La clinique vous contactera prochainement au {telephone}.", { telephone: quickForm.telephone })}</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <input placeholder="Nom complet *" value={quickForm.nom} onChange={e => setQuickForm(f => ({ ...f, nom: e.target.value }))}
+                  <input placeholder={tr("Nom complet *")} value={quickForm.nom} onChange={e => setQuickForm(f => ({ ...f, nom: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
-                  <input placeholder="Téléphone *" value={quickForm.telephone} onChange={e => setQuickForm(f => ({ ...f, telephone: e.target.value }))}
+                  <input placeholder={tr("Téléphone *")} value={quickForm.telephone} onChange={e => setQuickForm(f => ({ ...f, telephone: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <select value={quickForm.service} onChange={e => setQuickForm(f => ({ ...f, service: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", background: "white" }}>
-                    <option value="">Service souhaité</option>
+                    <option value="">{tr("Service souhaité")}</option>
                     {services.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <input type="date" value={quickForm.date_souhaitee} onChange={e => setQuickForm(f => ({ ...f, date_souhaitee: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
-                <textarea placeholder="Motif (optionnel)" value={quickForm.motif} onChange={e => setQuickForm(f => ({ ...f, motif: e.target.value }))}
+                <textarea placeholder={tr("Motif (optionnel)")} value={quickForm.motif} onChange={e => setQuickForm(f => ({ ...f, motif: e.target.value }))}
                   style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", height: 60, resize: "none" }} />
                 {quickError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{quickError}</p>}
                 <button onClick={submitQuickRequest} disabled={quickSending}
                   style={{ background: quickSending ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: quickSending ? "not-allowed" : "pointer" }}>
-                  {quickSending ? "Envoi..." : "Envoyer la demande"}
+                  {quickSending ? tr("Envoi...") : tr("Envoyer la demande")}
                 </button>
               </div>
             )}
@@ -539,10 +541,10 @@ export default function CliniqueVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{clinic.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre Médical</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Centre Médical")}</p>
           <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
             </button>
           </div>
         </div>

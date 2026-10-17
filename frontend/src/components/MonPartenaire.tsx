@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MediaUploader } from './MediaUploader'
 import { MediaReactions } from './MediaReactions'
+import { useTraduction } from '../i18n/traduction'
 
 interface UserData {
   numeroH: string
@@ -26,6 +27,7 @@ interface MediaItem {
 }
 
 export function MonPartenaire({ userData }: { userData: UserData }) {
+  const { tr, locale } = useTraduction()
   const [activeSession, setActiveSession] = useState('avant')
   const [showMediaUploader, setShowMediaUploader] = useState(false)
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
@@ -111,8 +113,8 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
     <div className="max-w-7xl mx-auto">
       {/* En-tête */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">{isHomme ? '👰 Ma Femme' : '🤵 Mon Homme'}</h2>
-        <p className="text-slate-600">Partagez vos moments et recevez les notes de votre partenaire</p>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">{isHomme ? `👰 ${tr('Ma Femme')}` : `🤵 ${tr('Mon Homme')}`}</h2>
+        <p className="text-slate-600">{tr("Partagez vos moments et recevez les notes de votre partenaire")}</p>
       </div>
 
       {/* Sessions */}
@@ -129,7 +131,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
               onClick={() => setActiveSession(session.id)}
             >
               <span className="text-2xl block mb-1">{session.icon}</span>
-              <span className="font-semibold text-sm block">{session.title}</span>
+              <span className="font-semibold text-sm block">{tr(session.title)}</span>
             </button>
           ))}
         </div>
@@ -138,13 +140,13 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-slate-800">
-              {sessions.find(s => s.id === activeSession)?.title}
+              {tr(sessions.find(s => s.id === activeSession)?.title || '')}
             </h3>
             <button 
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm"
               onClick={() => setShowMediaUploader(true)}
             >
-              📷 Ajouter média
+              📷 {tr("Ajouter média")}
             </button>
           </div>
 
@@ -152,12 +154,12 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
           <div>
             {mediaItems.length === 0 ? (
               <div className="text-center py-12 bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
-                <p className="text-slate-600 mb-4 text-lg">Aucun média partagé dans cette session</p>
+                <p className="text-slate-600 mb-4 text-lg">{tr("Aucun média partagé dans cette session")}</p>
                 <button 
                   className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-md"
                   onClick={() => setShowMediaUploader(true)}
                 >
-                  🚀 Commencer à partager
+                  🚀 {tr("Commencer à partager")}
                 </button>
               </div>
             ) : (
@@ -187,7 +189,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
                         <p className="text-slate-700 mb-2">{media.caption}</p>
                       )}
                       <div className="text-xs text-slate-500 mb-3">
-                        📅 {new Date(media.date).toLocaleDateString('fr-FR', { 
+                        📅 {new Date(media.date).toLocaleDateString(locale, { 
                           year: 'numeric', 
                           month: 'long', 
                           day: 'numeric' 
@@ -214,14 +216,14 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
             <span className="text-slate-500" aria-hidden>☆</span>
-            Notes de {isHomme ? 'mon homme' : 'ma femme'}
+            {isHomme ? tr('Notes de mon homme') : tr('Notes de ma femme')}
           </h3>
           {isHomme && partnerNotes.length < 5 && (
             <button 
               className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white font-medium rounded-lg transition-colors duration-200"
               onClick={() => setShowAddPartner(true)}
             >
-              + Ajouter un homme
+              + {tr("Ajouter un homme")}
             </button>
           )}
         </div>
@@ -229,20 +231,20 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
         {/* Formulaire d'ajout de partenaire */}
         {showAddPartner && (
           <div className="mb-6 p-4 bg-pink-50 rounded-lg border border-pink-200">
-            <h4 className="text-lg font-semibold text-slate-700 mb-4">Ajouter un homme</h4>
+            <h4 className="text-lg font-semibold text-slate-700 mb-4">{tr("Ajouter un homme")}</h4>
             <div className="flex gap-3">
               <input
                 type="text"
                 value={newPartnerName}
                 onChange={(e) => setNewPartnerName(e.target.value)}
-                placeholder="Entrez le nom complet"
+                placeholder={tr("Entrez le nom complet")}
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               />
               <button 
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200"
                 onClick={handleAddPartner}
               >
-                ✓ Ajouter
+                ✓ {tr("Ajouter")}
               </button>
               <button 
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
@@ -251,7 +253,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
                   setNewPartnerName('')
                 }}
               >
-                Annuler
+                {tr("Annuler")}
               </button>
             </div>
           </div>
@@ -260,26 +262,26 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
         <div className="overflow-x-auto rounded-xl border-2 border-slate-300 bg-white shadow-sm">
           {partnerNotes.length === 0 && !isHomme ? (
             <div className="text-center py-8 bg-slate-50">
-              <p className="text-slate-600">Notes de votre homme</p>
+              <p className="text-slate-600">{tr("Notes de votre homme")}</p>
             </div>
           ) : partnerNotes.length === 0 ? (
             <div className="text-center py-8 bg-slate-50">
-              <p className="text-slate-600 mb-3">Aucun homme ajouté</p>
+              <p className="text-slate-600 mb-3">{tr("Aucun homme ajouté")}</p>
               <button 
                 className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white font-medium rounded-lg transition-colors duration-200"
                 onClick={() => setShowAddPartner(true)}
               >
-                Ajouter votre premier homme
+                {tr("Ajouter votre premier homme")}
               </button>
             </div>
           ) : (
-            <table className="min-w-full text-sm" aria-label="Notes">
+            <table className="min-w-full text-sm" aria-label={tr("Notes")}>
               <thead className="bg-slate-200 text-slate-800 border-b-2 border-slate-300">
                 <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-semibold">{isHomme ? 'Homme' : 'Mon Homme'}</th>
-                  <th scope="col" className="px-4 py-3 text-left font-semibold">Année</th>
-                  <th scope="col" className="px-4 py-3 text-left font-semibold">Note</th>
-                  {isHomme && <th scope="col" className="px-4 py-3 text-left font-semibold">Actions</th>}
+                  <th scope="col" className="px-4 py-3 text-left font-semibold">{isHomme ? tr('Homme') : tr('Mon Homme')}</th>
+                  <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Année")}</th>
+                  <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Note")}</th>
+                  {isHomme && <th scope="col" className="px-4 py-3 text-left font-semibold">{tr("Actions")}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -322,7 +324,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
                           className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg"
                           onClick={() => handleRemovePartner(note.id)}
                         >
-                          🗑️ Supprimer
+                          🗑️ {tr("Supprimer")}
                         </button>
                       </td>
                     )}
@@ -332,10 +334,10 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
             </table>
           )}
           <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 text-xs font-medium text-slate-600 rounded-b-xl flex flex-wrap items-center justify-between gap-2">
-            <span>Tableau Notes — {partnerNotes.length} note{partnerNotes.length !== 1 ? 's' : ''}</span>
+            <span>{partnerNotes.length !== 1 ? tr("Tableau Notes — {n} notes", { n: partnerNotes.length }) : tr("Tableau Notes — {n} note", { n: partnerNotes.length })}</span>
             {partnerNotes.length > 0 && (
               <span className="bg-purple-50 text-purple-800 px-3 py-1 rounded-lg font-semibold">
-                Note moyenne : {(partnerNotes.reduce((sum, note) => sum + note.note, 0) / partnerNotes.length).toFixed(1)}/5 ★
+                {tr("Note moyenne : {moyenne}/5", { moyenne: (partnerNotes.reduce((sum, note) => sum + note.note, 0) / partnerNotes.length).toFixed(1) })} ★
               </span>
             )}
           </div>
@@ -353,7 +355,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h3 className="text-2xl font-semibold text-slate-800">📷 Ajouter un média</h3>
+              <h3 className="text-2xl font-semibold text-slate-800">📷 {tr("Ajouter un média")}</h3>
               <button 
                 className="text-slate-400 hover:text-slate-600 text-2xl"
                 onClick={() => setShowMediaUploader(false)}

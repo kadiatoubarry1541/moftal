@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
+import { useTraduction } from "../i18n/traduction";
 
 // Compte créé avec seulement téléphone + mot de passe (identifiant provisoire
 // « TMP-… ») : on rappelle de mettre le profil à jour, et quand le serveur
@@ -36,6 +37,7 @@ function installGuard() {
 
 export default function ProfileCompletionPrompt() {
   const { pathname } = useLocation();
+  const { tr } = useTraduction();
   const navigate = useNavigate();
   const [provisional, setProvisional] = useState(isProvisionalSession);
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
@@ -63,15 +65,15 @@ export default function ProfileCompletionPrompt() {
           className="flex items-center gap-3 rounded-2xl bg-white border border-amber-200 shadow-lg px-4 py-3">
           <span className="text-2xl">👤</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900">Mettez votre profil à jour</p>
-            <p className="text-xs text-gray-500">1 minute pour recevoir votre NuméroH, tout débloquer et pouvoir récupérer votre compte (avec un email).</p>
+            <p className="text-sm font-bold text-gray-900">{tr("Mettez votre profil à jour")}</p>
+            <p className="text-xs text-gray-500">{tr("1 minute pour recevoir votre NuméroH, tout débloquer et pouvoir récupérer votre compte (avec un email).")}</p>
           </div>
           <button type="button" onClick={goComplete}
             className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold text-white"
             style={{ background: "linear-gradient(135deg,#f59e0b,#ea580c)" }}>
-            Mettre à jour
+            {tr("Mettre à jour")}
           </button>
-          <button type="button" aria-label="Plus tard" onClick={() => { setDismissed(true); try { sessionStorage.setItem("profil-rappel-ferme", "1"); } catch { /* */ } }}
+          <button type="button" aria-label={tr("Plus tard")} onClick={() => { setDismissed(true); try { sessionStorage.setItem("profil-rappel-ferme", "1"); } catch { /* */ } }}
             className="flex-shrink-0 text-gray-400 text-lg px-1">✕</button>
         </div>
       )}
@@ -81,14 +83,14 @@ export default function ProfileCompletionPrompt() {
           onClick={() => setBlockedMessage(null)}>
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="text-4xl">👤</div>
-            <h2 className="mt-2 text-lg font-bold text-gray-900">Encore une petite étape</h2>
-            <p className="mt-1 text-sm text-gray-600">{blockedMessage}</p>
+            <h2 className="mt-2 text-lg font-bold text-gray-900">{tr("Encore une petite étape")}</h2>
+            <p className="mt-1 text-sm text-gray-600">{tr(blockedMessage)}</p>
             <button type="button" onClick={goComplete}
               className="mt-4 w-full py-3 rounded-xl font-bold text-white"
               style={{ background: "linear-gradient(135deg,#f59e0b,#ea580c)" }}>
-              ✏️ Mettre mon profil à jour
+              {tr("✏️ Mettre mon profil à jour")}
             </button>
-            <button type="button" onClick={() => setBlockedMessage(null)} className="mt-2 text-sm text-gray-500">Plus tard</button>
+            <button type="button" onClick={() => setBlockedMessage(null)} className="mt-2 text-sm text-gray-500">{tr("Plus tard")}</button>
           </div>
         </div>
       )}
