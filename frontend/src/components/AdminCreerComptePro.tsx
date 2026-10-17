@@ -5,12 +5,14 @@ import { normaliserLogo } from "../utils/logoImage";
 import EnvoiLien from "./EnvoiLien";
 import { lienAppGestion } from "../utils/lienAppGestion";
 import { messageLienApplication } from "../utils/invitationPro";
+import { useTraduction } from "../i18n/traduction";
 
 // L'admin crée un compte pro avec le minimum (nom, secteur, téléphone ou e-mail).
 // Il envoie le lien de l'application : le pro se connecte avec ce téléphone /
 // cet e-mail (la première fois il choisit son mot de passe), installe et a
 // tous les droits. Le compte est publié tout de suite (essai gratuit).
 export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () => void; onCree?: () => void }) {
+  const { tr } = useTraduction();
   const [name, setName] = useState("");
   const [type, setType] = useState("school");
   const [subSector, setSubSector] = useState("");
@@ -24,9 +26,9 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
 
   const creer = async () => {
     setErreur("");
-    if (!name.trim()) { setErreur("Indiquez le nom de l'établissement."); return; }
-    if (!identifiant.trim()) { setErreur("Indiquez le téléphone ou l'e-mail de l'établissement."); return; }
-    if (echanges && !subSector) { setErreur("Choisissez le niveau d'échanges."); return; }
+    if (!name.trim()) { setErreur(tr("Indiquez le nom de l'établissement.")); return; }
+    if (!identifiant.trim()) { setErreur(tr("Indiquez le téléphone ou l'e-mail de l'établissement.")); return; }
+    if (echanges && !subSector) { setErreur(tr("Choisissez le niveau d'échanges.")); return; }
     setEnvoi(true);
     try {
       const r = await fetch(`${config.API_BASE_URL}/invitations-pro/admin/creer`, {
@@ -35,7 +37,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
         body: JSON.stringify({ name: name.trim(), type, subSector: echanges ? subSector : undefined, planType, identifiant: identifiant.trim(), photo: photo || undefined }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.success) { setErreur(d.message || "Le compte n'a pas été créé."); return; }
+      if (!r.ok || !d.success) { setErreur(tr(d.message || "Le compte n'a pas été créé.")); return; }
       // Lien à envoyer : l'application de gestion (formule complète), sinon son espace pro
       let lien = `${window.location.origin}/espace-pro/${d.account.id}`;
       if (d.account.planType === "full") {
@@ -51,7 +53,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
       setResultat({ lien, nom: d.account.name, telephone: d.account.phone || undefined, email: d.account.email || undefined, compteExistant: !!d.compteExistant });
       onCree?.();
     } catch {
-      setErreur("Erreur de connexion. Vérifiez internet puis réessayez.");
+      setErreur(tr("Erreur de connexion. Vérifiez internet puis réessayez."));
     } finally {
       setEnvoi(false);
     }
@@ -62,72 +64,72 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
     <div className="fixed inset-0 z-[10050] bg-black/50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-extrabold text-gray-900">➕ Créer un compte pro</h3>
-          <button onClick={onClose} aria-label="Fermer" className="text-2xl text-gray-400">×</button>
+          <h3 className="text-lg font-extrabold text-gray-900">{tr("➕ Créer un compte pro")}</h3>
+          <button onClick={onClose} aria-label={tr("Fermer")} className="text-2xl text-gray-400">×</button>
         </div>
 
         {resultat ? (
           <div>
-            <p className="text-sm text-green-700 font-semibold">✅ « {resultat.nom} » est créé et publié.</p>
+            <p className="text-sm text-green-700 font-semibold">{tr("✅ « {nom} » est créé et publié.", { nom: resultat.nom })}</p>
             <p className="text-sm text-gray-600 mt-1">
               {resultat.compteExistant
-                ? "Ce téléphone / e-mail a déjà un compte Moftal : il se connecte avec son mot de passe habituel."
-                : "Envoyez-lui ce lien : il se connecte avec ce téléphone / cet e-mail, choisit son mot de passe la première fois, puis installe."}
+                ? tr("Ce téléphone / e-mail a déjà un compte Moftal : il se connecte avec son mot de passe habituel.")
+                : tr("Envoyez-lui ce lien : il se connecte avec ce téléphone / cet e-mail, choisit son mot de passe la première fois, puis installe.")}
             </p>
-            <EnvoiLien lien={resultat.lien} message={messageLienApplication(resultat.nom, resultat.lien, true)} telephone={resultat.telephone} email={resultat.email} sujet={`Votre application ${resultat.nom} sur Moftal`} />
-            <button onClick={onClose} className="mt-4 w-full py-2.5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm">Fermer</button>
+            <EnvoiLien lien={resultat.lien} message={messageLienApplication(resultat.nom, resultat.lien, true)} telephone={resultat.telephone} email={resultat.email} sujet={tr("Votre application {nom} sur Moftal", { nom: resultat.nom })} />
+            <button onClick={onClose} className="mt-4 w-full py-2.5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm">{tr("Fermer")}</button>
           </div>
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Nom de l'établissement *</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex : École Les Étoiles" className={champ} />
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Nom de l'établissement *")}</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder={tr("Ex : École Les Étoiles")} className={champ} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Téléphone ou e-mail de l'établissement *</label>
-              <input value={identifiant} onChange={e => setIdentifiant(e.target.value)} placeholder="Ex : 620 00 00 00 ou contact@ecole.com"
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Téléphone ou e-mail de l'établissement *")}</label>
+              <input value={identifiant} onChange={e => setIdentifiant(e.target.value)} placeholder={tr("Ex : 620 00 00 00 ou contact@ecole.com")}
                 inputMode="email" autoCapitalize="none" className={champ} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Secteur *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Secteur *")}</label>
               <select value={type} onChange={e => { setType(e.target.value); setSubSector(""); }} className={champ}>
-                {ADMIN_SERVICES.map(s => <option key={s.type} value={s.type}>{s.emoji} {s.label}</option>)}
+                {ADMIN_SERVICES.map(s => <option key={s.type} value={s.type}>{s.emoji} {tr(s.label)}</option>)}
               </select>
             </div>
             {echanges && (
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Niveau d'échanges *</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Niveau d'échanges *")}</label>
                 <select value={subSector} onChange={e => setSubSector(e.target.value)} className={champ}>
-                  <option value="">Choisir…</option>
-                  <option value="primaire">Primaire</option>
-                  <option value="secondaire">Secondaire</option>
-                  <option value="tertiaire">Tertiaire</option>
+                  <option value="">{tr("Choisir…")}</option>
+                  <option value="primaire">{tr("Primaire")}</option>
+                  <option value="secondaire">{tr("Secondaire")}</option>
+                  <option value="tertiaire">{tr("Tertiaire")}</option>
                 </select>
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Formule *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Formule *")}</label>
               <select value={planType} onChange={e => setPlanType(e.target.value as "full" | "visibility")} className={champ}>
-                <option value="full">Visibilité + Gestion Interne</option>
-                <option value="visibility">Visibilité + Rendez-vous</option>
+                <option value="full">{tr("Visibilité + Gestion Interne")}</option>
+                <option value="visibility">{tr("Visibilité + Rendez-vous")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Logo (facultatif — sinon le pro l'ajoute)</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">{tr("Logo (facultatif — sinon le pro l'ajoute)")}</label>
               <div className="flex items-center gap-3">
                 {photo && <img src={photo} alt="" className="w-12 h-12 rounded-lg object-contain border border-gray-200 bg-white" />}
                 <label className="px-3 py-2 rounded-xl border border-teal-600 text-teal-700 text-sm font-semibold cursor-pointer">
-                  {photo ? "Changer" : "Choisir un logo"}
+                  {photo ? tr("Changer") : tr("Choisir un logo")}
                   <input type="file" accept="image/*" className="hidden" onChange={e => {
                     const f = e.target.files?.[0]; e.target.value = "";
-                    if (f) normaliserLogo(f).then(setPhoto).catch(err => setErreur(err.message));
+                    if (f) normaliserLogo(f).then(setPhoto).catch(err => setErreur(tr(err.message)));
                   }} />
                 </label>
               </div>
             </div>
             {erreur && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{erreur}</p>}
             <button onClick={creer} disabled={envoi} className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm disabled:opacity-60">
-              {envoi ? "⏳ Création…" : "Créer et obtenir le lien de l'application"}
+              {envoi ? tr("⏳ Création…") : tr("Créer et obtenir le lien de l'application")}
             </button>
           </div>
         )}

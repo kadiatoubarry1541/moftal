@@ -5,6 +5,7 @@ import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -24,6 +25,7 @@ export default function JournalisteVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [media, setMedia]     = useState<any>(null);
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,9 @@ export default function JournalisteVitrine() {
       fetch(`${API}/api/pro-public/journalist/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setMedia(t.tenant);
-      else setError(t.message || "Média introuvable");
+      else setError(tr(t.message || "Média introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError("Impossible de charger ce média."))
+    }).catch(() => setError(tr("Impossible de charger ce média.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -47,7 +49,7 @@ export default function JournalisteVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: SLATE_DARK, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: SLATE_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
+        <p style={{ color: SLATE_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -57,9 +59,9 @@ export default function JournalisteVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>📰</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Média introuvable</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Média introuvable")}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: SLATE_DARK, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: SLATE_DARK, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>
   );
@@ -103,12 +105,12 @@ export default function JournalisteVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", letterSpacing: "0.02em" }}>{media.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Presse</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("Presse")}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {[["Accueil","hero"],["Articles","articles"],["Journalistes","reporters"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
@@ -125,11 +127,11 @@ export default function JournalisteVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", fontFamily: "'Georgia', serif", letterSpacing: "-0.5px" }}>{media.name}</h1>
           <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px", fontFamily: "system-ui" }}>
-            {media.description || "L'information en temps réel. Des journalistes engagés pour vous informer avec rigueur et objectivité."}
+            {media.description || tr("L'information en temps réel. Des journalistes engagés pour vous informer avec rigueur et objectivité.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("articles")} style={{ background: SLATE_DARK, color: "white", border: "none", borderRadius: 10, padding: "13px 30px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Lire nos articles
+              {tr("Lire nos articles")}
             </button>
           </div>
         </div>
@@ -151,8 +153,8 @@ export default function JournalisteVitrine() {
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: SLATE_DARK, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: SLATE_DARK, marginBottom: 4 }}>{tr(s.val)}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -162,7 +164,7 @@ export default function JournalisteVitrine() {
       <section id="articles" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>Nos Derniers Articles</h2>
+            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>{tr("Nos Derniers Articles")}</h2>
           </div>
 
           {/* Filtres catégories */}
@@ -171,14 +173,14 @@ export default function JournalisteVitrine() {
               {categories.map(cat => (
                 <button key={cat} onClick={() => setActiveCategory(cat)}
                   style={{ padding: "6px 16px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontWeight: activeCategory === cat ? 700 : 500, fontSize: 13, background: activeCategory === cat ? SLATE_DARK : "white", color: activeCategory === cat ? "white" : "#374151", transition: "all 0.15s" }}>
-                  {cat}
+                  {tr(cat)}
                 </button>
               ))}
             </div>
           )}
 
           {filtered.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>Aucun article disponible pour l'instant.</div>
+            <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>{tr("Aucun article disponible pour l'instant.")}</div>
           ) : (
             <div className="art-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {filtered.map((art: any, i: number) => (
@@ -189,7 +191,7 @@ export default function JournalisteVitrine() {
                   <div style={{ padding: "20px" }}>
                     {art.categorie && (
                       <span style={{ display: "inline-block", background: `${CAT_COLORS[art.categorie] || SLATE_DARK}18`, color: CAT_COLORS[art.categorie] || SLATE_DARK, fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 20, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "system-ui" }}>
-                        {art.categorie}
+                        {tr(art.categorie)}
                       </span>
                     )}
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: "0 0 8px", lineHeight: 1.4, fontFamily: "'Georgia', serif" }}>{art.titre}</h3>
@@ -211,7 +213,7 @@ export default function JournalisteVitrine() {
         <section id="reporters" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>Nos Journalistes</h2>
+              <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>{tr("Nos Journalistes")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {reporters.map((r: any, i: number) => (
@@ -233,17 +235,17 @@ export default function JournalisteVitrine() {
       <section id="contact" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 780, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>Nous Contacter</h2>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>{tr("Nous Contacter")}</h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
             {[
-              { icon: "📞", label: "Téléphone", val: media.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: media.email || "Non renseigné" },
-              { icon: "📍", label: "Rédaction", val: media.address || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: media.phone || tr("Non renseigné") },
+              { icon: "✉️", label: "Email", val: media.email || tr("Non renseigné") },
+              { icon: "📍", label: "Rédaction", val: media.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "white" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
               </div>
             ))}
@@ -258,9 +260,9 @@ export default function JournalisteVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a", marginBottom: 8, fontFamily: "'Georgia', serif" }}>{media.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Presse & Information</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Presse & Information")}</p>
         <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}</button>
         </div>
       </footer>
     </div>

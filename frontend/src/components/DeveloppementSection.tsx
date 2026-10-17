@@ -1,4 +1,5 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react';
+import { useTraduction } from '../i18n/traduction';
 import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from './CompteSolidariteQuartier';
 
 interface Props {
@@ -24,6 +25,7 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   { scope, location, locationName, hideProjetsButton = false },
   ref
 ) {
+  const { tr } = useTraduction();
   const soliRef = useRef<CompteSolidariteQuartierHandle>(null);
   useImperativeHandle(ref, () => ({
     openCaisse: () => soliRef.current?.open(),
@@ -41,7 +43,7 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
         >
           <div className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
-            <p className="font-bold text-white text-sm">Caisse</p>
+            <p className="font-bold text-white text-sm">{tr("Caisse")}</p>
           </div>
           <span className="text-white/80">›</span>
         </button>
