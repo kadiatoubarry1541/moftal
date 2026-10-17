@@ -46,6 +46,7 @@ const TITRES = {
   friday_khutba: '🕌 Khutba du vendredi',
   coordinator_msg: '📢 Message du coordinateur',
   inscription: '📝 Nouvelle demande d\'inscription',
+  commande: '🛒 Nouvelle commande',
 };
 
 /** Notification à une personne (cloche + téléphone). Ne bloque jamais l'action en cours. */
