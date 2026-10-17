@@ -10,7 +10,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
-import { ajouterRoutesCoursEtBibliotheque, numeroHComplet } from './schoolCoursBibliotheque.js';
+import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const router = attraperErreursAsync(express.Router());
@@ -250,13 +250,16 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureStaffPhotoColumn();
-    const { nom, prenom, role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
-    if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
+    const { role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
+    if (!String(telephone || email || numero_h || '').trim() && !(req.body.nom && req.body.prenom)) {
+      return res.status(400).json({ success: false, message: "Indiquez au moins le téléphone, l'e-mail ou le nom de l'enseignant." });
+    }
+    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const mats = matieres || (specialite ? [specialite] : []);
-    const nh = await numeroHComplet(numero_h);
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-personnel' });
     const [rows] = await sequelize.query(
       `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh) RETURNING *`,
@@ -273,10 +276,10 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureStaffPhotoColumn();
-    const { nom, prenom, role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
-    if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
+    const { role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
+    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const mats = matieres || (specialite ? [specialite] : []);
-    const nh = await numeroHComplet(numero_h);
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
     await sequelize.query(
       `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=COALESCE(:role,role),matieres=:mats::jsonb,specialite=:spec,matiere=:spec,

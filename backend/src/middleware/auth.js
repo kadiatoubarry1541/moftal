@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
-import { estEmployeDeLaGestion } from '../utils/accesEmployes.js';
+import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion } from '../utils/accesEmployes.js';
 
 // NumeroH des comptes administrateurs spéciaux
 export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
@@ -146,7 +146,9 @@ export const authenticate = async (req, res, next) => {
                && await ownsApprovedProAccount(user.numeroH))
           // Employé ajouté par le propriétaire : il travaille dans cette gestion
           // même si son propre profil n'est pas encore complété.
-          && !(await estEmployeDeLaGestion(user.numeroH, req.originalUrl))) {
+          && !(await estEmployeDeLaGestion(user.numeroH, req.originalUrl))
+          // Enseignant, parent ou élève ajouté par l'école : pareil, dans cette école
+          && !(await estMembreEcoleDeLaGestion(user.numeroH, req.originalUrl))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',
