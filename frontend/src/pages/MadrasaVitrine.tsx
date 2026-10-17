@@ -16,6 +16,16 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+// Description des matières connues (les matières affichées sont celles des enseignants)
+const MATIERES_MADRASA: { re: RegExp; icon: string; desc: string }[] = [
+  { re: /coran|hifz|tajw/i, icon: "📖", desc: "Mémorisation et récitation du Saint Coran selon les règles de tajwid." },
+  { re: /fiqh/i, icon: "📚", desc: "Jurisprudence islamique appliquée à la vie quotidienne." },
+  { re: /aqid|tawhid/i, icon: "⭐", desc: "Fondements de la foi et de la croyance islamique." },
+  { re: /hadith/i, icon: "📜", desc: "Étude des paroles et actes du Prophète ﷺ." },
+  { re: /arabe/i, icon: "🌍", desc: "Apprentissage de la langue du Coran, lecture et expression." },
+  { re: /sira|histoire/i, icon: "🕌", desc: "Biographie du Prophète Mohamed ﷺ et histoire islamique." },
+];
+
 export default function MadrasaVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
@@ -64,6 +74,8 @@ export default function MadrasaVitrine() {
 
   const stats = data?.stats || {};
   const staff = data?.staff || [];
+  const halaqas = data?.halaqas || [];
+  const matieres: string[] = data?.matieres || [];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -163,49 +175,76 @@ export default function MadrasaVitrine() {
         </div>
       </section>
 
-      {/* MATIÈRES ENSEIGNÉES */}
-      <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Programme</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Matières Enseignées</h2>
-            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>Un programme complet pour l'éducation spirituelle et académique.</p>
+      {/* MATIÈRES ENSEIGNÉES — celles des fiches des enseignants (réelles) */}
+      {matieres.length > 0 && (
+        <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <span style={{ background: `${TEAL}18`, color: TEAL, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Programme</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Matières Enseignées</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))", gap: 16 }}>
+              {matieres.map((m: string) => {
+                const connue = MATIERES_MADRASA.find(x => x.re.test(m));
+                return (
+                  <div key={m} style={{ background: "white", borderRadius: 16, padding: "22px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                    <div style={{ width: 52, height: 52, borderRadius: 14, background: `${TEAL}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 12 }}>{connue?.icon || "📘"}</div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 6px" }}>{m}</h3>
+                    {connue && <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{connue.desc}</p>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {[
-              { icon: "📖", title: "Coran (Hifz)", desc: "Mémorisation et récitation du Saint Coran selon les règles de tajwid." },
-              { icon: "📚", title: "Fiqh", desc: "Jurisprudence islamique appliquée à la vie quotidienne." },
-              { icon: "⭐", title: "Aqidah", desc: "Fondements de la foi et de la croyance islamique." },
-              { icon: "📜", title: "Hadith", desc: "Étude des paroles et actes du Prophète ﷺ." },
-              { icon: "🌍", title: "Langue Arabe", desc: "Apprentissage de la langue du Coran, lecture et expression." },
-              { icon: "🕌", title: "Sira", desc: "Biographie du Prophète Mohamed ﷺ et histoire islamique." },
-            ].map((item, i) => (
-              <div key={i} style={{ background: "white", borderRadius: 16, padding: "24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: `${TEAL}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 14 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{item.title}</h3>
-                <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ENSEIGNANTS */}
+      {/* ENSEIGNANTS — photo, nom, matière, profil */}
       {staff.length > 0 && (
         <section id="teachers" style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Enseignants</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Des oulémas qualifiés pour transmettre la science islamique.</p>
+              <p style={{ color: "#64748b", fontSize: 15 }}>Des enseignants qualifiés pour transmettre la science islamique.</p>
             </div>
-            <div className="staff-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 20 }}>
               {staff.map((s: any, i: number) => (
-                <div key={i} className="staff-card" style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700 }}>
-                    {(s.prenom || "?").charAt(0)}{(s.nom || "?").charAt(0)}
+                <div key={i} className="staff-card" style={{ background: "white", borderRadius: 18, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 48, fontWeight: 800 }}>
+                    {s.photo_url
+                      ? <img src={getPhotoUrl(s.photo_url) || ""} alt={`${s.prenom || ""} ${s.nom || ""}`.trim()} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      : <>{(s.prenom || "?").charAt(0)}{(s.nom || "").charAt(0)}</>}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>{s.prenom} {s.nom}</div>
-                  <div style={{ fontSize: 12, color: TEAL, fontWeight: 600 }}>{s.role}</div>
+                  <div style={{ padding: "16px 16px 18px", textAlign: "center" }}>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a" }}>{s.prenom} {s.nom}</div>
+                    <div style={{ fontSize: 13, color: TEAL, fontWeight: 700, marginTop: 4 }}>{[s.role, s.specialite].filter(Boolean).join(" · ")}</div>
+                    {s.profil && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.55, margin: "10px 0 0" }}>{s.profil}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* HALAQAS PROPOSÉES */}
+      {halaqas.length > 0 && (
+        <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Halaqas</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{halaqas.length} halaqa(s) proposée(s).</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
+              {halaqas.map((h: any, i: number) => (
+                <div key={i} style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                  {h.photo_url
+                    ? <img src={getPhotoUrl(h.photo_url) || ""} alt={h.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block" }} />
+                    : <div style={{ aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${TEAL}12, ${TEAL}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📖</div>}
+                  <div style={{ padding: "12px 14px" }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>{h.nom}</div>
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{[h.niveau, h.capacite && `${h.capacite} places`].filter(Boolean).join(" · ")}</div>
+                  </div>
                 </div>
               ))}
             </div>

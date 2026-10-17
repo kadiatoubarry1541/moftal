@@ -150,12 +150,16 @@ export async function employesDansLePersonnel(tenantCode, tableStaff) {
         AND NOT EXISTS (SELECT 1 FROM ${tableStaff} s WHERE s.tenant_code = a.tenant_code AND LOWER(TRIM(s.numero_h)) = LOWER(a.numero_h) ${actifs})`,
     { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
   );
+  // Ajoutés automatiquement : pas montrés sur le site tant que le responsable ne le décide pas
+  if (manquants.length) {
+    await sequelize.query(`ALTER TABLE ${tableStaff} ADD COLUMN IF NOT EXISTS sur_site BOOLEAN NOT NULL DEFAULT true`);
+  }
   for (const e of manquants) {
     const rep = { code: tenantCode, nh: e.numero_h, prenom: String(e.nom || e.numero_h).slice(0, 100), role: String(e.poste || 'Employé').slice(0, 50) };
     await sequelize.query(
       tableStaff === 'school_staff'
-        ? `INSERT INTO school_staff (tenant_code, nom, prenom, role, numero_h) VALUES (:code, '', :prenom, :role, :nh)`
-        : `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, numero_h) VALUES (:code, :prenom, '', :role, NULL, :nh)`,
+        ? `INSERT INTO school_staff (tenant_code, nom, prenom, role, numero_h, sur_site) VALUES (:code, '', :prenom, :role, :nh, false)`
+        : `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, numero_h, sur_site) VALUES (:code, :prenom, '', :role, NULL, :nh, false)`,
       { replacements: rep }
     ).catch((err) => console.error('Personnel depuis les employés :', err.message));
   }

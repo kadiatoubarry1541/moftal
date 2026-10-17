@@ -4,6 +4,7 @@ import { getSessionUser } from "../utils/auth";
 import { AddPersonModal } from "./AddPersonModal";
 import ParametresEspacePro from "./ParametresEspacePro";
 import PhotosSite from "./ecole/PhotosSite";
+import CoordonneesSite from "./CoordonneesSite";
 import { TenantCodeCard } from "./GestionBrand";
 import { useTraduction } from "../i18n/traduction";
 import {
@@ -78,6 +79,7 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
   const [voirAbonnement, setVoirAbonnement] = useState(false);
   const [voirMessages, setVoirMessages] = useState(vueInitiale === "messages");
   const [voirPhotos, setVoirPhotos] = useState(false);
+  const [voirCoordonnees, setVoirCoordonnees] = useState(false);
   const [nouveauxMessages, setNouveauxMessages] = useState(0);
   // Nombre de messages du site non traités, sur le bouton
   useEffect(() => {
@@ -223,6 +225,11 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
 
             {voirMessages ? (
               <MessagesDuSite tenantCode={tenantCode} onRetour={() => setVoirMessages(false)} onNombre={setNouveauxMessages} />
+            ) : voirCoordonnees ? (
+              <div>
+                <button onClick={() => setVoirCoordonnees(false)} style={{ background: "none", border: "none", padding: "0 0 10px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 700 }}>‹ {tr("Retour")}</button>
+                <CoordonneesSite tenantCode={tenantCode} couleur={info?.color || "#1a8f1a"} lienSite={info?.vitrinePath ? `/${info.vitrinePath}/${tenantCode}` : undefined} />
+              </div>
             ) : voirPhotos ? (
               <div>
                 <button onClick={() => setVoirPhotos(false)} style={{ background: "none", border: "none", padding: "0 0 10px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 700 }}>‹ {tr("Retour")}</button>
@@ -231,6 +238,7 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
                   lienSite={info?.vitrinePath ? `/${info.vitrinePath}/${tenantCode}` : undefined} />
               </div>
             ) : (<>
+            {bouton(tr("📍  Coordonnées du site"), () => setVoirCoordonnees(true), { background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", marginBottom: 8 })}
             {bouton(tr("🖼️  Photos du site"), () => setVoirPhotos(true), { background: "#fff7ed", color: "#c2410c", border: "1.5px solid #fed7aa", marginBottom: 8 })}
             {bouton(`${tr("📩  Messages du site")}${nouveauxMessages ? ` (${nouveauxMessages})` : ""}`, () => setVoirMessages(true),
               { background: nouveauxMessages ? "#b91c1c" : "#f8fafc", color: nouveauxMessages ? "white" : "#0f172a", border: nouveauxMessages ? "none" : "1.5px solid #e2e8f0", marginBottom: 8 })}

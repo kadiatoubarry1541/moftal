@@ -18,7 +18,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
-import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
+import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 // Photo facultative des apprenants et des enseignants
@@ -313,6 +313,7 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 // ── Personnel enseignant ───────────────────────────────────────────────────────
 router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) => {
   try {
+    await preparerColonnesSite('madrasa_staff');
     // Le personnel est aussi la liste des employés : chacun avec son accès à la gestion
     await employesDansLePersonnel(req.params.tenantCode, 'madrasa_staff');
     const [staff] = await sequelize.query(
@@ -335,11 +336,12 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
   const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
   if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
   await ensureColonnesPhoto();
+  await preparerColonnesSite('madrasa_staff');
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-personnel' });
   const [rows] = await sequelize.query(
-    `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h, photo_url)
-     VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh, :photo) RETURNING *`,
-    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh, photo } }
+    `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h, photo_url, profil, sur_site)
+     VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh, :photo, :profil, COALESCE(:surSite, true)) RETURNING *`,
+    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh, photo, ...champsSitePersonnel(req.body) } }
   );
   if (nh) {
     // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
@@ -358,12 +360,14 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
   // Fiche reliée à une autre personne : l'ancienne perd son accès
   if (ancien?.numero_h && String(ancien.numero_h).toLowerCase() !== String(nh || '').toLowerCase()) await retirerAccesPersonnel(req.params.tenantCode, ancien.numero_h);
   await ensureColonnesPhoto();
+  await preparerColonnesSite('madrasa_staff');
   const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
   await sequelize.query(
     `UPDATE madrasa_staff SET prenom = :prenom, nom = :nom, role = COALESCE(:role, role), specialite = COALESCE(:spec, specialite),
-       telephone = :tel, numero_h = :nh, photo_url = COALESCE(:photo, photo_url)
+       telephone = :tel, numero_h = :nh, photo_url = COALESCE(:photo, photo_url),
+       profil = COALESCE(:profil, profil), sur_site = COALESCE(:surSite, sur_site)
      WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh, photo, id: req.params.id, tc: req.params.tenantCode } }
+    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh, photo, ...champsSitePersonnel(req.body), id: req.params.id, tc: req.params.tenantCode } }
   );
   res.json({ success: true });
 });
@@ -395,10 +399,13 @@ router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res)
   const tc = req.params.tenantCode;
   const { nom, niveau, capacite, enseignant_id } = req.body;
   if (!nom) return res.status(400).json({ message: 'Nom requis.' });
+  // Photo de la salle (facultative), montrée sur le site
+  await preparerColonnesSite('madrasa_halaqas');
+  const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: tc, usage: 'photo-classe' });
   const [rows] = await sequelize.query(
-    `INSERT INTO madrasa_halaqas (tenant_code, nom, niveau, capacite, enseignant_id)
-     VALUES (:tc, :nom, :niveau, :cap, :eid) RETURNING *`,
-    { replacements: { tc, nom, niveau: niveau || 'Iqra', cap: capacite || 20, eid: enseignant_id || null } }
+    `INSERT INTO madrasa_halaqas (tenant_code, nom, niveau, capacite, enseignant_id, photo_url)
+     VALUES (:tc, :nom, :niveau, :cap, :eid, :photo) RETURNING *`,
+    { replacements: { tc, nom, niveau: niveau || 'Iqra', cap: capacite || 20, eid: enseignant_id || null, photo } }
   );
   res.json({ success: true, halaqa: rows[0] });
 });
@@ -406,10 +413,12 @@ router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res)
 router.put('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
   const { nom, niveau, capacite, enseignant_id } = req.body;
   if (!nom) return res.status(400).json({ success: false, message: 'Nom requis.' });
+  await preparerColonnesSite('madrasa_halaqas');
+  const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-classe' });
   await sequelize.query(
-    `UPDATE madrasa_halaqas SET nom = :nom, niveau = COALESCE(:niveau, niveau), capacite = :cap, enseignant_id = :eid
+    `UPDATE madrasa_halaqas SET nom = :nom, niveau = COALESCE(:niveau, niveau), capacite = :cap, enseignant_id = :eid, photo_url = COALESCE(:photo, photo_url)
      WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { nom, niveau: niveau || null, cap: capacite || 20, eid: enseignant_id || null, id: req.params.id, tc: req.params.tenantCode } }
+    { replacements: { nom, niveau: niveau || null, cap: capacite || 20, eid: enseignant_id || null, photo, id: req.params.id, tc: req.params.tenantCode } }
   );
   res.json({ success: true });
 });

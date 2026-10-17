@@ -25,6 +25,17 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
+// Icône d'une matière, pour la reconnaître d'un coup d'œil
+function iconeMatiere(m: string) {
+  const t = m.toLowerCase();
+  const table: [RegExp, string][] = [
+    [/math/, "➗"], [/fran|lecture|langue|litt/, "📖"], [/angl|english|espagn|allem|arabe/, "🗣️"], [/phys|chim/, "⚗️"],
+    [/svt|biolog|sciences? nat|scienc/, "🧬"], [/hist|géo|geo/, "🌍"], [/info|numér|ordinat/, "💻"], [/sport|eps|physique et sport/, "⚽"],
+    [/dessin|art|musique/, "🎨"], [/philo/, "💭"], [/éco|econ|compta/, "📊"], [/coran|islam|religi|tawhid|fiqh/, "📿"], [/civi|moral/, "⚖️"],
+  ];
+  return table.find(([r]) => r.test(t))?.[1] || "📘";
+}
+
 export default function EcoleVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
@@ -97,6 +108,7 @@ export default function EcoleVitrine() {
   const stats = data?.stats || {};
   const staff = data?.staff || [];
   const classrooms = data?.classrooms || [];
+  const matieres: string[] = data?.matieres || [];
   const feeTypes = data?.feeTypes || [];
 
   return (
@@ -211,20 +223,50 @@ export default function EcoleVitrine() {
       {staff.length > 0 && (
         <section id="teachers" style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
               <span style={{ background: `${GREEN}18`, color: GREEN, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("L'équipe pédagogique")}</span>
               <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Enseignants")}</h2>
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des éducateurs passionnés dédiés à la réussite de vos enfants.")}</p>
             </div>
-            <div className="staff-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {staff.map((s: any, i: number) => (
-                <div key={i} className="staff-card" style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${GREEN},${GREEN_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700, overflow: "hidden" }}>
-                    {s.photo_url ? <img src={s.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <>{(s.prenom || "?").charAt(0)}{(s.nom || "?").charAt(0)}</>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 20 }}>
+              {staff.map((s: any, i: number) => {
+                const matieresProf = Array.from(new Set([s.matiere, s.specialite, ...(Array.isArray(s.matieres) ? s.matieres : [])].filter(Boolean))) as string[];
+                return (
+                  <div key={i} className="staff-card" style={{ background: "white", borderRadius: 18, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
+                    {/* Photo de l'enseignant */}
+                    <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg,${GREEN},${GREEN_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 48, fontWeight: 800 }}>
+                      {s.photo_url
+                        ? <img src={getPhotoUrl(s.photo_url) || ""} alt={`${s.prenom || ""} ${s.nom || ""}`.trim()} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                        : <>{(s.prenom || "?").charAt(0)}{(s.nom || "").charAt(0)}</>}
+                    </div>
+                    <div style={{ padding: "16px 16px 18px", textAlign: "center" }}>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a" }}>{s.prenom} {s.nom}</div>
+                      <div style={{ fontSize: 13, color: GREEN, fontWeight: 700, marginTop: 4 }}>
+                        {[s.role && tr(s.role), ...matieresProf.map(m => tr(m))].filter(Boolean).join(" · ")}
+                      </div>
+                      {s.profil && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.55, margin: "10px 0 0" }}>{s.profil}</p>}
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>{s.prenom} {s.nom}</div>
-                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{tr(s.role)}</div>
-                  {s.matiere && <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr(s.matiere)}</div>}
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* MATIÈRES ENSEIGNÉES (celles des fiches des enseignants) */}
+      {matieres.length > 0 && (
+        <section style={{ background: "white", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos matières")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Les matières enseignées par nos professeurs.")}</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))", gap: 12 }}>
+              {matieres.map((m: string) => (
+                <div key={m} style={{ background: GREEN_BG, border: `1px solid ${GREEN}33`, borderRadius: 14, padding: "18px 12px", textAlign: "center" }}>
+                  <div style={{ fontSize: 32, marginBottom: 6 }}>{iconeMatiere(m)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: GREEN_DARK }}>{tr(m)}</div>
                 </div>
               ))}
             </div>
@@ -232,19 +274,25 @@ export default function EcoleVitrine() {
         </section>
       )}
 
-      {/* CLASSES / PROGRAMMES */}
+      {/* CLASSES PROPOSÉES */}
       {classrooms.length > 0 && (
-        <section style={{ background: "white", padding: "60px 20px" }}>
+        <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
               <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos Classes")}</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Les niveaux et classes proposés par notre école.")}</p>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("{n} classe(s) proposée(s) par notre école.", { n: classrooms.length })}</p>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
               {classrooms.map((c: any, i: number) => (
-                <span key={i} style={{ padding: "10px 20px", background: GREEN_BG, color: GREEN_DARK, borderRadius: 20, fontSize: 14, fontWeight: 700, border: `1px solid ${GREEN}33` }}>
-                  {c.nom} <span style={{ fontWeight: 500, opacity: 0.8 }}>· {tr(c.niveau)}</span>
-                </span>
+                <div key={i} style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                  {c.photo_url
+                    ? <img src={getPhotoUrl(c.photo_url) || ""} alt={c.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block" }} />
+                    : <div style={{ aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${GREEN_BG}, ${GREEN}22)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🏫</div>}
+                  <div style={{ padding: "12px 14px" }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>{c.nom}</div>
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{[c.niveau && tr(c.niveau), c.capacite && tr("{n} places", { n: c.capacite })].filter(Boolean).join(" · ")}</div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
