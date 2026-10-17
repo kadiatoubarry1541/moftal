@@ -10,6 +10,7 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -58,7 +59,7 @@ export default function GestionReseau() {
   const [aForm, setAForm] = useState({ titre: "", contenu: "", type: "general" });
 
   useEffect(() => {
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadDashboard();
   }, [tenantCode]);

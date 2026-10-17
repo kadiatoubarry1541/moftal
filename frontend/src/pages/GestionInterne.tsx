@@ -7,6 +7,7 @@ import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
+import { cheminConnexion } from "../utils/connexionRetour";
 import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
   type PublishModal, type ProfilModal,
@@ -78,7 +79,7 @@ export default function GestionInterne() {
   }, [location.search]);
 
   useEffect(() => {
-    if (!currentUser) { navigate("/login"); return; }
+    if (!currentUser) { navigate(cheminConnexion(), { replace: true }); return; }
 
     const myAccountsPromise = chargerComptes();
 

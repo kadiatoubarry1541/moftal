@@ -5,6 +5,7 @@ import { useTraduction, trHors } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminAppEcole } from "../utils/appEcole";
 import { MoftalMark } from "../components/GestionBrand";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -40,7 +41,7 @@ export default function EspaceParentEcole({ mode }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode || "", "parent") } }); return; }
+    if (!localStorage.getItem("token")) { navigate(cheminConnexion(), { replace: true }); return; }
     setLoading(true); setError(null);
     const qs = selectedStudentId ? `?student_id=${selectedStudentId}` : "";
     fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access${qs}`, { headers: auth() })

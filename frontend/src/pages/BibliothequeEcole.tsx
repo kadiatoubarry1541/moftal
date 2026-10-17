@@ -5,6 +5,7 @@ import { CarteLivre, type Livre } from "../components/ecole/CoursEtBibliotheque"
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminAppEcole } from "../utils/appEcole";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 // Bibliothèque de l'école, pour ses membres (enseignants, élèves, parents) :
 // les livres PDF ajoutés par le directeur.
@@ -22,7 +23,7 @@ export default function BibliothequeEcole({ mode = "school" }: { mode?: "school"
   const [recherche, setRecherche] = useState("");
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode, "bibliotheque") } }); return; }
+    if (!localStorage.getItem("token")) { navigate(cheminConnexion(), { replace: true }); return; }
     fetch(`${config.API_BASE_URL}/${madrasa ? "madrasa-mgmt" : "school-mgmt"}/${encodeURIComponent(tenantCode)}/bibliotheque`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
       .then(async (r) => ({ ok: r.ok, d: await r.json().catch(() => ({})) }))
       .then(({ ok, d }) => { if (ok && d.success) { setEcole(d.ecole); setLivres(d.livres); } else setErreur(d.message || "Accès refusé."); })

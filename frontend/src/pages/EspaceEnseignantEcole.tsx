@@ -5,6 +5,7 @@ import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminAppEcole } from "../utils/appEcole";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 // Espace de l'enseignant : il marque le début et la fin de chacun de ses cours.
 // L'heure enregistrée est celle du serveur ; le directeur la voit dans
@@ -41,7 +42,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   }, [base]);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode, "enseignant") } }); return; }
+    if (!localStorage.getItem("token")) { navigate(cheminConnexion(), { replace: true }); return; }
     charger();
   }, [charger, navigate, tenantCode]);
 

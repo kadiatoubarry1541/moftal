@@ -9,6 +9,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
 import { BoutonRapport } from "../components/RapportMois";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -60,7 +61,7 @@ export default function GestionScientifique() {
   const [prjForm, setPrjForm] = useState({ titre: "", description: "", responsable: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
   const [aForm, setAForm] = useState({ titre: "", contenu: "", type: "general" });
 
-  useEffect(() => { if (!user) { navigate("/login"); return; } if (!tenantCode) return; loadAll(); }, [tenantCode]);
+  useEffect(() => { if (!user) { navigate(cheminConnexion(), { replace: true }); return; } if (!tenantCode) return; loadAll(); }, [tenantCode]);
   useEffect(() => {
     if (!tenantCode || !tenant) return;
     if (tab === "members") loadMembers();

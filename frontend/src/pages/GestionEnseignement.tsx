@@ -18,6 +18,7 @@ import NotificationsApp from "../components/ecole/NotificationsApp";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -202,7 +203,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
   useEffect(() => {
     const user = getSessionUser();
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     Promise.all([get("/info"), get("/dashboard")])
       .then(([info, dash]) => {
         if (!info.tenant) { setError(trHors(info.message || "Accès refusé.")); return; }

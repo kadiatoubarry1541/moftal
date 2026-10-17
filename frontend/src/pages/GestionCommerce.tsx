@@ -11,6 +11,7 @@ import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -118,7 +119,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   const b = (code: string) => BASE(code);
 
   useEffect(() => {
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
   }, [tenantCode]);
