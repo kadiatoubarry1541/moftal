@@ -33,6 +33,11 @@ const ORDER_STATUS: Record<string, { bg: string; color: string; label: string }>
   annule:         { bg: "#fef2f2", color: "#dc2626", label: "Annulé" },
 };
 // Service d'une commande, et en-tête : la table, ou le client pour une commande du site
+interface LignePlat { cle: string; nom: string; categorie: string; prix: string; description: string; disponible: boolean; image: string; erreur?: string }
+const MAX_PLATS_A_LA_FOIS = 10;
+const nouvelleLigne = (categorie = "Plat principal"): LignePlat =>
+  ({ cle: Math.random().toString(36).slice(2), nom: "", categorie, prix: "", description: "", disponible: true, image: "" });
+
 // Photo choisie → image compressée (data URL) envoyée au serveur, qui l'enregistre en base
 const lirePhoto = async (f: File) => {
   const petite = await compressImage(f, 1200, 0.82);
@@ -73,7 +78,9 @@ export default function GestionRestaurant() {
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showAddAnn, setShowAddAnn] = useState(false);
 
-  const [dForm, setDForm] = useState({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true, image: "" });
+  // Ajout de plats : jusqu'à 10 d'un coup, chacun avec son prix et sa photo
+  const [lignes, setLignes] = useState<LignePlat[]>([nouvelleLigne()]);
+  const [bilanPlats, setBilanPlats] = useState<{ ok: boolean; texte: string } | null>(null);
   const [tForm, setTForm] = useState({ numero: "", capacite: "4", zone: "Salle" });
   const [oForm, setOForm] = useState({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] });
   const [sForm, setSForm] = useState({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" });
@@ -282,32 +289,84 @@ export default function GestionRestaurant() {
             <button onClick={() => setShowAddDish(!showAddDish)} style={btn(ORANGE)}>{showAddDish ? "✕ Annuler" : "+ Ajouter plat"}</button>
           </div>
           {showAddDish && (
-            <div style={{ background: ORANGE_LIGHT, border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: 18, marginBottom: 18 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <input style={inp} placeholder="Nom du plat *" value={dForm.nom} onChange={e => setDForm(p => ({ ...p, nom: e.target.value }))} />
-                <select style={inp} value={dForm.categorie} onChange={e => setDForm(p => ({ ...p, categorie: e.target.value }))}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <input style={inp} placeholder="Prix (GNF)" type="number" value={dForm.prix} onChange={e => setDForm(p => ({ ...p, prix: e.target.value }))} />
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "#475569" }}>
-                  <input type="checkbox" checked={dForm.disponible} onChange={e => setDForm(p => ({ ...p, disponible: e.target.checked }))} />
-                  Disponible maintenant
-                </label>
+            <div style={{ background: ORANGE_LIGHT, border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: 14, marginBottom: 18 }}>
+              <div style={{ fontSize: 13, color: "#9a3412", marginBottom: 10 }}>
+                Ajoutez jusqu'à {MAX_PLATS_A_LA_FOIS} plats d'un coup : <b>nom, prix et photo</b>. Ils sont enregistrés sur le serveur et apparaissent tout de suite dans le menu de votre site.
               </div>
-              <textarea style={{ ...inp, minHeight: 60, resize: "vertical", marginBottom: 10 }} placeholder="Description (ingrédients, allergènes…)" value={dForm.description} onChange={e => setDForm(p => ({ ...p, description: e.target.value }))} />
-              {/* Photo du plat : sur le site, les clients choisissent en voyant */}
-              <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                {dForm.image
-                  ? <img src={dForm.image} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover" }} />
-                  : <span style={{ width: 64, height: 64, borderRadius: 10, border: `1.5px dashed ${ORANGE_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📷</span>}
-                {dForm.image ? "Changer la photo du plat" : "Ajouter une photo du plat (conseillé)"}
-                <input type="file" accept="image/*" hidden onChange={async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; try { const image = await lirePhoto(f); setDForm(p => ({ ...p, image })); } catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); } }} />
-              </label>
-              <button onClick={async () => {
-                if (!dForm.nom || !dForm.prix) return;
-                const d = await post(`${BASE(tenantCode!)}/dishes`, { ...dForm, prix: +dForm.prix });
-                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true, image: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
-              }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+              <div style={{ display: "grid", gap: 10 }}>
+                {lignes.map((l, i) => {
+                  const maj = (champ: Partial<LignePlat>) => setLignes(ls => ls.map(x => x.cle === l.cle ? { ...x, ...champ, erreur: undefined } : x));
+                  return (
+                    <div key={l.cle} style={{ background: "white", border: `1.5px solid ${l.erreur ? "#fca5a5" : ORANGE_BORDER}`, borderRadius: 10, padding: 10, display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
+                      <label title="Photo du plat" style={{ flexShrink: 0, cursor: "pointer" }}>
+                        {l.image
+                          ? <img src={l.image} alt="" style={{ width: 72, height: 72, borderRadius: 10, objectFit: "cover", display: "block" }} />
+                          : <span style={{ width: 72, height: 72, borderRadius: 10, border: `1.5px dashed ${ORANGE}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontSize: 22, color: ORANGE }}>📷<span style={{ fontSize: 10, fontWeight: 700 }}>Photo</span></span>}
+                        <input type="file" accept="image/*" hidden onChange={async e => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; try { maj({ image: await lirePhoto(f) }); } catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); } }} />
+                      </label>
+                      <div style={{ flex: "1 1 220px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        <input style={{ ...inp, gridColumn: "1 / -1" }} placeholder={`Nom du plat ${i + 1} *`} value={l.nom} onChange={e => maj({ nom: e.target.value })} />
+                        <input style={inp} placeholder="Prix (GNF) *" type="number" min="0" inputMode="numeric" value={l.prix} onChange={e => maj({ prix: e.target.value })} />
+                        <select style={inp} value={l.categorie} onChange={e => maj({ categorie: e.target.value })}>
+                          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <input style={{ ...inp, gridColumn: "1 / -1" }} placeholder="Description (facultatif : ingrédients…)" value={l.description} onChange={e => maj({ description: e.target.value })} />
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+                          <input type="checkbox" checked={l.disponible} onChange={e => maj({ disponible: e.target.checked })} /> Disponible
+                        </label>
+                        {lignes.length > 1 && (
+                          <button type="button" onClick={() => setLignes(ls => ls.filter(x => x.cle !== l.cle))}
+                            style={{ justifySelf: "end", background: "none", border: "none", color: "#be123c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✕ Retirer cette ligne</button>
+                        )}
+                      </div>
+                      {l.erreur && <div style={{ flexBasis: "100%", fontSize: 12, color: "#b91c1c", fontWeight: 600 }}>⚠️ {l.erreur}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+                {lignes.length < MAX_PLATS_A_LA_FOIS && (
+                  <button type="button" onClick={() => setLignes(ls => [...ls, nouvelleLigne(ls[ls.length - 1]?.categorie)])}
+                    style={{ ...btn("white"), color: ORANGE, border: `1.5px solid ${ORANGE}` }}>+ Un autre plat ({lignes.length}/{MAX_PLATS_A_LA_FOIS})</button>
+                )}
+                <button disabled={saving} style={btn(ORANGE)} onClick={async () => {
+                  setBilanPlats(null);
+                  // Lignes vides ignorées ; nom et prix obligatoires, avec un message clair
+                  const remplies = lignes.filter(l => l.nom.trim() || l.prix || l.image);
+                  if (!remplies.length) { setBilanPlats({ ok: false, texte: "Écrivez au moins le nom et le prix d'un plat." }); return; }
+                  const verifiees = remplies.map(l => ({ ...l, erreur: !l.nom.trim() ? "Le nom du plat manque." : (l.prix === "" || !(+l.prix >= 0)) ? "Le prix manque." : undefined }));
+                  if (verifiees.some(l => l.erreur)) { setLignes(verifiees); setBilanPlats({ ok: false, texte: "Complétez les lignes en rouge, puis enregistrez." }); return; }
+                  const restantes: LignePlat[] = [];
+                  let enregistres = 0; let surAppareil = 0;
+                  for (const l of verifiees) {
+                    const d = await post(`${BASE(tenantCode!)}/dishes`, { nom: l.nom.trim(), categorie: l.categorie, prix: +l.prix, description: l.description, disponible: l.disponible, image: l.image || undefined });
+                    if (d.success && d.queued) surAppareil++;
+                    else if (d.success) enregistres++;
+                    else restantes.push({ ...l, erreur: d.message || "Pas enregistré. Réessayez." });
+                  }
+                  const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
+                  if (!surAppareil) fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])).catch(() => {});
+                  setLignes(restantes.length ? restantes : [nouvelleLigne()]);
+                  if (!restantes.length && !surAppareil) setShowAddDish(false);
+                  const morceaux = [
+                    enregistres ? `✅ ${enregistres} plat(s) enregistré(s) — visibles dans le menu de votre site.` : "",
+                    surAppareil ? `📴 ${surAppareil} plat(s) gardé(s) sur l'appareil faute de connexion : ils seront envoyés au retour d'internet.` : "",
+                    restantes.length ? `⚠️ ${restantes.length} plat(s) non enregistré(s) : voir les lignes en rouge.` : "",
+                  ].filter(Boolean);
+                  setBilanPlats({ ok: !restantes.length, texte: morceaux.join(" ") });
+                }}>{saving ? "Enregistrement…" : `Enregistrer ${lignes.length > 1 ? `les ${lignes.length} plats` : "le plat"}`}</button>
+              </div>
+            </div>
+          )}
+          {bilanPlats && (
+            <div style={{ background: bilanPlats.ok ? "#f0fdf4" : "#fef2f2", border: `1px solid ${bilanPlats.ok ? "#bbf7d0" : "#fecaca"}`, color: bilanPlats.ok ? "#166534" : "#b91c1c", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, fontWeight: 600 }}>
+              {bilanPlats.texte}
+            </div>
+          )}
+          {/* Rappel : un menu sans photos ne donne pas envie */}
+          {dishes.some(d => !d.image_url) && (
+            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#9a3412" }}>
+              📷 <b>{dishes.filter(d => !d.image_url).length} plat(s) sans photo.</b> Les clients choisissent avec les yeux : touchez « 📷 Photo » à côté d'un plat pour ajouter sa photo, elle apparaît tout de suite sur votre site.
             </div>
           )}
           {/* Rappel : un menu sans photos ne donne pas envie */}
@@ -317,8 +376,9 @@ export default function GestionRestaurant() {
             </div>
           )}
           {/* Group by category */}
-          {CATEGORIES.map(cat => {
-            const catDishes = filtrer(dishes, recherche).filter(d => d.categorie === cat);
+          {[...CATEGORIES, "Autres"].map(cat => {
+            // « Autres » : plats d'une catégorie qui n'est pas dans la liste (jamais cachés)
+            const catDishes = filtrer(dishes, recherche).filter(d => cat === "Autres" ? !CATEGORIES.includes(d.categorie) : d.categorie === cat);
             if (catDishes.length === 0) return null;
             return (
               <div key={cat} style={{ marginBottom: 20 }}>

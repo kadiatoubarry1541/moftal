@@ -89,14 +89,19 @@ router.get('/:tenantCode/dishes', authenticate, verifyTenant, async (req, res) =
 
 router.post('/:tenantCode/dishes', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, categorie, prix, description, disponible } = req.body;
+    const { categorie, description, disponible } = req.body;
+    const nom = String(req.body.nom || '').trim().slice(0, 255);
+    const prix = Number(req.body.prix);
+    if (!nom) return res.status(400).json({ success: false, message: 'Donnez le nom du plat.' });
+    if (!Number.isFinite(prix) || prix < 0) return res.status(400).json({ success: false, message: `Prix invalide pour « ${nom} ».` });
     await preparerPhotoPlat();
-    const image = await photoDepuisFormulaire(req.body.image, { proprietaire: req.params.tenantCode, usage: 'photo-plat' });
-    await sequelize.query(
-      `INSERT INTO resto_dishes (tenant_code,nom,categorie,prix,description,disponible,image_url) VALUES(:code,:nom,:cat,:prix,:desc,:dispo,:image)`,
-      { replacements: { code: req.params.tenantCode, nom, cat: categorie || 'Plat principal', prix: prix || 0, desc: description || null, dispo: disponible !== false, image } }
+    const image = req.body.image ? await photoDepuisFormulaire(req.body.image, { proprietaire: req.params.tenantCode, usage: 'photo-plat' }) : null;
+    if (req.body.image && !image) return res.status(400).json({ success: false, message: `La photo de « ${nom} » est illisible. Essayez une autre photo.` });
+    const [rows] = await sequelize.query(
+      `INSERT INTO resto_dishes (tenant_code,nom,categorie,prix,description,disponible,image_url) VALUES(:code,:nom,:cat,:prix,:desc,:dispo,:image) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, nom, cat: categorie || 'Plat principal', prix, desc: description || null, dispo: disponible !== false, image } }
     );
-    res.json({ success: true });
+    res.json({ success: true, dish: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
