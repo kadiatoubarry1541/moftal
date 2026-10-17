@@ -17,6 +17,7 @@ import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
 import { FitText } from "./components/FitText";
 import { cheminAppEcole, type ModeEcole, type PageMembre } from "./utils/appEcole";
+import { cheminVitrineDepuisGestion, lireRetourGestion, ecrireRetourGestion } from "./utils/gestionVitrines";
 import { InvitationInstallerMoftal, AvertissementDoubleInstallation } from "./components/InstallAppButton";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
@@ -381,6 +382,26 @@ function App() {
     pathname.startsWith("/beaute-vitrine/") ||
     pathname.startsWith("/artisan/") ||
     pathname.startsWith("/producteur/");
+  // Site vitrine de l'établissement, ouvert depuis la barre de sa gestion interne
+  const vitrineDeLaGestion = isEspaceTenant ? cheminVitrineDepuisGestion(pathname) : null;
+  // Site vitrine visité depuis la gestion : bouton « Retour à la gestion » sur le site,
+  // sinon l'administrateur ou l'employé (surtout dans l'application installée) restait bloqué.
+  const pagePrecedente = useRef(pathname + location.search);
+  const [retourGestion, setRetourGestion] = useState(() => lireRetourGestion());
+  useEffect(() => {
+    const avant = pagePrecedente.current;
+    pagePrecedente.current = pathname + location.search;
+    if (isVitrineMode) {
+      if (/^\/gestion-[^/]+\/[^/]+/.test(avant)) {
+        const v = { gestion: avant, vitrine: pathname };
+        ecrireRetourGestion(v);
+        setRetourGestion(v);
+      }
+    } else if (!isGestionMode) {
+      ecrireRetourGestion(null);
+      setRetourGestion(null);
+    }
+  }, [pathname]);
   const isProfilPage = pathname === '/moi/profil';
   // Applis autonomes avec leur propre écran, logo et bouton d'installation —
   // le header/nav de l'app principale ne doit pas se superposer (pas de double
@@ -599,7 +620,7 @@ function App() {
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
           <div style={{ width: "100%", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             {/* Gauche : ← + logo + Professionnel */}
-            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
               <button
                 onClick={() => navigate(-1 as any)}
                 style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
@@ -608,7 +629,7 @@ function App() {
               >
                 ‹
               </button>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: isEspaceTenant ? "default" : "pointer" }} onClick={() => { if (!isEspaceTenant) navigate("/gestion-interne"); }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, cursor: isEspaceTenant ? "default" : "pointer" }} onClick={() => { if (!isEspaceTenant) navigate("/gestion-interne"); }}>
                 {isEspaceTenant ? (
                   // Même logo que partout dans la gestion (TenantLogo)
                   <TenantLogo
@@ -624,7 +645,7 @@ function App() {
                     <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
                   </div>
                 )}
-                <span style={{ color: "white", fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</span>
+                <span style={{ color: "white", fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{t('header.pro_mode')}</span>
               </div>
             </div>
             {/* Droite : profil + Espace Pro */}
@@ -650,6 +671,15 @@ function App() {
                     </div>
                   </div>
                 </Link>
+              )}
+              {vitrineDeLaGestion && (
+                <button
+                  onClick={() => navigate(vitrineDeLaGestion)}
+                  title="Voir le site vitrine"
+                  style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
+                >
+                  🌐 Site
+                </button>
               )}
               <button
                 onClick={() => isEspaceTenant ? setPanneauProOuvert(true) : navigate("/gestion-interne?tab=pro")}
@@ -893,6 +923,16 @@ function App() {
         <Suspense fallback={null}>
           <FloatingMessenger />
         </Suspense>
+      )}
+
+      {/* Retour à la gestion interne depuis son site vitrine */}
+      {isVitrineMode && retourGestion?.vitrine === pathname && (
+        <button
+          onClick={() => navigate(retourGestion.gestion)}
+          style={{ position: "fixed", left: "max(16px, env(safe-area-inset-left, 0px))", bottom: "max(16px, env(safe-area-inset-bottom, 0px))", zIndex: 60, background: "#0f172a", color: "white", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 999, padding: "10px 16px", cursor: "pointer", fontSize: 14, fontWeight: 700, boxShadow: "0 4px 16px rgba(0,0,0,0.35)", whiteSpace: "nowrap" }}
+        >
+          ‹ Retour à la gestion
+        </button>
       )}
 
       {/* Footer minimal Espace Gestion — pas dans l'espace d'un établissement
