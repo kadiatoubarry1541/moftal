@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -198,12 +199,11 @@ export default function ReseauVitrine() {
           <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.7, marginBottom: 32 }}>
             Vous êtes professionnel et souhaitez rejoindre notre réseau ? Contactez-nous pour intégrer notre communauté et accéder à des opportunités exclusives.
           </p>
-          {reseau.phone && (
-            <button onClick={() => window.open(`https://wa.me/${reseau.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite rejoindre votre réseau professionnel.")}`, "_blank")}
-              style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              📲 Nous écrire
-            </button>
-          )}
+          <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={reseau.name} couleur={VIOLET} objet={"Demande d'adhésion"}
+                messageInitial={"Bonjour, je souhaite rejoindre votre réseau professionnel."}
+                style={{ background: VIOLET, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                ✉️ Nous écrire
+              </EcrireAuSite>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 36 }}>
             {[
               { icon: "📞", label: "Téléphone", val: reseau.phone || "—" },

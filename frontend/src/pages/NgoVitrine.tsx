@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -199,12 +200,11 @@ export default function NgoVitrine() {
           <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.7, marginBottom: 32 }}>
             Ensemble, nous pouvons changer des vies. Contactez-nous pour devenir membre, bénévole ou partenaire de notre organisation.
           </p>
-          {ngo.phone && (
-            <button onClick={() => window.open(`https://wa.me/${ngo.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite rejoindre votre ONG et m'engager pour la cause.")}`, "_blank")}
-              style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              📲 Nous écrire
-            </button>
-          )}
+          <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={ngo.name} couleur={ROSE} objet={"Demande pour rejoindre l'ONG"}
+                messageInitial={"Bonjour, je souhaite rejoindre votre ONG et m'engager pour la cause."}
+                style={{ background: ROSE, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                ✉️ Nous écrire
+              </EcrireAuSite>
         </div>
       </section>
 
