@@ -10,6 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { BoutonRapport } from "../components/RapportMois";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -214,7 +215,7 @@ export default function GestionMairie() {
   }, [tenantCode]);
 
   useEffect(() => {
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     fetchTenant();
     fetchDashboard();
   }, [fetchTenant, fetchDashboard]);

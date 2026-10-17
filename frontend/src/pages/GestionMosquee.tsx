@@ -10,6 +10,7 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -63,7 +64,7 @@ export default function GestionMosquee() {
   const [qForm, setQForm] = useState({ nom: "", prenom: "", niveau_coran: "Débutant", telephone_parent: "", enseignant_id: "" });
 
   useEffect(() => {
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadDashboard();
   }, [tenantCode]);

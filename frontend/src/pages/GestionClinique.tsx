@@ -10,6 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -189,7 +190,7 @@ export default function GestionClinique() {
 
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem("token");
-    navigate("/login-membre", { state: { from: `/gestion-clinique/${tenantCode}` } });
+    navigate(cheminConnexion(), { replace: true });
   }, [navigate, tenantCode]);
 
   const get = useCallback(async (path: string) => {
@@ -218,7 +219,7 @@ export default function GestionClinique() {
 
   useEffect(() => {
     if (!localStorage.getItem("token")) {
-      navigate("/login-membre", { state: { from: `/gestion-clinique/${tenantCode}` } });
+      navigate(cheminConnexion(), { replace: true });
       return;
     }
     get("/info")

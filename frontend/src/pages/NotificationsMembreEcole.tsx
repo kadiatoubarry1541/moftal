@@ -4,6 +4,7 @@ import { config } from "../config/api";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import NotificationsApp from "../components/ecole/NotificationsApp";
 import { cheminAppEcole, type ModeEcole } from "../utils/appEcole";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 // Application de l'école → « Notifications » pour un parent ou un enseignant :
 // il ne voit que les siennes (le serveur filtre).
@@ -13,7 +14,7 @@ export default function NotificationsMembreEcole({ mode }: { mode: ModeEcole }) 
   const [ecole, setEcole] = useState<{ name?: string; logo_url?: string | null } | null>(null);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode, "notifications") } }); return; }
+    if (!localStorage.getItem("token")) { navigate(cheminConnexion(), { replace: true }); return; }
     fetch(`${config.API_BASE_URL}/pro-public/${mode === "madrasa" ? "madrasa" : "school"}/${encodeURIComponent(tenantCode)}`)
       .then(r => r.json()).then(d => { if (d.success) setEcole(d.tenant); }).catch(() => {});
   }, [mode, tenantCode, navigate]);

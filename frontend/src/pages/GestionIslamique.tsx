@@ -5,6 +5,7 @@ import { config } from "../config/api";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import { getSessionUser } from "../utils/auth";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -86,7 +87,7 @@ export default function GestionIslamique({ mode }: Props) {
   const [msqForm, setMsqForm] = useState({ nom:"", adresse:"", responsable:"", telephone:"" });
 
   useEffect(() => {
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     load("info+dashboard");
   }, [tenantCode]);

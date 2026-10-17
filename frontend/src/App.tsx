@@ -392,7 +392,11 @@ function App() {
     const avant = pagePrecedente.current;
     pagePrecedente.current = pathname + location.search;
     if (isVitrineMode) {
-      if (/^\/gestion-[^/]+\/[^/]+/.test(avant)) {
+      if ((location.state as any)?.sansRetourGestion) {
+        // Client renvoyé sur le site : il n'a pas accès à la gestion
+        ecrireRetourGestion(null);
+        setRetourGestion(null);
+      } else if (/^\/gestion-[^/]+\/[^/]+/.test(avant)) {
         const v = { gestion: avant, vitrine: pathname };
         ecrireRetourGestion(v);
         setRetourGestion(v);

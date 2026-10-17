@@ -29,6 +29,10 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
   const reseau = !abonnement && /joindre le serveur|connexion|network|fetch/i.test(texte);
 
   const [redirection, setRedirection] = useState(true);
+  // Lien de l'application ouvert pour l'installer (?installer=1) : le client peut
+  // l'installer aussi — elle s'ouvrira ensuite sur le site de l'établissement.
+  const [pourInstaller] = useState(() => new URLSearchParams(window.location.search).get("installer") === "1");
+  const [siteClient, setSiteClient] = useState<string | null>(null);
 
   // Client : site de l'établissement ; parent ou enseignant : son espace dans l'application
   useEffect(() => {
@@ -44,12 +48,17 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
       if (service.type === "school" || service.type === "madrasa") {
         const droits = await droitsMembreEcole(service.type, tenantCode);
         const page = droits.enseignant ? "enseignant" : droits.parent ? "parent" : null;
-        if (!fini && page) { navigate(cheminAppEcole(service.type, tenantCode, page), { replace: true }); return; }
+        // « ?installer=1 » gardé : l'installation est proposée dans son espace
+        if (!fini && page) { navigate(cheminAppEcole(service.type, tenantCode, page) + window.location.search, { replace: true }); return; }
       }
-      if (!fini) navigate(`/${vitrine}/${tenantCode}`, { replace: true });
+      if (fini) return;
+      const site = `/${vitrine}/${tenantCode}`;
+      if (pourInstaller) { setSiteClient(site); setRedirection(false); return; }
+      // Client : pas de bouton « Retour à la gestion » sur le site (il n'y a pas accès)
+      navigate(site, { replace: true, state: { sansRetourGestion: true } });
     })();
     return () => { fini = true; };
-  }, [abonnement, reseau, tenantCode, navigate]);
+  }, [abonnement, reseau, tenantCode, navigate, pourInstaller]);
 
   const autreCompte = () => {
     localStorage.removeItem("token");
@@ -61,6 +70,27 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
       <div style={{ width: 32, height: 32, border: `3px solid ${couleur}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  if (siteClient) return (
+    <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 440, background: "white", borderRadius: 20, border: "1px solid #e2e8f0", padding: "28px 24px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+          <TenantLogo tenantCode={tenantCode} fallback={emoji} size={72} radius={18} style={{ border: "1px solid #e2e8f0" }} />
+        </div>
+        <h1 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "0 0 8px" }}>{tr("Installer l'application")}</h1>
+        <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: "0 0 16px" }}>
+          {tr("Gardez l'application de l'établissement sur votre téléphone : elle s'ouvre sur son site (rendez-vous, actualités, contacts).")}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <InstallAppButton variant="settings" themeColor={couleur} label={tr("Installer l'application")} />
+          <button type="button" onClick={() => navigate(siteClient, { replace: true, state: { sansRetourGestion: true } })}
+            style={{ width: "100%", padding: 12, background: couleur, color: "white", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            {tr("🌐 Voir le site")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 

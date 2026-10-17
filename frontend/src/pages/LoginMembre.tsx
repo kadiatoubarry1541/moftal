@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
 import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
 
@@ -14,7 +14,14 @@ export function LoginMembre() {
   const [isLoading, setIsLoading] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useI18n()
+  // Page d'où l'on vient (espace patient, application de l'établissement…) :
+  // on y revient après la connexion (seulement une adresse de ce site)
+  const redirectParam = new URLSearchParams(location.search).get('redirect')
+  const retour = (location.state as any)?.from
+    || (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null)
+    || '/compte'
 
   // Auto-redirect si déjà connecté 
   useEffect(() => {
@@ -25,7 +32,7 @@ export function LoginMembre() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          navigate('/compte', { replace: true })
+          navigate(retour, { replace: true })
           return
         }
       }
@@ -75,7 +82,7 @@ export function LoginMembre() {
       const sessionUser = { ...(data.user || {}), token: data.token }
       localStorage.setItem('session_user', JSON.stringify(sessionUser))
 
-      navigate('/compte')
+      navigate(retour, { replace: true })
     } catch {
       setError('Erreur lors de la connexion. Vérifiez votre connexion internet.')
     } finally {

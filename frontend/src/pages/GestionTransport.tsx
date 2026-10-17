@@ -9,6 +9,7 @@ import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
+import { cheminConnexion } from "../utils/connexionRetour";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -84,7 +85,10 @@ export default function GestionTransport() {
     setLoading(false);
   }, [code]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    if (!token()) { navigate(cheminConnexion(), { replace: true }); return; }
+    loadAll();
+  }, [loadAll]);
 
   // VEHICLES
   const addVehicle = async () => {
