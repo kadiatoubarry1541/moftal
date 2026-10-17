@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -212,14 +213,13 @@ export default function TransportVitrine() {
               </div>
             ))}
           </div>
-          {co.phone && (
-            <div style={{ textAlign: "center" }}>
-              <button onClick={() => window.open(`https://wa.me/${co.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite réserver une place pour un trajet.")}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Réserver par message
-              </button>
+          <div style={{ textAlign: "center" }}>
+              <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={co.name} couleur={SKY} objet={"Réservation de place"}
+                messageInitial={"Bonjour, je souhaite réserver une place pour un trajet."}
+                style={{ background: SKY, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                ✉️ Réserver une place
+              </EcrireAuSite>
             </div>
-          )}
         </div>
       </section>
 

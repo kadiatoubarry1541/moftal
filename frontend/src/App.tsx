@@ -341,6 +341,17 @@ function App() {
   // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
   const [panneauProOuvert, setPanneauProOuvert] = useState(false);
   useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
+  // Notification « Nouveau message du site » (?demandes=1) : l'Espace Pro s'ouvre sur les messages
+  const [panneauVue, setPanneauVue] = useState<"messages" | undefined>(undefined);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("demandes") !== "1" || !/^\/gestion-[^/]+\/[^/]+/.test(pathname)) return;
+    params.delete("demandes");
+    const q = params.toString();
+    navigate(pathname + (q ? `?${q}` : ""), { replace: true });
+    setPanneauVue("messages");
+    setPanneauProOuvert(true);
+  }, [pathname, location.search]);
   // Dans l'espace du pro : icône d'onglet et titre à son nom, pas ceux de Moftal
   useEffect(() => {
     if (!isEspaceTenant || !proBrand) return;
@@ -697,7 +708,7 @@ function App() {
       )}
       {isGestionMode && isEspaceTenant && panneauProOuvert && (
         <Suspense fallback={null}>
-          <PanneauEspacePro tenantCode={pathname.split("/")[2]} onClose={() => setPanneauProOuvert(false)} />
+          <PanneauEspacePro tenantCode={pathname.split("/")[2]} vueInitiale={panneauVue} onClose={() => { setPanneauProOuvert(false); setPanneauVue(undefined); }} />
         </Suspense>
       )}
 

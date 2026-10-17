@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -214,14 +215,13 @@ export default function SecuriteVitrine() {
               </div>
             ))}
           </div>
-          {agency.phone && (
-            <div style={{ textAlign: "center", marginTop: 32 }}>
-              <button onClick={() => window.open(`https://wa.me/${agency.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite un devis pour vos services de sécurité.")}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Demander un devis par message
-              </button>
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+              <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={agency.name} couleur={DARK} objet={"Demande de devis"}
+                messageInitial={"Bonjour, je souhaite un devis pour vos services de sécurité."}
+                style={{ background: DARK, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                ✉️ Demander un devis
+              </EcrireAuSite>
             </div>
-          )}
         </div>
       </section>
 

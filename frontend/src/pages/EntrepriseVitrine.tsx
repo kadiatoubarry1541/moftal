@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -234,14 +235,13 @@ export default function EntrepriseVitrine() {
               </div>
             ))}
           </div>
-          {ent.phone && (
-            <div style={{ textAlign: "center", marginTop: 32 }}>
-              <button onClick={() => window.open(`https://wa.me/${ent.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite des informations sur vos services.")}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Nous écrire
-              </button>
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+              <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={ent.name} couleur={BLUE} objet={"Demande d'information"}
+                messageInitial={"Bonjour, je souhaite des informations sur vos services."}
+                style={{ background: BLUE, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                ✉️ Nous écrire
+              </EcrireAuSite>
             </div>
-          )}
         </div>
       </section>
 

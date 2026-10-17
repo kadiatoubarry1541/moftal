@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
@@ -384,14 +385,13 @@ export default function EcoleVitrine() {
               </div>
             ))}
           </div>
-          {school.phone && (
-            <div style={{ textAlign: "center", marginTop: 32 }}>
-              <button onClick={() => window.open(`https://wa.me/${school.phone.replace(/\D/g,"")}?text=${encodeURIComponent(tr("Bonjour ! Je souhaite des informations sur l'école."))}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                {tr("📲 Nous écrire")}
-              </button>
+          <div style={{ textAlign: "center", marginTop: 32 }}>
+              <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={school.name} couleur={GREEN} objet={tr("Demande d'information")}
+                messageInitial={tr("Bonjour ! Je souhaite des informations sur l'école.")}
+                style={{ background: GREEN, color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                {tr("✉️ Nous écrire")}
+              </EcrireAuSite>
             </div>
-          )}
         </div>
       </section>
 

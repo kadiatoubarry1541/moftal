@@ -47,6 +47,7 @@ const TITRES = {
   coordinator_msg: '📢 Message du coordinateur',
   inscription: '📝 Nouvelle demande d\'inscription',
   commande: '🛒 Nouvelle commande',
+  demande_site: '📩 Nouveau message du site',
 };
 
 /** Notification à une personne (cloche + téléphone). Ne bloque jamais l'action en cours. */

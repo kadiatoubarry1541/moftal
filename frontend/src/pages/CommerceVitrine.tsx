@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import EcrireAuSite from "../components/EcrireAuSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -118,18 +119,10 @@ export default function CommerceVitrine() {
     setMobileMenuOpen(false);
   }
 
-  function construireMessage() {
-    const lines = cartItems.map(i => `- ${i.product.nom} x${i.qty} = ${fmtMoney(i.product.prix_vente * i.qty)}`);
-    const msg = `Bonjour ! Je souhaite commander :\n${lines.join("\n")}\n\nTotal : ${fmtMoney(cartTotal)}\n\nMerci !`;
-    return encodeURIComponent(msg);
-  }
-
-  function contacterParMessage() {
-    if (!store?.phone) return;
-    const phone = store.phone.replace(/\D/g, "");
-    const msg = cartItems.length > 0 ? construireMessage() : encodeURIComponent(`Bonjour ! Je suis intéressé par vos produits sur Moftal.`);
-    window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
-  }
+  // Commande ou question envoyée directement à la boutique (sa gestion)
+  const messageBoutique = cartItems.length > 0
+    ? `Bonjour ! Je souhaite commander :\n${cartItems.map(i => `- ${i.product.nom} x${i.qty} = ${fmtMoney(i.product.prix_vente * i.qty)}`).join("\n")}\n\nTotal : ${fmtMoney(cartTotal)}\n\nMerci !`
+    : "Bonjour ! Je suis intéressé(e) par vos produits.";
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
@@ -250,12 +243,10 @@ export default function CommerceVitrine() {
               style={{ background: AMBER, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(217,119,6,0.25)" }}>
               Voir les produits
             </button>
-            {store.phone && (
-              <button onClick={contacterParMessage}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
-                📲 Message
-              </button>
-            )}
+            <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet={cartItems.length ? "Commande" : "Message"} messageInitial={messageBoutique}
+              style={{ background: "white", color: AMBER, border: `2px solid ${AMBER}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+              ✉️ Nous écrire
+            </EcrireAuSite>
           </div>
         </div>
         <div style={{ position: "absolute", bottom: -1, left: 0, right: 0 }}>
@@ -459,14 +450,12 @@ export default function CommerceVitrine() {
               </div>
             ))}
           </div>
-          {store.phone && (
-            <div style={{ textAlign: "center" }}>
-              <button onClick={contacterParMessage}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(37,211,102,0.3)" }}>
-                📲 Commander par message
-              </button>
-            </div>
-          )}
+          <div style={{ textAlign: "center" }}>
+            <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet={cartItems.length ? "Commande" : "Message"} messageInitial={messageBoutique}
+              style={{ background: AMBER, color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(217,119,6,0.3)" }}>
+              {cartItems.length ? "🛒 Envoyer ma commande" : "✉️ Nous écrire"}
+            </EcrireAuSite>
+          </div>
         </div>
       </section>
 
@@ -537,16 +526,10 @@ export default function CommerceVitrine() {
                   <span style={{ fontWeight: 600, color: "#64748b" }}>Total estimé</span>
                   <span style={{ fontWeight: 800, fontSize: 18, color: AMBER }}>{fmtMoney(cartTotal)}</span>
                 </div>
-                {store.phone ? (
-                  <button onClick={() => { setShowCart(false); contacterParMessage(); }}
-                    style={{ width: "100%", padding: "14px", background: "#25D366", color: "white", border: "none", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 15 }}>
-                    📲 Commander par message
-                  </button>
-                ) : (
-                  <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px", textAlign: "center", fontSize: 13, color: "#64748b" }}>
-                    Contactez la boutique pour passer votre commande.
-                  </div>
-                )}
+                <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={store.name} couleur={AMBER} objet="Commande" messageInitial={messageBoutique}
+                  style={{ width: "100%", padding: "14px", background: AMBER, color: "white", border: "none", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 15 }}>
+                  🛒 Envoyer ma commande à la boutique
+                </EcrireAuSite>
                 <button onClick={() => setCartItems([])} style={{ width: "100%", marginTop: 8, padding: "10px", background: "none", border: "1px solid #e2e8f0", borderRadius: 12, cursor: "pointer", fontSize: 13, color: "#94a3b8" }}>
                   Vider le panier
                 </button>

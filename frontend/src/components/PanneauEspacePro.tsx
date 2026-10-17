@@ -15,13 +15,75 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\
 // Panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement :
 // site client, publications, profil public et clients — tout au même endroit,
 // sans quitter la gestion interne. L'abonnement reste discret, tout en bas.
-export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: string; onClose: () => void }) {
+// Messages envoyés depuis le site de l'établissement (« Nous écrire », commande
+// d'une boutique, devis…) : enregistrés en base, suivis ici.
+function MessagesDuSite({ tenantCode, onRetour, onNombre }: { tenantCode: string; onRetour: () => void; onNombre: (n: number) => void }) {
+  const { tr } = useTraduction();
+  const [demandes, setDemandes] = useState<any[] | null>(null);
+  const [erreur, setErreur] = useState("");
+  const auth = { Authorization: `Bearer ${localStorage.getItem("token") || ""}`, "Content-Type": "application/json" };
+  const charger = () => fetch(`${API}/api/site-mgmt/${encodeURIComponent(tenantCode)}/demandes`, { headers: auth })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { setErreur(d.message || "Messages indisponibles."); return; }
+      setDemandes(d.demandes || []);
+      onNombre((d.demandes || []).filter((x: any) => x.statut === "nouveau").length);
+    })
+    .catch(() => setErreur("Connexion impossible : les messages n'ont pas pu être chargés."));
+  useEffect(() => { charger(); }, [tenantCode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changerStatut = async (id: number, statut: string) => {
+    try {
+      const r = await fetch(`${API}/api/site-mgmt/${encodeURIComponent(tenantCode)}/demandes/${id}`, { method: "PATCH", headers: auth, body: JSON.stringify({ statut }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) { alert(tr(d.message || "Le changement n'a pas été enregistré.")); return; }
+      charger();
+    } catch { alert(tr("Erreur de connexion.")); }
+  };
+  return (
+    <div>
+      <button onClick={onRetour} style={{ background: "none", border: "none", padding: "0 0 10px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 700 }}>‹ {tr("Retour")}</button>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>📩 {tr("Messages du site")}</div>
+      {erreur && <p style={{ color: "#dc2626", fontSize: 13 }}>{tr(erreur)}</p>}
+      {!demandes && !erreur && <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Chargement…")}</p>}
+      {demandes && demandes.length === 0 && <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Aucun message reçu depuis le site pour le moment.")}</p>}
+      <div style={{ display: "grid", gap: 8 }}>
+        {(demandes || []).map(d => (
+          <div key={d.id} style={{ border: `1.5px solid ${d.statut === "nouveau" ? "#fca5a5" : "#e2e8f0"}`, borderRadius: 12, padding: "10px 12px", background: d.statut === "nouveau" ? "#fff7f7" : "white" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "#0f172a", minWidth: 0 }}>{d.objet || tr("Message")} · {d.nom}</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>{new Date(d.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div>
+            </div>
+            <div style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-wrap", margin: "6px 0" }}>{d.message}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <a href={`tel:${d.telephone}`} style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>📞 {d.telephone}</a>
+              <button onClick={() => changerStatut(d.id, d.statut === "nouveau" ? "traite" : "nouveau")}
+                style={{ fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 8, cursor: "pointer", border: "1px solid #e2e8f0", background: d.statut === "nouveau" ? "#0f172a" : "white", color: d.statut === "nouveau" ? "white" : "#475569" }}>
+                {d.statut === "nouveau" ? tr("✓ Marquer traité") : tr("↺ Remettre en nouveau")}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: { tenantCode: string; onClose: () => void; vueInitiale?: "messages" }) {
   const navigate = useNavigate();
   const { tr } = useTraduction();
   const { pathname } = useLocation();
   // Ces gestions ont leur page Paramètres, où se trouve l'abonnement
   const abonnementDansParametres = /^\/gestion-(clinique|commerce|ecole|ecole-v1|madrasa|madrasa-v2|mairie)\//.test(pathname);
   const [voirAbonnement, setVoirAbonnement] = useState(false);
+  const [voirMessages, setVoirMessages] = useState(vueInitiale === "messages");
+  const [nouveauxMessages, setNouveauxMessages] = useState(0);
+  // Nombre de messages du site non traités, sur le bouton
+  useEffect(() => {
+    fetch(`${API}/api/site-mgmt/${encodeURIComponent(tenantCode)}/demandes`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setNouveauxMessages((d.demandes || []).filter((x: any) => x.statut === "nouveau").length); })
+      .catch(() => {});
+  }, [tenantCode]);
   const token = localStorage.getItem("token") || "";
   const currentUser = getSessionUser();
 
@@ -157,6 +219,12 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
                 style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18, color: "#475569", flexShrink: 0 }}>✕</button>
             </div>
 
+            {voirMessages ? (
+              <MessagesDuSite tenantCode={tenantCode} onRetour={() => setVoirMessages(false)} onNombre={setNouveauxMessages} />
+            ) : (<>
+            {bouton(`${tr("📩  Messages du site")}${nouveauxMessages ? ` (${nouveauxMessages})` : ""}`, () => setVoirMessages(true),
+              { background: nouveauxMessages ? "#b91c1c" : "#f8fafc", color: nouveauxMessages ? "white" : "#0f172a", border: nouveauxMessages ? "none" : "1.5px solid #e2e8f0", marginBottom: 8 })}
+
             {erreur && <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 12px" }}>{tr(erreur)}</p>}
             {!account && !erreur && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 12px" }}>{tr("Chargement…")}</p>}
 
@@ -179,6 +247,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
                 {voirAbonnement && <div style={{ marginTop: 8 }}><div style={{ display: "grid", gap: 12 }}><TenantCodeCard code={tenantCode} /><ParametresEspacePro /></div></div>}
               </div>
             )}
+            </>)}
           </div>
         </div>
       )}
