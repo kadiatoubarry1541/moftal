@@ -7,6 +7,7 @@ import EcrireAuSite from "./EcrireAuSite";
 import { CouverturePhotoSite, GalerieVitrine } from "./PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -39,6 +40,7 @@ const fmtMoney = (n: number) => `${(Number(n) || 0).toLocaleString("fr-FR")} GNF
 
 export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: string; modele: ModeleVitrine }) {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [pro, setPro] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [chargement, setChargement] = useState(true);
@@ -52,9 +54,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       fetch(`${API}/api/pro-public/${m.type}/${tenantCode}`).then(r => r.json()),
       fetch(`${API}/api/pro-public/${m.type}/${tenantCode}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
-      if (t.success) setPro(t.tenant); else setErreur(t.message || m.introuvable);
+      if (t.success) setPro(t.tenant); else setErreur(tr(t.message || m.introuvable));
       if (d.success) setData(d);
-    }).catch(() => setErreur("Impossible de charger cette page. Vérifiez votre connexion."))
+    }).catch(() => setErreur(tr("Impossible de charger cette page. Vérifiez votre connexion.")))
       .finally(() => setChargement(false));
   }, [tenantCode, m.type, m.introuvable]);
 
@@ -71,7 +73,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid ${m.fond}`, borderTopColor: m.couleur, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: m.couleurFoncee, fontSize: 14, fontWeight: 600 }}>Chargement…</p>
+        <p style={{ color: m.couleurFoncee, fontSize: 14, fontWeight: 600 }}>{tr("Chargement…")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -81,9 +83,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", padding: 24 }}>
       <div style={{ textAlign: "center", maxWidth: 400 }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>{m.emoji}</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{m.introuvable}</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr(m.introuvable)}</h2>
         <p style={{ color: "#64748b", marginBottom: 24 }}>{erreur}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: m.couleur, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>Retour à l'accueil</button>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: m.couleur, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>
   );
@@ -110,12 +112,12 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="vs-nom-barre" style={{ fontWeight: 800, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{pro.name}</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>{m.metier}</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>{tr(m.metier)}</div>
             </div>
           </div>
           <EcrireAuSite tenantCode={tenantCode} nomEtablissement={pro.name} couleur={m.couleur} objet={m.objetDemande}
             style={{ ...boutonPlein, padding: "9px 14px", fontSize: 13, flexShrink: 0 }}>
-            ✉️ Nous écrire
+            ✉️ {tr("Nous écrire")}
           </EcrireAuSite>
         </div>
       </nav>
@@ -129,20 +131,20 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
           <div style={{ width: 96, height: 96, borderRadius: 24, overflow: "hidden", background: "white", border: "1px solid #e2e8f0", margin: "0 auto 18px", boxShadow: "0 8px 24px rgba(15,23,42,.08)" }}>
             <LogoEtablissement src={pro.logo_url} name={pro.name} fontSize={46} />
           </div>
-          <span style={{ background: `${m.couleur}18`, color: m.couleurFoncee, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{m.emoji} {m.metier}</span>
+          <span style={{ background: `${m.couleur}18`, color: m.couleurFoncee, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{m.emoji} {tr(m.metier)}</span>
           <h1 className="vs-titre" style={{ fontSize: 36, fontWeight: 800, margin: "12px 0 10px", lineHeight: 1.2 }}>{pro.name}</h1>
           {(pro.specialite || pro.city || pro.address) && (
             <p style={{ color: "#475569", fontSize: 14, margin: "0 0 10px" }}>
               {[pro.specialite && `🛠 ${pro.specialite}`, (pro.city || pro.address) && `📍 ${pro.city || pro.address}`].filter(Boolean).join("  ·  ")}
             </p>
           )}
-          <p style={{ color: "#334155", fontSize: 16, lineHeight: 1.65, margin: "0 auto 24px", maxWidth: 560 }}>{pro.description || m.descriptionParDefaut}</p>
+          <p style={{ color: "#334155", fontSize: 16, lineHeight: 1.65, margin: "0 auto 24px", maxWidth: 560 }}>{pro.description || tr(m.descriptionParDefaut)}</p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            {articles.length > 0 && <button onClick={() => voir("articles")} style={boutonPlein}>{m.titreArticles}</button>}
+            {articles.length > 0 && <button onClick={() => voir("articles")} style={boutonPlein}>{tr(m.titreArticles)}</button>}
             <EcrireAuSite tenantCode={tenantCode} nomEtablissement={pro.name} couleur={m.couleur} objet={m.objetDemande} style={boutonClair}>
-              {m.boutonContact}
+              {tr(m.boutonContact)}
             </EcrireAuSite>
-            {pro.phone && <a href={`tel:${pro.phone}`} style={boutonClair}>📞 Appeler</a>}
+            {pro.phone && <a href={`tel:${pro.phone}`} style={boutonClair}>📞 {tr("Appeler")}</a>}
           </div>
         </div>
       </section>
@@ -154,7 +156,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
             <div key={c.libelle} style={{ background: "white", borderRadius: 14, padding: "16px 10px", textAlign: "center", border: "1px solid #f1f5f9", boxShadow: "0 4px 16px rgba(15,23,42,.06)" }}>
               <div style={{ fontSize: 26 }}>{c.icone}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: m.couleur, margin: "4px 0 2px" }}>{c.valeur}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{c.libelle}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{tr(c.libelle)}</div>
             </div>
           ))}
         </div>
@@ -163,9 +165,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       {/* ARTICLES / SERVICES */}
       <section id="articles" style={{ padding: "48px 16px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, textAlign: "center", margin: "0 0 20px" }}>{m.titreArticles}</h2>
+          <h2 style={{ fontSize: 28, fontWeight: 800, textAlign: "center", margin: "0 0 20px" }}>{tr(m.titreArticles)}</h2>
           {articles.length > 6 && (
-            <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="🔍 Rechercher…"
+            <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder={tr("🔍 Rechercher…")}
               style={{ display: "block", width: "100%", maxWidth: 420, margin: "0 auto 14px", padding: "11px 14px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 14, boxSizing: "border-box", background: "white" }} />
           )}
           {categories.length > 1 && (
@@ -175,7 +177,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
                 return (
                   <button key={c || "tout"} onClick={() => setCategorie(c)}
                     style={{ padding: "7px 14px", borderRadius: 20, border: `1.5px solid ${actif ? m.couleur : "#e2e8f0"}`, background: actif ? m.couleur : "white", color: actif ? "white" : "#334155", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                    {c ? `${m.iconesCategories?.[c] || ""} ${c}`.trim() : "Tout"}
+                    {c ? `${m.iconesCategories?.[c] || ""} ${tr(c)}`.trim() : tr("Tout")}
                   </button>
                 );
               })}
@@ -183,7 +185,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
           )}
           {visibles.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>{m.emoji}</div>{recherche ? `Rien trouvé pour « ${recherche} »` : m.rienAAfficher}
+              <div style={{ fontSize: 48, marginBottom: 10 }}>{m.emoji}</div>{recherche ? tr("Rien trouvé pour « {q} »", { q: recherche }) : tr(m.rienAAfficher)}
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))", gap: 16 }}>
@@ -196,19 +198,19 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
                       ? <img src={getPhotoUrl(a.image_url) || ""} alt={nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
                       : <div style={{ aspectRatio: "4 / 3", background: `linear-gradient(135deg, ${m.fond}, ${m.couleur}22)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{iconeDe(a)}</div>}
                     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
-                      {a.categorie && <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".05em" }}>{a.categorie}</div>}
+                      {a.categorie && <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".05em" }}>{tr(a.categorie)}</div>}
                       <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{nom}</div>
                       {a.description && <div className="vs-desc" style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{a.description}</div>}
                       {a.zone_intervention && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {a.zone_intervention}</div>}
                       <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                         <div>
                           {prix > 0 && <div style={{ fontWeight: 800, fontSize: 17, color: m.couleur }}>{fmtMoney(prix)}{a.unite ? <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}> / {a.unite}</span> : null}</div>}
-                          {+a.prix_gros > 0 && <div style={{ fontSize: 12, color: "#64748b" }}>Gros : {fmtMoney(+a.prix_gros)}</div>}
+                          {+a.prix_gros > 0 && <div style={{ fontSize: 12, color: "#64748b" }}>{tr("Gros : {prix}", { prix: fmtMoney(+a.prix_gros) })}</div>}
                         </div>
                         <EcrireAuSite tenantCode={tenantCode} nomEtablissement={pro.name} couleur={m.couleur} objet={m.objetDemande}
-                          messageInitial={`Bonjour, je suis intéressé(e) par : ${nom}${prix > 0 ? ` (${fmtMoney(prix)})` : ""}.`}
+                          messageInitial={tr("Bonjour, je suis intéressé(e) par : {article}.", { article: `${nom}${prix > 0 ? ` (${fmtMoney(prix)})` : ""}` })}
                           style={{ background: `${m.couleur}14`, color: m.couleurFoncee, border: "none", borderRadius: 10, padding: "8px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                          {m.boutonArticle}
+                          {tr(m.boutonArticle)}
                         </EcrireAuSite>
                       </div>
                     </div>
@@ -227,7 +229,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       {annonces.length > 0 && (
         <section style={{ padding: "40px 16px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px" }}>📢 Annonces</h2>
+            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 16px" }}>📢 {tr("Annonces")}</h2>
             <div style={{ display: "grid", gap: 10 }}>
               {annonces.map((a, i) => (
                 <div key={i} style={{ background: "white", border: "1px solid #e2e8f0", borderInlineStart: `4px solid ${m.couleur}`, borderRadius: 12, padding: "14px 18px" }}>
@@ -244,7 +246,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       {/* CONTACT */}
       <section id="contact" style={{ background: "white", padding: "48px 16px", borderTop: "1px solid #f1f5f9" }}>
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 20px" }}>Nous contacter</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 20px" }}>{tr("Nous contacter")}</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 24 }}>
             {[
               { icone: "📞", libelle: "Téléphone", valeur: pro.phone, lien: pro.phone && `tel:${pro.phone}` },
@@ -253,13 +255,13 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
             ].filter(c => c.valeur).map(c => (
               <a key={c.libelle} href={c.lien || undefined} style={{ display: "block", padding: "20px 14px", border: "1px solid #e2e8f0", borderRadius: 14, background: "#f8fafc", color: "#0f172a", textDecoration: "none" }}>
                 <div style={{ fontSize: 30, marginBottom: 6 }}>{c.icone}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".06em" }}>{c.libelle}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".06em" }}>{tr(c.libelle)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4, wordBreak: "break-word" }}>{c.valeur}</div>
               </a>
             ))}
           </div>
           <EcrireAuSite tenantCode={tenantCode} nomEtablissement={pro.name} couleur={m.couleur} objet={m.objetDemande} style={{ ...boutonPlein, padding: "14px 36px" }}>
-            {m.boutonContact}
+            {tr(m.boutonContact)}
           </EcrireAuSite>
         </div>
       </section>
@@ -268,9 +270,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
 
       <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "28px 16px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{pro.name}</div>
-        <div style={{ fontSize: 12 }}>{m.metier}</div>
+        <div style={{ fontSize: 12 }}>{tr(m.metier)}</div>
         <button onClick={() => navigate("/")} style={{ marginTop: 14, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-          <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginInlineEnd: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+          <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginInlineEnd: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
         </button>
       </footer>
     </div>

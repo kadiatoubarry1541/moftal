@@ -1,6 +1,7 @@
 import { getPhotoUrl } from "../utils/auth";
 import GaleriePhotosSite from "./ecole/GaleriePhotosSite";
 import type { PhotoSite } from "./ecole/PhotosSite";
+import { useTraduction } from "../i18n/traduction";
 
 // Photos ajoutées par le pro (Espace Pro → Photos du site), sur son site :
 // une grande photo de couverture en haut, et la galerie plus bas.
@@ -21,5 +22,6 @@ export function CouverturePhotoSite({ photos, nom }: { photos: PhotoSite[]; nom?
 
 /** Galerie « en images » (rien n'est affiché tant qu'il n'y a pas de photo). */
 export function GalerieVitrine({ photos, couleur }: { photos: PhotoSite[]; couleur: string }) {
-  return <GaleriePhotosSite photos={photos} couleur={couleur} sousTitre="Découvrez nos produits, nos services, nos réalisations et nos locaux." />;
+  const { tr } = useTraduction();
+  return <GaleriePhotosSite photos={photos} couleur={couleur} sousTitre={tr("Découvrez nos produits, nos services, nos réalisations et nos locaux.")} />;
 }

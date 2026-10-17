@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import { useI18n } from "./useI18n";
 import AR_ECOLE from "./ar-ecole";
 import EN_TR from "./tr-en";
+import MAN_TR from "./tr-man";
+import PUL_TR from "./tr-pul";
 
 // Traduction des textes tr("…") : pages de l'école, gestions, sites des pros,
 // installation, hors connexion. La clé est le texte français lui-même : sans
@@ -15,8 +17,8 @@ function remplir(texte: string, vars?: Record<string, string | number | null | u
 }
 
 export function traduire(lang: string, fr: string, vars?: Record<string, string | number | null | undefined>) {
-  // Arabe et anglais : traduction complète. Sans traduction connue, le français s'affiche.
-  const dico = lang === "ar" ? AR_ECOLE : lang === "en" ? EN_TR : null;
+  // Anglais, arabe, mandingue et pular : traduction complète. Sans traduction connue, le français s'affiche.
+  const dico = lang === "ar" ? AR_ECOLE : lang === "en" ? EN_TR : lang === "man" ? MAN_TR : lang === "pul" ? PUL_TR : null;
   const base = dico ? (dico[fr] ?? dico[fr.trim()] ?? fr) : fr;
   return remplir(base, vars);
 }
