@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { getPhotoUrl } from "../utils/auth";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -20,6 +23,7 @@ const CAT_ICONS: Record<string, string> = {
 
 export default function RestaurantVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const [resto, setResto]      = useState<any>(null);
   const [data, setData]        = useState<any>(null);
@@ -160,6 +164,9 @@ export default function RestaurantVitrine() {
         </div>
       </nav>
 
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={resto?.name} />
+
       {/* HERO */}
       <section id="hero" style={{ background: "#f8fafc", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
@@ -245,9 +252,15 @@ export default function RestaurantVitrine() {
             <div className="dish-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {filtered.map((d: any, i: number) => (
                 <div key={i} className="dish-card" style={{ background: "white", borderRadius: 16, padding: "20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `${RED}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 12 }}>
-                    {CAT_ICONS[d.categorie] || "🍽️"}
-                  </div>
+                  {d.image_url ? (
+                    <div style={{ margin: "-20px -20px 14px", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#f1f5f9" }}>
+                      <img src={getPhotoUrl(d.image_url) || ""} alt={d.nom} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 52, height: 52, borderRadius: 14, background: `${RED}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 12 }}>
+                      {CAT_ICONS[d.categorie] || "🍽️"}
+                    </div>
+                  )}
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{d.nom}</div>
                   {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.categorie}</div>}
                   {d.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "0 0 10px" }}>{d.description}</p>}
@@ -302,6 +315,8 @@ export default function RestaurantVitrine() {
         </div>
       </section>
 
+      <GalerieVitrine photos={photos} couleur="#ef4444" />
+
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#ef4444" accentDark="#991b1b" />
 
       {/* PANIER — barre en bas de l'écran dès qu'un plat est choisi */}
@@ -333,7 +348,8 @@ export default function RestaurantVitrine() {
               <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
                 {lignesPanier.map((l: any) => (
                   <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", border: "1px solid #f1f5f9", borderRadius: 10 }}>
-                    <div style={{ minWidth: 0 }}>
+                    {l.image_url && <img src={getPhotoUrl(l.image_url) || ""} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{l.nom}</div>
                       <div style={{ fontSize: 12, color: "#64748b" }}>{fmtMoney((+l.prix || 0) * l.quantite)}</div>
                     </div>

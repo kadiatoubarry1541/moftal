@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
+import { usePhotosSite } from "../utils/photosSite";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -19,6 +21,7 @@ const TYPE_ICONS: Record<string, string> = {
 
 export default function ScientifiqueVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const [lab, setLab]         = useState<any>(null);
   const [data, setData]       = useState<any>(null);
@@ -105,6 +108,9 @@ export default function ScientifiqueVitrine() {
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
+      <CouverturePhotoSite photos={photos} nom={lab?.name} />
 
       {/* HERO */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -230,6 +236,8 @@ export default function ScientifiqueVitrine() {
           </div>
         </div>
       </section>
+
+      <GalerieVitrine photos={photos} couleur="#4f46e5" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#4f46e5" accentDark="#1e1b4b" />
 

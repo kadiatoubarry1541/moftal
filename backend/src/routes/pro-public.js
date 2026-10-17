@@ -218,7 +218,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM resto_dishes WHERE tenant_code=:code AND disponible=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_tables WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_staff WHERE tenant_code=:code AND actif=true`, { code }),
-          q(`SELECT id,nom,categorie,prix,description,disponible FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 200`, { code }),
+          q(`SELECT id,nom,categorie,prix,description,disponible,to_jsonb(resto_dishes)->>'image_url' AS image_url FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { dishes: +(dishCnt.c||0), tables: +(tableCnt.c||0), staff: +(staffCnt.c||0) }, dishes });
       }

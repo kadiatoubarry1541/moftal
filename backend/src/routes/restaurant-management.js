@@ -4,6 +4,7 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const router = express.Router();
 
@@ -69,8 +70,15 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 });
 
 // ─── MENU / PLATS ─────────────────────────────────────────────────────────────
+// Photo de chaque plat (affichée sur le site : les clients choisissent en voyant)
+let colonnePhotoPlat = null;
+const preparerPhotoPlat = () => (colonnePhotoPlat ||= sequelize.query(
+  `ALTER TABLE resto_dishes ADD COLUMN IF NOT EXISTS image_url TEXT`
+).catch((e) => { colonnePhotoPlat = null; throw e; }));
+
 router.get('/:tenantCode/dishes', authenticate, verifyTenant, async (req, res) => {
   try {
+    await preparerPhotoPlat();
     const rows = await sequelize.query(
       `SELECT * FROM resto_dishes WHERE tenant_code=:code ORDER BY categorie, nom`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
@@ -82,9 +90,11 @@ router.get('/:tenantCode/dishes', authenticate, verifyTenant, async (req, res) =
 router.post('/:tenantCode/dishes', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, categorie, prix, description, disponible } = req.body;
+    await preparerPhotoPlat();
+    const image = await photoDepuisFormulaire(req.body.image, { proprietaire: req.params.tenantCode, usage: 'photo-plat' });
     await sequelize.query(
-      `INSERT INTO resto_dishes (tenant_code,nom,categorie,prix,description,disponible) VALUES(:code,:nom,:cat,:prix,:desc,:dispo)`,
-      { replacements: { code: req.params.tenantCode, nom, cat: categorie || 'Plat principal', prix: prix || 0, desc: description || null, dispo: disponible !== false } }
+      `INSERT INTO resto_dishes (tenant_code,nom,categorie,prix,description,disponible,image_url) VALUES(:code,:nom,:cat,:prix,:desc,:dispo,:image)`,
+      { replacements: { code: req.params.tenantCode, nom, cat: categorie || 'Plat principal', prix: prix || 0, desc: description || null, dispo: disponible !== false, image } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -98,6 +108,21 @@ router.patch('/:tenantCode/dishes/:id', authenticate, verifyTenant, async (req, 
       { replacements: { dispo: disponible, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Ajouter, changer ou retirer la photo d'un plat (image vide = retirer)
+router.put('/:tenantCode/dishes/:id/photo', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await preparerPhotoPlat();
+    const image = req.body?.image ? await photoDepuisFormulaire(req.body.image, { proprietaire: req.params.tenantCode, usage: 'photo-plat' }) : null;
+    if (req.body?.image && !image) return res.status(400).json({ success: false, message: 'Image illisible. Essayez une autre photo.' });
+    const [rows] = await sequelize.query(
+      `UPDATE resto_dishes SET image_url=:image WHERE id=:id AND tenant_code=:code RETURNING id, image_url`,
+      { replacements: { image, id: req.params.id, code: req.params.tenantCode } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Plat introuvable.' });
+    res.json({ success: true, dish: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
