@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './InvitationsReceived.css'
 import { InvitationManager } from '../utils/invitationManager'
 import type { Invitation, InvitationNotification } from '../types/invitation.ts'
+import { useTraduction } from '../i18n/traduction'
 
 interface InvitationsReceivedProps {
   userData: {
@@ -12,6 +13,7 @@ interface InvitationsReceivedProps {
 }
 
 export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
+  const { tr, locale } = useTraduction()
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [notifications, setNotifications] = useState<InvitationNotification[]>([])
   const [activeTab, setActiveTab] = useState('pending')
@@ -41,9 +43,9 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
     try {
       const invitation = await InvitationManager.acceptInvitation(invitationId)
       await Promise.all([loadInvitations(), loadNotifications()])
-      alert(`Vous avez accepté l'invitation de ${invitation.fromName}`)
+      alert(tr("Vous avez accepté l'invitation de {nom}", { nom: invitation.fromName }))
     } catch (err: any) {
-      alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+      alert(tr(err?.message || "Erreur : la réponse n'a pas été enregistrée."))
     }
   }
 
@@ -51,9 +53,9 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
     try {
       const invitation = await InvitationManager.declineInvitation(invitationId)
       await Promise.all([loadInvitations(), loadNotifications()])
-      alert(`Vous avez refusé l'invitation de ${invitation.fromName}`)
+      alert(tr("Vous avez refusé l'invitation de {nom}", { nom: invitation.fromName }))
     } catch (err: any) {
-      alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+      alert(tr(err?.message || "Erreur : la réponse n'a pas été enregistrée."))
     }
   }
 
@@ -72,7 +74,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
   const unreadNotifications = notifications.filter(notif => !notif.read)
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
@@ -96,10 +98,10 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
   return (
     <div className="invitations-received">
       <div className="invitations-header">
-        <h3>Mes Invitations</h3>
+        <h3>{tr("Mes Invitations")}</h3>
         {unreadNotifications.length > 0 && (
           <div className="notification-badge">
-            {unreadNotifications.length} nouvelle{unreadNotifications.length > 1 ? 's' : ''}
+            {unreadNotifications.length > 1 ? tr("{n} nouvelles", { n: unreadNotifications.length }) : tr("{n} nouvelle", { n: unreadNotifications.length })}
           </div>
         )}
       </div>
@@ -107,7 +109,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
       {/* Notifications */}
       {notifications.length > 0 && (
         <div className="notifications-section">
-          <h4>Notifications récentes</h4>
+          <h4>{tr("Notifications récentes")}</h4>
           <div className="notifications-list">
             {notifications.slice(0, 5).map(notification => (
               <div
@@ -136,7 +138,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                   </div>
                 </div>
                 <div className="notification-content">
-                  <div className="notification-message">{notification.message}</div>
+                  <div className="notification-message">{tr(notification.message)}</div>
                   <div className="notification-date">{formatDate(notification.date)}</div>
                 </div>
                 {!notification.read && <div className="unread-indicator"></div>}
@@ -153,21 +155,21 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
           onClick={() => setActiveTab('pending')}
         >
           <span className="tab-icon">⏳</span>
-          <span className="tab-label">En attente ({pendingInvitations.length})</span>
+          <span className="tab-label">{tr("En attente ({n})", { n: pendingInvitations.length })}</span>
         </button>
         <button
           className={`tab ${activeTab === 'accepted' ? 'active' : ''}`}
           onClick={() => setActiveTab('accepted')}
         >
           <span className="tab-icon">✅</span>
-          <span className="tab-label">Acceptées ({acceptedInvitations.length})</span>
+          <span className="tab-label">{tr("Acceptées ({n})", { n: acceptedInvitations.length })}</span>
         </button>
         <button
           className={`tab ${activeTab === 'declined' ? 'active' : ''}`}
           onClick={() => setActiveTab('declined')}
         >
           <span className="tab-icon">❌</span>
-          <span className="tab-label">Refusées ({declinedInvitations.length})</span>
+          <span className="tab-label">{tr("Refusées ({n})", { n: declinedInvitations.length })}</span>
         </button>
       </div>
 
@@ -177,7 +179,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
           <div className="pending-invitations">
             {pendingInvitations.length === 0 ? (
               <div className="empty-state">
-                <p>Aucune invitation en attente</p>
+                <p>{tr("Aucune invitation en attente")}</p>
               </div>
             ) : (
               <div className="invitations-list">
@@ -207,17 +209,17 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>
                         <p className="invitation-relation">
-                          Vous invite en tant que {invitation.relation}
+                          {tr("Vous invite en tant que {relation}", { relation: tr(invitation.relation) })}
                         </p>
                         <p className="invitation-date">
-                          Reçue le {formatDate(invitation.dateSent)}
+                          {tr("Reçue le {date}", { date: formatDate(invitation.dateSent) })}
                         </p>
                       </div>
                     </div>
                     
                     {invitation.message && (
                       <div className="invitation-message">
-                        <strong>Message :</strong> {invitation.message}
+                        <strong>{tr("Message :")}</strong> {invitation.message}
                       </div>
                     )}
                     
@@ -226,13 +228,13 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                         className="btn accept-btn"
                         onClick={() => handleAcceptInvitation(invitation.id)}
                       >
-                        ✅ Accepter
+                        ✅ {tr("Accepter")}
                       </button>
                       <button 
                         className="btn decline-btn"
                         onClick={() => handleDeclineInvitation(invitation.id)}
                       >
-                        ❌ Refuser
+                        ❌ {tr("Refuser")}
                       </button>
                     </div>
                   </div>
@@ -246,7 +248,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
           <div className="accepted-invitations">
             {acceptedInvitations.length === 0 ? (
               <div className="empty-state">
-                <p>Aucune invitation acceptée</p>
+                <p>{tr("Aucune invitation acceptée")}</p>
               </div>
             ) : (
               <div className="invitations-list">
@@ -276,17 +278,17 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>
                         <p className="invitation-relation">
-                          Vous avez accepté l'invitation en tant que {invitation.relation}
+                          {tr("Vous avez accepté l'invitation en tant que {relation}", { relation: tr(invitation.relation) })}
                         </p>
                         <p className="invitation-date">
-                          Acceptée le {formatDate(invitation.dateResponded || '')}
+                          {tr("Acceptée le {date}", { date: formatDate(invitation.dateResponded || '') })}
                         </p>
                       </div>
                     </div>
                     
                     <div className="invitation-status">
                       <span className="status-badge accepted">
-                        ✅ Acceptée
+                        ✅ {tr("Acceptée")}
                       </span>
                     </div>
                   </div>
@@ -300,7 +302,7 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
           <div className="declined-invitations">
             {declinedInvitations.length === 0 ? (
               <div className="empty-state">
-                <p>Aucune invitation refusée</p>
+                <p>{tr("Aucune invitation refusée")}</p>
               </div>
             ) : (
               <div className="invitations-list">
@@ -330,17 +332,17 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>
                         <p className="invitation-relation">
-                          Vous avez refusé l'invitation en tant que {invitation.relation}
+                          {tr("Vous avez refusé l'invitation en tant que {relation}", { relation: tr(invitation.relation) })}
                         </p>
                         <p className="invitation-date">
-                          Refusée le {formatDate(invitation.dateResponded || '')}
+                          {tr("Refusée le {date}", { date: formatDate(invitation.dateResponded || '') })}
                         </p>
                       </div>
                     </div>
                     
                     <div className="invitation-status">
                       <span className="status-badge declined">
-                        ❌ Refusée
+                        ❌ {tr("Refusée")}
                       </span>
                     </div>
                   </div>

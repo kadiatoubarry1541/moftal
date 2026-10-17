@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
+import { useTraduction } from '../i18n/traduction';
 import ProSection from '../components/ProSection';
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
 import WorldMap from '../components/WorldMap';
@@ -58,6 +59,7 @@ export default function Securite() {
   const [locationCheckLoading, setLocationCheckLoading] = useState(false);
   const navigate = useNavigate();
   const { t } = useI18n();
+  const { tr } = useTraduction();
 
   // Re-tri réactif quand GPS arrive
   const agents = useMemo(() => sortByProximity(rawAgents, userGeo), [rawAgents, userGeo]);
@@ -117,12 +119,12 @@ export default function Securite() {
       } else {
         // Jamais d'agents ni de numéros inventés affichés comme réels
         setRawAgents([]);
-        setLoadError(data.message || 'Impossible de charger les agents de sécurité.');
+        setLoadError(tr(data.message || 'Impossible de charger les agents de sécurité.'));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des agents:', error);
       setRawAgents([]);
-      setLoadError('Impossible de charger les agents de sécurité : vérifiez votre connexion.');
+      setLoadError(tr('Impossible de charger les agents de sécurité : vérifiez votre connexion.'));
     } finally {
       setLoading(false);
     }
@@ -288,7 +290,7 @@ export default function Securite() {
       }
     } catch (e) {
       console.error(e);
-      setLocationCheckResult({ safetyLevel: 'error', recommendations: ['Erreur de connexion. Réessayez.'] });
+      setLocationCheckResult({ safetyLevel: 'error', recommendations: [tr('Erreur de connexion. Réessayez.')] });
     } finally {
       setLocationCheckLoading(false);
     }
@@ -310,10 +312,10 @@ export default function Securite() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                🛡️ Sécurité
+                🛡️ {tr("Sécurité")}
               </h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Contacts des agents de sécurité
+                {tr("Contacts des agents de sécurité")}
               </p>
             </div>
             <div className="flex space-x-4">
@@ -321,7 +323,7 @@ export default function Securite() {
                 onClick={() => navigate("/compte")}
                 className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                ← {tr("Retour")}
               </button>
             </div>
           </div>
@@ -332,10 +334,10 @@ export default function Securite() {
         {/* Carte mondiale et géolocalisation */}
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            🗺️ Carte mondiale & géolocalisation
+            🗺️ {tr("Carte mondiale & géolocalisation")}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Du monde entier jusqu'aux quartiers et rues : zoomez avec la molette ou les boutons +/− pour voir tous les détails. Cliquez sur « Ma position » pour vous localiser, ou sur la carte pour choisir un lieu et vérifier la sécurité.
+            {tr("Du monde entier jusqu'aux quartiers et rues : zoomez avec la molette ou les boutons +/− pour voir tous les détails. Cliquez sur « Ma position » pour vous localiser, ou sur la carte pour choisir un lieu et vérifier la sécurité.")}
           </p>
           <WorldMap
             showMyPositionButton={true}
@@ -347,7 +349,7 @@ export default function Securite() {
           {selectedMapPosition && (
             <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                Position sélectionnée : {selectedMapPosition.lat.toFixed(5)}, {selectedMapPosition.lng.toFixed(5)}
+                {tr("Position sélectionnée : {lat}, {lng}", { lat: selectedMapPosition.lat.toFixed(5), lng: selectedMapPosition.lng.toFixed(5) })}
               </p>
               <button
                 type="button"
@@ -355,21 +357,21 @@ export default function Securite() {
                 disabled={locationCheckLoading}
                 className="px-4 py-2 rounded-lg font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-60"
               >
-                {locationCheckLoading ? 'Vérification…' : '🛡️ Vérifier'}
+                {locationCheckLoading ? tr('Vérification…') : tr('🛡️ Vérifier')}
               </button>
               {locationCheckResult && (
                 <div className="mt-3 p-2 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600">
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    Niveau : {locationCheckResult.safetyLevel === 'safe' && '✅ Sûr'}
-                    {locationCheckResult.safetyLevel === 'moderate' && '⚠️ Modéré'}
-                    {locationCheckResult.safetyLevel === 'risky' && '⚠️ Risqué'}
-                    {locationCheckResult.safetyLevel === 'dangerous' && '🔴 Dangereux'}
-                    {locationCheckResult.safetyLevel === 'error' && '❌ Erreur'}
+                    {tr('Niveau :')} {locationCheckResult.safetyLevel === 'safe' && tr('✅ Sûr')}
+                    {locationCheckResult.safetyLevel === 'moderate' && tr('⚠️ Modéré')}
+                    {locationCheckResult.safetyLevel === 'risky' && tr('⚠️ Risqué')}
+                    {locationCheckResult.safetyLevel === 'dangerous' && tr('🔴 Dangereux')}
+                    {locationCheckResult.safetyLevel === 'error' && tr('❌ Erreur')}
                   </p>
                   {locationCheckResult.recommendations?.length ? (
                     <ul className="text-sm text-gray-600 dark:text-gray-400 mt-1 list-disc list-inside">
                       {locationCheckResult.recommendations.map((r, i) => (
-                        <li key={i}>{r}</li>
+                        <li key={i}>{tr(r)}</li>
                       ))}
                     </ul>
                   ) : null}
@@ -382,7 +384,7 @@ export default function Securite() {
         {/* Choix du pays – chaque pays a sa propre sécurité */}
         <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            🌍 Pays
+            🌍 {tr("Pays")}
           </label>
           <select
             value={selectedCountry || userCountry}
@@ -393,19 +395,19 @@ export default function Securite() {
             }}
             className="w-full max-w-xs border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
           >
-            <option value="">Choisir un pays</option>
+            <option value="">{tr("Choisir un pays")}</option>
             {countries.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>{tr(c)}</option>
             ))}
           </select>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Chaque pays a ses propres forces de sécurité. Sélectionnez un pays pour voir les agents.
+            {tr("Chaque pays a ses propres forces de sécurité. Sélectionnez un pays pour voir les agents.")}
           </p>
         </div>
 
         {!(selectedCountry || userCountry) ? (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-6 text-center text-amber-800 dark:text-amber-200">
-            <p className="font-medium">Choisissez un pays ci-dessus pour afficher les agents de sécurité.</p>
+            <p className="font-medium">{tr("Choisissez un pays ci-dessus pour afficher les agents de sécurité.")}</p>
           </div>
         ) : (
           <>
@@ -421,7 +423,7 @@ export default function Securite() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
               >
-                👮 Policiers
+                👮 {tr("Policiers")}
               </button>
               <button
                 onClick={() => setActiveTab('gendarmes')}
@@ -431,7 +433,7 @@ export default function Securite() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
               >
-                👮‍♂️ Gendarmes
+                👮‍♂️ {tr("Gendarmes")}
               </button>
               <button
                 onClick={() => setActiveTab('pompiers')}
@@ -441,7 +443,7 @@ export default function Securite() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
               >
-                🚒 Pompiers
+                🚒 {tr("Pompiers")}
               </button>
               <button
                 onClick={() => setActiveTab('agents')}
@@ -451,7 +453,7 @@ export default function Securite() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
               >
-                🛡️ Agents Privés
+                🛡️ {tr("Agents Privés")}
               </button>
             </nav>
           </div>
@@ -462,11 +464,11 @@ export default function Securite() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Rechercher
+                {tr("Rechercher")}
               </label>
               <input
                 type="text"
-                placeholder="Nom, agence, ville, téléphone..."
+                placeholder={tr("Nom, agence, ville, téléphone...")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
@@ -474,7 +476,7 @@ export default function Securite() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Région
+                {tr("Région")}
               </label>
               <select
                 value={selectedRegion}
@@ -484,7 +486,7 @@ export default function Securite() {
                 }}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
               >
-                <option value="">Toutes les régions</option>
+                <option value="">{tr("Toutes les régions")}</option>
                 {regions.map(region => (
                   <option key={region} value={region}>{region}</option>
                 ))}
@@ -492,14 +494,14 @@ export default function Securite() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Ville
+                {tr("Ville")}
               </label>
               <select
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
               >
-                <option value="">Toutes les villes</option>
+                <option value="">{tr("Toutes les villes")}</option>
                 {cities.map(city => (
                   <option key={city} value={city}>{city}</option>
                 ))}
@@ -514,8 +516,8 @@ export default function Securite() {
             <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
             <span>
               {gpsActive
-                ? "Les agents les plus proches de vous apparaissent en premier"
-                : `Résultats personnalisés — les agents de ${userGeo.city || userGeo.country || selectedCountry} apparaissent en premier`
+                ? tr("Les agents les plus proches de vous apparaissent en premier")
+                : tr("Résultats personnalisés — les agents de {lieu} apparaissent en premier", { lieu: userGeo.city || userGeo.country || selectedCountry })
               }
             </span>
           </div>
@@ -548,13 +550,13 @@ export default function Securite() {
                           </h3>
                           {aprox && (
                             <span className="px-2 py-0.5 text-white text-xs font-semibold rounded-full" style={{ backgroundColor: aprox.color }}>
-                              {aprox.text}
+                              {tr(aprox.text)}
                             </span>
                           )}
                         </div>
                         <p className="text-gray-600 dark:text-gray-400 mb-2">
                           {agent.agency}
-                          {agent.badgeNumber && ` • Badge: ${agent.badgeNumber}`}
+                          {agent.badgeNumber && ` • ${tr("Badge: {numero}", { numero: agent.badgeNumber })}`}
                         </p>
                         <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                           <div>
@@ -567,7 +569,7 @@ export default function Securite() {
                           )}
                           {agent.experience && (
                             <div>
-                              <span className="font-medium">⭐</span> {agent.experience} ans d'expérience
+                              <span className="font-medium">⭐</span> {tr("{n} ans d'expérience", { n: agent.experience })}
                             </div>
                           )}
                           {agent.rating && (
@@ -606,13 +608,13 @@ export default function Securite() {
                           className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
                         >
                           <span>🚨</span>
-                          <span className="font-semibold">Urgence: {agent.emergencyPhone}</span>
+                          <span className="font-semibold">{tr("Urgence: {tel}", { tel: agent.emergencyPhone })}</span>
                         </button>
                       )}
                     </div>
                     {!agent.isAvailable && (
                       <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                        Indisponible
+                        {tr("Indisponible")}
                       </span>
                     )}
                   </div>
@@ -624,10 +626,10 @@ export default function Securite() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
               <div className="text-4xl mb-4">🔍</div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {loadError ? 'Chargement impossible' : 'Aucun agent trouvé'}
+                {loadError ? tr('Chargement impossible') : tr('Aucun agent trouvé')}
               </h3>
               <p className={loadError ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
-                {loadError || 'Aucun agent de sécurité ne correspond à vos critères de recherche.'}
+                {loadError || tr('Aucun agent de sécurité ne correspond à vos critères de recherche.')}
               </p>
             </div>
           )}
@@ -638,9 +640,9 @@ export default function Securite() {
         {/* Section Agences de Sécurité Professionnelles (approuvées par l'admin) */}
         <ProSection
           type="security_agency"
-          title="Agences de Sécurité"
+          title={tr("Agences de Sécurité")}
           icon="🛡️"
-          description="Les agences de sécurité peuvent s'inscrire ici. Après validation par l'administrateur, elles apparaîtront dans la liste et disposeront de leur propre espace de travail."
+          description={tr("Les agences de sécurité peuvent s'inscrire ici. Après validation par l'administrateur, elles apparaîtront dans la liste et disposeront de leur propre espace de travail.")}
         />
       </div>
     </div>

@@ -5,6 +5,7 @@ import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
+import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -28,6 +29,7 @@ export default function MaireVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
+  const { tr } = useTraduction();
 
   const [mairie, setMairie]   = useState<any>(null);
   const [agents, setAgents]   = useState<any[]>([]);
@@ -44,10 +46,10 @@ export default function MaireVitrine() {
       fetch(`${API_BASE}/mairie-public/${code}/stats`).then(r => r.json()),
     ]).then(([m, a, s]) => {
       if (m.success) setMairie(m.mairie);
-      else setError(m.message || "Mairie introuvable");
+      else setError(tr(m.message || "Mairie introuvable"));
       if (a.success) setAgents(a.agents);
       if (s.success) setStats(s.stats);
-    }).catch(() => setError("Impossible de charger la mairie."))
+    }).catch(() => setError(tr("Impossible de charger la mairie.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -60,7 +62,7 @@ export default function MaireVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: BLUE, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>Chargement en cours…</p>
+        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours…")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -70,10 +72,10 @@ export default function MaireVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🏛️</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Mairie introuvable</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || "Cette mairie n'est pas disponible."}</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Mairie introuvable")}</h2>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || tr("Cette mairie n'est pas disponible.")}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: BLUE, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
-          Retour à l'accueil
+          {tr("Retour à l'accueil")}
         </button>
       </div>
     </div>
@@ -129,14 +131,14 @@ export default function MaireVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>{mairie.name}</div>
-              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>État Civil</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("État Civil")}</div>
             </div>
           </div>
 
           {/* Nav desktop */}
           <div style={{ display: "flex", gap: 20, alignItems: "center" }} className="nav-links">
             {[["Accueil", "hero"], ["Services", "services"], ["Agents", "agents"], ["Contact", "contact"]].map(([label, id]) => (
-              <button key={id} className="vitrine-nav-link" onClick={() => scrollTo(id)}>{label}</button>
+              <button key={id} className="vitrine-nav-link" onClick={() => scrollTo(id)}>{tr(label)}</button>
             ))}
           </div>
 
@@ -149,7 +151,7 @@ export default function MaireVitrine() {
         {mobileMenu && (
           <div style={{ background: "white", borderTop: "1px solid #e2e8f0", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
             {[["Accueil", "hero"], ["Services", "services"], ["Agents", "agents"], ["Contact", "contact"]].map(([label, id]) => (
-              <button key={id} onClick={() => scrollTo(id)} style={{ color: "#334155", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, textAlign: "left", padding: "8px 0" }}>{label}</button>
+              <button key={id} onClick={() => scrollTo(id)} style={{ color: "#334155", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, textAlign: "left", padding: "8px 0" }}>{tr(label)}</button>
             ))}
           </div>
         )}
@@ -165,22 +167,22 @@ export default function MaireVitrine() {
             <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={40} />
           </div>
           <div style={{ display: "inline-block", background: `${BLUE}18`, borderRadius: 20, padding: "4px 16px", fontSize: 12, fontWeight: 700, color: BLUE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>
-            Service Public · État Civil
+            {tr("Service Public · État Civil")}
           </div>
           <h1 className="hero-title" style={{ fontSize: 42, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>
             {mairie.name}
           </h1>
           <p className="hero-sub" style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.7, maxWidth: 560, margin: "0 auto 36px" }}>
-            {mairie.description || "Au service des citoyens pour tous vos actes d'état civil. Mariages, naissances, décès et certificats traités rapidement et officiellement."}
+            {mairie.description || tr("Au service des citoyens pour tous vos actes d'état civil. Mariages, naissances, décès et certificats traités rapidement et officiellement.")}
           </p>
           <div className="hero-btns" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("services")}
               style={{ background: BLUE, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
-              Nos Services
+              {tr("Nos Services")}
             </button>
             <button onClick={() => scrollTo("contact")}
               style={{ background: "white", color: BLUE, border: `1.5px solid ${BLUE}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Nous Contacter
+              {tr("Nous Contacter")}
             </button>
           </div>
         </div>
@@ -203,7 +205,7 @@ export default function MaireVitrine() {
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: BLUE, marginBottom: 4 }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
         </div>
@@ -213,9 +215,9 @@ export default function MaireVitrine() {
       <section id="services" style={{ background: "#f8fafc", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>État Civil</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Services</h2>
-            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 520, margin: "0 auto" }}>Tous les actes d'état civil traités par des agents qualifiés, dans les délais les plus brefs.</p>
+            <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("État Civil")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Services")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 520, margin: "0 auto" }}>{tr("Tous les actes d'état civil traités par des agents qualifiés, dans les délais les plus brefs.")}</p>
           </div>
           <div className="svc-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
             {SERVICES_MAIRIE.map((svc, i) => (
@@ -223,11 +225,11 @@ export default function MaireVitrine() {
                 <div style={{ width: 58, height: 58, borderRadius: 14, background: `${BLUE}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16 }}>
                   {svc.icon}
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 10px" }}>{svc.label}</h3>
-                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{svc.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 10px" }}>{tr(svc.label)}</h3>
+                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{tr(svc.desc)}</p>
                 <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 6, color: BLUE, fontSize: 12, fontWeight: 600 }}>
                   <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  Service disponible
+                  {tr("Service disponible")}
                 </div>
               </div>
             ))}
@@ -239,9 +241,9 @@ export default function MaireVitrine() {
       <section style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Procédure</span>
-            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Comment ça marche ?</h2>
-            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>Un processus simple et transparent pour obtenir vos documents officiels.</p>
+            <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("Procédure")}</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Comment ça marche ?")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15, maxWidth: 500, margin: "0 auto" }}>{tr("Un processus simple et transparent pour obtenir vos documents officiels.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, maxWidth: 960, margin: "0 auto" }} className="stats-grid">
             {[
@@ -255,8 +257,8 @@ export default function MaireVitrine() {
                   {item.step}
                 </div>
                 <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -268,13 +270,13 @@ export default function MaireVitrine() {
         <section id="agents" style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>L'équipe</span>
-              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Agents</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Des fonctionnaires qualifiés à votre service.</p>
+              <span style={{ background: `${BLUE}18`, color: BLUE, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("L'équipe")}</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Agents")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des fonctionnaires qualifiés à votre service.")}</p>
             </div>
             {chefs.length > 0 && (
               <>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16, textAlign: "center" }}>Direction & Encadrement</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16, textAlign: "center" }}>{tr("Direction & Encadrement")}</h3>
                 <div className="agent-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 36 }}>
                   {chefs.map((a, i) => (
                     <div key={i} className="agent-card" style={{ background: "white", borderRadius: 16, padding: "28px 20px", textAlign: "center", border: `2px solid ${BLUE}22`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -290,7 +292,7 @@ export default function MaireVitrine() {
             )}
             {autresAgents.length > 0 && (
               <>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16, textAlign: "center" }}>Agents d'État Civil</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16, textAlign: "center" }}>{tr("Agents d'État Civil")}</h3>
                 <div className="agent-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
                   {autresAgents.map((a, i) => (
                     <div key={i} className="agent-card" style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 6px rgba(0,0,0,0.04)" }}>
@@ -311,8 +313,8 @@ export default function MaireVitrine() {
       {/* ── POURQUOI NOUS ── */}
       <section style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>Pourquoi passer par notre mairie ?</h2>
-          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>Une administration moderne, transparente et efficace au service de vos droits civiques.</p>
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Pourquoi passer par notre mairie ?")}</h2>
+          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Une administration moderne, transparente et efficace au service de vos droits civiques.")}</p>
           <div className="why-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
             {[
               { icon: "⚡", title: "Traitement rapide",      desc: "Vos dossiers sont traités dans les meilleurs délais. Nous respectons les délais légaux et souvent les dépassons." },
@@ -321,8 +323,8 @@ export default function MaireVitrine() {
             ].map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{item.title}</h3>
-                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -333,8 +335,8 @@ export default function MaireVitrine() {
       <section style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Documents à apporter</h2>
-            <p style={{ color: "#64748b", fontSize: 14 }}>Préparez ces documents avant de vous déplacer pour gagner du temps.</p>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Documents à apporter")}</h2>
+            <p style={{ color: "#64748b", fontSize: 14 }}>{tr("Préparez ces documents avant de vous déplacer pour gagner du temps.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, maxWidth: 800, margin: "0 auto" }} className="svc-grid">
             {[
@@ -344,11 +346,11 @@ export default function MaireVitrine() {
               { acte: "🏠 Certificat résidence", docs: ["CNI en cours de validité", "Justificatif de domicile (facture d'eau/électricité)", "Photo d'identité", "Motif de la demande"] },
             ].map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 14, padding: "22px 24px", border: "1px solid #bfdbfe", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontWeight: 700, color: BLUE_DARK, fontSize: 15, marginBottom: 14 }}>{item.acte}</div>
+                <div style={{ fontWeight: 700, color: BLUE_DARK, fontSize: 15, marginBottom: 14 }}>{tr(item.acte)}</div>
                 {item.docs.map((doc, j) => (
                   <div key={j} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8, fontSize: 13, color: "#334155" }}>
                     <svg width="14" height="14" fill="none" stroke={BLUE} strokeWidth={2.5} viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 2 }}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    {doc}
+                    {tr(doc)}
                   </div>
                 ))}
               </div>
@@ -361,18 +363,18 @@ export default function MaireVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
-            <p style={{ color: "#64748b", fontSize: 15 }}>Nos agents sont disponibles pour répondre à vos questions.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nous Contacter")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Nos agents sont disponibles pour répondre à vos questions.")}</p>
           </div>
           <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 800, margin: "0 auto" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: mairie.phone   || "Non renseigné" },
-              { icon: "✉️", label: "Email",     val: mairie.email   || "Non renseigné" },
-              { icon: "📍", label: "Adresse",   val: mairie.address || "Non renseignée" },
+              { icon: "📞", label: "Téléphone", val: mairie.phone   || tr("Non renseigné") },
+              { icon: "✉️", label: "Email",     val: mairie.email   || tr("Non renseigné") },
+              { icon: "📍", label: "Adresse",   val: mairie.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
               </div>
             ))}
@@ -381,15 +383,15 @@ export default function MaireVitrine() {
           {/* Horaires */}
           <div style={{ maxWidth: 500, margin: "36px auto 0", background: `${BLUE}08`, border: `1px solid ${BLUE}22`, borderRadius: 16, padding: "24px 32px", textAlign: "center" }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>🕐</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: BLUE_DARK, marginBottom: 12 }}>Horaires d'ouverture</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: BLUE_DARK, marginBottom: 12 }}>{tr("Horaires d'ouverture")}</h3>
             {[
               { jour: "Lundi – Vendredi", heure: "8h00 – 16h30" },
               { jour: "Samedi",           heure: "8h00 – 12h00" },
               { jour: "Dimanche",         heure: "Fermé" },
             ].map((h, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none", fontSize: 13 }}>
-                <span style={{ color: "#64748b", fontWeight: 500 }}>{h.jour}</span>
-                <span style={{ color: h.heure === "Fermé" ? "#dc2626" : BLUE, fontWeight: 700 }}>{h.heure}</span>
+                <span style={{ color: "#64748b", fontWeight: 500 }}>{tr(h.jour)}</span>
+                <span style={{ color: h.heure === "Fermé" ? "#dc2626" : BLUE, fontWeight: 700 }}>{h.heure === "Fermé" ? tr("Fermé") : h.heure}</span>
               </div>
             ))}
           </div>
@@ -409,10 +411,10 @@ export default function MaireVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{mairie.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Service Public · État Civil</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("Service Public · État Civil")}</p>
           <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
             </button>
           </div>
         </div>

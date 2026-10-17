@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+import { useTraduction } from '../i18n/traduction'
 
 export function Field({ label, help, error, children }: { label: string, help?: string, error?: string, children: ReactNode }) {
   return (
@@ -23,9 +24,10 @@ export function Select({ value, onChange, options, placeholder }: { value?: stri
 }
 
 export function SelectCode({ value, onChange, options, placeholder }: { value?: string, onChange: (v: string)=>void, options: {label:string,code:string}[], placeholder?: string }) {
+  const { tr } = useTraduction()
   return (
     <select value={value || ''} onChange={(e)=>onChange(e.target.value)}>
-      <option value="">{placeholder || 'Sélectionner'}</option>
+      <option value="">{placeholder || tr('Sélectionner')}</option>
       {options.map(opt => <option key={opt.code} value={opt.code}>{opt.label}</option>)}
     </select>
   )
@@ -50,6 +52,7 @@ export function CheckboxGroup({ options, values, onChange }: { options: string[]
 }
 
 export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file: File)=>void }) {
+  const { tr } = useTraduction();
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<string | null>(null);
   
@@ -130,7 +133,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
         }}>
           <img 
             src={preview} 
-            alt="Aperçu" 
+            alt={tr("Aperçu")} 
             style={{ 
               width: '100%', 
               height: '200px', 
@@ -159,7 +162,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
               justifyContent: 'center',
               boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
             }}
-            title="Supprimer la photo"
+            title={tr("Supprimer la photo")}
           >
             ×
           </button>
@@ -171,17 +174,17 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
               htmlFor="file-picker-capture"
               className="flex-1 min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
             >
-              📷 Prendre une photo
+              📷 {tr("Prendre une photo")}
             </label>
             <label
               htmlFor="file-picker-gallery"
               className="flex-1 min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm text-white bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer"
             >
-              🖼️ Choisir depuis galerie
+              🖼️ {tr("Choisir depuis galerie")}
             </label>
           </div>
           <small className="text-gray-500 text-xs text-center">
-            Formats acceptés: JPG, PNG, GIF (max 5MB)
+            {tr("Formats acceptés: JPG, PNG, GIF (max 5MB)")}
           </small>
         </div>
       )}

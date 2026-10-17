@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
+import { useTraduction } from '../../i18n/traduction'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -24,6 +25,7 @@ function getToken() {
 
 export default function FamilleAdminArbres() {
   const navigate = useNavigate()
+  const { tr } = useTraduction()
   const [families, setFamilies] = useState<FamilyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -78,9 +80,9 @@ export default function FamilleAdminArbres() {
   const activeFamily = families.find(f => f.nomFamille === selected) || null
 
   const genreBadge = (genre?: string) => {
-    if (genre === 'HOMME') return { emoji: '👨', label: 'Homme' }
-    if (genre === 'FEMME') return { emoji: '👩', label: 'Femme' }
-    return { emoji: '🧑', label: 'Genre non précisé' }
+    if (genre === 'HOMME') return { emoji: '👨', label: tr('Homme') }
+    if (genre === 'FEMME') return { emoji: '👩', label: tr('Femme') }
+    return { emoji: '🧑', label: tr('Genre non précisé') }
   }
 
   if (!user?.numeroH || !isAdmin(user)) {
@@ -95,19 +97,19 @@ export default function FamilleAdminArbres() {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors shadow-sm border border-gray-200"
         >
           <span aria-hidden>←</span>
-          Retour à la vue Admin
+          {tr("Retour à la vue Admin")}
         </Link>
         <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           <span className="text-3xl">🌳</span>
-          Toutes les familles
+          {tr("Toutes les familles")}
         </h1>
       </div>
 
       <p className="text-sm text-gray-500 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6">
-        🔒 Réservé à l'administration. Chaque utilisateur continue de ne voir que sa propre famille dans son propre arbre — cette page ne change rien à ça.
+        🔒 {tr("Réservé à l'administration. Chaque utilisateur continue de ne voir que sa propre famille dans son propre arbre — cette page ne change rien à ça.")}
       </p>
 
-      {loading && <div className="text-center py-12 text-gray-500">Chargement...</div>}
+      {loading && <div className="text-center py-12 text-gray-500">{tr("Chargement...")}</div>}
 
       {!loading && !activeFamily && (
         <>
@@ -115,10 +117,10 @@ export default function FamilleAdminArbres() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher une famille par nom..."
+            placeholder={tr("Rechercher une famille par nom...")}
             className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm mb-4 outline-none focus:border-emerald-400"
           />
-          <p className="text-sm text-gray-500 mb-4">{filteredFamilies.length} famille{filteredFamilies.length > 1 ? 's' : ''}</p>
+          <p className="text-sm text-gray-500 mb-4">{filteredFamilies.length > 1 ? tr("{n} familles", { n: filteredFamilies.length }) : tr("{n} famille", { n: filteredFamilies.length })}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {filteredFamilies.map(f => (
               <button
@@ -127,12 +129,12 @@ export default function FamilleAdminArbres() {
                 onClick={() => setSelected(f.nomFamille)}
                 className="text-left rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-emerald-400 hover:shadow transition-all"
               >
-                <p className="font-bold text-gray-900">{f.nomFamille || '(sans nom)'}</p>
-                <p className="text-xs text-gray-500 mt-1">{f.memberCount} membre{f.memberCount > 1 ? 's' : ''}</p>
+                <p className="font-bold text-gray-900">{f.nomFamille || tr('(sans nom)')}</p>
+                <p className="text-xs text-gray-500 mt-1">{f.memberCount > 1 ? tr("{n} membres", { n: f.memberCount }) : tr("{n} membre", { n: f.memberCount })}</p>
               </button>
             ))}
             {filteredFamilies.length === 0 && (
-              <p className="text-gray-400 text-sm col-span-full text-center py-8">Aucune famille ne correspond à cette recherche.</p>
+              <p className="text-gray-400 text-sm col-span-full text-center py-8">{tr("Aucune famille ne correspond à cette recherche.")}</p>
             )}
           </div>
         </>
@@ -145,10 +147,10 @@ export default function FamilleAdminArbres() {
             onClick={() => setSelected(null)}
             className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
           >
-            ← Toutes les familles
+            ← {tr("Toutes les familles")}
           </button>
           <h2 className="text-xl font-bold text-gray-800 mb-4">
-            Famille {activeFamily.nomFamille} — {activeFamily.memberCount} membre{activeFamily.memberCount > 1 ? 's' : ''}
+            {activeFamily.memberCount > 1 ? tr("Famille {nom} — {n} membres", { nom: activeFamily.nomFamille, n: activeFamily.memberCount }) : tr("Famille {nom} — {n} membre", { nom: activeFamily.nomFamille, n: activeFamily.memberCount })}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {activeFamily.members.map(m => {

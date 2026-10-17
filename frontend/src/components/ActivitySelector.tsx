@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { ACTIVITES_PROFESSIONNELLES, CATEGORIES_ACTIVITES } from '../utils/activities'
+import { useTraduction } from '../i18n/traduction'
 
 interface ActivitySelectorProps {
   value?: string
@@ -8,7 +9,8 @@ interface ActivitySelectorProps {
   placeholder?: string
 }
 
-export function ActivitySelector({ value, onChange, label, placeholder = "Sélectionner une activité..." }: ActivitySelectorProps) {
+export function ActivitySelector({ value, onChange, label, placeholder }: ActivitySelectorProps) {
+  const { tr } = useTraduction()
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
@@ -50,7 +52,7 @@ export function ActivitySelector({ value, onChange, label, placeholder = "Sélec
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className={value ? 'selected-value' : 'placeholder'}>
-            {value || placeholder}
+            {value || placeholder || tr("Sélectionner une activité...")}
           </span>
           <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
         </div>
@@ -61,7 +63,7 @@ export function ActivitySelector({ value, onChange, label, placeholder = "Sélec
             <div className="search-container">
               <input
                 type="text"
-                placeholder="Rechercher une activité..."
+                placeholder={tr("Rechercher une activité...")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="search-input"
@@ -75,7 +77,7 @@ export function ActivitySelector({ value, onChange, label, placeholder = "Sélec
                 className={`category-filter ${selectedCategory === '' ? 'active' : ''}`}
                 onClick={() => setSelectedCategory('')}
               >
-                Toutes
+                {tr("Toutes")}
               </button>
               {categories.map(category => (
                 <button
@@ -83,7 +85,7 @@ export function ActivitySelector({ value, onChange, label, placeholder = "Sélec
                   className={`category-filter ${selectedCategory === category ? 'active' : ''}`}
                   onClick={() => setSelectedCategory(category)}
                 >
-                  {category}
+                  {tr(category)}
                 </button>
               ))}
             </div>
@@ -102,7 +104,7 @@ export function ActivitySelector({ value, onChange, label, placeholder = "Sélec
                 ))
               ) : (
                 <div className="no-results">
-                  Aucune activité trouvée
+                  {tr("Aucune activité trouvée")}
                 </div>
               )}
             </div>
