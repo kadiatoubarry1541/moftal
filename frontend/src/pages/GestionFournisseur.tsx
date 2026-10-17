@@ -210,7 +210,7 @@ export default function GestionFournisseur() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 4 }}>Chiffre d'affaires ce mois</div>
-              <div style={{ fontSize: 28, fontWeight: 800 }}>{(dash.caMois || 0).toLocaleString("fr-FR")} GNF</div>
+              <div style={{ fontSize: 28, fontWeight: 800 }}>{(Number(dash.caMois) || 0).toLocaleString("fr-FR")} GNF</div>
             </div>
             <div style={{ textAlign: "right", opacity: 0.9 }}>
               <div style={{ fontSize: 12, marginBottom: 2 }}>Produits</div>
@@ -256,7 +256,7 @@ export default function GestionFournisseur() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, color: CYAN, fontSize: 13 }}>{(o.montant_total || 0).toLocaleString("fr-FR")} GNF</div>
+                    <div style={{ fontWeight: 700, color: CYAN, fontSize: 13 }}>{(Number(o.montant_total) || 0).toLocaleString("fr-FR")} GNF</div>
                     <span style={{ fontSize: 10, fontWeight: 600, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 6 }}>{sc.label}</span>
                   </div>
                 </div>
@@ -309,8 +309,8 @@ export default function GestionFournisseur() {
                       </td>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a" }}>{p.nom}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>
-                      <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(p.prix_gros || 0).toLocaleString("fr-FR")} GNF</td>
-                      <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(p.prix_detail || 0).toLocaleString("fr-FR")} GNF</td>
+                      <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(Number(p.prix_gros) || 0).toLocaleString("fr-FR")} GNF</td>
+                      <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(Number(p.prix_detail) || 0).toLocaleString("fr-FR")} GNF</td>
                       <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#156315" : "#be123c" }}>{p.stock}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.unite || "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
@@ -420,7 +420,7 @@ export default function GestionFournisseur() {
                     {o.notes && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontStyle: "italic" }}>{o.notes}</div>}
                   </div>
                   <div style={{ textAlign: "right", marginLeft: 12 }}>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: CYAN }}>{(o.montant_total || 0).toLocaleString("fr-FR")} GNF</div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: CYAN }}>{(Number(o.montant_total) || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={o.statut}
                       onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/orders/${o.id}/statut`, e.target.value))) return; setOrders(os => os.map(x => x.id === o.id ? { ...x, statut: e.target.value } : x)); }}

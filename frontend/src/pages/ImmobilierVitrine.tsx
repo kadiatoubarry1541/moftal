@@ -15,7 +15,7 @@ const ORANGE_DARK = "#9a3412";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 
-function fmtMoney(n: number) { return n ? (n || 0).toLocaleString("fr-FR") + " GNF" : "Sur demande"; }
+function fmtMoney(n: number) { return Number(n) ? (Number(n) || 0).toLocaleString("fr-FR") + " GNF" : "Sur demande"; }
 
 const TYPE_ICONS: Record<string, string> = {
   "villa": "🏡", "appartement": "🏢", "studio": "🛋️", "bureau": "🏛️",

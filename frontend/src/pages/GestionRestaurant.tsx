@@ -18,7 +18,7 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 
 type Tab = "dashboard" | "dishes" | "tables" | "orders" | "staff" | "announcements";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtTime(d: string) { return d ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"; }
 
 const ORANGE = "#ea580c";

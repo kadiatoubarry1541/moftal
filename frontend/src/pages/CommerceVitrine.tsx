@@ -13,7 +13,7 @@ const AMBER       = "#d97706";
 const AMBER_DARK  = "#92400e";
 
 function fmtMoney(n: number) {
-  return (n || 0).toLocaleString("fr-FR") + " GNF";
+  return (Number(n) || 0).toLocaleString("fr-FR") + " GNF";
 }
 
 const CAT_ICONS: Record<string, string> = {

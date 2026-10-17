@@ -35,7 +35,7 @@ export interface ModeleVitrine {
 }
 
 function prixDe(a: any) { return +(a.prix ?? a.prix_detail ?? a.prix_unitaire ?? 0) || 0; }
-const fmtMoney = (n: number) => `${(n || 0).toLocaleString("fr-FR")} GNF`;
+const fmtMoney = (n: number) => `${(Number(n) || 0).toLocaleString("fr-FR")} GNF`;
 
 export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: string; modele: ModeleVitrine }) {
   const navigate = useNavigate();
@@ -58,7 +58,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       .finally(() => setChargement(false));
   }, [tenantCode, m.type, m.introuvable]);
 
-  const articles: any[] = data?.products || data?.services || data?.works || [];
+  const articles: any[] = useMemo(() => data?.products || data?.services || data?.works || [], [data]);
   const annonces: any[] = data?.announcements || [];
   const categories = useMemo(() => Array.from(new Set(articles.map(a => a.categorie).filter(Boolean))) as string[], [articles]);
   const visibles = useMemo(() => {

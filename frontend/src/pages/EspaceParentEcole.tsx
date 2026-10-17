@@ -12,7 +12,7 @@ interface Props { mode: "school" | "madrasa"; }
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 function fmtDate(d: string, locale = "fr-FR") { return d ? new Date(d).toLocaleDateString(locale) : "—"; }
-function fmtMoney(n: number, locale = "fr-FR") { return (n || 0).toLocaleString(locale) + " GNF"; }
+function fmtMoney(n: number, locale = "fr-FR") { return (Number(n) || 0).toLocaleString(locale) + " GNF"; }
 
 export default function EspaceParentEcole({ mode }: Props) {
   const { tenantCode } = useParams<{ tenantCode: string }>();

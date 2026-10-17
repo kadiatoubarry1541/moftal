@@ -18,7 +18,7 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 type Tab = "dashboard" | "membres" | "projets" | "cotisations" | "annonces";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
 const BLUE = "#2563eb";
 const BLUE_BG = "#eff6ff";
