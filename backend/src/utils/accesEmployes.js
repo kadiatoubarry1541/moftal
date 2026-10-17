@@ -81,6 +81,86 @@ export async function estMembreEcoleDeLaGestion(numeroH, url) {
   return resultats.some(Boolean);
 }
 
+// ─── École / madrasa : le personnel EST la liste des employés ────────────────
+// Une seule liste « Personnel » : chaque personne (enseignant, surveillant,
+// comptable…) a son accès à la gestion, de « aucun » (espace enseignant
+// seulement) à « total ». Seul le responsable (propriétaire ou co-responsable
+// « total ») peut changer un accès.
+export const ACCES_PERSONNEL = ['aucun', ...NIVEAUX];
+
+/** numero_h (minuscules) → niveau d'accès actif, pour un établissement. */
+export async function accesDuPersonnel(tenantCode) {
+  await preparerTableAcces();
+  const rows = await sequelize.query(
+    `SELECT LOWER(numero_h) AS nh, niveau FROM management_staff_access WHERE tenant_code = :code AND is_active = true`,
+    { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+  );
+  return new Map(rows.map((r) => [r.nh, r.niveau]));
+}
+
+/** Donne, change ou retire l'accès à la gestion d'une personne du personnel. Renvoie { erreur } si refusé. */
+export async function definirAccesPersonnel(req, { numeroH, nom, poste, niveau }) {
+  if (!ACCES_PERSONNEL.includes(niveau)) return {};
+  const code = req.params.tenantCode;
+  if (!numeroH) {
+    return niveau === 'aucun' ? {} : { erreur: "Indiquez le téléphone, l'e-mail ou le NuméroH de cette personne pour lui donner un accès à la gestion." };
+  }
+  if (String(numeroH).toLowerCase() === String(req.tenant?.owner_numero_h || '').toLowerCase()) return {};
+  const actuel = (await accesActif(code, numeroH))?.niveau || 'aucun';
+  if (actuel === niveau) return {};
+  if (req.employe && req.employe.niveau !== 'total') {
+    return { erreur: "Seul le responsable de l'établissement peut changer l'accès à la gestion." };
+  }
+  if (niveau === 'aucun') {
+    await sequelize.query(
+      `UPDATE management_staff_access SET is_active = false WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh)`,
+      { replacements: { code, nh: numeroH } }
+    );
+    return {};
+  }
+  await sequelize.query(
+    `INSERT INTO management_staff_access (tenant_code, numero_h, nom, poste, niveau, is_active, ajoute_par)
+     VALUES (:code, :nh, :nom, :poste, :niveau, true, :par)
+     ON CONFLICT (tenant_code, numero_h) DO UPDATE SET niveau = EXCLUDED.niveau, poste = EXCLUDED.poste, nom = EXCLUDED.nom, is_active = true`,
+    { replacements: { code, nh: numeroH, nom: String(nom || '').slice(0, 255) || null, poste: String(poste || '').slice(0, 100) || null, niveau, par: req.employe?.numeroH || req.userId || null } }
+  );
+  return {};
+}
+
+/** Personne retirée du personnel : elle perd aussi son accès à la gestion. */
+export async function retirerAccesPersonnel(tenantCode, numeroH) {
+  if (!numeroH) return;
+  await preparerTableAcces();
+  await sequelize.query(
+    `UPDATE management_staff_access SET is_active = false WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh)`,
+    { replacements: { code: tenantCode, nh: numeroH } }
+  );
+}
+
+/**
+ * Employés ajoutés avant la liste unique (par « 👥 Employés ») : ils sont
+ * ajoutés au personnel pour que tout le monde soit au même endroit.
+ */
+export async function employesDansLePersonnel(tenantCode, tableStaff) {
+  await preparerTableAcces();
+  const actifs = tableStaff === 'school_staff' ? 'AND s.is_active = true' : '';
+  const manquants = await sequelize.query(
+    `SELECT a.numero_h, a.nom, a.poste FROM management_staff_access a
+      WHERE a.tenant_code = :code AND a.is_active = true
+        AND NOT EXISTS (SELECT 1 FROM ${tableStaff} s WHERE s.tenant_code = a.tenant_code AND LOWER(TRIM(s.numero_h)) = LOWER(a.numero_h) ${actifs})`,
+    { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+  );
+  for (const e of manquants) {
+    const rep = { code: tenantCode, nh: e.numero_h, prenom: String(e.nom || e.numero_h).slice(0, 100), role: String(e.poste || 'Employé').slice(0, 50) };
+    await sequelize.query(
+      tableStaff === 'school_staff'
+        ? `INSERT INTO school_staff (tenant_code, nom, prenom, role, numero_h) VALUES (:code, '', :prenom, :role, :nh)`
+        : `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, numero_h) VALUES (:code, :prenom, '', :role, NULL, :nh)`,
+      { replacements: rep }
+    ).catch((err) => console.error('Personnel depuis les employés :', err.message));
+  }
+}
+
 // Ce qu'un employé n'a pas le droit de faire, selon son niveau (null = autorisé).
 function refusEmploye(req, niveau) {
   if (niveau === 'total') return null;

@@ -70,6 +70,14 @@ const inp = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none";
 const inpSt = { borderColor: "#e2e8f0", color: "#0f172a" };
 const lbl = { fontSize: 11, fontWeight: 600 as const, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.04em" };
 
+// Personnel = employés de l'établissement : chacun a son accès à la gestion
+const ACCES_GESTION: { v: string; label: string; court: string }[] = [
+  { v: "aucun",   label: "Espace enseignant seulement (pas la gestion)", court: "" },
+  { v: "limite",  label: "Gestion : limité (voir et ajouter)",            court: "Gestion : limité" },
+  { v: "complet", label: "Gestion : complet (sauf paramètres)",           court: "Gestion : complet" },
+  { v: "total",   label: "Gestion : tous les droits (co-responsable)",    court: "Co-responsable" },
+];
+
 export default function GestionEnseignement({ mode }: Props) {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
@@ -87,7 +95,7 @@ export default function GestionEnseignement({ mode }: Props) {
     emoji: "📖",
     apprenants: "Apprenants", apprenant: "Apprenant",
     groupes: "Halaqas",  groupe: "Halaqa",
-    staffLabel: "Enseignants", staffSingular: "Enseignant",
+    staffLabel: "Personnel", staffSingular: "Enseignant",
     cycles: [{ cycle: "", niveaux: ["Iqra", "Qa'idah", "Débutant", "Juz' Amma", "Hizb", "Hafiz"] }],
     matieres: ["Coran", "Tajwid", "Hadith", "Fiqh", "Arabe", "Histoire islamique", "Morale"],
     roles: ["Directeur", "Cheikh", "Enseignant", "Surveillant", "Administratif", "Autre"],
@@ -224,6 +232,9 @@ export default function GestionEnseignement({ mode }: Props) {
     return () => { fini = true; };
   }, [!!tenant, tenantCode, mode]);
 
+  // Le propriétaire et le co-responsable (« total ») choisissent l'accès de chacun
+  const peutDonnerAcces = !tenant?.acces_employe || tenant.acces_employe === "total";
+
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
     if (window.innerWidth < 768) setCollapsed(true);
@@ -299,7 +310,7 @@ export default function GestionEnseignement({ mode }: Props) {
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
-          if (d.staff) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)")); }
+          if (d.staff) { setStaff(p => [{ ...d.staff, acces_gestion: form.acces_gestion || "aucun" }, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)")); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-groupe") {
@@ -558,8 +569,16 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          {peutDonnerAcces && (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Accès à la gestion")}</label>
+              <select value={form.acces_gestion || "aucun"} onChange={e=>setForm((f:any)=>({...f,acces_gestion:e.target.value}))} className={inp} style={inpSt}>
+                {ACCES_GESTION.map(a=><option key={a.v} value={a.v}>{tr(a.label)}</option>)}
+              </select>
+            </div>
+          )}
           <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>
-            {tr("Le téléphone ou l'e-mail suffit : l'enseignant se connecte avec, choisit son mot de passe et complète lui-même le reste.")}
+            {tr("Le téléphone ou l'e-mail suffit : la personne se connecte avec, choisit son mot de passe et complète elle-même le reste.")}
           </p>
           {champPhoto}
         </>)}
@@ -843,7 +862,7 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display:"flex",flexDirection:"column",gap:20,animation:"fadeIn 0.2s ease" }}>
-              <BoutonRapport base={`${config.API_BASE_URL}/${apiName}/${tenantCode}`} etablissement={tenant || undefined} couleur={V.color} />
+              <BoutonRapport base={`${config.API_BASE_URL}/${apiName}/${tenantCode}`} etablissement={tenant || undefined} couleur={V.color} onEmployes={() => loadSection("staff")} />
               {/* KPI Cards */}
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
                 {[
@@ -979,6 +998,9 @@ export default function GestionEnseignement({ mode }: Props) {
                         {s.telephone && <div>📞 {s.telephone}</div>}
                         {s.numero_h && <div style={{ fontFamily:"monospace",color:"#94a3b8",fontSize:11 }}>H: {s.numero_h}</div>}
                       </div>
+                      {s.acces_gestion && s.acces_gestion !== "aucun" && (
+                        <div style={{ marginTop:8 }}><span style={{ padding:"2px 8px",background:"#eff6ff",color:"#1d4ed8",borderRadius:20,fontSize:11,fontWeight:700 }}>🔑 {tr(ACCES_GESTION.find(a=>a.v===s.acces_gestion)?.court || "")}</span></div>
+                      )}
                       <div style={{ display:"flex", gap:12, marginTop:12 }}>
                         <button onClick={()=>{ setForm({ ...s }); setModal("add-staff"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
                         <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/staff/${s.id}`); if(d.success){setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
