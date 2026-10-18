@@ -69,12 +69,12 @@ export default function CliniqueVitrine() {
       fetch(`${API_BASE}/clinic-public/${code}/reviews`).then(r => r.json()),
     ]).then(([c, s, sv, ph, rv]) => {
       if (c.success) setClinic(c.clinic);
-      else setError(tr(c.message || "Clinique introuvable"));
+      else setError((c.message || "Clinique introuvable"));
       if (s.success) setStaff(s.staff);
       if (sv.success) setServices(sv.services);
       if (ph.success) setHasPharmacy(ph.hasPharmacy);
       if (rv.success) { setReviews(rv.reviews); setReviewStats({ moyenne: rv.moyenne, total: rv.total }); }
-    }).catch(() => setError(tr("Impossible de charger la clinique.")))
+    }).catch(() => setError(("Impossible de charger la clinique.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -123,7 +123,7 @@ export default function CliniqueVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🏥</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Clinique introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || tr("Cette clinique n'existe pas ou n'est pas disponible.")}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error ? tr(error) : tr("Cette clinique n'existe pas ou n'est pas disponible.")}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
           {tr("Retour à l'accueil")}
         </button>

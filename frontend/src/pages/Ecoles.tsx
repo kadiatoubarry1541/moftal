@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import ChoixLangueEcole from '../components/ChoixLangueEcole';
 import { useTraduction } from '../i18n/traduction';
 
 interface School {
@@ -84,7 +83,6 @@ export default function Ecoles() {
             <p className="text-gray-600 mt-1">{tr("Liste des écoles partenaires de la communauté")}</p>
           </div>
           <div className="flex gap-2 items-center">
-            <ChoixLangueEcole compact />
             <button
               onClick={() => setShowForm(!showForm)}
               className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-lg transition-colors shadow-sm"

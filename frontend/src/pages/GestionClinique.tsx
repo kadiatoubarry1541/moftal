@@ -11,6 +11,7 @@ import { normaliserLogo } from "../utils/logoImage";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
+import ParametreLangue from "../components/ParametreLangue";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1623,6 +1624,7 @@ export default function GestionClinique() {
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
               <TenantCodeCard code={tenantCode} />
+              <ParametreLangue />
 
               {/* Logo */}
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>

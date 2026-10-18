@@ -41,9 +41,9 @@ export default function ImmobilierVitrine() {
       fetch(`${API}/api/pro-public/immobilier/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setAgency(t.tenant);
-      else setError(tr(t.message || "Agence introuvable"));
+      else setError((t.message || "Agence introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError(tr("Impossible de charger l'agence.")))
+    }).catch(() => setError(("Impossible de charger l'agence.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -62,7 +62,7 @@ export default function ImmobilierVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🏠</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Agence introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error && tr(error)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: ORANGE, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>

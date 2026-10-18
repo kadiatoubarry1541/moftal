@@ -34,9 +34,9 @@ export default function ReseauVitrine() {
       fetch(`${API}/api/pro-public/reseau/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setReseau(t.tenant);
-      else setError(tr(t.message || "Réseau introuvable"));
+      else setError((t.message || "Réseau introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError(tr("Impossible de charger ce réseau.")))
+    }).catch(() => setError(("Impossible de charger ce réseau.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -55,7 +55,7 @@ export default function ReseauVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🌐</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Réseau introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error && tr(error)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: VIOLET, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>

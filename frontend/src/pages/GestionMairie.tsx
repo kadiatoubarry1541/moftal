@@ -11,6 +11,7 @@ import { normaliserLogo } from "../utils/logoImage";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import ParametreLangue from "../components/ParametreLangue";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1061,7 +1062,7 @@ export default function GestionMairie() {
   const renderSettings = () => (
     <div>
       <h2 style={{ margin: "0 0 20px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>Paramètres de la mairie</h2>
-      <div style={{ maxWidth: 560, marginBottom: 16 }}><TenantCodeCard code={tenantCode} /></div>
+      <div style={{ maxWidth: 560, marginBottom: 16, display: "grid", gap: 16 }}><TenantCodeCard code={tenantCode} /><ParametreLangue /></div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.07)", maxWidth: 560 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>

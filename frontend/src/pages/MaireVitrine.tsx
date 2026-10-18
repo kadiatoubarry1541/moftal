@@ -46,10 +46,10 @@ export default function MaireVitrine() {
       fetch(`${API_BASE}/mairie-public/${code}/stats`).then(r => r.json()),
     ]).then(([m, a, s]) => {
       if (m.success) setMairie(m.mairie);
-      else setError(tr(m.message || "Mairie introuvable"));
+      else setError((m.message || "Mairie introuvable"));
       if (a.success) setAgents(a.agents);
       if (s.success) setStats(s.stats);
-    }).catch(() => setError(tr("Impossible de charger la mairie.")))
+    }).catch(() => setError(("Impossible de charger la mairie.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -73,7 +73,7 @@ export default function MaireVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🏛️</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Mairie introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || tr("Cette mairie n'est pas disponible.")}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error ? tr(error) : tr("Cette mairie n'est pas disponible.")}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: BLUE, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
           {tr("Retour à l'accueil")}
         </button>

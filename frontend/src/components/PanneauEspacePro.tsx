@@ -6,6 +6,7 @@ import ParametresEspacePro from "./ParametresEspacePro";
 import PhotosSite from "./ecole/PhotosSite";
 import CoordonneesSite from "./CoordonneesSite";
 import { TenantCodeCard } from "./GestionBrand";
+import ParametreLangue from "./ParametreLangue";
 import { useTraduction } from "../i18n/traduction";
 import {
   DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
@@ -262,7 +263,7 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
                   style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
                   {tr("⚙️ Paramètres · Application et abonnement")} {voirAbonnement ? "▴" : "▾"}
                 </button>
-                {voirAbonnement && <div style={{ marginTop: 8 }}><div style={{ display: "grid", gap: 12 }}><TenantCodeCard code={tenantCode} /><ParametresEspacePro /></div></div>}
+                {voirAbonnement && <div style={{ marginTop: 8 }}><div style={{ display: "grid", gap: 12 }}><TenantCodeCard code={tenantCode} /><ParametreLangue /><ParametresEspacePro /></div></div>}
               </div>
             )}
             </>)}
