@@ -12,6 +12,7 @@ import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
   type PublishModal, type ProfilModal,
 } from "../components/EspaceProModals";
+import { CommandesRecues } from "../components/CommanderProduit";
 
 // En prod, frontend et backend sont sur des domaines différents : un chemin relatif
 // "/api/..." atterrit sur le frontend lui-même (et échoue silencieusement). L'URL doit
@@ -468,6 +469,8 @@ export default function GestionInterne() {
           <TabButtons />
 
           {tab === "pro" && <>
+            {/* L'admin voit toutes les commandes de l'Échange, sans limite */}
+            <CommandesRecues tout toujoursVisible />
             {/* Header Super Admin */}
             <div style={{ background:"linear-gradient(135deg,#1d4ed8,#4f46e5)", borderRadius:16, padding:"22px 28px", marginBottom:36, display:"flex", alignItems:"center", gap:16 }}>
               <div style={{ fontSize:40 }}>👑</div>
@@ -757,6 +760,8 @@ export default function GestionInterne() {
         <TabButtons />
 
         {tab === "pro" && <>
+          {/* Commandes reçues sur l'Échange */}
+          <CommandesRecues />
           {/* Bandeau Espace Pro */}
           <div style={{ background:"linear-gradient(135deg,#1a8f1a,#156315)", borderRadius:14, padding:"18px 22px", marginBottom:12, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", justifyContent:"space-between" }}>
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>

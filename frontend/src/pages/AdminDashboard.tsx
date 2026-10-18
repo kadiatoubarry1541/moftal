@@ -11,6 +11,7 @@ import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
+import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
 
 interface ProfessionalAccount {
   id: string;
@@ -634,6 +635,7 @@ export default function AdminDashboard() {
     { id: "pros", label: "Professionnels", icon: "📋" },
     { id: "annonces", label: "Annonces", icon: "📢" },
     { id: "echange-produits", label: "Publications Échange", icon: "🔄" },
+    { id: "commandes", label: "Commandes", icon: "🛒" },
     { id: "users", label: "Utilisateurs", icon: "👥" },
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
@@ -1550,6 +1552,15 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ========== COMMANDES : tout, sans limite ========== */}
+          {adminSection === "commandes" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-gray-800">🛒 Commandes et demandes</h2>
+              <CommandesRecues tout toujoursVisible />
+              <MessagesTousLesSites />
             </div>
           )}
 

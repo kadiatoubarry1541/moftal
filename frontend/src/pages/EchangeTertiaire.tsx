@@ -7,6 +7,8 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
+import { CommanderProduitModal } from '../components/CommanderProduit';
+import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -60,6 +62,7 @@ function getMateriauxTabs(t: (key: string) => string): { key: MateriauxTab; emoj
 
 export default function EchangeTertiaire() {
   const { t } = useI18n();
+  const { tr } = useTraduction();
   const MATERIAUX_TABS = useMemo(() => getMateriauxTabs(t), [t]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
@@ -536,7 +539,7 @@ export default function EchangeTertiaire() {
                 )}
                 <button onClick={() => setSelectedProduct(product)}
                   className="w-full py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium text-sm transition-colors">
-                  {t('echange_tertiaire.contact_vendor_btn')}
+                  {tr("🛒 Commander")}
                 </button>
               </div>
             </div>
@@ -544,29 +547,8 @@ export default function EchangeTertiaire() {
         )}
       </div>
 
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setSelectedProduct(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{selectedProduct.title}</h3>
-            <span className="inline-block px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold mb-3">
-              {selectedProduct.category || t('echange_tertiaire.materials_fallback')}
-            </span>
-            {selectedProduct.description && (
-              <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm">{selectedProduct.description}</p>
-            )}
-            <p className="text-lg font-bold text-amber-600 dark:text-amber-400 mb-2">
-              {Number(selectedProduct.price).toLocaleString()} {selectedProduct.currency}
-            </p>
-            {selectedProduct.location && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">📍 {selectedProduct.location}</p>
-            )}
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              {t('echange_tertiaire.contact_instructions')}
-            </p>
-            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">{t('btn.close')}</button>
-          </div>
-        </div>
-      )}
+      {/* Commander : la commande va à celui qui a publié (son Espace Pro) */}
+      {selectedProduct && <CommanderProduitModal product={selectedProduct} couleur="#d97706" onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }

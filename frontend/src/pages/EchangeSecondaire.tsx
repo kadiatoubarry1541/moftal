@@ -7,6 +7,8 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
+import { CommanderProduitModal } from '../components/CommanderProduit';
+import { useTraduction } from '../i18n/traduction';
 
 interface UserData {
   numeroH: string;
@@ -81,6 +83,7 @@ function getSecondaireTabs(t: (key: string) => string) {
 
 export default function EchangeSecondaire() {
   const { t } = useI18n();
+  const { tr } = useTraduction();
   const SECONDAIRE_TABS = useMemo(() => getSecondaireTabs(t), [t]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
@@ -996,7 +999,7 @@ export default function EchangeSecondaire() {
                   onClick={() => setSelectedProduct(product)}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-bold"
                 >
-                  {t('echange_primaire.contact_btn')}
+                  {tr("🛒 Commander")}
                 </button>
               </div>
             </div>
@@ -1099,47 +1102,8 @@ export default function EchangeSecondaire() {
         </div>
       )}
 
-      {/* Modal de contact produit */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">
-              {t('echange_primaire.contact_vendor_title')}
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-bold text-gray-900 text-lg">{selectedProduct.title}</h4>
-                <p className="text-sm text-gray-600">{selectedProduct.sellerName}</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-orange-600">
-                  {selectedProduct.price.toLocaleString()} {selectedProduct.currency}
-                </p>
-              </div>
-              <div>
-                <h5 className="font-semibold text-gray-900 mb-2">{t('echange_primaire.contact_info_label')}</h5>
-                <p className="text-sm text-gray-600">
-                  📞 {selectedProduct.contactInfo?.phone || t('echange_primaire.not_provided')}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-200 font-semibold"
-              >
-                {t('echange_primaire.call_now_btn')}
-              </button>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-200 font-semibold"
-              >
-                ✕ {t('btn.close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Commander : la commande va à celui qui a publié (son Espace Pro) */}
+      {selectedProduct && <CommanderProduitModal product={selectedProduct} couleur="#2563eb" onClose={() => setSelectedProduct(null)} />}
 
       {products.length === 0 && (
         <div className="text-center text-gray-500 py-20">

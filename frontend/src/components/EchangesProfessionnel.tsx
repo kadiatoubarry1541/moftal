@@ -4,6 +4,8 @@ import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
 import PaymentModal from './PaymentModal';
 import { useI18n } from '../i18n/useI18n';
+import { CommanderProduitModal, CommandesRecues, MesCommandes } from './CommanderProduit';
+import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -84,6 +86,7 @@ const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }
 
 export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelProps) {
   const { t } = useI18n();
+  const { tr } = useTraduction();
   const SECTIONS = getSections(t);
   const SUB_SECTOR_LABELS: Record<string, string> = {
     primaire: t('echange.sub_sector_alimentation'),
@@ -258,6 +261,11 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
 
       {/* Une seule page qui défile — les 4 catégories se suivent, jamais besoin de sortir */}
       <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-8">
+        {/* Commandes : celles reçues (vendeur) et celles passées (acheteur) — vides, rien ne s'affiche */}
+        <div className="pt-3">
+          <CommandesRecues />
+          <MesCommandes />
+        </div>
         {SECTIONS.map(section => {
           const products = productsBySection[section.id] || [];
           const loading = loadingBySection[section.id];
@@ -321,6 +329,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                         {product.price > 0 && (
                           <p className="text-sm font-bold mt-1" style={{ color: '#1a8f1a' }}>{product.price.toLocaleString()} {product.currency}</p>
                         )}
+                        <span className="mt-2 block w-full text-center py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold">{tr("🛒 Commander")}</span>
                       </div>
                     </button>
                   ))}
@@ -331,50 +340,8 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
         })}
       </div>
 
-      {/* Modal de contact — même logique que sur les pages détaillées */}
-      {selectedProduct && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedProduct(null)}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            {selectedProduct.images?.[0] && (
-              <img src={buildImageUrl(selectedProduct.images[0])} alt={selectedProduct.title} className="w-full h-48 object-cover rounded-xl mb-4" />
-            )}
-            {!selectedProduct.images?.[0] && selectedProduct.videos?.[0] && (
-              <video src={buildImageUrl(selectedProduct.videos[0])} controls className="w-full h-48 object-cover rounded-xl mb-4 bg-black" />
-            )}
-            {selectedProduct.audio?.[0] && (
-              <audio src={buildImageUrl(selectedProduct.audio[0])} controls className="w-full mb-4" />
-            )}
-            <h3 className="text-lg font-bold text-gray-900 mb-4">{t('echange.contact_seller')}</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="font-bold text-gray-900">{selectedProduct.title}</p>
-                {selectedProduct.sellerName && <p className="text-sm text-gray-600">{selectedProduct.sellerName}</p>}
-              </div>
-              {selectedProduct.price > 0 && (
-                <p className="text-xl font-bold text-green-600">
-                  {selectedProduct.price.toLocaleString()} {selectedProduct.currency}
-                </p>
-              )}
-              <p className="text-sm text-gray-600">
-                📞 {selectedProduct.contactInfo?.phone || t('echange.phone_not_provided')}
-              </p>
-              {selectedProduct.location && (
-                <p className="text-sm text-gray-600">📍 {selectedProduct.location}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedProduct(null)}
-              className="mt-6 w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
-            >
-              {t('btn.close')}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Commander : la commande va à celui qui a publié (son Espace Pro) */}
+      {selectedProduct && <CommanderProduitModal product={selectedProduct} couleur="#16a34a" onClose={() => setSelectedProduct(null)} />}
 
       {payingAccount && (
         <PaymentModal

@@ -5,6 +5,7 @@ import { VerifiedBadge } from "../components/VerifiedBadge";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 import { useTraduction } from "../i18n/traduction";
+import { CommandesRecues } from "../components/CommanderProduit";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -208,6 +209,9 @@ export default function MesComptesPro() {
             </p>
           </div>
         </div>
+
+        {/* Commandes reçues sur l'Échange (ce que la personne a publié) */}
+        <CommandesRecues />
 
         {/* Contenu */}
         {loading ? (

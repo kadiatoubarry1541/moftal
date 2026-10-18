@@ -8,6 +8,7 @@ import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { isGlobalAdmin } from '../utils/sectorAdmin.js';
 
 // Messages envoyés depuis le site d'un établissement (demande d'information,
 // devis, réservation, commande d'une boutique…). Ils arrivent directement dans
@@ -98,6 +99,21 @@ async function verifyTenantProprietaire(req, res, next) {
 }
 // Le propriétaire et ses employés (selon leur niveau) voient les messages
 const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+// Admin Moftal : les messages et commandes de TOUS les établissements, sans limite
+siteMgmtRouter.get('/admin/toutes-demandes', authenticate, async (req, res) => {
+  try {
+    if (!isGlobalAdmin(req.user)) return res.status(403).json({ success: false, message: 'Accès réservé à l\'administrateur.' });
+    await preparerTable();
+    const demandes = await sequelize.query(
+      `SELECT d.*, t.name AS etablissement, t.type FROM site_demandes d
+       LEFT JOIN management_tenants t ON t.tenant_code = d.tenant_code
+       ORDER BY d.created_at DESC LIMIT 1000`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, demandes });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
 
 siteMgmtRouter.get('/:tenantCode/demandes', authenticate, verifyTenant, async (req, res) => {
   try {

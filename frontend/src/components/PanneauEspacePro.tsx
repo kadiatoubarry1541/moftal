@@ -12,6 +12,7 @@ import {
   DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
   type PublishModal, type ProfilModal,
 } from "./EspaceProModals";
+import { CommandesRecues } from "./CommanderProduit";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -46,6 +47,8 @@ function MessagesDuSite({ tenantCode, onRetour, onNombre }: { tenantCode: string
     <div>
       <button onClick={onRetour} style={{ background: "none", border: "none", padding: "0 0 10px", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 700 }}>‹ {tr("Retour")}</button>
       <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>📩 {tr("Messages du site")}</div>
+      {/* Commandes passées sur l'Échange (ce que le responsable a publié) */}
+      <CommandesRecues />
       {erreur && <p style={{ color: "#dc2626", fontSize: 13 }}>{tr(erreur)}</p>}
       {!demandes && !erreur && <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Chargement…")}</p>}
       {demandes && demandes.length === 0 && <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Aucun message reçu depuis le site pour le moment.")}</p>}
