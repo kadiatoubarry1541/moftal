@@ -54,9 +54,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       fetch(`${API}/api/pro-public/${m.type}/${tenantCode}`).then(r => r.json()),
       fetch(`${API}/api/pro-public/${m.type}/${tenantCode}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
-      if (t.success) setPro(t.tenant); else setErreur(tr(t.message || m.introuvable));
+      if (t.success) setPro(t.tenant); else setErreur((t.message || m.introuvable));
       if (d.success) setData(d);
-    }).catch(() => setErreur(tr("Impossible de charger cette page. Vérifiez votre connexion.")))
+    }).catch(() => setErreur(("Impossible de charger cette page. Vérifiez votre connexion.")))
       .finally(() => setChargement(false));
   }, [tenantCode, m.type, m.introuvable]);
 
@@ -84,7 +84,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       <div style={{ textAlign: "center", maxWidth: 400 }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>{m.emoji}</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr(m.introuvable)}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{erreur}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{erreur && tr(erreur)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: m.couleur, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>

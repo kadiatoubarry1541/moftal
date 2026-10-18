@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react'
 import { useI18n } from '../i18n/useI18n'
 import { LANG_LABELS } from '../i18n/strings'
 
+// Sites publics : le bouton « Langue », en haut à droite. Il attend qu'on
+// choisisse une langue dans la liste. Dans l'application, la langue est dans les Paramètres.
 export function LangButton() {
   const { lang, setLang, t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -17,7 +19,7 @@ export function LangButton() {
   }, [open])
 
   return (
-    <div ref={ref} className="relative flex justify-end mb-3">
+    <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -30,12 +32,13 @@ export function LangButton() {
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 top-9 w-40 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200 z-50 overflow-hidden py-1"
+          className="absolute right-0 top-9 bg-white rounded-xl shadow-2xl ring-1 ring-gray-200 z-50 overflow-hidden py-1"
+          style={{ width: 176, maxWidth: "none", left: "auto", right: 0 }}
         >
           <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100">
             {t('header.language')}
           </div>
-          <div className="max-h-52 overflow-y-auto">
+          <div>
             {Object.entries(LANG_LABELS).map(([code, label]) => (
               <button
                 key={code}
@@ -49,7 +52,7 @@ export function LangButton() {
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <span className="flex-1 ecriture-locale">{label}</span>
+                <span className="flex-1 ecriture-locale" style={{ whiteSpace: "nowrap" }}>{label}</span>
                 {lang === code && <span className="text-blue-600">✓</span>}
               </button>
             ))}

@@ -48,9 +48,9 @@ export default function RestaurantVitrine() {
       fetch(`${API}/api/pro-public/restaurant/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setResto(t.tenant);
-      else setError(tr(t.message || "Restaurant introuvable"));
+      else setError((t.message || "Restaurant introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError(tr("Impossible de charger le restaurant.")))
+    }).catch(() => setError(("Impossible de charger le restaurant.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -117,7 +117,7 @@ export default function RestaurantVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🍽️</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{tr("Restaurant introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error && tr(error)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: RED, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour")}</button>
       </div>
     </div>

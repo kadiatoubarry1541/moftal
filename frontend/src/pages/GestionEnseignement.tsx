@@ -16,7 +16,7 @@ import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtB
 import PhotosSite from "../components/ecole/PhotosSite";
 import CoordonneesSite from "../components/CoordonneesSite";
 import NotificationsApp from "../components/ecole/NotificationsApp";
-import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import ParametreLangue from "../components/ParametreLangue";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 import { cheminConnexion } from "../utils/connexionRetour";
@@ -1406,14 +1406,7 @@ export default function GestionEnseignement({ mode }: Props) {
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
               <TenantCodeCard code={tenantCode} />
-              {/* Langue de la gestion : français ou arabe (de droite à gauche) */}
-              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "20px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{tr("Langue")}</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Langue d'affichage de la gestion sur cet appareil")}</p>
-                </div>
-                <ChoixLangueEcole />
-              </div>
+              <ParametreLangue />
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{tr("Logo")}</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>

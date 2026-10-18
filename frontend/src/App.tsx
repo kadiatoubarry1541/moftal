@@ -19,6 +19,8 @@ import { FitText } from "./components/FitText";
 import { cheminAppEcole, type ModeEcole, type PageMembre } from "./utils/appEcole";
 import { cheminVitrineDepuisGestion, lireRetourGestion, ecrireRetourGestion } from "./utils/gestionVitrines";
 import { InvitationInstallerMoftal, AvertissementDoubleInstallation } from "./components/InstallAppButton";
+import { LangButton } from "./components/LangButton";
+import { useTraduction } from "./i18n/traduction";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -122,6 +124,7 @@ const GestionEnseignement = lazy(() => import("./pages/GestionEnseignement"));
 const EspaceParentEcole   = lazy(() => import("./pages/EspaceParentEcole"));
 const EspaceEnseignantEcole = lazy(() => import("./pages/EspaceEnseignantEcole"));
 const NotificationsMembreEcole = lazy(() => import("./pages/NotificationsMembreEcole"));
+const ParametresMembreEcole = lazy(() => import("./pages/ParametresMembreEcole"));
 const BibliothequeEcole    = lazy(() => import("./pages/BibliothequeEcole"));
 const GestionEntreprise   = lazy(() => import("./pages/GestionEntreprise"));
 const GestionNgo          = lazy(() => import("./pages/GestionNgo"));
@@ -211,6 +214,7 @@ function ZakaMuslimOnly() {
 
 function App() {
   const { lang, setLang, t } = useI18n();
+  const { tr } = useTraduction();
   const location = useLocation();
   const { pathname } = location;
   const [guideReady, setGuideReady] = useState(false);
@@ -337,7 +341,7 @@ function App() {
   const proBrand = useProBrand();
   const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
   // Parents et enseignants dans l'application de l'école : ni barre ni « Espace Pro »
-  const isEspaceMembreEcole = /^\/gestion-(ecole|madrasa)\/[^/]+\/(parent|enseignant|bibliotheque|notifications)/.test(pathname);
+  const isEspaceMembreEcole = /^\/gestion-(ecole|madrasa)\/[^/]+\/(parent|enseignant|bibliotheque|notifications|parametres)/.test(pathname);
   // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
   const [panneauProOuvert, setPanneauProOuvert] = useState(false);
   useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
@@ -525,7 +529,8 @@ function App() {
               {/* Droite : Cloche + Langue */}
               <div className="flex items-center gap-2 justify-end min-h-[44px] flex-shrink-0">
                 {isAccueilConnecte && <NotificationBell />}
-                {(!isLoggedIn || isHome) && (
+                {/* Choix de la langue : visiteurs seulement. Connecté, il est dans les Paramètres. */}
+                {!isLoggedIn && (
                   <div ref={langRef} className="relative">
                     <button
                       type="button"
@@ -715,6 +720,12 @@ function App() {
       {/* Main content - plein écran, chaque page gère son propre container.
           flex-1 colle le pied de page en bas de l'écran quand le contenu est
           court (pas de grand vide à traverser en scrollant pour l'atteindre). */}
+      {/* Sites publics : un seul bouton « Langue », en haut à droite */}
+      {isVitrineMode && (
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 12px", background: "white", borderBottom: "1px solid #f1f5f9" }}>
+          <LangButton />
+        </div>
+      )}
       <main className="w-full flex-1 flex flex-col" style={{ overflowX: 'clip' }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
@@ -843,6 +854,8 @@ function App() {
           <Route path="/gestion-madrasa/:tenantCode/bibliotheque" element={<BibliothequeEcole mode="madrasa" />} />
           <Route path="/gestion-ecole/:tenantCode/notifications"   element={<NotificationsMembreEcole mode="school" />} />
           <Route path="/gestion-madrasa/:tenantCode/notifications" element={<NotificationsMembreEcole mode="madrasa" />} />
+          <Route path="/gestion-ecole/:tenantCode/parametres"      element={<ParametresMembreEcole mode="school" />} />
+          <Route path="/gestion-madrasa/:tenantCode/parametres"    element={<ParametresMembreEcole mode="madrasa" />} />
           <Route path="/ecole/:tenantCode/espace-parent"   element={<VersAppEcole mode="school" page="parent" />} />
           <Route path="/ecole/:tenantCode/enseignant"      element={<VersAppEcole mode="school" page="enseignant" />} />
           <Route path="/ecole/:tenantCode/bibliotheque"    element={<VersAppEcole mode="school" page="bibliotheque" />} />
@@ -946,7 +959,7 @@ function App() {
           onClick={() => navigate(retourGestion.gestion)}
           style={{ position: "fixed", left: "max(16px, env(safe-area-inset-left, 0px))", bottom: "max(16px, env(safe-area-inset-bottom, 0px))", zIndex: 60, background: "#0f172a", color: "white", border: "2px solid rgba(255,255,255,0.85)", borderRadius: 999, padding: "10px 16px", cursor: "pointer", fontSize: 14, fontWeight: 700, boxShadow: "0 4px 16px rgba(0,0,0,0.35)", whiteSpace: "nowrap" }}
         >
-          ‹ Retour à la gestion
+          ‹ {tr("Retour à la gestion")}
         </button>
       )}
 

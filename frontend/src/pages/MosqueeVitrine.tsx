@@ -38,9 +38,9 @@ export default function MosqueeVitrine() {
       fetch(`${API}/api/pro-public/${apiType}/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setMosque(t.tenant);
-      else setError(tr(t.message || "Mosquée introuvable"));
+      else setError((t.message || "Mosquée introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError(tr("Impossible de charger la mosquée.")))
+    }).catch(() => setError(("Impossible de charger la mosquée.")))
       .finally(() => setLoading(false));
   }, [tenantCode, apiType]);
 
@@ -59,7 +59,7 @@ export default function MosqueeVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🕌</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Mosquée introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error && tr(error)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: EMERALD, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import LogoEtablissement from "../LogoEtablissement";
 import { MoftalMark } from "../GestionBrand";
 import InstallAppButton from "../InstallAppButton";
-import ChoixLangueEcole from "../ChoixLangueEcole";
 import { useTraduction } from "../../i18n/traduction";
 import { cheminAppEcole, droitsMembreEcole, type ModeEcole, type PageMembre } from "../../utils/appEcole";
 
@@ -36,6 +35,7 @@ export default function BarreAppMembre({ mode, tenantCode, nom, logoUrl, actif }
     { id: "enseignant", label: tr("🧑‍🏫 Mes cours"), visible: actif === "enseignant" || !!droits?.enseignant },
     { id: "bibliotheque", label: tr("📚 Bibliothèque"), visible: true },
     { id: "notifications", label: tr("🔔 Notifications"), visible: true },
+    { id: "parametres", label: tr("⚙️ Paramètres"), visible: true },
   ];
 
   return (
@@ -46,7 +46,6 @@ export default function BarreAppMembre({ mode, tenantCode, nom, logoUrl, actif }
             <LogoEtablissement src={logoUrl} name={nom || ""} type={mode} fontSize={18} />
           </div>
           <p style={{ flex: 1, minWidth: 0, margin: 0, fontWeight: 800, fontSize: 15, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nom}</p>
-          <ChoixLangueEcole compact />
           {nom && <InstallAppButton name={nom} logoUrl={logoUrl || undefined} themeColor={couleur} color={couleur} />}
         </div>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 0" }}>

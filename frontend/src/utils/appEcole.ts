@@ -3,7 +3,7 @@ import { config } from "../config/api";
 // Pages des membres dans l'application d'une école ou d'une madrasa
 // (/gestion-ecole/:code/parent…) — jamais sur son site vitrine.
 export type ModeEcole = "school" | "madrasa";
-export type PageMembre = "parent" | "enseignant" | "bibliotheque" | "notifications";
+export type PageMembre = "parent" | "enseignant" | "bibliotheque" | "notifications" | "parametres";
 
 export function cheminAppEcole(mode: ModeEcole, tenantCode: string, page?: PageMembre) {
   return `/gestion-${mode === "madrasa" ? "madrasa" : "ecole"}/${tenantCode}${page ? `/${page}` : ""}`;

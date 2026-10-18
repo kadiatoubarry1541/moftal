@@ -44,9 +44,9 @@ export default function MadrasaVitrine() {
       fetch(`${API}/api/pro-public/madrasa/${code}/data`).then(r => r.json()),
     ]).then(([t, d]) => {
       if (t.success) setMadrasa(t.tenant);
-      else setError(tr(t.message || "Madrasa introuvable"));
+      else setError((t.message || "Madrasa introuvable"));
       if (d.success) setData(d);
-    }).catch(() => setError(tr("Impossible de charger la madrasa.")))
+    }).catch(() => setError(("Impossible de charger la madrasa.")))
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -68,7 +68,7 @@ export default function MadrasaVitrine() {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🕌</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Madrasa introuvable")}</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error}</p>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{error && tr(error)}</p>
         <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>

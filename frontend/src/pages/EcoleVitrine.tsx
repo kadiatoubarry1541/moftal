@@ -7,7 +7,6 @@ import EcrireAuSite from "../components/EcrireAuSite";
 import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
-import ChoixLangueEcole from "../components/ChoixLangueEcole";
 import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
@@ -152,8 +151,6 @@ export default function EcoleVitrine() {
               <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{school.name}</div>
               <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("École")}</div>
             </div>
-            {/* À côté du nom : toujours visible, même sur téléphone (les liens, eux, défilent) */}
-            <ChoixLangueEcole compact />
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             {[["Accueil","hero"],...(photos.length ? [["Photos","photos"]] : []),["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (

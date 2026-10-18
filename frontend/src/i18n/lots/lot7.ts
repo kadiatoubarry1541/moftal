@@ -9,5 +9,8 @@ const lot: Lot = {
   "Impossible de charger vos coordonnées.": ["Your contact details could not be loaded.", "تعذّر تحميل بيانات الاتصال الخاصة بك.", "Aw ka kunnafoni sirilenw ma se ka doni.", "Kabaruuji jokkol mon mbaawaa loowede."],
   "Rien n'a été publié. Réessayez.": ["Nothing was published. Try again.", "لم يُنشر أي شيء. أعد المحاولة.", "Foyi ma bɔ. A kɛ tugun.", "Alaa ko yaltinaa. Fuɗɗito."],
   "Pas de connexion : rien n'a été publié. Réessayez.": ["No connection: nothing was published. Try again.", "لا يوجد اتصال: لم يُنشر أي شيء. أعد المحاولة.", "Siri tɛ : foyi ma bɔ. A kɛ tugun.", "Alaa jokkol : alaa ko yaltinaa. Fuɗɗito."],
+  "Retour à la gestion": ["Back to management", "العودة إلى الإدارة", "Segin ɲɛnabɔli la", "Rutto e jiiloondiral"],
+  "Langue d'affichage sur cet appareil": ["Display language on this device", "لغة العرض على هذا الجهاز", "Kan min bɛ jira nin minɛn kan", "Ɗemngal hollirteengal e ngal kaɓirgal"],
+  "⚙️ Paramètres": ["⚙️ Settings", "⚙️ الإعدادات", "⚙️ Paramɛtiriw", "⚙️ Teelte"],
 };
 export default lot;

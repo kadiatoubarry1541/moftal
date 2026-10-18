@@ -12,6 +12,7 @@ import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import ParametreLangue from "../components/ParametreLangue";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1040,6 +1041,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {tab === "settings" && (
         <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "flex", flexDirection: "column", gap: 16 }}>
           <TenantCodeCard code={tenantCode} />
+          <ParametreLangue />
           <div style={formBg}>
             <div style={{ fontWeight: 700, marginBottom: 12 }}>Logo</div>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>

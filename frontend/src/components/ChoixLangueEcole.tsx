@@ -2,7 +2,7 @@ import { useTraduction } from "../i18n/traduction";
 import { LANG_LABELS } from "../i18n/strings";
 import type { LangCode } from "../i18n/strings";
 
-// Choix de la langue dans les pages de l'école : les 5 langues de Moftal.
+// Les 5 langues de Moftal, côte à côte : utilisé dans les Paramètres (ParametreLangue).
 // Préférence de l'utilisateur, gardée dans le téléphone (comme le thème).
 export default function ChoixLangueEcole({ sombre = false, compact = false }: { sombre?: boolean; compact?: boolean }) {
   const { lang, setLang, tr } = useTraduction();
