@@ -5,8 +5,10 @@ import { config } from "../config/api";
 import { getSessionUser, getPhotoUrl } from "../utils/auth";
 import { compressImage } from "../utils/compressImage";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import ParametreLangue from "../components/ParametreLangue";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
@@ -16,7 +18,7 @@ import { cheminConnexion } from "../utils/connexionRetour";
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "dishes" | "tables" | "orders" | "staff" | "announcements";
+type Tab = "dashboard" | "dishes" | "tables" | "orders" | "staff" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtTime(d: string) { return d ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"; }
@@ -152,6 +154,7 @@ export default function GestionRestaurant() {
     { id: "orders",        label: "Commandes",    emoji: "📋" },
     { id: "staff",         label: "Équipe",       emoji: "👨‍🍳" },
     { id: "announcements", label: "Annonces",     emoji: "📢" },
+    { id: "settings",      label: "Paramètres",   emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" };
@@ -651,6 +654,15 @@ export default function GestionRestaurant() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* ── PARAMÈTRES : identifiant, langue, installer l'application, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
     </div>

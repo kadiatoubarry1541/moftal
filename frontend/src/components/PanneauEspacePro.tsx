@@ -79,7 +79,7 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
   const { tr } = useTraduction();
   const { pathname } = useLocation();
   // Ces gestions ont leur page Paramètres, où se trouve l'abonnement
-  const abonnementDansParametres = /^\/gestion-(clinique|commerce|ecole|ecole-v1|madrasa|madrasa-v2|mairie)\//.test(pathname);
+  const abonnementDansParametres = /^\/gestion-(clinique|commerce|ecole|ecole-v1|madrasa|madrasa-v2|mairie|restaurant)\//.test(pathname);
   const [voirAbonnement, setVoirAbonnement] = useState(false);
   const [voirMessages, setVoirMessages] = useState(vueInitiale === "messages");
   const [voirPhotos, setVoirPhotos] = useState(false);
