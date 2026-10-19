@@ -617,21 +617,17 @@ router.get('/admin/products', async (req, res) => {
 });
 
 // @route   DELETE /api/exchange/products/:id
-// @desc    Retirer une publication de l'Échange : l'admin (tous les produits, ex. un
-//          produit qu'il ne veut pas laisser) ou celui qui l'a publiée (plus disponible).
+// @desc    Retirer une publication de l'Échange — uniquement depuis l'espace admin.
 //          La publication est masquée (is_active = false) : les commandes passées gardent leur historique.
-// @access  Authentifié + Admin ou auteur de la publication
+// @access  Authentifié + Admin
 router.delete('/products/:id', async (req, res) => {
   try {
-    const user = req.user;
+    if (!isGlobalAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé. Admin requis.' });
+    }
     const product = await ExchangeProduct.findByPk(req.params.id);
     if (!product || product.isActive === false) {
       return res.status(404).json({ success: false, message: 'Publication introuvable.' });
-    }
-    const moi = user?.numeroH || req.userId;
-    const estAuteur = !!moi && (product.numeroH === moi || product.createdBy === moi);
-    if (!isGlobalAdmin(user) && !estAuteur) {
-      return res.status(403).json({ success: false, message: 'Seuls l\'administrateur et l\'auteur de la publication peuvent la supprimer.' });
     }
 
     await product.update({ isActive: false, isAvailable: false });

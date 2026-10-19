@@ -4,7 +4,7 @@ import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
 import PaymentModal from './PaymentModal';
 import { useI18n } from '../i18n/useI18n';
-import { CommanderProduitModal, CommandesRecues, MesCommandes, SupprimerProduitBouton } from './CommanderProduit';
+import { CommanderProduitModal, CommandesRecues, MesCommandes } from './CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
@@ -333,8 +333,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                         <span className="mt-2 block w-full text-center py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold">{tr("🛒 Commander")}</span>
                       </div>
                     </button>
-                    <SupprimerProduitBouton product={product} className="mt-1.5 w-full !py-1.5 !text-xs !rounded-lg"
-                      onSupprime={(id) => setProductsBySection(prev => ({ ...prev, [section.id]: (prev[section.id] || []).filter(p => p.id !== id) }))} />
                     </div>
                   ))}
                 </div>
