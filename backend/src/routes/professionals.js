@@ -944,9 +944,9 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
         message: 'Vous ne pouvez approuver que les comptes de votre secteur (santé, éducation ou échanges).'
       });
     }
-    // Seul un compte en attente peut être approuvé (pas de ré-approbation d'un
-    // compte refusé / déjà approuvé, qui relancerait l'essai gratuit).
-    if (account.status !== 'pending') {
+    // Un compte en attente, ou rejeté par erreur, peut être approuvé (jamais un
+    // compte déjà approuvé, qui relancerait l'essai gratuit).
+    if (account.status !== 'pending' && account.status !== 'rejected') {
       return res.status(409).json({ success: false, message: `Ce compte n'est pas en attente (statut : ${account.status}).` });
     }
     // Un admin de secteur ne valide jamais son propre compte
@@ -954,7 +954,14 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous ne pouvez pas approuver votre propre compte.' });
     }
 
-    await finalizeApproval(account, req.userId);
+    if (account.status === 'rejected' && account.approvedAt) {
+      // Déjà approuvé une fois puis rejeté : on rétablit le compte sans relancer
+      // l'essai gratuit (l'abonnement garde ses dates).
+      await account.update({ status: 'approved', approvedBy: req.userId, rejectionReason: null });
+    } else {
+      if (account.status === 'rejected') await account.update({ rejectionReason: null });
+      await finalizeApproval(account, req.userId);
+    }
 
     // Notifier le propriétaire
     const typeLabels = {

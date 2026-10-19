@@ -1462,7 +1462,19 @@ export default function AdminDashboard() {
                             </>
                           );
                         })()}
-                        {pro.status === "rejected" && <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full">Rejeté</span>}
+                        {pro.status === "rejected" && (
+                          <>
+                            <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full">Rejeté</span>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Approuver le compte "${pro.name}" (rejeté par erreur) ?`)) handleApprove(pro.id);
+                              }}
+                              className="min-h-[40px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              ✓ Approuver
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => handleDeletePro(pro.id, pro.name)}
                           className="min-h-[36px] px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-lg transition-colors"
