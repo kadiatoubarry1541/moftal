@@ -9,6 +9,7 @@ const COULEUR_SECTEUR: Record<string, string> = {
   clinic: "#1a8f1a", health_worker: "#1a8f1a", school: "#1a8f1a", madrasa: "#0891b2",
   mosque: "#1a8f1a", ngo: "#e11d48", enterprise: "#4f46e5", restaurant: "#ea580c",
   transport: "#1d4ed8", beauty: "#db2777", artisan: "#d97706", security_agency: "#475569",
+  lawyer: "#7f1d1d", legal_advisor: "#7f1d1d",
   mairie: "#1d4ed8", scientist: "#4338ca", commerce: "#d97706", journalist: "#dc2626",
   supplier: "#0e7490", vendor: "#0891b2", reseau: "#2563eb", broker: "#b45309", producer: "#7c3aed",
 };

@@ -128,12 +128,12 @@ function withValidation(account) {
  * pour pouvoir publier (voir exchange.js / PRIX_VENDEUR_ECHANGE).
  */
 export async function finalizeApproval(account, approverUserId) {
-  const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
+  const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency', 'lawyer', 'legal_advisor'];
   let tenantCode = account.tenant_code || null;
   // Formule « Visibilité + Rendez-vous » : pas de gestion interne ni de site client
   // (sauf Gestion Interne payée à part) → aucun établissement créé.
   if (mgmtTypes.includes(account.type) && !tenantCode && await compteAGestionInterne(account)) {
-    const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
+    const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU', lawyer: 'AVOC', legal_advisor: 'JURI' };
     const prefix = prefixMap[account.type] || 'PRO';
     tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
     await sequelize.query(
@@ -218,7 +218,7 @@ router.post('/register', authenticate, async (req, res) => {
     const validTypes = [
       'clinic', 'health_worker', 'security_agency', 'journalist', 'enterprise', 'school',
       'supplier', 'scientist', 'ngo', 'vendor', 'producer', 'broker', 'restaurant',
-      'transport', 'beauty', 'artisan', 'mairie', 'mosque', 'madrasa', 'commerce', 'reseau'
+      'transport', 'beauty', 'artisan', 'mairie', 'mosque', 'madrasa', 'commerce', 'reseau', 'lawyer', 'legal_advisor'
     ];
     if (!validTypes.includes(type)) {
       return res.status(400).json({ success: false, message: 'Type invalide' });
@@ -403,6 +403,7 @@ router.get('/pro-manifest/:id', async (req, res) => {
       enterprise: '#f59e0b', restaurant: '#f97316',
       transport: '#3b82f6', beauty: '#d946ef',
       artisan: '#57534e', security_agency: '#334155',
+      lawyer: '#7f1d1d', legal_advisor: '#7f1d1d',
       mairie: '#1e40af', scientist: '#4f46e5',
       commerce: '#06b6d4', journalist: '#06b6d4',
       supplier: '#06b6d4', vendor: '#06b6d4', reseau: '#06b6d4',
@@ -492,6 +493,7 @@ const TENANT_ICON_COLORS = {
   clinic: '#1a8f1a', health_worker: '#1a8f1a', school: '#1a8f1a', madrasa: '#0891b2',
   mosque: '#1a8f1a', ngo: '#e11d48', enterprise: '#4f46e5', restaurant: '#ea580c',
   transport: '#1d4ed8', beauty: '#db2777', artisan: '#d97706', security_agency: '#475569',
+  lawyer: '#7f1d1d', legal_advisor: '#7f1d1d',
   mairie: '#1d4ed8', scientist: '#4338ca', commerce: '#d97706', journalist: '#dc2626',
   supplier: '#0e7490', vendor: '#0891b2', reseau: '#2563eb', broker: '#b45309', producer: '#7c3aed',
 };
@@ -638,6 +640,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       enterprise: '#f59e0b', restaurant: '#f97316',
       transport: '#3b82f6', beauty: '#d946ef',
       artisan: '#57534e', security_agency: '#334155',
+      lawyer: '#7f1d1d', legal_advisor: '#7f1d1d',
       mairie: '#1e40af', scientist: '#4f46e5',
       commerce: '#06b6d4', journalist: '#06b6d4',
       supplier: '#06b6d4', vendor: '#06b6d4', reseau: '#06b6d4',
@@ -741,7 +744,7 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
       });
     }
 
-    const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', immobilier:'IMMO', reseau:'RESEAU' };
+    const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', lawyer:'AVOC', legal_advisor:'JURI', immobilier:'IMMO', reseau:'RESEAU' };
     const prefix = prefixMap[account.type] || 'PRO';
     const tenantCode = account.tenant_code || `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
 
@@ -957,6 +960,8 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
     const typeLabels = {
       clinic: 'Clinique/Hôpital',
       security_agency: 'Agence de sécurité',
+      lawyer: 'Avocat / Cabinet d\'avocats',
+      legal_advisor: 'Cabinet de conseil juridique',
       journalist: 'Journaliste',
       enterprise: 'Entreprise',
       school: 'École/Professeur',
@@ -1023,9 +1028,9 @@ router.post('/admin/subscription/:id', authenticate, requireAdmin, async (req, r
 
     // Créer le tenant_code et l'entrée management si manquant lors d'une activation
     if (status === 'active' && !account.tenant_code) {
-      const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
+      const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency', 'lawyer', 'legal_advisor'];
       if (mgmtTypes.includes(account.type)) {
-        const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
+        const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU', lawyer: 'AVOC', legal_advisor: 'JURI' };
         const prefix = prefixMap[account.type] || 'PRO';
         const newTenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
         await sequelize.query(

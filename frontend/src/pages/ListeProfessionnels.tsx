@@ -39,6 +39,8 @@ const TYPES = [
   { id: "transport", label: "Transport", icon: "🚗" },
   { id: "beauty", label: "Beauté", icon: "💈" },
   { id: "artisan", label: "Artisanat", icon: "🔧" },
+  { id: "lawyer", label: "Avocats", icon: "⚖️" },
+  { id: "legal_advisor", label: "Conseil juridique", icon: "📜" },
   { id: "mairie",  label: "Mairie",    icon: "🏛️" },
 ];
 

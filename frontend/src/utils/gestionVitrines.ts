@@ -22,6 +22,8 @@ export const GESTION_VITRINE_PATHS: Record<string, string> = {
   producer: 'producteur',
   beauty: 'beaute-vitrine',
   artisan: 'artisan',
+  lawyer: 'juridique-vitrine',
+  legal_advisor: 'juridique-vitrine',
 };
 
 // Chemin de gestion (/gestion-xxx/CODE) → chemin de son site vitrine
@@ -51,6 +53,7 @@ const GESTION_ROUTE_VERS_VITRINE: Record<string, string> = {
   'gestion-producer': 'producteur',
   'gestion-beauty': 'beaute-vitrine',
   'gestion-artisan': 'artisan',
+  'gestion-juridique': 'juridique-vitrine',
 };
 
 export function cheminVitrineDepuisGestion(pathname: string): string | null {

@@ -342,6 +342,7 @@ const pul: Record<string, string> = {
   'services.cat_restaurant': 'Nokkuuji ñaamdu',
   'services.cat_transport': 'Yahdu',
   'services.cat_beaute': 'Bonɗe',
+  'services.cat_juridique': 'Sariya',
   'services.cat_artisanat': 'Golle juuɗe',
   'services.cat_reseau': 'Jokkondire',
   'services.cat_vendeurs': 'Sooneeɓe',

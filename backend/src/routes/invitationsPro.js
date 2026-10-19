@@ -15,7 +15,7 @@ const router = express.Router();
 const TYPES = [
   'clinic', 'health_worker', 'security_agency', 'journalist', 'enterprise', 'school',
   'supplier', 'scientist', 'ngo', 'vendor', 'producer', 'broker', 'restaurant',
-  'transport', 'beauty', 'artisan', 'mairie', 'mosque', 'madrasa', 'commerce', 'reseau'
+  'transport', 'beauty', 'artisan', 'mairie', 'mosque', 'madrasa', 'commerce', 'reseau', 'lawyer', 'legal_advisor'
 ];
 const TYPES_ECHANGES = ['vendor', 'supplier', 'producer'];
 

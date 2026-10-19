@@ -25,6 +25,7 @@ const GESTION_PAR_TYPE = {
   supplier: 'gestion-fournisseur', security_agency: 'gestion-securite', broker: 'gestion-immobilier',
   restaurant: 'gestion-restaurant', transport: 'gestion-transport', mairie: 'gestion-mairie', vendor: 'gestion-vendeur',
   producer: 'gestion-producer', beauty: 'gestion-beauty', artisan: 'gestion-artisan',
+  lawyer: 'gestion-juridique', legal_advisor: 'gestion-juridique',
 };
 
 let tablePrete = null;
@@ -187,6 +188,7 @@ siteMgmtRouter.put('/:tenantCode/coordonnees', authenticate, verifyTenant, async
 // sur le site. La table vient du secteur de l'établissement (jamais du client).
 const TABLE_ARTICLES = {
   artisan: 'artisan_services', beauty: 'beauty_services', producer: 'producer_products',
+  lawyer: 'juridique_services', legal_advisor: 'juridique_services',
   vendor: 'retailer_products', retailer: 'retailer_products', supplier: 'supplier_products',
   broker: 'immo_properties', immobilier: 'immo_properties',
 };

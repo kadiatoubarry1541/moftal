@@ -64,6 +64,7 @@ import supplierMgmtRoutes  from './routes/supplier-management.js';
 import securityMgmtRoutes  from './routes/security-management.js';
 import retailerMgmtRoutes  from './routes/retailer-management.js';
 import beautyMgmtRoutes    from './routes/beauty-management.js';
+import juridiqueMgmtRoutes, { remplirExempleJuridique } from './routes/juridique-management.js';
 import artisanMgmtRoutes   from './routes/artisan-management.js';
 import producerMgmtRoutes  from './routes/producer-management.js';
 import reseauMgmtRoutes      from './routes/reseau-management.js';
@@ -1820,6 +1821,9 @@ async function initAllTables() {
     // à l'origine ne contenait que pending/success/failed/cancelled — un paiement réussi
     // ne pouvait donc jamais être enregistré comme complété (erreur silencieuse).
     await sequelize.query(`ALTER TYPE "enum_payments_status" ADD VALUE IF NOT EXISTS 'completed';`).catch(() => {});
+    // Secteur Juridique (avocats, conseil juridique) : nouveaux types de compte pro
+    await sequelize.query(`ALTER TYPE "enum_professional_accounts_type" ADD VALUE IF NOT EXISTS 'lawyer';`).catch(() => {});
+    await sequelize.query(`ALTER TYPE "enum_professional_accounts_type" ADD VALUE IF NOT EXISTS 'legal_advisor';`).catch(() => {});
     // gatewayRef : utilisé par le code (Djomy) pour retrouver un paiement depuis
     // le webhook, mais absent de la table créée à l'origine — le webhook ne retrouvait donc
     // jamais le paiement et ne débloquait jamais ce que le client venait de payer.
@@ -2579,6 +2583,7 @@ async function initAllTables() {
       { code: 'DEMO-REF-RESTO', type: 'restaurant',      name: 'Restaurant Référence Admin' },
       { code: 'DEMO-REF-TRANS', type: 'transport',       name: 'Transport Référence Admin' },
       { code: 'DEMO-REF-MAIR',  type: 'mairie',          name: 'Mairie Référence Admin' },
+      { code: 'DEMO-REF-JURI',  type: 'lawyer',          name: 'Cabinet Juridique Référence Admin' },
     ];
     for (const t of DEMO_TENANTS) {
       await sequelize.query(
@@ -2589,6 +2594,8 @@ async function initAllTables() {
       ).catch(() => {});
     }
     console.log('✅ Tenants DEMO seedés dans management_tenants');
+    // Exemples du cabinet juridique de référence (une seule fois)
+    await remplirExempleJuridique().catch((e) => console.warn('⚠️ exemple juridique :', e.message));
   } catch (err) {
     console.warn('⚠️ initAllTables [demo-seed]:', err.message);
   }
@@ -2890,6 +2897,7 @@ app.use('/api/supplier-mgmt',  supplierMgmtRoutes);
 app.use('/api/security-mgmt',  securityMgmtRoutes);
 app.use('/api/retailer-mgmt',  retailerMgmtRoutes);
 app.use('/api/beauty-mgmt',    beautyMgmtRoutes);
+app.use('/api/juridique-mgmt', juridiqueMgmtRoutes);
 app.use('/api/artisan-mgmt',   artisanMgmtRoutes);
 app.use('/api/producer-mgmt',  producerMgmtRoutes);
 app.use('/api/reseau-mgmt',      reseauMgmtRoutes);

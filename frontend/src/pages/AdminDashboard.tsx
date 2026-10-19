@@ -138,6 +138,7 @@ export default function AdminDashboard() {
     | "/echange/tertiaire"
     | "/echange/tertiaire/demarcheurs"
     | "/securite"
+    | "/juridique"
     | "/journalisme"
   >("/sante");
   const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
@@ -517,6 +518,7 @@ export default function AdminDashboard() {
           "/echange/tertiaire",
           "/echange/tertiaire/demarcheurs",
           "/securite",
+          "/juridique",
           "/journalisme",
         ];
         setPageAdmins(
@@ -548,6 +550,7 @@ export default function AdminDashboard() {
       "/echange/tertiaire": "Échanges - Tertiaire",
       "/echange/tertiaire/demarcheurs": "Échanges - Tertiaire (Démarcheurs)",
       "/securite": "Sécurité",
+      "/juridique": "Juridique",
       "/journalisme": "Journalisme",
     };
     try {
@@ -605,6 +608,8 @@ export default function AdminDashboard() {
     broker: { label: "Démarcheur / Location", icon: "🏘️" },
     scientist: { label: "Scientifique/Chercheur", icon: "🔬" },
     moftal_vendor: { label: "Vendeur Échange", icon: "🛍️" },
+    lawyer: { label: "Avocat / Cabinet", icon: "⚖️" },
+    legal_advisor: { label: "Conseil juridique", icon: "📜" },
   };
 
   const SECTEUR_LABELS: Record<string, string> = {
@@ -660,6 +665,7 @@ export default function AdminDashboard() {
     { id: "all",        label: "Tous",       icon: "🌐", types: [] as string[], from: "from-gray-600",   to: "to-gray-700"   },
     { id: "sante",      label: "Santé",      icon: "🏥", types: ["clinic"],                              from: "from-emerald-600", to: "to-teal-600"  },
     { id: "securite",   label: "Sécurité",   icon: "🛡️", types: ["security_agency"],                    from: "from-slate-600",   to: "to-gray-700"  },
+    { id: "juridique",  label: "Juridique",  icon: "⚖️", types: ["lawyer", "legal_advisor"],             from: "from-red-900",     to: "to-amber-700" },
     { id: "education",  label: "Éducation",  icon: "🎓", types: ["school", "enterprise"],               from: "from-amber-500",   to: "to-orange-500"},
     { id: "science",    label: "Science",    icon: "🔬", types: ["scientist"],                           from: "from-indigo-600",  to: "to-violet-600"},
     { id: "solidarite", label: "Solidarité", icon: "🤝", types: ["ngo"],                                from: "from-rose-500",    to: "to-pink-600"  },
@@ -1161,6 +1167,8 @@ export default function AdminDashboard() {
                     { type: "transport",        icon: "🚗", label: "Transport & Livraison",       service: "Échanges",    dashboard: true,  gestionInterne: false },
                     { type: "beauty",           icon: "💈", label: "Beauté & Bien-être",          service: "Échanges",    dashboard: true,  gestionInterne: false },
                     { type: "artisan",          icon: "🔧", label: "Artisanat & Services",        service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "lawyer",           icon: "⚖️", label: "Avocat / Cabinet d'avocats",  service: "Juridique",   dashboard: true,  gestionInterne: true  },
+                    { type: "legal_advisor",    icon: "📜", label: "Cabinet de conseil juridique", service: "Juridique",  dashboard: true,  gestionInterne: true  },
                   ].map(t => {
                     const total    = allPros.filter(p => p.type === t.type).length;
                     const pending  = allPros.filter(p => p.type === t.type && p.status === "pending").length;
@@ -1654,6 +1662,12 @@ export default function AdminDashboard() {
                   stats: [{ l: "Total", v: "8", c: "text-gray-700" }, { l: "En attente", v: "2", c: "text-orange-500" }, { l: "Acceptés", v: "5", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
                 },
                 {
+                  icon: "⚖️", label: "Juridique", subtitle: "Types : lawyer · legal_advisor — Avocats · Cabinets de conseil juridique",
+                  from: "from-red-900", to: "to-amber-700", bg: "bg-red-50", border: "border-red-200",
+                  sampleService: "Consultation pour un litige foncier", sampleType: "Rendez-vous de consultation",
+                  stats: [{ l: "Total", v: "6", c: "text-gray-700" }, { l: "En attente", v: "2", c: "text-orange-500" }, { l: "Acceptés", v: "4", c: "text-green-600" }, { l: "Refusés", v: "0", c: "text-red-500" }],
+                },
+                {
                   icon: "🔧", label: "Artisanat & Services", subtitle: "Type : artisan — Plombiers · Électriciens · Menuisiers · Soudeurs",
                   from: "from-stone-500", to: "to-zinc-600", bg: "bg-stone-50", border: "border-stone-200",
                   sampleService: "Réparation fuite d'eau urgente", sampleType: "Demande d'intervention",
@@ -2133,6 +2147,37 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Référence Juridique (avocats, conseil juridique) — remplie d'exemples */}
+                  <div className="border border-red-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-red-900 to-amber-700 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">⚖️</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Cabinet Juridique Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-JURI</p>
+                      </div>
+                    </div>
+                    <div className="bg-red-50 px-5 py-3 text-sm text-red-900 border-b border-red-100">
+                      Dossiers · Rendez-vous · Clients · Prestations · Équipe · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Rempli d'exemples (dossiers, rendez-vous, clients, équipe) pour voir la gestion et le site d'un cabinet avec des données.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-juridique/DEMO-REF-JURI")}
+                          className="flex-1 py-2.5 bg-red-900 hover:bg-red-950 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/juridique-vitrine/DEMO-REF-JURI")}
+                          className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-900 border border-red-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
               </div>
             </div>
           )}
@@ -2173,6 +2218,7 @@ export default function AdminDashboard() {
                             | "/echange/tertiaire"
                             | "/echange/tertiaire/demarcheurs"
                             | "/securite"
+                            | "/juridique"
                             | "/journalisme"
                         )
                       }
@@ -2186,6 +2232,7 @@ export default function AdminDashboard() {
                       <option value="/echange/tertiaire">Échanges – Tertiaire</option>
                       <option value="/echange/tertiaire/demarcheurs">Échanges – Tertiaire (Démarcheurs)</option>
                       <option value="/securite">Sécurité</option>
+                      <option value="/juridique">Juridique</option>
                       <option value="/journalisme">Journalisme</option>
                     </select>
                   </div>

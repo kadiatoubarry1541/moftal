@@ -99,6 +99,8 @@ async function fixProEnum() {
       'mairie',
       'reseau',
       'moftal_vendor',
+      'lawyer',
+      'legal_advisor',
     ];
 
     /* ── 5. Ajouter les valeurs manquantes ── */

@@ -459,6 +459,7 @@ export default function GestionInterne() {
       { type: "producer",        label: "Entreprise de Production",    emoji: "🏭", gradient: "linear-gradient(135deg,#5b21b6,#7c3aed)",   border: "#ddd6fe", bgLight: "#f5f3ff", textColor: "#3b0764", features: "Produits fabriqués · Lots · Commandes · Personnel",              demoCode: "DEMO-REF-PROD",  path: "gestion-producer",     btn: "#7c3aed", btnH: "#6d28d9" },
       { type: "beauty",          label: "Beauté & Bien-être",          emoji: "💈", gradient: "linear-gradient(135deg,#be185d,#db2777)",   border: "#fbcfe8", bgLight: "#fdf2f8", textColor: "#831843", features: "Services · Rendez-vous · Personnel · Clients · Caisse du jour",  demoCode: "DEMO-REF-BEAU",  path: "gestion-beauty",       btn: "#db2777", btnH: "#be185d" },
       { type: "artisan",         label: "Artisanat & Services",        emoji: "🔧", gradient: "linear-gradient(135deg,#92400e,#d97706)",   border: "#fde68a", bgLight: "#fffbeb", textColor: "#78350f", features: "Interventions · Services · Devis · Clients · Annonces",          demoCode: "DEMO-REF-ARTI",  path: "gestion-artisan",      btn: "#d97706", btnH: "#b45309" },
+      { type: "lawyer",          label: "Juridique (Avocats, Conseil)", emoji: "⚖️", gradient: "linear-gradient(135deg,#7f1d1d,#b45309)",   border: "#fecaca", bgLight: "#fef2f2", textColor: "#7f1d1d", features: "Rendez-vous · Dossiers · Clients · Équipe · Prestations",        demoCode: "DEMO-REF-JURI",  path: "gestion-juridique",    btn: "#7f1d1d", btnH: "#991b1b" },
     ];
 
     return (

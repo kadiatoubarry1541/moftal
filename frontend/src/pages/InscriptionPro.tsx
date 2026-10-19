@@ -26,6 +26,8 @@ const PRO_TYPES = [
   { id: "transport",       label: "Transport & Livraison",           icon: "🚗", desc: "Taxi, moto, camion ou livraison à domicile" },
   { id: "beauty",          label: "Beauté & Bien-être",              icon: "💈", desc: "Salon de coiffure, spa, institut de beauté" },
   { id: "artisan",         label: "Artisanat & Services",            icon: "🔧", desc: "Plombier, électricien, menuisier, soudeur, maçon" },
+  { id: "lawyer",          label: "Avocat / Cabinet d'avocats",      icon: "⚖️", desc: "Rendez-vous de consultation, dossiers et clients de votre cabinet" },
+  { id: "legal_advisor",   label: "Cabinet de conseil juridique",    icon: "📜", desc: "Contrats, création d'entreprise, démarches — recevez vos clients" },
   { id: "mairie",          label: "Mairie / État Civil",             icon: "🏛️", desc: "Gérez les mariages, naissances, décès et certificats de résidence" },
   { id: "reseau",          label: "Association / Réseau",            icon: "🌐", desc: "Association, comité, groupe communautaire — membres, projets, cotisations" },
 ];
@@ -37,6 +39,7 @@ const LOGO_COLORS: Record<string, string> = {
   enterprise: "#4f46e5", restaurant: "#ea580c", vendor: "#0891b2", supplier: "#0e7490",
   producer: "#7c3aed", broker: "#b45309", scientist: "#4338ca", ngo: "#e11d48",
   transport: "#1d4ed8", beauty: "#db2777", artisan: "#d97706", mairie: "#1d4ed8", reseau: "#2563eb",
+  lawyer: "#7f1d1d", legal_advisor: "#7f1d1d",
 };
 
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
@@ -99,6 +102,14 @@ const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
   beauty: {
     expect: "Nous attendons que vous proposiez vos services de beauté (coiffure, soins, maquillage, massage, spa) avec vos tarifs, vos horaires et vos disponibilités pour les rendez-vous.",
     page: "Vous serez visible sur la page **Beauté & Bien-être** : les clients pourront voir votre catalogue de soins et prendre rendez-vous directement depuis votre espace.",
+  },
+  lawyer: {
+    expect: "Nous attendons que vous soyez avocat inscrit au Barreau, que vous présentiez vos domaines d'intervention et que vous acceptiez les demandes de rendez-vous de consultation.",
+    page: "Vous serez visible sur la page **Juridique** : les clients pourront trouver votre cabinet par ville et par domaine, et prendre rendez-vous directement.",
+  },
+  legal_advisor: {
+    expect: "Nous attendons que vous présentiez vos services de conseil juridique (contrats, création d'entreprise, démarches) avec vos horaires, et que vous acceptiez les demandes de rendez-vous.",
+    page: "Vous serez visible sur la page **Juridique** (section Conseil juridique) : les clients pourront trouver votre cabinet et prendre rendez-vous directement.",
   },
   artisan: {
     expect: "Nous attendons que vous proposiez vos services artisanaux (plomberie, électricité, menuiserie, maçonnerie, soudure…) avec votre zone d'intervention, vos tarifs et vos disponibilités.",
@@ -193,6 +204,8 @@ export default function InscriptionPro() {
       case "transport": return "Ex: Taxi, Moto, Livraison à domicile";
       case "beauty": return "Ex: Coiffure, Soins du visage, Massage";
       case "artisan": return "Ex: Plomberie, Électricité, Menuiserie";
+      case "lawyer": return "Ex: Consultation, Assistance devant le tribunal, Rédaction d'actes";
+      case "legal_advisor": return "Ex: Rédaction de contrats, Création d'entreprise, Recouvrement";
       default: return "Ex: Services proposés...";
     }
   };
@@ -204,6 +217,8 @@ export default function InscriptionPro() {
       case "clinic": return "Ex: Cardiologie, Pédiatrie, Gynécologie, Neurologie";
       case "school": return "Ex: Mathématiques, Sciences, Langues, Sport";
       case "scientist": return "Ex: Biologie, Chimie, Physique, Informatique";
+      case "lawyer": return "Ex: Droit foncier, Droit de la famille, Droit des affaires, Pénal";
+      case "legal_advisor": return "Ex: Droit des affaires, Droit du travail, Fiscalité";
       default: return "Ex: Spécialités...";
     }
   };
@@ -228,10 +243,10 @@ export default function InscriptionPro() {
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
 
   // Inscription simple partout, sauf pour les domaines très suivis par l'État
-  // (santé, sécurité, éducation) qui gardent un justificatif obligatoire dès
-  // le départ. Pour tous les autres types, le compte se crée facilement et
-  // le profil peut être complété plus tard.
-  const REQUIRES_JUSTIFICATIF = ["clinic", "health_worker", "school", "madrasa", "security_agency"];
+  // (santé, sécurité, éducation) et du juridique (contre les faux cabinets), qui
+  // gardent un justificatif obligatoire dès le départ. Pour tous les autres
+  // types, le compte se crée facilement et le profil peut être complété plus tard.
+  const REQUIRES_JUSTIFICATIF = ["clinic", "health_worker", "school", "madrasa", "security_agency", "lawyer", "legal_advisor"];
 
   // Champs spécifiques restaurant
   const [cuisineType, setCuisineType] = useState("");
@@ -822,6 +837,10 @@ export default function InscriptionPro() {
                   ? "Document officiel attestant votre fonction. PDF ou image. Max 10 Mo."
                   : selectedType === "security_agency"
                   ? "Agrément de sécurité, carte professionnelle ou autorisation. PDF ou image. Max 10 Mo."
+                  : selectedType === "lawyer"
+                  ? "Carte professionnelle d'avocat ou attestation d'inscription au Barreau. PDF ou image. Max 10 Mo."
+                  : selectedType === "legal_advisor"
+                  ? "Registre du commerce ou statuts du cabinet. PDF ou image. Max 10 Mo."
                   : selectedType === "ngo"
                   ? "Récépissé d'enregistrement de l'ONG ou association. PDF ou image. Max 10 Mo."
                   : selectedType === "restaurant"
