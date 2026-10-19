@@ -335,7 +335,7 @@ export default function AdminDashboard() {
   };
 
   const deleteExchangeProduct = async (productId: string) => {
-    if (!window.confirm("Supprimer définitivement cette publication ?")) return;
+    if (!window.confirm("Supprimer cette publication ? Elle ne sera plus visible dans l'Échange.")) return;
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_BASE}/api/exchange/products/${productId}`, {

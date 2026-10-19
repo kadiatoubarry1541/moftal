@@ -6,7 +6,7 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { useI18n } from '../i18n/useI18n';
-import { CommanderProduitModal, SupprimerProduitBouton } from '../components/CommanderProduit';
+import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 
 interface UserData {
@@ -736,7 +736,6 @@ export default function EchangeNourriture() {
                   >
                     {tr("🛒 Commander")}
                   </button>
-                  <SupprimerProduitBouton product={product} onSupprime={(id) => setRawProducts(ps => ps.filter(p => p.id !== id))} />
                   <button
                     onClick={() => setLikedProducts(prev => {
                       const next = new Set(prev);

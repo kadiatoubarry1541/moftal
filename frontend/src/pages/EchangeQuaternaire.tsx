@@ -7,7 +7,7 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
-import { CommanderProduitModal, SupprimerProduitBouton } from '../components/CommanderProduit';
+import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
@@ -576,7 +576,6 @@ export default function EchangeQuaternaire() {
                   className="flex-1 py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium text-sm transition-colors">
                   {tr("🛒 Commander")}
                 </button>
-                  <SupprimerProduitBouton product={product} onSupprime={(id) => setRawProducts(ps => ps.filter(p => p.id !== id))} />
                 </div>
               </div>
             </div>
