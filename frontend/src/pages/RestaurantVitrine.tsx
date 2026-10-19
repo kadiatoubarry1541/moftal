@@ -255,7 +255,7 @@ export default function RestaurantVitrine() {
               {filtered.map((d: any, i: number) => (
                 <div key={i} className="dish-card" style={{ background: "white", borderRadius: 16, padding: "20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
                   {d.image_url ? (
-                    <div style={{ margin: "-20px -20px 14px", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#f1f5f9" }}>
+                    <div style={{ margin: "-20px -20px 14px", width: "calc(100% + 40px)", maxWidth: "none", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#f1f5f9" }}>
                       <img src={getPhotoUrl(d.image_url) || ""} alt={d.nom} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </div>
                   ) : (
