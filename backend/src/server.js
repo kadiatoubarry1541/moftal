@@ -64,7 +64,7 @@ import supplierMgmtRoutes  from './routes/supplier-management.js';
 import securityMgmtRoutes  from './routes/security-management.js';
 import retailerMgmtRoutes  from './routes/retailer-management.js';
 import beautyMgmtRoutes    from './routes/beauty-management.js';
-import juridiqueMgmtRoutes from './routes/juridique-management.js';
+import juridiqueMgmtRoutes, { remplirExempleJuridique } from './routes/juridique-management.js';
 import artisanMgmtRoutes   from './routes/artisan-management.js';
 import producerMgmtRoutes  from './routes/producer-management.js';
 import reseauMgmtRoutes      from './routes/reseau-management.js';
@@ -2594,6 +2594,8 @@ async function initAllTables() {
       ).catch(() => {});
     }
     console.log('✅ Tenants DEMO seedés dans management_tenants');
+    // Exemples du cabinet juridique de référence (une seule fois)
+    await remplirExempleJuridique().catch((e) => console.warn('⚠️ exemple juridique :', e.message));
   } catch (err) {
     console.warn('⚠️ initAllTables [demo-seed]:', err.message);
   }
