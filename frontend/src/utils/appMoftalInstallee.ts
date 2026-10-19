@@ -7,6 +7,10 @@
 const CLE_PLAY = "moftalAppPlay";       // { pkg, at } — app du Play Store ouverte récemment
 const CLE_SITE = "moftalAppSite";       // at — app installée depuis le site ouverte récemment
 const CLE_SESSION_PLAY = "moftalDansAppPlay";
+// Paquet de l'application Moftal du Play Store (public/.well-known/assetlinks.json).
+// Un lien ouvert depuis une AUTRE application (message, e-mail…) arrive aussi avec
+// un référent « android-app:// » : ce n'est pas Moftal, on l'ignore.
+const PAQUET_MOFTAL = /^com\.moftal\./;
 // Sans ouverture depuis 45 jours, on considère l'app supprimée (on peut réinstaller).
 const VALIDITE_MS = 45 * 24 * 3600 * 1000;
 
@@ -26,10 +30,10 @@ export function estEnModeApp() {
 export function noterLancementApp() {
   try {
     const ref = document.referrer || "";
-    if (ref.startsWith("android-app://")) {
-      // Ouverture depuis l'application du Play Store
+    const pkg = ref.startsWith("android-app://") ? ref.slice("android-app://".length).split("/")[0] : "";
+    if (PAQUET_MOFTAL.test(pkg)) {
+      // Ouverture depuis l'application Moftal du Play Store
       sessionStorage.setItem(CLE_SESSION_PLAY, "1");
-      const pkg = ref.slice("android-app://".length).split("/")[0];
       localStorage.setItem(CLE_PLAY, JSON.stringify({ pkg, at: Date.now() }));
     } else if (sessionStorage.getItem(CLE_SESSION_PLAY) === "1") {
       const p = lire<{ pkg: string }>(CLE_PLAY);
@@ -48,7 +52,8 @@ export function estDansAppPlay() {
 /** Nom du paquet de l'app Play Store si elle est installée sur ce téléphone, sinon null. */
 export function appPlayInstallee(): string | null {
   const p = lire<{ pkg: string; at: number }>(CLE_PLAY);
-  return p?.pkg && Date.now() - (p.at || 0) < VALIDITE_MS ? p.pkg : null;
+  // Une note laissée par une autre application (ancienne version) ne compte pas
+  return p?.pkg && PAQUET_MOFTAL.test(p.pkg) && Date.now() - (p.at || 0) < VALIDITE_MS ? p.pkg : null;
 }
 
 export function appSiteInstallee(): boolean {
