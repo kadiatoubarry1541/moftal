@@ -19,6 +19,9 @@ const TYPES_PAR_URL = {
   vendor:     ['vendor', 'retailer'],
   retailer:   ['vendor', 'retailer'],
   imam:       ['imam', 'mosque'],
+  // Juridique : avocats et cabinets de conseil juridique partagent le même site
+  // (/juridique-vitrine) ; chaque liste de la rubrique reste filtrée par son type.
+  juridique:     ['lawyer', 'legal_advisor'],
 };
 const typesEnBase = (type) => TYPES_PAR_URL[type] || [type];
 
@@ -311,6 +314,22 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q(`SELECT titre,contenu,type,created_at FROM beauty_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
         return res.json({ success: true, stats: { services: +(servCnt.c||0), clients: +(clientCnt.c||0), rendezvous: +(rdvCnt.c||0) }, services, announcements });
+      }
+
+      case 'juridique':
+      case 'lawyer':
+      case 'legal_advisor': {
+        // Prestations, équipe et annonces seulement : les dossiers ne sortent jamais de la gestion
+        const [servCnt, staffCnt, rdvCnt, services, announcements] = await Promise.all([
+          q1(`SELECT COUNT(*) as c FROM juridique_services WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM juridique_staff WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM juridique_bookings WHERE tenant_code=:code AND statut='termine'`, { code }),
+          q(`SELECT id,nom,categorie,prix,description,image_url,
+                    CASE WHEN duree_min > 0 THEN duree_min || ' min' END AS duree
+             FROM juridique_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT titre,contenu,type,created_at FROM juridique_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
+        ]);
+        return res.json({ success: true, stats: { services: +(servCnt.c||0), equipe: +(staffCnt.c||0), rendezvous: +(rdvCnt.c||0) }, services, announcements });
       }
 
       case 'artisan': {

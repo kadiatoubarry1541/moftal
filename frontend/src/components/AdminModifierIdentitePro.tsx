@@ -14,6 +14,7 @@ const LOGO_COLORS: Record<string, string> = {
   enterprise: "#4f46e5", restaurant: "#ea580c", vendor: "#0891b2", supplier: "#0e7490",
   producer: "#7c3aed", broker: "#b45309", scientist: "#4338ca", ngo: "#e11d48",
   transport: "#1d4ed8", beauty: "#db2777", artisan: "#d97706", mairie: "#1d4ed8", reseau: "#2563eb",
+  lawyer: "#7f1d1d", legal_advisor: "#7f1d1d",
 };
 
 interface ProIdentite { id: string; type: string; name: string; photo?: string | null }

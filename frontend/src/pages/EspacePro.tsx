@@ -85,6 +85,8 @@ const TYPE_TO_SERVICE: Record<string, string> = {
   madrasa:          "education",
   mosque:           "solidarite",
   commerce:         "echanges",
+  lawyer:           "juridique",
+  legal_advisor:    "juridique",
 };
 
 /* =============================================
@@ -272,6 +274,21 @@ const SERVICE_CONFIG: Record<string, ServiceCfg> = {
     ringColor: "ring-fuchsia-200 dark:ring-fuchsia-800",
     welcomeMsg: "Gérez vos rendez-vous beauté et soins",
   },
+  juridique: {
+    label: "Juridique",
+    icon: "⚖️",
+    bgGradient: "from-red-900 to-amber-700",
+    accentBorder: "border-red-800",
+    lightBg: "bg-red-50",
+    darkBg: "dark:bg-red-900/20",
+    textAccent: "text-red-800 dark:text-red-300",
+    badgeBg: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200",
+    btnPrimary: "bg-red-800 hover:bg-red-900",
+    statCardBg: "bg-red-800/20",
+    tabActive: "border-red-800 text-red-800 dark:text-red-300",
+    ringColor: "ring-red-200 dark:ring-red-800",
+    welcomeMsg: "Gérez vos demandes de rendez-vous de consultation",
+  },
   artisanat: {
     label: "Artisanat & Services",
     icon: "🔧",
@@ -319,6 +336,7 @@ const SERVICE_MANIFEST_COLOR: Record<string, string> = {
   immobilier: "#65a30d",
   transport: "#3b82f6",
   beaute: "#d946ef",
+  juridique: "#7f1d1d",
   artisanat: "#57534e",
   mairie: "#1e40af",
 };
@@ -369,6 +387,8 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   transport:       { label: "Transport & Livraison",          icon: "🚗" },
   beauty:          { label: "Beauté & Bien-être",             icon: "💈" },
   artisan:         { label: "Artisanat & Services",           icon: "🔧" },
+  lawyer:          { label: "Avocat / Cabinet d'avocats",     icon: "⚖️" },
+  legal_advisor:   { label: "Conseil juridique",              icon: "📜" },
 };
 
 import { config } from "../config/api";

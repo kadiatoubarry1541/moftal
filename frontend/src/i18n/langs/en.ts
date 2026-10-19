@@ -342,6 +342,7 @@ const en: Record<string, string> = {
   'services.cat_restaurant': 'Restaurant',
   'services.cat_transport': 'Transport',
   'services.cat_beaute': 'Beauty',
+  'services.cat_juridique': 'Legal',
   'services.cat_artisanat': 'Craftsmanship',
   'services.cat_reseau': 'Network',
   'services.cat_vendeurs': 'Sellers',

@@ -834,7 +834,7 @@ const TENANT_PREFIX = {
   madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR',
   scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU',
   vendor: 'VENT', producer: 'PROD', broker: 'BROK',
-  restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU',
+  restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU', lawyer: 'AVOC', legal_advisor: 'JURI',
   artisan: 'ARTI', mairie: 'MAIR',
 };
 

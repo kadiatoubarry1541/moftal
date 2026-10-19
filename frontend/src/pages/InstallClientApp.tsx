@@ -28,6 +28,8 @@ const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }
   producer:        { label: "Entreprise de production",  icon: "🏭", color: "#7c3aed" },
   scientist:       { label: "Chercheur / Scientifique",  icon: "🔬", color: "#4f46e5" },
   broker:          { label: "Immobilier / Démarcheur",   icon: "🏠", color: "#b45309" },
+  lawyer:          { label: "Avocat / Cabinet",          icon: "⚖️", color: "#7f1d1d" },
+  legal_advisor:   { label: "Conseil juridique",         icon: "📜", color: "#7f1d1d" },
 };
 
 // Route publique vitrine selon le type (Gestion Interne)
@@ -53,6 +55,8 @@ const VITRINE_PATH: Record<string, string> = {
   producer:        "producteur",
   scientist:       "scientifique",
   broker:          "immobilier",
+  lawyer:          "juridique-vitrine",
+  legal_advisor:   "juridique-vitrine",
 };
 
 // Espace client personnel dédié selon le type (Gestion Interne uniquement)

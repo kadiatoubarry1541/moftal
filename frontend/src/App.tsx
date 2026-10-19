@@ -56,6 +56,7 @@ const Transport = lazy(() => import("./pages/Transport"));
 const Mosquee = lazy(() => import("./pages/Mosquee"));
 const Madrasa = lazy(() => import("./pages/Madrasa"));
 const Beaute = lazy(() => import("./pages/Beaute"));
+const Juridique = lazy(() => import("./pages/Juridique"));
 const Artisans = lazy(() => import("./pages/Artisans"));
 const Sante = lazy(() => import("./pages/Sante"));
 const Securite = lazy(() => import("./pages/Securite"));
@@ -116,6 +117,7 @@ const EspacePatientClinique = lazy(() => import("./pages/EspacePatientClinique")
 const GestionCommerce = lazy(() => import("./pages/GestionCommerce"));
 const GestionVendeur  = lazy(() => import("./pages/GestionVendeur"));
 const GestionBeauty   = lazy(() => import("./pages/GestionBeauty"));
+const GestionJuridique = lazy(() => import("./pages/GestionJuridique"));
 const GestionArtisan  = lazy(() => import("./pages/GestionArtisan"));
 const GestionProducer = lazy(() => import("./pages/GestionProducer"));
 const GestionMosquee = lazy(() => import("./pages/GestionMosquee"));
@@ -134,6 +136,7 @@ const GestionFournisseur  = lazy(() => import("./pages/GestionFournisseur"));
 const FournisseurVitrine  = lazy(() => import("./pages/FournisseurVitrine"));
 const VendeurVitrine      = lazy(() => import("./pages/VendeurVitrine"));
 const BeauteVitrine       = lazy(() => import("./pages/BeauteVitrine"));
+const JuridiqueVitrine    = lazy(() => import("./pages/JuridiqueVitrine"));
 const ArtisanVitrine      = lazy(() => import("./pages/ArtisanVitrine"));
 const ProducteurVitrine   = lazy(() => import("./pages/ProducteurVitrine"));
 const GestionSecurite     = lazy(() => import("./pages/GestionSecurite"));
@@ -395,6 +398,7 @@ function App() {
     pathname.startsWith("/fournisseur/") ||
     pathname.startsWith("/vendeur/") ||
     pathname.startsWith("/beaute-vitrine/") ||
+    pathname.startsWith("/juridique-vitrine/") ||
     pathname.startsWith("/artisan/") ||
     pathname.startsWith("/producteur/");
   // Site vitrine de l'établissement, ouvert depuis la barre de sa gestion interne
@@ -751,6 +755,7 @@ function App() {
           <Route path="/mosquee" element={<Mosquee />} />
           <Route path="/madrasa" element={<Madrasa />} />
           <Route path="/beaute" element={<Beaute />} />
+          <Route path="/juridique" element={<Juridique />} />
           <Route path="/artisans" element={<Artisans />} />
           <Route path="/sante" element={<Sante />} />
           <Route path="/securite" element={<Securite />} />
@@ -887,6 +892,7 @@ function App() {
           <Route path="/fournisseur/:tenantCode"         element={<FournisseurVitrine />} />
           <Route path="/vendeur/:tenantCode"            element={<VendeurVitrine />} />
           <Route path="/beaute-vitrine/:tenantCode"     element={<BeauteVitrine />} />
+          <Route path="/juridique-vitrine/:tenantCode"  element={<JuridiqueVitrine />} />
           <Route path="/artisan/:tenantCode"            element={<ArtisanVitrine />} />
           <Route path="/producteur/:tenantCode"         element={<ProducteurVitrine />} />
           <Route path="/gestion-securite/:tenantCode"     element={<GestionSecurite />} />
@@ -895,6 +901,7 @@ function App() {
           <Route path="/gestion-transport/:tenantCode"   element={<GestionTransport />} />
           <Route path="/gestion-vendeur/:tenantCode"   element={<GestionVendeur />} />
           <Route path="/gestion-beauty/:tenantCode"    element={<GestionBeauty />} />
+          <Route path="/gestion-juridique/:tenantCode" element={<GestionJuridique />} />
           <Route path="/gestion-artisan/:tenantCode"   element={<GestionArtisan />} />
           <Route path="/gestion-producer/:tenantCode"  element={<GestionProducer />} />
           <Route path="/commerce" element={<Commerce />} />

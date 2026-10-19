@@ -342,6 +342,7 @@ const man: Record<string, string> = {
   'services.cat_restaurant': 'Dumunikɛyɔrɔw',
   'services.cat_transport': 'Taamasira',
   'services.cat_beaute': 'Cɛɲi',
+  'services.cat_juridique': 'Sariya',
   'services.cat_artisanat': 'Bololabaara',
   'services.cat_reseau': 'Jɛkuluw',
   'services.cat_vendeurs': 'Feerelaw',

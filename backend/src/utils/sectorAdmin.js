@@ -14,6 +14,7 @@ export const SECTOR_PAGE_PATHS = {
   echange_tertiaire: '/echange/tertiaire',
   echange_tertiaire_demarcheurs: '/echange/tertiaire/demarcheurs',
   securite: '/securite',
+  juridique: '/juridique',
   journalisme: '/journalisme',
   science: '/science',
   solidarite: '/solidarite',
@@ -30,6 +31,7 @@ export const SECTOR_NAMES = {
   echange_tertiaire: 'Échanges - Tertiaire',
   echange_tertiaire_demarcheurs: 'Échanges - Tertiaire (Démarcheurs)',
   securite: 'Sécurité',
+  juridique: 'Juridique',
   journalisme: 'Journalisme',
   science: 'Science',
   solidarite: 'Solidarité',
@@ -48,6 +50,7 @@ export const SECTOR_PRO_TYPES = {
   echange_tertiaire: ['vendor', 'supplier', 'producer', 'commerce', 'restaurant', 'transport', 'beauty', 'artisan'],
   echange_tertiaire_demarcheurs: ['broker'],
   securite: ['security_agency'],
+  juridique: ['lawyer', 'legal_advisor'],
   journalisme: ['journalist'],
   science: ['scientist'],
   solidarite: ['ngo'],
@@ -67,6 +70,7 @@ export function getSectorForProType(professionalType, subSector = null) {
   if (SECTOR_PRO_TYPES.sante.includes(t)) return 'sante';
   if (SECTOR_PRO_TYPES.education.includes(t)) return 'education';
   if (SECTOR_PRO_TYPES.securite.includes(t)) return 'securite';
+  if (SECTOR_PRO_TYPES.juridique.includes(t)) return 'juridique';
   if (SECTOR_PRO_TYPES.journalisme.includes(t)) return 'journalisme';
   if (SECTOR_PRO_TYPES.science.includes(t)) return 'science';
   if (SECTOR_PRO_TYPES.solidarite.includes(t)) return 'solidarite';

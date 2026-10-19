@@ -37,7 +37,7 @@ interface GestionTenant {
 }
 
 interface ProSectionProps {
-  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo" | "broker" | "restaurant" | "transport" | "commerce" | "vendor" | "producer" | "artisan" | "beauty" | "mosque" | "madrasa" | "mairie" | "reseau";
+  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo" | "broker" | "restaurant" | "transport" | "commerce" | "vendor" | "producer" | "artisan" | "beauty" | "mosque" | "madrasa" | "mairie" | "reseau" | "lawyer" | "legal_advisor";
   title: string;
   icon: string;
   description: string;

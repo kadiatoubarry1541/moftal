@@ -342,6 +342,7 @@ const ar: Record<string, string> = {
   'services.cat_restaurant': 'مطعم',
   'services.cat_transport': 'النقل',
   'services.cat_beaute': 'التجميل',
+  'services.cat_juridique': 'القانون',
   'services.cat_artisanat': 'الحرف اليدوية',
   'services.cat_reseau': 'الشبكة',
   'services.cat_vendeurs': 'البائعون',

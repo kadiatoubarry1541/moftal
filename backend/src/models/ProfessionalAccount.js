@@ -69,6 +69,8 @@ ProfessionalAccount.init({
       'artisan',     // plombier, électricien, menuisier, soudeur
       'mairie',      // mairie / état civil : mariages, naissances, décès, résidences
       'reseau',      // association / réseau communautaire : membres, projets, cotisations
+      'lawyer',        // Juridique : avocat / cabinet d'avocats (100 % privé)
+      'legal_advisor', // Juridique : cabinet de conseil juridique (100 % privé)
       'moftal_vendor' // vendeur inscrit sur le marketplace Échange Moftal (primaire/secondaire/tertiaire)
     ),
     allowNull: false

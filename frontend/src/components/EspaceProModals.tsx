@@ -28,6 +28,8 @@ export const ADMIN_SERVICES = [
   { type: "producer",        demoCode: "DEMO-REF-PROD",   label: "Entreprise de Production",   emoji: "🏭", color: "#7c3aed", bg: "#f5f3ff", path: "gestion-producer",      vitrinePath: "producteur",      reseauPath: "reseau/producer" },
   { type: "beauty",          demoCode: "DEMO-REF-BEAU",   label: "Beauté & Bien-être",         emoji: "💈", color: "#db2777", bg: "#fdf2f8", path: "gestion-beauty",        vitrinePath: "beaute-vitrine",  reseauPath: "reseau/beauty" },
   { type: "artisan",         demoCode: "DEMO-REF-ARTI",   label: "Artisanat & Services",       emoji: "🔧", color: "#d97706", bg: "#fffbeb", path: "gestion-artisan",       vitrinePath: "artisan",         reseauPath: "reseau/artisan" },
+  { type: "lawyer",          demoCode: "DEMO-REF-JURI",   label: "Avocats / Cabinets",         emoji: "⚖️", color: "#7f1d1d", bg: "#fef2f2", path: "gestion-juridique",     vitrinePath: "juridique-vitrine", reseauPath: "" },
+  { type: "legal_advisor",   demoCode: "DEMO-REF-JURI",   label: "Conseil juridique",          emoji: "📜", color: "#7f1d1d", bg: "#fef2f2", path: "gestion-juridique",     vitrinePath: "juridique-vitrine", reseauPath: "" },
   { type: "health_worker",   demoCode: "DEMO-REF-HLTH",   label: "Médecin / Agent de santé",   emoji: "👨‍⚕️", color: "#1a8f1a", bg: "#f0fdfa", path: "gestion-clinique",    vitrinePath: "clinique",        reseauPath: "reseau/clinic" },
 ];
 

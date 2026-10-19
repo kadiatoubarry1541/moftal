@@ -40,6 +40,8 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   broker:          { label: "Démarcheur / Location",      icon: "🏘️" },
   ngo:             { label: "ONG / Association",          icon: "🤝" },
   scientist:       { label: "Chercheur / Scientifique",  icon: "🔬" },
+  lawyer:          { label: "Avocat / Cabinet d'avocats", icon: "⚖️" },
+  legal_advisor:   { label: "Conseil juridique",          icon: "📜" },
 };
 
 /* Couleur du bouton "Ouvrir le dashboard" selon le service */
@@ -55,6 +57,8 @@ const TYPE_TO_BTN: Record<string, string> = {
   broker:          "bg-cyan-600    hover:bg-cyan-700",
   ngo:             "bg-rose-600    hover:bg-rose-700",
   scientist:       "bg-indigo-600  hover:bg-indigo-700",
+  lawyer:          "bg-red-900     hover:bg-red-950",
+  legal_advisor:   "bg-red-900     hover:bg-red-950",
 };
 
 /* Badge couleur service */
@@ -70,6 +74,8 @@ const TYPE_TO_BADGE: Record<string, string> = {
   broker:          "bg-cyan-100    text-cyan-700    dark:bg-cyan-900/40 dark:text-cyan-300",
   ngo:             "bg-rose-100    text-rose-700    dark:bg-rose-900/40 dark:text-rose-300",
   scientist:       "bg-indigo-100  text-indigo-700  dark:bg-indigo-900/40 dark:text-indigo-300",
+  lawyer:          "bg-red-100     text-red-900     dark:bg-red-900/40 dark:text-red-200",
+  legal_advisor:   "bg-red-100     text-red-900     dark:bg-red-900/40 dark:text-red-200",
 };
 
 /* Label service affiché */
@@ -85,6 +91,8 @@ const TYPE_TO_SERVICE_LABEL: Record<string, string> = {
   broker:          "Échanges",
   ngo:             "Solidarité",
   scientist:       "Science",
+  lawyer:          "Juridique",
+  legal_advisor:   "Juridique",
 };
 
 const STATUS_STYLES: Record<string, { label: string; cls: string }> = {

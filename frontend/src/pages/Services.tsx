@@ -70,6 +70,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
   const services: ServiceItem[] = [
     { to: '/sante',                                    emoji: '🏥', label: t('services.cat_sante'),        bg: 'bg-red-100'    },
     { to: '/securite',                                 emoji: '🛡️', label: t('services.cat_securite'),     bg: 'bg-slate-100'  },
+    { to: '/juridique',                                emoji: '⚖️', label: t('services.cat_juridique'),    bg: 'bg-red-100'    },
     { to: '/immobilier',                               emoji: '🏠', label: t('services.cat_immobilier'),   bg: 'bg-amber-100'  },
     { to: '/education',                                emoji: '🎓', label: t('services.cat_education'),    bg: 'bg-amber-100'  },
     { to: '/madrasa',                                  emoji: '📖', label: t('services.cat_madrasa'),      bg: 'bg-teal-100'   },

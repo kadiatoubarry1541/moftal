@@ -342,6 +342,7 @@ const fr: Record<string, string> = {
   'services.cat_restaurant': 'Restaurant',
   'services.cat_transport': 'Transport',
   'services.cat_beaute': 'Beauté',
+  'services.cat_juridique': 'Juridique',
   'services.cat_artisanat': 'Artisanat',
   'services.cat_reseau': 'Réseau',
   'services.cat_vendeurs': 'Vendeurs',

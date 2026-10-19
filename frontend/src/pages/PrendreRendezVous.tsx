@@ -42,6 +42,8 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   artisan:         { label: "Artisan / Services",         icon: "🔧" },
   mairie:          { label: "Mairie / État Civil",        icon: "🏛️" },
   reseau:          { label: "Association / Réseau",       icon: "🌐" },
+  lawyer:          { label: "Avocat / Cabinet d'avocats", icon: "⚖️" },
+  legal_advisor:   { label: "Conseil juridique",          icon: "📜" },
 };
 
 export default function PrendreRendezVous() {

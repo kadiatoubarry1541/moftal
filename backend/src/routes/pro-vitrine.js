@@ -182,7 +182,7 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
     // (sauf Gestion Interne payée à part) → on n'en crée pas.
     let tenantCode = account.tenant_code;
     if (!tenantCode && await compteAGestionInterne(account)) {
-      const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', immobilier:'IMMO', reseau:'RESEAU' };
+      const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', lawyer:'AVOC', legal_advisor:'JURI', immobilier:'IMMO', reseau:'RESEAU' };
       const prefix = prefixMap[account.type] || 'PRO';
       tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
       await account.update({ tenant_code: tenantCode });
