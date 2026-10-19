@@ -294,7 +294,7 @@ export default function GestionRestaurant() {
           {showAddDish && (
             <div style={{ background: ORANGE_LIGHT, border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: 14, marginBottom: 18 }}>
               <div style={{ fontSize: 13, color: "#9a3412", marginBottom: 10 }}>
-                Ajoutez jusqu'à {MAX_PLATS_A_LA_FOIS} plats d'un coup : <b>nom, prix et photo</b>. Ils sont enregistrés sur le serveur et apparaissent tout de suite dans le menu de votre site.
+                Ajoutez jusqu'à {MAX_PLATS_A_LA_FOIS} plats d'un coup : <b>nom, prix et photo (obligatoire)</b>. Touchez « 📷 Photo » pour choisir la photo de chaque plat. Ils sont enregistrés sur le serveur et apparaissent tout de suite dans le menu de votre site.
               </div>
               <div style={{ display: "grid", gap: 10 }}>
                 {lignes.map((l, i) => {
@@ -337,7 +337,7 @@ export default function GestionRestaurant() {
                   // Lignes vides ignorées ; nom et prix obligatoires, avec un message clair
                   const remplies = lignes.filter(l => l.nom.trim() || l.prix || l.image);
                   if (!remplies.length) { setBilanPlats({ ok: false, texte: "Écrivez au moins le nom et le prix d'un plat." }); return; }
-                  const verifiees = remplies.map(l => ({ ...l, erreur: !l.nom.trim() ? "Le nom du plat manque." : (l.prix === "" || !(+l.prix >= 0)) ? "Le prix manque." : undefined }));
+                  const verifiees = remplies.map(l => ({ ...l, erreur: !l.nom.trim() ? "Le nom du plat manque." : (l.prix === "" || !(+l.prix >= 0)) ? "Le prix manque." : !l.image ? "La photo du plat manque : touchez « 📷 Photo »." : undefined }));
                   if (verifiees.some(l => l.erreur)) { setLignes(verifiees); setBilanPlats({ ok: false, texte: "Complétez les lignes en rouge, puis enregistrez." }); return; }
                   const restantes: LignePlat[] = [];
                   let enregistres = 0; let surAppareil = 0;
@@ -364,12 +364,6 @@ export default function GestionRestaurant() {
           {bilanPlats && (
             <div style={{ background: bilanPlats.ok ? "#f0fdf4" : "#fef2f2", border: `1px solid ${bilanPlats.ok ? "#bbf7d0" : "#fecaca"}`, color: bilanPlats.ok ? "#166534" : "#b91c1c", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, fontWeight: 600 }}>
               {bilanPlats.texte}
-            </div>
-          )}
-          {/* Rappel : un menu sans photos ne donne pas envie */}
-          {dishes.some(d => !d.image_url) && (
-            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#9a3412" }}>
-              📷 <b>{dishes.filter(d => !d.image_url).length} plat(s) sans photo.</b> Les clients choisissent avec les yeux : touchez « 📷 Photo » à côté d'un plat pour ajouter sa photo, elle apparaît tout de suite sur votre site.
             </div>
           )}
           {/* Rappel : un menu sans photos ne donne pas envie */}
