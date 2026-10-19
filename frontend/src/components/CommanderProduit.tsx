@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
@@ -291,5 +291,36 @@ export function MessagesTousLesSites() {
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * « Supprimer » une publication de l'Échange : visible pour l'admin (tous les
+ * produits) et pour celui qui l'a publiée (produit plus disponible).
+ */
+export function SupprimerProduitBouton({ product, onSupprime, className = "" }: { product: { id: string; title: string; numeroH?: string }; onSupprime: (id: string) => void; className?: string }) {
+  const { tr } = useTraduction();
+  const moi = getSessionUser();
+  const [envoi, setEnvoi] = useState(false);
+  if (!moi || !(isAdmin(moi) || (product.numeroH && product.numeroH === moi.numeroH))) return null;
+
+  const supprimer = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(tr("Supprimer « {titre} » de l'Échange ? Le produit ne sera plus visible.", { titre: product.title }))) return;
+    setEnvoi(true);
+    try {
+      const r = await fetch(`${API}/products/${encodeURIComponent(product.id)}`, { method: "DELETE", headers: entetes() });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) throw new Error(d.message || tr("La suppression n'a pas pu être faite."));
+      onSupprime(product.id);
+    } catch (err: any) { alert(err.message); }
+    finally { setEnvoi(false); }
+  };
+
+  return (
+    <button type="button" onClick={supprimer} disabled={envoi} title={tr("Supprimer")}
+      className={`px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold disabled:opacity-60 ${className}`}>
+      {envoi ? "…" : `🗑️ ${tr("Supprimer")}`}
+    </button>
   );
 }
