@@ -11,6 +11,7 @@ import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { notifierUtilisateur } from '../utils/notificationsEtablissement.js';
 
 if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
 
@@ -616,21 +617,24 @@ router.get('/admin/products', async (req, res) => {
 });
 
 // @route   DELETE /api/exchange/products/:id
-// @desc    Supprimer une publication (Admin uniquement) — tous secteurs confondus
-// @access  Authentifié + Admin
+// @desc    Retirer une publication de l'Échange : l'admin (tous les produits, ex. un
+//          produit qu'il ne veut pas laisser) ou celui qui l'a publiée (plus disponible).
+//          La publication est masquée (is_active = false) : les commandes passées gardent leur historique.
+// @access  Authentifié + Admin ou auteur de la publication
 router.delete('/products/:id', async (req, res) => {
   try {
     const user = req.user;
-    if (!isGlobalAdmin(user)) {
-      return res.status(403).json({ success: false, message: 'Accès refusé. Admin requis.' });
-    }
-
     const product = await ExchangeProduct.findByPk(req.params.id);
-    if (!product) {
+    if (!product || product.isActive === false) {
       return res.status(404).json({ success: false, message: 'Publication introuvable.' });
     }
+    const moi = user?.numeroH || req.userId;
+    const estAuteur = !!moi && (product.numeroH === moi || product.createdBy === moi);
+    if (!isGlobalAdmin(user) && !estAuteur) {
+      return res.status(403).json({ success: false, message: 'Seuls l\'administrateur et l\'auteur de la publication peuvent la supprimer.' });
+    }
 
-    await product.destroy();
+    await product.update({ isActive: false, isAvailable: false });
 
     res.json({ success: true, message: 'Publication supprimée.' });
   } catch (error) {
@@ -808,6 +812,176 @@ router.post('/suppliers/:supplierId/reject', authenticate, async (req, res) => {
       success: false,
       message: 'Erreur serveur lors du rejet du fournisseur'
     });
+  }
+});
+
+// ========== COMMANDES ==========
+// « Commander » sur une publication de l'Échange : la commande est enregistrée
+// en base et arrive chez celui qui a publié (Espace Pro → Demandes, cloche +
+// téléphone). L'acheteur suit sa commande ; l'admin voit toutes les commandes.
+
+let tableCommandesPrete = null;
+const preparerTableCommandes = () => (tableCommandesPrete ||= sequelize.query(`
+  CREATE TABLE IF NOT EXISTS "exchange_orders" (
+    "id"               SERIAL PRIMARY KEY,
+    "product_id"       UUID,
+    "product_title"    VARCHAR(255) NOT NULL,
+    "category"         VARCHAR(50),
+    "unit_price"       NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    "currency"         VARCHAR(10)  NOT NULL DEFAULT 'FG',
+    "quantite"         INTEGER      NOT NULL DEFAULT 1,
+    "total"            NUMERIC(16, 2) NOT NULL DEFAULT 0,
+    "seller_numero_h"  VARCHAR(100) NOT NULL,
+    "buyer_numero_h"   VARCHAR(100) NOT NULL,
+    "buyer_nom"        VARCHAR(255),
+    "buyer_telephone"  VARCHAR(50)  NOT NULL,
+    "adresse"          VARCHAR(500),
+    "message"          TEXT,
+    "statut"           VARCHAR(20)  NOT NULL DEFAULT 'nouvelle',
+    "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS "idx_exchange_orders_seller" ON "exchange_orders" ("seller_numero_h", "created_at" DESC);
+  CREATE INDEX IF NOT EXISTS "idx_exchange_orders_buyer" ON "exchange_orders" ("buyer_numero_h", "created_at" DESC);
+`).catch((e) => { tableCommandesPrete = null; throw e; }));
+
+const STATUTS_COMMANDE = {
+  nouvelle: 'reçue',
+  acceptee: 'acceptée',
+  livree: 'livrée',
+  annulee: 'annulée',
+};
+const texteCourt = (v, max) => String(v ?? '').trim().slice(0, max);
+
+// @route   POST /api/exchange/products/:id/commander
+// @desc    Commander une publication — la commande va à celui qui l'a publiée
+// @access  Authentifié
+router.post('/products/:id/commander', async (req, res) => {
+  try {
+    const acheteur = req.user?.numeroH || req.userId;
+    const product = await ExchangeProduct.findByPk(req.params.id);
+    if (!product || product.isActive === false) {
+      return res.status(404).json({ success: false, message: 'Cette publication n\'existe plus.' });
+    }
+    const vendeur = product.numeroH || product.createdBy;
+    if (!vendeur) return res.status(400).json({ success: false, message: 'Le vendeur de cette publication est introuvable.' });
+    if (vendeur === acheteur) {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas commander votre propre publication.' });
+    }
+
+    const quantite = Math.min(Math.max(parseInt(req.body?.quantite, 10) || 1, 1), 100000);
+    const telephone = texteCourt(req.body?.telephone, 50);
+    if (telephone.replace(/[^0-9]/g, '').length < 8) {
+      return res.status(400).json({ success: false, message: 'Votre numéro de téléphone est obligatoire.' });
+    }
+    const nom = texteCourt(req.body?.nom, 255)
+      || [req.user?.prenom, req.user?.nomFamille].filter(Boolean).join(' ')
+      || acheteur;
+    const adresse = texteCourt(req.body?.adresse, 500);
+    const message = texteCourt(req.body?.message, 2000);
+    const prix = Number(product.price) || 0;
+    const devise = product.currency || 'FG';
+
+    await preparerTableCommandes();
+    const [commande] = await sequelize.query(
+      `INSERT INTO exchange_orders (product_id, product_title, category, unit_price, currency, quantite, total,
+         seller_numero_h, buyer_numero_h, buyer_nom, buyer_telephone, adresse, message)
+       VALUES (:pid, :titre, :cat, :prix, :devise, :qte, :total, :vendeur, :acheteur, :nom, :tel, :adresse, :message)
+       RETURNING *`,
+      {
+        replacements: {
+          pid: product.id, titre: product.title, cat: product.category || null, prix, devise, qte: quantite,
+          total: prix * quantite, vendeur, acheteur, nom, tel: telephone, adresse: adresse || null, message: message || null,
+        },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    await notifierUtilisateur(vendeur, 'commande',
+      `${nom} (${telephone}) commande ${quantite} × « ${product.title} » — ${(prix * quantite).toLocaleString('fr-FR')} ${devise}`,
+      { url: '/mes-comptes-pro?commandes=1' });
+
+    res.status(201).json({ success: true, message: 'Commande envoyée au vendeur.', commande });
+  } catch (e) {
+    console.error('Commande Échange :', e);
+    res.status(500).json({ success: false, message: 'La commande n\'a pas pu être enregistrée. Réessayez.' });
+  }
+});
+
+// @route   GET /api/exchange/orders/received
+// @desc    Commandes reçues par l'utilisateur (ce qu'il a publié). Admin : ?tout=1 → toutes les commandes.
+// @access  Authentifié
+router.get('/orders/received', async (req, res) => {
+  try {
+    await preparerTableCommandes();
+    const moi = req.user?.numeroH || req.userId;
+    const tout = isGlobalAdmin(req.user) && req.query.tout === '1';
+    const commandes = await sequelize.query(
+      `SELECT o.*, TRIM(CONCAT(s.prenom, ' ', s.nom_famille)) AS seller_nom
+       FROM exchange_orders o LEFT JOIN users s ON s.numero_h = o.seller_numero_h
+       ${tout ? '' : 'WHERE o.seller_numero_h = :moi'}
+       ORDER BY o.created_at DESC LIMIT 500`,
+      { replacements: { moi }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, commandes, tout });
+  } catch (e) {
+    console.error('Commandes reçues :', e);
+    res.status(500).json({ success: false, message: 'Impossible de charger les commandes.' });
+  }
+});
+
+// @route   GET /api/exchange/orders/mine
+// @desc    Commandes passées par l'utilisateur (suivi acheteur)
+// @access  Authentifié
+router.get('/orders/mine', async (req, res) => {
+  try {
+    await preparerTableCommandes();
+    const commandes = await sequelize.query(
+      `SELECT o.*, TRIM(CONCAT(s.prenom, ' ', s.nom_famille)) AS seller_nom
+       FROM exchange_orders o LEFT JOIN users s ON s.numero_h = o.seller_numero_h
+       WHERE o.buyer_numero_h = :moi ORDER BY o.created_at DESC LIMIT 200`,
+      { replacements: { moi: req.user?.numeroH || req.userId }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, commandes });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Impossible de charger vos commandes.' });
+  }
+});
+
+// @route   PATCH /api/exchange/orders/:id
+// @desc    Le vendeur (ou l'admin) suit la commande : acceptée, livrée, annulée.
+//          L'acheteur peut seulement annuler une commande pas encore acceptée.
+// @access  Authentifié
+router.patch('/orders/:id', async (req, res) => {
+  try {
+    const statut = req.body?.statut;
+    if (!STATUTS_COMMANDE[statut]) return res.status(400).json({ success: false, message: 'Statut invalide.' });
+    await preparerTableCommandes();
+    const moi = req.user?.numeroH || req.userId;
+    const [commande] = await sequelize.query(
+      `SELECT * FROM exchange_orders WHERE id = :id LIMIT 1`,
+      { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!commande) return res.status(404).json({ success: false, message: 'Commande introuvable.' });
+    const estVendeur = commande.seller_numero_h === moi || isGlobalAdmin(req.user);
+    const annulationAcheteur = commande.buyer_numero_h === moi && statut === 'annulee' && commande.statut === 'nouvelle';
+    if (!estVendeur && !annulationAcheteur) {
+      return res.status(403).json({ success: false, message: 'Accès refusé à cette commande.' });
+    }
+    await sequelize.query(
+      `UPDATE exchange_orders SET statut = :statut, updated_at = NOW() WHERE id = :id`,
+      { replacements: { statut, id: commande.id } }
+    );
+    const destinataire = estVendeur ? commande.buyer_numero_h : commande.seller_numero_h;
+    if (destinataire !== moi) {
+      await notifierUtilisateur(destinataire, 'commande',
+        `Commande « ${commande.product_title} » (${commande.quantite}) : ${STATUTS_COMMANDE[statut]}.`,
+        { titre: '🛒 Suivi de commande', url: estVendeur ? '/echange?mes-commandes=1' : '/mes-comptes-pro?commandes=1' });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Suivi commande :', e);
+    res.status(500).json({ success: false, message: 'La commande n\'a pas pu être mise à jour.' });
   }
 });
 

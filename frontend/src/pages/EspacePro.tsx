@@ -372,6 +372,7 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
 };
 
 import { config } from "../config/api";
+import { CommandesRecues } from "../components/CommanderProduit";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
@@ -1475,6 +1476,8 @@ export default function EspacePro() {
             ───────────────────────────── */}
         {tab === "pending" && (
           <div>
+            {/* Commandes reçues sur l'Échange (ce que le pro a publié) */}
+            <CommandesRecues />
             {pendingApts.length === 0 ? (
               <div className="text-center py-20">
                 <div className="text-6xl mb-4">📭</div>

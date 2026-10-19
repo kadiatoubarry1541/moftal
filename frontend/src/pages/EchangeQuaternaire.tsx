@@ -7,6 +7,8 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
+import { CommanderProduitModal, SupprimerProduitBouton } from '../components/CommanderProduit';
+import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -57,6 +59,7 @@ function getTechTabs(t: (key: string) => string): { key: TechTab; emoji: string;
 
 export default function EchangeQuaternaire() {
   const { t } = useI18n();
+  const { tr } = useTraduction();
   const TECH_TABS = useMemo(() => getTechTabs(t), [t]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
@@ -568,50 +571,21 @@ export default function EchangeQuaternaire() {
                     <span>📍</span> {product.location}
                   </p>
                 )}
-                <button onClick={() => setSelectedProduct(product)}
-                  className="w-full py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium text-sm transition-colors">
-                  {t('echange_tertiaire.contact_vendor_btn')}
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedProduct(product)}
+                  className="flex-1 py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium text-sm transition-colors">
+                  {tr("🛒 Commander")}
                 </button>
+                  <SupprimerProduitBouton product={product} onSupprime={(id) => setRawProducts(ps => ps.filter(p => p.id !== id))} />
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setSelectedProduct(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{selectedProduct.title}</h3>
-            <div className="flex gap-2 mb-3 flex-wrap">
-              <span className="px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full text-xs font-semibold">
-                {selectedProduct.category || t('echange_quaternaire.digital_fallback')}
-              </span>
-              {selectedProduct.condition && (
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  selectedProduct.condition === 'neuf' ? 'bg-green-100 text-green-700' :
-                  selectedProduct.condition === 'bon' ? 'bg-blue-100 text-blue-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {selectedProduct.condition === 'neuf' ? t('echange_quaternaire.condition_new_badge') : selectedProduct.condition === 'bon' ? t('echange_quaternaire.condition_good') : selectedProduct.condition}
-                </span>
-              )}
-            </div>
-            {selectedProduct.description && (
-              <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm">{selectedProduct.description}</p>
-            )}
-            <p className="text-lg font-bold text-violet-600 dark:text-violet-400 mb-2">
-              {Number(selectedProduct.price).toLocaleString()} {selectedProduct.currency}
-            </p>
-            {selectedProduct.location && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">📍 {selectedProduct.location}</p>
-            )}
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              {t('echange_tertiaire.contact_instructions')}
-            </p>
-            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">{t('btn.close')}</button>
-          </div>
-        </div>
-      )}
+      {/* Commander : la commande va à celui qui a publié (son Espace Pro) */}
+      {selectedProduct && <CommanderProduitModal product={selectedProduct} couleur="#7c3aed" onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }
