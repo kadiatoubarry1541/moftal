@@ -340,10 +340,12 @@ export default function GestionRestaurant() {
                   const verifiees = remplies.map(l => ({ ...l, erreur: !l.nom.trim() ? "Le nom du plat manque." : (l.prix === "" || !(+l.prix >= 0)) ? "Le prix manque." : !l.image ? "La photo du plat manque : touchez « 📷 Photo »." : undefined }));
                   if (verifiees.some(l => l.erreur)) { setLignes(verifiees); setBilanPlats({ ok: false, texte: "Complétez les lignes en rouge, puis enregistrez." }); return; }
                   const restantes: LignePlat[] = [];
-                  let enregistres = 0; let surAppareil = 0;
+                  let enregistres = 0; let surAppareil = 0; let photosPerdues = 0;
                   for (const l of verifiees) {
                     const d = await post(`${BASE(tenantCode!)}/dishes`, { nom: l.nom.trim(), categorie: l.categorie, prix: +l.prix, description: l.description, disponible: l.disponible, image: l.image || undefined });
                     if (d.success && d.queued) surAppareil++;
+                    // Photo envoyée mais absente de la réponse : le serveur ne l'a pas enregistrée
+                    else if (d.success && l.image && !d.dish?.image_url) { photosPerdues++; enregistres++; }
                     else if (d.success) enregistres++;
                     else restantes.push({ ...l, erreur: d.message || "Pas enregistré. Réessayez." });
                   }
@@ -355,8 +357,9 @@ export default function GestionRestaurant() {
                     enregistres ? `✅ ${enregistres} plat(s) enregistré(s) — visibles dans le menu de votre site.` : "",
                     surAppareil ? `📴 ${surAppareil} plat(s) gardé(s) sur l'appareil faute de connexion : ils seront envoyés au retour d'internet.` : "",
                     restantes.length ? `⚠️ ${restantes.length} plat(s) non enregistré(s) : voir les lignes en rouge.` : "",
+                    photosPerdues ? `⚠️ Le serveur n'a pas enregistré la photo de ${photosPerdues} plat(s) : ajoutez-la avec « 📷 Photo » à côté du plat. Si cela recommence, le serveur doit être mis à jour.` : "",
                   ].filter(Boolean);
-                  setBilanPlats({ ok: !restantes.length, texte: morceaux.join(" ") });
+                  setBilanPlats({ ok: !restantes.length && !photosPerdues, texte: morceaux.join(" ") });
                 }}>{saving ? "Enregistrement…" : `Enregistrer ${lignes.length > 1 ? `les ${lignes.length} plats` : "le plat"}`}</button>
               </div>
             </div>
@@ -393,7 +396,14 @@ export default function GestionRestaurant() {
                           try { image = await lirePhoto(f); } catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); return; }
                           if (await envoyerGestion(`${BASE(tenantCode!)}/dishes/${d.id}/photo`, { method: "PUT", headers: auth(), body: JSON.stringify({ image }) })) {
                             const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
-                            fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || []));
+                            fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(async r => {
+                              const dd = await r.json();
+                              if (!dd.success) return;
+                              setDishes(dd.dishes || []);
+                              // Relu en base (pas la copie gardée sur l'appareil) : la photo doit y être, sinon on le dit
+                              const relueEnBase = navigator.onLine && !r.headers.get("X-Moftal-Offline");
+                              if (relueEnBase && !(dd.dishes || []).find((x: any) => x.id === d.id)?.image_url) alert("Le serveur n'a pas enregistré la photo. Réessayez ; si cela recommence, le serveur doit être mis à jour.");
+                            });
                           }
                         }} />
                       </label>
