@@ -292,11 +292,12 @@ export default function RestaurantVitrine() {
             <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>{tr("Réserver ou commander")}</h2>
             <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>{tr("Commandez en ligne ou contactez-nous pour réserver une table.")}</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginBottom: 32 }}>
             {[
               { icon: "📞", label: tr("Téléphone"), val: resto.phone || tr("Non renseigné") },
               { icon: "✉️", label: tr("E-mail"), val: resto.email || tr("Non renseigné") },
               { icon: "📍", label: tr("Adresse"), val: resto.address || tr("Non renseignée") },
+              ...(resto.horaires ? [{ icon: "🕒", label: tr("Horaires"), val: resto.horaires }] : []),
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
