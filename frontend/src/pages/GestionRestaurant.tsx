@@ -14,6 +14,7 @@ import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { cheminConnexion } from "../utils/connexionRetour";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -45,6 +46,8 @@ const lirePhoto = async (f: File) => {
   const petite = await compressImage(f, 1200, 0.82);
   return new Promise<string>((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = ko; r.readAsDataURL(petite); });
 };
+
+const champStyle: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, boxSizing: "border-box" };
 
 const SERVICES: Record<string, string> = { sur_place: "Sur place", emporter: "À emporter", livraison: "Livraison" };
 const enteteCommande = (o: any) => o.source === "site" ? `🌐 ${o.client_nom || "Commande du site"}` : `Table ${o.table_num || "—"}`;
@@ -87,6 +90,10 @@ export default function GestionRestaurant() {
   const [oForm, setOForm] = useState({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] });
   const [sForm, setSForm] = useState({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" });
   const [anForm, setAnForm] = useState({ titre: "", contenu: "", type: "general" });
+  // Paramètres : renseignements du restaurant (enregistrés en base, affichés sur le site)
+  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const remplirParametres = (t: any) => setSettingsForm({ name: t?.name || "", description: t?.description || "", phone: t?.phone || "", email: t?.email || "", address: t?.address || "", horaires: t?.horaires || "", phone_urgence: t?.phone_urgence || "" });
 
   useEffect(() => {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
@@ -98,6 +105,7 @@ export default function GestionRestaurant() {
     ]).then(([info, d]) => {
       if (!info.success) { setError(info.message || "Accès refusé."); return; }
       setTenant(info.tenant);
+      remplirParametres(info.tenant);
       setDash(d);
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
   }, [tenantCode]);
@@ -125,6 +133,28 @@ export default function GestionRestaurant() {
     } finally { setSaving(false); }
   };
   const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
+  const choisirLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
+  };
+  const enregistrerParametres = async () => {
+    if (!(settingsForm.name || "").trim()) { alert("Le nom du restaurant est obligatoire."); return; }
+    setSettingsSaving(true);
+    try {
+      const r = await fetch(`${BASE(tenantCode!)}/settings`, { method: "PUT", headers: auth(), body: JSON.stringify(settingsForm) });
+      const d = await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}) : rien n'a été enregistré.` }));
+      if (d.success && d.tenant) { setTenant(d.tenant); remplirParametres(d.tenant); alert("Renseignements enregistrés. Ils apparaissent sur le site du restaurant."); }
+      else alert(d.message || "Erreur : rien n'a été enregistré.");
+    } catch {
+      alert("Connexion coupée : rien n'a été enregistré. Réessayez.");
+    } finally { setSettingsSaving(false); }
+  };
 
   const reloadDash = () => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -665,6 +695,38 @@ export default function GestionRestaurant() {
       {tab === "settings" && (
         <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
           <TenantCodeCard code={tenantCode} />
+          {tenant?.acces_employe && tenant.acces_employe !== "total" ? (
+            <div style={{ background: ORANGE_LIGHT, border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: 14, fontSize: 13, color: "#9a3412" }}>
+              Seul le propriétaire peut modifier les renseignements du restaurant.
+            </div>
+          ) : (
+            <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 14, padding: 16, display: "grid", gap: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>🍽️ Renseignements du restaurant</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback="🍽️" size={72} radius={14} />
+                <div>
+                  <label htmlFor="logo-upload-resto" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: ORANGE, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Changer le logo</label>
+                  <input id="logo-upload-resto" type="file" accept="image/*" style={{ display: "none" }} onChange={choisirLogo} />
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiché partout : votre gestion, votre site, les listes et les rendez-vous.</p>
+                </div>
+              </div>
+              <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Nom du restaurant *</label><input style={champStyle} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} /></div>
+              <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Description</label><textarea style={{ ...champStyle, height: 80, resize: "vertical" }} placeholder="Votre cuisine, vos spécialités…" value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+                <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Téléphone</label><input style={champStyle} type="tel" value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
+                <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>E-mail</label><input style={champStyle} type="email" value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+              </div>
+              <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Adresse</label><input style={champStyle} placeholder="Quartier, rue, repère…" value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+                <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Horaires d'ouverture</label><input style={champStyle} placeholder="Ex : Lun-Dim 10h-23h" value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} /></div>
+                <div><label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 }}>Téléphone d'urgence</label><input style={champStyle} type="tel" value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone_urgence: e.target.value }))} /></div>
+              </div>
+              <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Ces renseignements sont enregistrés sur le serveur et affichés sur le site de votre restaurant.</p>
+              <button onClick={enregistrerParametres} disabled={settingsSaving} style={{ justifySelf: "start", padding: "10px 24px", background: settingsSaving ? `${ORANGE}88` : ORANGE, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
+                {settingsSaving ? "Enregistrement…" : "Enregistrer les renseignements"}
+              </button>
+            </div>
+          )}
           <ParametreLangue />
           <ParametresEspacePro />
         </div>

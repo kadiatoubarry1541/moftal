@@ -5,6 +5,8 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { syncAccountFromTenant } from '../utils/tenantSync.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -37,6 +39,35 @@ async function verifyTenantProprietaire(req, res, next) {
 // ─── INFO ─────────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
+});
+
+// ─── PARAMÈTRES (nom, logo, contact, horaires, urgence) ────────────────────────
+// Réservé au propriétaire et au co-responsable « tous les droits ».
+router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
+  if (req.employe && req.employe.niveau !== 'total') {
+    return res.status(403).json({ success: false, message: "Seul le propriétaire peut modifier les renseignements du restaurant." });
+  }
+  try {
+    await ensureTenantExtraColumns();
+    const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
+    const code = req.params.tenantCode;
+    await sequelize.query(
+      `UPDATE management_tenants SET
+        name          = COALESCE(:name, name),
+        logo_url      = COALESCE(NULLIF(:logo, ''), logo_url),
+        address       = :address,
+        phone         = :phone,
+        email         = :email,
+        description   = :desc,
+        horaires      = :horaires,
+        phone_urgence = :phone_urgence
+       WHERE tenant_code = :code`,
+      { replacements: { name: (name || '').trim() || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
+    );
+    const [updated] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
+    await syncAccountFromTenant(code);
+    res.json({ success: true, tenant: updated });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
