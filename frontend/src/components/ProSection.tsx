@@ -4,6 +4,7 @@ import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type Us
 import { GESTION_VITRINE_PATHS } from "../utils/gestionVitrines";
 import LogoEtablissement from "./LogoEtablissement";
 import { useTraduction } from "../i18n/traduction";
+import { avecLibellesServices } from "../utils/libellesServices";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -75,7 +76,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
     try {
       const res = await fetch(`${API_BASE}/api/professionals/approved?type=${type}`);
       const data = await res.json();
-      if (data.success) setRawAccounts(data.accounts || []);
+      if (data.success) setRawAccounts((data.accounts || []).map(avecLibellesServices));
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
