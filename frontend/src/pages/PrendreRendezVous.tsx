@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { useTraduction } from "../i18n/traduction";
+import { avecLibellesServices } from "../utils/libellesServices";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -77,7 +78,7 @@ export default function PrendreRendezVous() {
     try {
       const res = await fetch(`${API_BASE}/api/professionals/detail/${id}`);
       const data = await res.json();
-      if (data.success) setAccount(data.account);
+      if (data.success) setAccount(avecLibellesServices(data.account));
     } catch (err) {
       console.error("Erreur:", err);
     } finally {

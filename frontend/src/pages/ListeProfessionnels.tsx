@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { sortByProximity, proximityScore, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { avecLibellesServices } from "../utils/libellesServices";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -118,7 +119,7 @@ export default function ListeProfessionnels() {
         : `${API_BASE}/api/professionals/approved`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) setRawAccounts(data.accounts || []);
+      if (data.success) setRawAccounts((data.accounts || []).map(avecLibellesServices));
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
@@ -133,7 +134,7 @@ export default function ListeProfessionnels() {
       const url = `${API_BASE}/api/professionals/search?q=${encodeURIComponent(search)}&type=${filterType}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) setRawAccounts(data.accounts || []);
+      if (data.success) setRawAccounts((data.accounts || []).map(avecLibellesServices));
     } catch (error) {
       console.error("Erreur:", error);
     } finally {

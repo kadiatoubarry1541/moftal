@@ -11,6 +11,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import AccueilAppGestion from "../components/AccueilAppGestion";
 import AdminCarteFormule from "../components/AdminCarteFormule";
 import { getTypeInfo } from "../components/EspaceProModals";
+import { libellesServices } from "../utils/libellesServices";
 
 interface ProAccount {
   id: string;
@@ -2677,7 +2678,7 @@ export default function EspacePro() {
                         <div className="mb-4">
                           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Services proposés</p>
                           <div className="flex flex-wrap gap-2">
-                            {account.services.map((s, i) => (
+                            {libellesServices(account.services).map((s, i) => (
                               <span key={i} className={`px-3 py-1.5 ${svc.badgeBg} text-sm rounded-full font-medium`}>{s}</span>
                             ))}
                           </div>
