@@ -18,6 +18,8 @@ function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ be
 
 function fmtMoney(n: number) { return Number(n) ? (Number(n) || 0).toLocaleString("fr-FR") + " GNF" : trHors("Sur demande"); }
 
+const STATUT_LIBELLE: Record<string, string> = { vacant: "Disponible", occupe: "Occupé", travaux: "En travaux" };
+
 const TYPE_ICONS: Record<string, string> = {
   "villa": "🏡", "appartement": "🏢", "studio": "🛋️", "bureau": "🏛️",
   "magasin": "🏪", "terrain": "🌍", "chambre": "🛏️",
@@ -110,12 +112,67 @@ export default function ImmobilierVitrine() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
-            {[["Accueil","hero"],["Biens","properties"],["Contact","contact"]].map(([lbl,id]) => (
+            {[["Biens","properties"],["Agence","hero"],["Contact","contact"]].map(([lbl,id]) => (
               <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
       </nav>
+
+      {/* BIENS : chaque bien publié depuis la gestion, image en premier */}
+      <section id="properties" style={{ background: "#f8fafc", padding: "24px 16px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", margin: "0 0 16px" }}>{tr("Nos biens")} ({properties.length})</h2>
+
+          {statuts.length > 1 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
+              {statuts.map(s => (
+                <button key={s} onClick={() => setFilter(s)}
+                  style={{ padding: "6px 16px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontWeight: filter === s ? 700 : 500, fontSize: 13, background: filter === s ? ORANGE : "white", color: filter === s ? "white" : "#374151", transition: "all 0.15s", textTransform: "capitalize" }}>
+                  {tr(STATUT_LIBELLE[s] || s)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🏠</div>
+              {tr("Aucun bien disponible pour l'instant.")}
+            </div>
+          ) : (
+            <div className="prop-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+              {filtered.map((p: any, i: number) => (
+                <div key={p.id ?? i} className="prop-card" style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
+                  {/* L'image (ou la vidéo) publiée depuis la gestion occupe toute la carte */}
+                  {p.video_url && !p.image_url
+                    ? <video src={getPhotoUrl(p.video_url) || p.video_url} controls playsInline preload="metadata" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block", background: "black" }} />
+                    : p.image_url
+                    ? <img src={getPhotoUrl(p.image_url) || ""} alt={p.nom} loading="lazy" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
+                    : <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg, ${ORANGE}10, ${ORANGE}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</div>}
+                  <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>{fmtMoney(p.prix)}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: p.statut === "vacant" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "vacant" ? "#1a8f1a" : "#64748b" }}>
+                        {tr(STATUT_LIBELLE[p.statut] || p.statut || "Disponible")}
+                      </span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{p.nom}</div>
+                    {(p.quartier || p.ville) && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {[p.quartier, p.ville].filter(Boolean).join(", ")}</div>}
+                    {p.superficie && <div style={{ fontSize: 12, color: "#64748b" }}>📐 {p.superficie} m²</div>}
+                    {p.description && <div style={{ fontSize: 12, color: "#475569", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.description}</div>}
+                    <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={agency.name} couleur={ORANGE} objet={`Bien : ${p.nom}`}
+                      messageInitial={tr("Bonjour, je suis intéressé par ce bien : {bien}. Est-il toujours disponible ?", { bien: p.nom })}
+                      style={{ marginTop: "auto", background: ORANGE, color: "white", border: "none", borderRadius: 10, padding: "9px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>
+                      ✉️ {tr("Je suis intéressé")}
+                    </EcrireAuSite>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* PHOTO DE COUVERTURE (ajoutée depuis l'Espace Pro) */}
       <CouverturePhotoSite photos={photos} nom={agency?.name} />
@@ -148,12 +205,10 @@ export default function ImmobilierVitrine() {
 
       {/* STATS */}
       <section style={{ background: "white", padding: "0 20px 48px" }}>
-        <div className="stats-g" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
+        <div className="stats-g" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
           {[
             { icon: "🏠", val: `${stats.total || 0}`, label: "Biens au total" },
             { icon: "🔑", val: `${stats.vacant || 0}`, label: "Disponibles" },
-            { icon: "📋", val: tr("Rapide"), label: "Traitement dossier" },
-            { icon: "🤝", val: tr("Confiance"), label: "Engagement qualité" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -161,66 +216,6 @@ export default function ImmobilierVitrine() {
               <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{tr(s.label)}</div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* BIENS */}
-      <section id="properties" style={{ background: "#f8fafc", padding: "60px 20px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 36 }}>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Nos Biens Disponibles")}</h2>
-          </div>
-
-          {statuts.length > 1 && (
-            <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
-              {statuts.map(s => (
-                <button key={s} onClick={() => setFilter(s)}
-                  style={{ padding: "6px 16px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontWeight: filter === s ? 700 : 500, fontSize: 13, background: filter === s ? ORANGE : "white", color: filter === s ? "white" : "#374151", transition: "all 0.15s", textTransform: "capitalize" }}>
-                  {tr(s)}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {filtered.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🏠</div>
-              {tr("Aucun bien disponible pour l'instant.")}
-            </div>
-          ) : (
-            <div className="prop-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {filtered.map((p: any, i: number) => (
-                <div key={i} className="prop-card" style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  {/* Photo du bien (ajoutée depuis la gestion), sinon une illustration */}
-                  {p.video_url && !p.image_url
-                    ? <video src={getPhotoUrl(p.video_url) || p.video_url} controls playsInline preload="metadata" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "black" }} />
-                    : p.image_url
-                    ? <img src={getPhotoUrl(p.image_url) || ""} alt={p.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
-                    : <div style={{ aspectRatio: "16 / 9", background: `linear-gradient(135deg, ${ORANGE}10, ${ORANGE}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</div>}
-                  <div style={{ height: 4, background: p.statut === "vacant" ? ORANGE : "#94a3b8" }} />
-                  <div style={{ padding: "20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: `${ORANGE}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                        {TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{p.nom}</div>
-                        {p.type_bien && <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "capitalize" }}>{p.type_bien}</div>}
-                      </div>
-                    </div>
-                    {p.superficie && <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>📐 {p.superficie} m²</div>}
-                    {(p.quartier || p.ville) && <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>📍 {[p.quartier, p.ville].filter(Boolean).join(", ")}</div>}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: ORANGE }}>{fmtMoney(p.prix)}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: p.statut === "vacant" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "vacant" ? "#1a8f1a" : "#64748b" }}>
-                        {tr(p.statut || "Disponible")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 

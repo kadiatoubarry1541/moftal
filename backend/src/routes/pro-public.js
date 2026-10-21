@@ -235,7 +235,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code AND statut='vacant'`, { code }),
           // Colonnes réelles : surface, loyer_mensuel, adresse — renommées pour le site client.
-          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'video_url' AS video_url FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 9`, { code }),
+          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,description,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'video_url' AS video_url FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { total: +(propCnt.c||0), vacant: +(vacantCnt.c||0) }, properties });
       }
