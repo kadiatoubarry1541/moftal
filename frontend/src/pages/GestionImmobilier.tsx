@@ -2,7 +2,7 @@
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser } from "../utils/auth";
+import { getSessionUser, getPhotoUrl } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
@@ -12,6 +12,8 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import { compressImage } from "../utils/compressImage";
+import { uploadMedia } from "../utils/uploadMedia";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -19,6 +21,14 @@ const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, 
 type Tab = "dashboard" | "properties" | "tenants" | "payments" | "maintenance" | "announcements";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
+
+// Photo choisie → image compressée (data URL) envoyée au serveur, qui l'enregistre en base
+const lirePhoto = async (f: File) => {
+  const petite = await compressImage(f, 1200, 0.82);
+  return new Promise<string>((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = ko; r.readAsDataURL(petite); });
+};
+const BIEN_VIDE = { nom: "", type_bien: "appartement", adresse: "", loyer_mensuel: "", description: "" };
+const MEDIA_VIDE = { image: "", video_url: "", envoi: false };
 
 const AMBER = "#b45309";
 const AMBER_LIGHT = "#fffbeb";
@@ -62,7 +72,25 @@ export default function GestionImmobilier() {
   const [showAddMaint, setShowAddMaint] = useState(false);
   const [showAddAnn, setShowAddAnn] = useState(false);
 
-  const [prForm, setPrForm] = useState({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" });
+  // Ajout d'un bien : seule la photo ou la vidéo est obligatoire
+  const [prForm, setPrForm] = useState(BIEN_VIDE);
+  const [media, setMedia] = useState(MEDIA_VIDE);
+  const choisirMedia = async (f: File) => {
+    if (f.type.startsWith("video/")) {
+      if (f.size > 200 * 1024 * 1024) { alert("Cette vidéo est trop lourde (200 Mo au maximum). Choisissez une vidéo plus courte."); return; }
+      setMedia(m => ({ ...m, envoi: true }));
+      try {
+        const url = await uploadMedia(f, "videos");
+        setMedia({ image: "", video_url: url, envoi: false });
+      } catch (e: any) {
+        setMedia(m => ({ ...m, envoi: false }));
+        alert(`La vidéo n'a pas été envoyée : ${e?.message || "vérifiez la connexion"}. Réessayez.`);
+      }
+      return;
+    }
+    try { const image = await lirePhoto(f); setMedia({ image, video_url: "", envoi: false }); }
+    catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); }
+  };
   const [ltForm, setLtForm] = useState({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" });
   const [pyForm, setPyForm] = useState({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" });
   const [mtForm, setMtForm] = useState({ property_id: "", titre: "", description: "", type_intervention: "reparation", priorite: "normale", cout_estime: "" });
@@ -263,24 +291,38 @@ export default function GestionImmobilier() {
           </div>
           {showAddProp && (
             <div style={{ background: AMBER_LIGHT, border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: 18, marginBottom: 18 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <input style={inp} placeholder="Nom du bien *" value={prForm.nom} onChange={e => setPrForm(p => ({ ...p, nom: e.target.value }))} />
+              <div style={{ fontSize: 13, color: "#92400e", marginBottom: 10 }}>
+                Seule la <b>photo ou la vidéo</b> est obligatoire. Elle apparaît sur votre site.
+              </div>
+              {/* Photo ou vidéo du bien (obligatoire) */}
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: 160, marginBottom: 10, borderRadius: 12, overflow: "hidden", cursor: media.envoi ? "wait" : "pointer",
+                border: media.image || media.video_url ? `1px solid ${AMBER_BORDER}` : `2px dashed ${AMBER}`, background: media.image || media.video_url ? "#f1f5f9" : "white" }}>
+                {media.image ? <img src={media.image} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />
+                  : media.video_url ? <video src={media.video_url} muted autoPlay loop playsInline style={{ width: "100%", maxHeight: 260, display: "block", background: "black" }} />
+                  : <span style={{ textAlign: "center", color: AMBER, fontWeight: 700, fontSize: 14, padding: 16 }}>
+                      {media.envoi ? "Envoi de la vidéo…" : <>📷 🎥<br />Ajouter une photo ou une vidéo *</>}
+                    </span>}
+                <input type="file" accept="image/*,video/*" style={{ display: "none" }} disabled={media.envoi}
+                  onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) choisirMedia(f); }} />
+              </label>
+              {(media.image || media.video_url) && !media.envoi && (
+                <div style={{ fontSize: 12, color: "#92400e", marginTop: -4, marginBottom: 10 }}>Touchez l'image ou la vidéo pour la changer.</div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 10 }}>
                 <select style={inp} value={prForm.type_bien} onChange={e => setPrForm(p => ({ ...p, type_bien: e.target.value }))}>
                   {["appartement","maison","bureau","boutique","entrepot","terrain","villa","studio"].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
                 </select>
-                <input style={inp} placeholder="Adresse" value={prForm.adresse} onChange={e => setPrForm(p => ({ ...p, adresse: e.target.value }))} />
-                <input style={inp} placeholder="Ville" value={prForm.ville} onChange={e => setPrForm(p => ({ ...p, ville: e.target.value }))} />
-                <input style={inp} placeholder="Surface (m²)" type="number" value={prForm.surface} onChange={e => setPrForm(p => ({ ...p, surface: e.target.value }))} />
-                <input style={inp} placeholder="Nb pièces" type="number" value={prForm.nb_pieces} onChange={e => setPrForm(p => ({ ...p, nb_pieces: e.target.value }))} />
-                <input style={inp} placeholder="Loyer mensuel (GNF)" type="number" value={prForm.loyer_mensuel} onChange={e => setPrForm(p => ({ ...p, loyer_mensuel: e.target.value }))} />
-                <input style={inp} placeholder="Charges (GNF)" type="number" value={prForm.charges} onChange={e => setPrForm(p => ({ ...p, charges: e.target.value }))} />
+                <input style={inp} placeholder="Prix (GNF)" type="number" inputMode="numeric" value={prForm.loyer_mensuel} onChange={e => setPrForm(p => ({ ...p, loyer_mensuel: e.target.value }))} />
+                <input style={inp} placeholder="Nom du bien (facultatif)" value={prForm.nom} onChange={e => setPrForm(p => ({ ...p, nom: e.target.value }))} />
+                <input style={inp} placeholder="Adresse / quartier" value={prForm.adresse} onChange={e => setPrForm(p => ({ ...p, adresse: e.target.value }))} />
               </div>
-              <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} placeholder="Description" value={prForm.description} onChange={e => setPrForm(p => ({ ...p, description: e.target.value }))} />
+              <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} placeholder="Description (facultatif)" value={prForm.description} onChange={e => setPrForm(p => ({ ...p, description: e.target.value }))} />
               <button onClick={async () => {
-                if (!prForm.nom) return;
-                const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, surface: prForm.surface ? +prForm.surface : null, nb_pieces: prForm.nb_pieces ? +prForm.nb_pieces : null, loyer_mensuel: +prForm.loyer_mensuel || 0 });
-                if (d.success) { setShowAddProp(false); setPrForm({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" }); reloadTab("properties"); } else alert(d.message || "Erreur : rien n'a été enregistré");
-              }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+                if (media.envoi) { alert("Attendez la fin de l'envoi de la vidéo."); return; }
+                if (!media.image && !media.video_url) { alert("Ajoutez une photo ou une vidéo du bien."); return; }
+                const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, loyer_mensuel: +prForm.loyer_mensuel || 0, image: media.image || undefined, video_url: media.video_url || undefined });
+                if (d.success) { setShowAddProp(false); setPrForm(BIEN_VIDE); setMedia(MEDIA_VIDE); reloadTab("properties"); } else alert(d.message || "Erreur : rien n'a été enregistré");
+              }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer le bien"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -290,15 +332,20 @@ export default function GestionImmobilier() {
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                     {/* Case photo : la photo apparaît sur le site */}
-                    <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={AMBER}
-                      onChange={url => setProperties(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))}
-                      style={{ float: "left", marginInlineEnd: 12 }} />
+                    {p.video_url && !p.image_url ? (
+                      <video src={getPhotoUrl(p.video_url) || p.video_url} controls playsInline preload="metadata"
+                        style={{ float: "left", marginInlineEnd: 12, width: 120, height: 90, borderRadius: 12, background: "black", objectFit: "cover" }} />
+                    ) : (
+                      <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={AMBER}
+                        onChange={url => setProperties(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))}
+                        style={{ float: "left", marginInlineEnd: 12 }} />
+                    )}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{p.nom}</div>
                         <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{p.type_bien} · {p.adresse}{p.ville ? ` · ${p.ville}` : ""}</div>
                         {(p.surface || p.nb_pieces) && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{p.surface ? `${p.surface} m²` : ""}{p.surface && p.nb_pieces ? " · " : ""}{p.nb_pieces ? `${p.nb_pieces} pièces` : ""}</div>}
-                        {p.loyer_mensuel > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 6 }}>{fmtMoney(p.loyer_mensuel)}/mois</div>}
+                        {p.loyer_mensuel > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 6 }}>{fmtMoney(p.loyer_mensuel)}</div>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <select value={p.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/properties/${p.id}`, { statut: e.target.value }); reloadTab("properties"); }}
