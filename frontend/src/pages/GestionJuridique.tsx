@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
@@ -17,7 +20,7 @@ import CarreauPhoto from "../components/CarreauPhoto";
 const BASE = (code: string) => `/api/juridique-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "dossiers" | "bookings" | "clients" | "services" | "staff" | "announcements";
+type Tab = "dashboard" | "dossiers" | "bookings" | "clients" | "services" | "staff" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
@@ -214,6 +217,7 @@ export default function GestionJuridique() {
     { id: "services",      label: "Prestations",     emoji: "⚖️" },
     { id: "staff",         label: "Équipe",          emoji: "👔" },
     { id: "announcements", label: "Annonces",        emoji: "📣" },
+    { id: "settings",      label: "Paramètres",      emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14, boxSizing: "border-box" };
@@ -244,10 +248,10 @@ export default function GestionJuridique() {
         </div>
       </div>
 
-      {/* TABS */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* TABS : une seule ligne, qui défile sur téléphone */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 14, background: tab === t.id ? COLOR : COLOR_BG, color: tab === t.id ? "white" : COLOR }}>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 14, whiteSpace: "nowrap", flexShrink: 0, background: tab === t.id ? COLOR : COLOR_BG, color: tab === t.id ? "white" : COLOR }}>
             {t.emoji} {t.label}
           </button>
         ))}
@@ -618,6 +622,18 @@ export default function GestionJuridique() {
               <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>{a.type} · {fmtDate(a.created_at)}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* PARAMÈTRES : identifiant, renseignements du cabinet, langue, abonnement */}
+      {tab === "settings" && (
+        <div style={{ maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={b(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={COLOR} emoji="⚖️"
+            titre="Renseignements du cabinet" nomLabel="Nom du cabinet *" descriptionAide="Vos domaines, votre expérience…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
     </div>

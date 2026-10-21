@@ -14,6 +14,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { ajouterRouteParametres } from '../utils/routeParametres.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
@@ -216,6 +217,9 @@ const select = (sql, replacements) => sequelize.query(sql, { replacements, type:
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
 });
+
+// ─── PARAMÈTRES (nom, logo, contact, horaires, urgence) ────────────────────────
+ajouterRouteParametres(router, [authenticate, verifyTenant]);
 
 // ─── TABLEAU DE BORD ──────────────────────────────────────────────────────────
 router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res) => {
