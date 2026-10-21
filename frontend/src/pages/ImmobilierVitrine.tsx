@@ -192,7 +192,9 @@ export default function ImmobilierVitrine() {
               {filtered.map((p: any, i: number) => (
                 <div key={i} className="prop-card" style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   {/* Photo du bien (ajoutée depuis la gestion), sinon une illustration */}
-                  {p.image_url
+                  {p.video_url && !p.image_url
+                    ? <video src={getPhotoUrl(p.video_url) || p.video_url} controls playsInline preload="metadata" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "black" }} />
+                    : p.image_url
                     ? <img src={getPhotoUrl(p.image_url) || ""} alt={p.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
                     : <div style={{ aspectRatio: "16 / 9", background: `linear-gradient(135deg, ${ORANGE}10, ${ORANGE}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</div>}
                   <div style={{ height: 4, background: p.statut === "vacant" ? ORANGE : "#94a3b8" }} />

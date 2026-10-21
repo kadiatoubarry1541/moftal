@@ -4,6 +4,7 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const router = express.Router();
 
@@ -94,8 +95,15 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 });
 
 // ─── PROPRIÉTÉS ───────────────────────────────────────────────────────────────
+// Photo ou vidéo de chaque bien (affichée sur le site : les clients choisissent en voyant)
+let colonnesMediaBien = null;
+const preparerMediaBien = () => (colonnesMediaBien ||= sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS image_url TEXT`)
+  .then(() => sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS video_url TEXT`))
+  .catch((e) => { colonnesMediaBien = null; throw e; }));
+
 router.get('/:tenantCode/properties', authenticate, verifyTenant, async (req, res) => {
   try {
+    await preparerMediaBien();
     const rows = await sequelize.query(
       `SELECT * FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
@@ -106,13 +114,25 @@ router.get('/:tenantCode/properties', authenticate, verifyTenant, async (req, re
 
 router.post('/:tenantCode/properties', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, type_bien, adresse, ville, surface, nb_pieces, loyer_mensuel, charges, statut, description } = req.body;
+    const { type_bien, ville, surface, nb_pieces, loyer_mensuel, charges, statut, description } = req.body;
     const code = req.params.tenantCode;
-    await sequelize.query(
-      `INSERT INTO immo_properties (tenant_code,nom,type_bien,adresse,ville,surface,nb_pieces,loyer_mensuel,charges,statut,description) VALUES(:code,:nom,:type,:adresse,:ville,:surface,:pieces,:loyer,:charges,:statut,:desc)`,
-      { replacements: { code, nom, type: type_bien || 'appartement', adresse: adresse || '', ville: ville || '', surface: surface || null, pieces: nb_pieces || null, loyer: loyer_mensuel || 0, charges: charges || 0, statut: statut || 'vacant', desc: description || null } }
+    // Seule la photo ou la vidéo est obligatoire ; le reste est facultatif
+    const video = /^https?:\/\//.test(String(req.body.video_url || '')) ? String(req.body.video_url).slice(0, 1000) : null;
+    const image = req.body.image ? await photoDepuisFormulaire(req.body.image, { proprietaire: code, usage: 'photo-bien' }) : null;
+    if (req.body.image && !image) return res.status(400).json({ success: false, message: 'La photo du bien est illisible. Essayez une autre photo.' });
+    if (!image && !video) return res.status(400).json({ success: false, message: 'Ajoutez une photo ou une vidéo du bien.' });
+    const type = String(type_bien || 'appartement').slice(0, 100);
+    const adresse = String(req.body.adresse || '').trim().slice(0, 255);
+    // Sans nom : le type du bien (et son adresse) en tient lieu
+    const nom = String(req.body.nom || '').trim().slice(0, 255)
+      || `${type.charAt(0).toUpperCase()}${type.slice(1)}${adresse ? ` — ${adresse}` : ''}`.slice(0, 255);
+    const prix = Number(loyer_mensuel);
+    await preparerMediaBien();
+    const [rows] = await sequelize.query(
+      `INSERT INTO immo_properties (tenant_code,nom,type_bien,adresse,ville,surface,nb_pieces,loyer_mensuel,charges,statut,description,image_url,video_url) VALUES(:code,:nom,:type,:adresse,:ville,:surface,:pieces,:loyer,:charges,:statut,:desc,:image,:video) RETURNING *`,
+      { replacements: { code, nom, type, adresse, ville: ville || '', surface: surface || null, pieces: nb_pieces || null, loyer: Number.isFinite(prix) && prix > 0 ? prix : 0, charges: charges || 0, statut: statut || 'vacant', desc: description || null, image, video } }
     );
-    res.json({ success: true });
+    res.json({ success: true, property: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
