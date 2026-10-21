@@ -1,6 +1,5 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/postcss";
 import viteCompression from "vite-plugin-compression";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -101,11 +100,7 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     base: "/",
-    css: {
-      postcss: {
-        plugins: [tailwindcss],
-      },
-    },
+    // Styles : voir postcss.config.js (Tailwind + compatibilité anciens navigateurs)
     server: {
       host: '0.0.0.0',
       port: 3000,
