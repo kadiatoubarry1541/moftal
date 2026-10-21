@@ -10,6 +10,7 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { ajouterRouteParametres } from '../utils/routeParametres.js';
 
 const router = express.Router();
 
@@ -42,6 +43,7 @@ async function verifyTenantProprietaire(req, res, next) {
 // ─── INFO ─────────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
+ajouterRouteParametres(router, [authenticate, verifyTenant]);
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────

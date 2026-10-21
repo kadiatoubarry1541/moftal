@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
@@ -16,7 +19,7 @@ import CarreauPhoto from "../components/CarreauPhoto";
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "products" | "lots" | "orders" | "staff" | "announcements";
+type Tab = "dashboard" | "products" | "lots" | "orders" | "staff" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
@@ -206,6 +209,7 @@ export default function GestionProducer() {
     { id: "orders",        label: "Commandes",  emoji: "📋" },
     { id: "staff",         label: "Personnel",  emoji: "👷" },
     { id: "announcements", label: "Annonces",   emoji: "📣" },
+    { id: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14, boxSizing: "border-box" };
@@ -543,6 +547,17 @@ export default function GestionProducer() {
               <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>{a.type} · {fmtDate(a.created_at)}</div>
             </div>
           ))}
+        </div>
+      )}
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={COLOR} emoji="🏭"
+            titre="Renseignements de l'entreprise" nomLabel="Nom de l'entreprise *" descriptionAide="Ce que vous produisez, vos zones de livraison…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
     </div>

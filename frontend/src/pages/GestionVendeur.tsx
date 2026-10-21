@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
@@ -16,7 +19,7 @@ import CarreauPhoto from "../components/CarreauPhoto";
 const BASE = (code: string) => `/api/retailer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses";
+type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "settings";
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 
@@ -181,6 +184,7 @@ export default function GestionVendeur() {
     { id: "sales",     label: "Ventes",     emoji: "💰" },
     { id: "clients",   label: "Clients",    emoji: "👤" },
     { id: "expenses",  label: "Dépenses",   emoji: "📋" },
+    { id: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14, boxSizing: "border-box" };
@@ -469,6 +473,17 @@ export default function GestionVendeur() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={COLOR} emoji="🛒"
+            titre="Renseignements de la boutique" nomLabel="Nom de la boutique *" descriptionAide="Vos produits, vos marques…"
+            horairesAide="Ex : Lun-Sam 8h-19h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
     </div>
