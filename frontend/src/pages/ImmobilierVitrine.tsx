@@ -35,6 +35,13 @@ export default function ImmobilierVitrine() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [filter, setFilter]   = useState("Tous");
+  // Pré-demande : le visiteur choisit des biens puis envoie sa demande à l'agence (sa gestion)
+  const [choix, setChoix]     = useState<number[]>([]);
+  const [demandeOuverte, setDemandeOuverte] = useState(false);
+  const [client, setClient]   = useState({ nom: "", telephone: "", type_demande: "visite", message: "" });
+  const [envoi, setEnvoi]     = useState(false);
+  const [erreurDemande, setErreurDemande] = useState("");
+  const [demandeEnvoyee, setDemandeEnvoyee] = useState(false);
 
   useEffect(() => {
     const code = tenantCode!;
@@ -75,6 +82,31 @@ export default function ImmobilierVitrine() {
 
   const statuts = ["Tous", ...Array.from(new Set(properties.map((p: any) => p.statut).filter(Boolean))) as string[]];
   const filtered = filter === "Tous" ? properties : properties.filter((p: any) => p.statut === filter);
+  const biensChoisis = properties.filter((p: any) => choix.includes(p.id));
+  const basculerChoix = (id: number) => setChoix(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
+  const ouvrirDemande = () => { setErreurDemande(""); setDemandeEnvoyee(false); setDemandeOuverte(true); };
+  const envoyerDemande = async () => {
+    if (envoi) return;
+    if (!client.nom.trim() || client.telephone.replace(/\D/g, "").length < 8) { setErreurDemande(tr("Indiquez votre nom et votre numéro de téléphone.")); return; }
+    setEnvoi(true); setErreurDemande("");
+    try {
+      const r = await fetch(`${API}/api/pro-public/immobilier/${tenantCode}/demande`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ biens: choix, client_nom: client.nom, client_telephone: client.telephone, type_demande: client.type_demande, message: client.message }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) { setErreurDemande(tr(d.message || "La demande n'a pas été envoyée. Réessayez.")); return; }
+      setDemandeEnvoyee(true);
+      setChoix([]);
+    } catch {
+      setErreurDemande(tr("Pas de connexion : la demande n'a pas été envoyée. Vérifiez internet puis réessayez."));
+    } finally { setEnvoi(false); }
+  };
+  // Toutes les photos du bien (la principale d'abord)
+  const photosDe = (p: any): string[] => {
+    const liste = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
+    return liste.length ? liste : p.image_url ? [p.image_url] : [];
+  };
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -83,6 +115,7 @@ export default function ImmobilierVitrine() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
         .vn-link{color:#334155;font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
         .vn-link:hover{color:#0f172a;border-bottom-color:${ORANGE};}
+        .galerie-bien{scrollbar-width:none}.galerie-bien::-webkit-scrollbar{display:none}
         .prop-card{transition:all 0.25s;} .prop-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(234,88,12,0.15) !important;}
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}.prop-g{grid-template-columns:1fr 1fr !important}}
         @media(max-width:480px){.prop-g{grid-template-columns:1fr !important}}
@@ -147,8 +180,19 @@ export default function ImmobilierVitrine() {
                   {/* L'image (ou la vidéo) publiée depuis la gestion occupe toute la carte */}
                   {p.video_url && !p.image_url
                     ? <video src={getPhotoUrl(p.video_url) || p.video_url} controls playsInline preload="metadata" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block", background: "black" }} />
-                    : p.image_url
-                    ? <img src={getPhotoUrl(p.image_url) || ""} alt={p.nom} loading="lazy" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block", background: "#f1f5f9" }} />
+                    : photosDe(p).length
+                    ? (
+                      <div style={{ position: "relative" }}>
+                        <div className="galerie-bien" style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", aspectRatio: "1 / 1", background: "#f1f5f9" }}>
+                          {photosDe(p).map((src, k) => (
+                            <img key={k} src={getPhotoUrl(src) || ""} alt={p.nom} loading="lazy" style={{ flex: "0 0 100%", width: "100%", height: "100%", objectFit: "cover", display: "block", scrollSnapAlign: "start" }} />
+                          ))}
+                        </div>
+                        {photosDe(p).length > 1 && (
+                          <span style={{ position: "absolute", right: 8, bottom: 8, background: "rgba(15,23,42,0.7)", color: "white", fontSize: 11, fontWeight: 700, borderRadius: 999, padding: "3px 9px" }}>📷 {photosDe(p).length} · {tr("glissez")}</span>
+                        )}
+                      </div>
+                    )
                     : <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg, ${ORANGE}10, ${ORANGE}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</div>}
                   <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -161,11 +205,10 @@ export default function ImmobilierVitrine() {
                     {(p.quartier || p.ville) && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {[p.quartier, p.ville].filter(Boolean).join(", ")}</div>}
                     {p.superficie && <div style={{ fontSize: 12, color: "#64748b" }}>📐 {p.superficie} m²</div>}
                     {p.description && <div style={{ fontSize: 12, color: "#475569", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.description}</div>}
-                    <EcrireAuSite tenantCode={tenantCode!} nomEtablissement={agency.name} couleur={ORANGE} objet={`Bien : ${p.nom}`}
-                      messageInitial={tr("Bonjour, je suis intéressé par ce bien : {bien}. Est-il toujours disponible ?", { bien: p.nom })}
-                      style={{ marginTop: "auto", background: ORANGE, color: "white", border: "none", borderRadius: 10, padding: "9px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>
-                      ✉️ {tr("Je suis intéressé")}
-                    </EcrireAuSite>
+                    <button onClick={() => basculerChoix(p.id)}
+                      style={{ marginTop: "auto", background: choix.includes(p.id) ? "white" : ORANGE, color: choix.includes(p.id) ? ORANGE : "white", border: `1.5px solid ${ORANGE}`, borderRadius: 10, padding: "9px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>
+                      {choix.includes(p.id) ? `✓ ${tr("Choisi — retirer")}` : `➕ ${tr("Ajouter à ma demande")}`}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -252,6 +295,76 @@ export default function ImmobilierVitrine() {
       <GalerieVitrine photos={photos} couleur="#ea580c" />
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#ea580c" accentDark="#9a3412" />
+
+      {/* MA DEMANDE — barre en bas de l'écran dès qu'un bien est choisi */}
+      {choix.length > 0 && !demandeOuverte && (
+        <button onClick={ouvrirDemande}
+          style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "max(16px, env(safe-area-inset-bottom, 0px))", zIndex: 70, background: ORANGE, color: "white", border: "none", borderRadius: 999, padding: "14px 22px", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 24px rgba(234,88,12,0.4)", whiteSpace: "nowrap" }}>
+          📩 {tr(choix.length > 1 ? "{n} biens choisis" : "{n} bien choisi", { n: choix.length })} — {tr("Envoyer ma demande")}
+        </button>
+      )}
+
+      {/* PRÉ-DEMANDE — envoyée directement à l'agence */}
+      {demandeOuverte && (
+        <div onClick={e => { if (e.target === e.currentTarget && !envoi) setDemandeOuverte(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: "white", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", borderRadius: "20px 20px 0 0", padding: "20px 18px 28px", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>📩 {tr("Ma demande")}</div>
+              <button onClick={() => setDemandeOuverte(false)} disabled={envoi} aria-label={tr("Fermer")} style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+
+            {demandeEnvoyee ? (
+              <div style={{ textAlign: "center", padding: "12px 0" }}>
+                <div style={{ fontSize: 48 }}>✅</div>
+                <p style={{ fontSize: 16, fontWeight: 800, margin: "8px 0" }}>{tr("Demande envoyée à {nom}", { nom: agency.name })}</p>
+                <p style={{ fontSize: 14, color: "#475569", margin: "0 0 16px" }}>{tr("L'agence vous contactera au {tel}.", { tel: client.telephone })}</p>
+                <button onClick={() => { setDemandeOuverte(false); setDemandeEnvoyee(false); }} style={{ width: "100%", padding: 14, background: ORANGE, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>{tr("Fermer")}</button>
+              </div>
+            ) : (<>
+              <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+                {biensChoisis.map((p: any) => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: "1px solid #f1f5f9", borderRadius: 10 }}>
+                    {photosDe(p)[0]
+                      ? <img src={getPhotoUrl(photosDe(p)[0]) || ""} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                      : <span style={{ width: 48, height: 48, borderRadius: 8, background: `${ORANGE}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</span>}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{p.nom}</div>
+                      <div style={{ fontSize: 12, color: ORANGE, fontWeight: 700 }}>{fmtMoney(p.prix)}</div>
+                    </div>
+                    <button onClick={() => basculerChoix(p.id)} aria-label={tr("Retirer")} style={{ border: "none", background: "#f1f5f9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+                {biensChoisis.length === 0 && <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>{tr("Aucun bien choisi : touchez « Ajouter à ma demande » sous un bien.")}</p>}
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[["visite", tr("🔑 Visiter")], ["location", tr("📝 Louer")], ["achat", tr("🤝 Acheter")]].map(([v, lbl]) => (
+                    <button key={v} onClick={() => setClient(c => ({ ...c, type_demande: v }))}
+                      style={{ flex: 1, minWidth: 90, padding: "10px 8px", borderRadius: 10, border: `1.5px solid ${client.type_demande === v ? ORANGE : "#e2e8f0"}`, background: client.type_demande === v ? `${ORANGE}10` : "white", color: client.type_demande === v ? ORANGE : "#334155", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <input value={client.nom} onChange={e => setClient(c => ({ ...c, nom: e.target.value }))} placeholder={tr("Votre nom *")} autoComplete="name"
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
+                <input value={client.telephone} onChange={e => setClient(c => ({ ...c, telephone: e.target.value }))} placeholder={tr("Votre téléphone *")} type="tel" autoComplete="tel"
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
+                <textarea value={client.message} onChange={e => setClient(c => ({ ...c, message: e.target.value }))} rows={2}
+                  placeholder={tr("Jour de visite souhaité, questions… (facultatif)")}
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", resize: "vertical" }} />
+              </div>
+
+              {erreurDemande && <p style={{ color: "#b91c1c", fontSize: 13, fontWeight: 600, margin: "12px 0 0" }}>{erreurDemande}</p>}
+              <button onClick={envoyerDemande} disabled={envoi || biensChoisis.length === 0}
+                style={{ width: "100%", marginTop: 14, padding: 14, background: ORANGE, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: envoi || biensChoisis.length === 0 ? 0.6 : 1 }}>
+                {envoi ? tr("⏳ Envoi…") : tr("Envoyer ma demande à l'agence")}
+              </button>
+            </>)}
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>

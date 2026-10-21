@@ -48,6 +48,7 @@ const TITRES = {
   inscription: '📝 Nouvelle demande d\'inscription',
   commande: '🛒 Nouvelle commande',
   demande_site: '📩 Nouveau message du site',
+  demande_bien: '🏠 Nouvelle demande de bien',
 };
 
 /** Notification à une personne (cloche + téléphone). Ne bloque jamais l'action en cours. */

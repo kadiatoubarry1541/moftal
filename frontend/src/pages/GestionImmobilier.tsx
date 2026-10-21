@@ -18,7 +18,7 @@ import { uploadMedia } from "../utils/uploadMedia";
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "properties" | "tenants" | "payments" | "maintenance" | "announcements";
+type Tab = "dashboard" | "properties" | "demandes" | "tenants" | "payments" | "maintenance" | "announcements";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
@@ -27,8 +27,19 @@ const lirePhoto = async (f: File) => {
   const petite = await compressImage(f, 1200, 0.82);
   return new Promise<string>((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = ko; r.readAsDataURL(petite); });
 };
-const BIEN_VIDE = { nom: "", type_bien: "appartement", adresse: "", loyer_mensuel: "", description: "" };
-const MEDIA_VIDE = { image: "", video_url: "", envoi: false };
+const BIEN_VIDE = { type_bien: "appartement", adresse: "", loyer_mensuel: "" };
+const MEDIA_VIDE: { images: string[]; video_url: string; envoi: boolean } = { images: [], video_url: "", envoi: false };
+const MAX_PHOTOS = 6;
+// Vignettes des photos du formulaire : 3 par ligne
+const VIGNETTE = "calc((100% - 16px) / 3)";
+const TYPES_BIEN = ["appartement", "maison", "villa", "studio", "chambre", "bureau", "boutique", "magasin", "entrepot", "terrain"];
+// Pré-demandes reçues du site
+const STATUT_DEMANDE: Record<string, { bg: string; color: string; label: string }> = {
+  nouvelle: { bg: "#fef2f2", color: "#b91c1c", label: "Nouvelle" },
+  traitee:  { bg: "#f0fdf0", color: "#1a8f1a", label: "Traitée" },
+  annulee:  { bg: "#f1f5f9", color: "#64748b", label: "Annulée" },
+};
+const TYPE_DEMANDE: Record<string, string> = { visite: "🔑 Visite", location: "📝 Location", achat: "🤝 Achat" };
 
 const AMBER = "#b45309";
 const AMBER_LIGHT = "#fffbeb";
@@ -62,6 +73,7 @@ export default function GestionImmobilier() {
   const [payments, setPayments] = useState<any[]>([]);
   const [maintenance, setMaintenance] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [demandes, setDemandes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -72,24 +84,33 @@ export default function GestionImmobilier() {
   const [showAddMaint, setShowAddMaint] = useState(false);
   const [showAddAnn, setShowAddAnn] = useState(false);
 
-  // Ajout d'un bien : seule la photo ou la vidéo est obligatoire
+  // Ajout d'un bien : lieu, type, prix et photos (ou une vidéo), choisies dès l'ajout
   const [prForm, setPrForm] = useState(BIEN_VIDE);
   const [media, setMedia] = useState(MEDIA_VIDE);
-  const choisirMedia = async (f: File) => {
-    if (f.type.startsWith("video/")) {
-      if (f.size > 200 * 1024 * 1024) { alert("Cette vidéo est trop lourde (200 Mo au maximum). Choisissez une vidéo plus courte."); return; }
+  const choisirMedias = async (fichiers: File[]) => {
+    const video = fichiers.find(f => f.type.startsWith("video/"));
+    if (video) {
+      if (video.size > 200 * 1024 * 1024) { alert("Cette vidéo est trop lourde (200 Mo au maximum). Choisissez une vidéo plus courte."); return; }
       setMedia(m => ({ ...m, envoi: true }));
       try {
-        const url = await uploadMedia(f, "videos");
-        setMedia({ image: "", video_url: url, envoi: false });
+        const url = await uploadMedia(video, "videos");
+        setMedia(m => ({ ...m, video_url: url, envoi: false }));
       } catch (e: any) {
         setMedia(m => ({ ...m, envoi: false }));
         alert(`La vidéo n'a pas été envoyée : ${e?.message || "vérifiez la connexion"}. Réessayez.`);
       }
-      return;
     }
-    try { const image = await lirePhoto(f); setMedia({ image, video_url: "", envoi: false }); }
-    catch { alert("Cette photo n'a pas pu être lue. Essayez une autre image."); }
+    const photos = fichiers.filter(f => f.type.startsWith("image/"));
+    if (!photos.length) return;
+    const lues: string[] = [];
+    for (const f of photos) {
+      try { lues.push(await lirePhoto(f)); } catch { alert("Une photo n'a pas pu être lue. Essayez une autre image."); }
+    }
+    setMedia(m => {
+      const images = [...m.images, ...lues].slice(0, MAX_PHOTOS);
+      if (m.images.length + lues.length > MAX_PHOTOS) alert(`${MAX_PHOTOS} photos au maximum par bien.`);
+      return { ...m, images };
+    });
   };
   const [ltForm, setLtForm] = useState({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" });
   const [pyForm, setPyForm] = useState({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" });
@@ -117,6 +138,7 @@ export default function GestionImmobilier() {
     fetch(`${BASE(tenantCode)}/properties`, { headers: h }).then(r => r.json()).then(d => d.success && setProperties(d.properties || []));
     fetch(`${BASE(tenantCode)}/tenants`,    { headers: h }).then(r => r.json()).then(d => d.success && setTenants(d.tenants || []));
     if (tab === "payments")      fetch(`${BASE(tenantCode)}/payments`,      { headers: h }).then(r => r.json()).then(d => d.success && setPayments(d.payments || []));
+    if (tab === "demandes")      fetch(`${BASE(tenantCode)}/demandes`,      { headers: h }).then(r => r.json()).then(d => d.success && setDemandes(d.demandes || []));
     if (tab === "maintenance")   fetch(`${BASE(tenantCode)}/maintenance`,   { headers: h }).then(r => r.json()).then(d => d.success && setMaintenance(d.maintenance || []));
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
   }, [tab, tenantCode, loading]);
@@ -141,6 +163,7 @@ export default function GestionImmobilier() {
   const reloadTab = (t: Tab) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
     if (t === "properties")    fetch(`${BASE(tenantCode!)}/properties`,    { headers: h }).then(r => r.json()).then(d => d.success && setProperties(d.properties || []));
+    if (t === "demandes")      fetch(`${BASE(tenantCode!)}/demandes`,      { headers: h }).then(r => r.json()).then(d => d.success && setDemandes(d.demandes || []));
     if (t === "tenants")       fetch(`${BASE(tenantCode!)}/tenants`,       { headers: h }).then(r => r.json()).then(d => d.success && setTenants(d.tenants || []));
     if (t === "payments")      fetch(`${BASE(tenantCode!)}/payments`,      { headers: h }).then(r => r.json()).then(d => d.success && setPayments(d.payments || []));
     if (t === "maintenance")   fetch(`${BASE(tenantCode!)}/maintenance`,   { headers: h }).then(r => r.json()).then(d => d.success && setMaintenance(d.maintenance || []));
@@ -159,6 +182,7 @@ export default function GestionImmobilier() {
   const TABS: { id: Tab; label: string; emoji: string }[] = [
     { id: "dashboard",     label: "Dashboard",    emoji: "📊" },
     { id: "properties",   label: "Biens",         emoji: "🏠" },
+    { id: "demandes",     label: "Demandes",      emoji: "📩" },
     { id: "tenants",      label: "Locataires",    emoji: "👤" },
     { id: "payments",     label: "Loyers",        emoji: "💰" },
     { id: "maintenance",  label: "Maintenance",   emoji: "🔧" },
@@ -291,38 +315,49 @@ export default function GestionImmobilier() {
           </div>
           {showAddProp && (
             <div style={{ background: AMBER_LIGHT, border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: 18, marginBottom: 18 }}>
-              <div style={{ fontSize: 13, color: "#92400e", marginBottom: 10 }}>
-                Seule la <b>photo ou la vidéo</b> est obligatoire. Elle apparaît sur votre site.
+              {/* 1. Photos (ou vidéo) du bien : obligatoires, choisies dès l'ajout */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#92400e", marginBottom: 8 }}>📷 Photos du bien * <span style={{ fontWeight: 500 }}>(jusqu'à {MAX_PHOTOS}, ou une vidéo)</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {media.images.map((src, k) => (
+                  <div key={k} style={{ position: "relative", width: VIGNETTE, aspectRatio: "1 / 1", borderRadius: 10, overflow: "hidden", background: "#f1f5f9" }}>
+                    <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    {k === 0 && <span style={{ position: "absolute", left: 4, top: 4, background: AMBER, color: "white", fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "2px 6px" }}>Principale</span>}
+                    <button type="button" aria-label="Retirer la photo" onClick={() => setMedia(m => ({ ...m, images: m.images.filter((_, x) => x !== k) }))}
+                      style={{ position: "absolute", right: 4, top: 4, width: 26, height: 26, borderRadius: 13, border: "none", background: "rgba(15,23,42,0.7)", color: "white", fontWeight: 800, cursor: "pointer" }}>✕</button>
+                  </div>
+                ))}
+                {media.video_url && (
+                  <div style={{ position: "relative", width: VIGNETTE, aspectRatio: "1 / 1", borderRadius: 10, overflow: "hidden", background: "black" }}>
+                    <video src={media.video_url} muted autoPlay loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <button type="button" aria-label="Retirer la vidéo" onClick={() => setMedia(m => ({ ...m, video_url: "" }))}
+                      style={{ position: "absolute", right: 4, top: 4, width: 26, height: 26, borderRadius: 13, border: "none", background: "rgba(15,23,42,0.7)", color: "white", fontWeight: 800, cursor: "pointer" }}>✕</button>
+                  </div>
+                )}
+                {media.images.length < MAX_PHOTOS && (
+                  <label style={{ width: VIGNETTE, boxSizing: "border-box", aspectRatio: "1 / 1", borderRadius: 10, border: `2px dashed ${AMBER}`, background: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: AMBER, fontWeight: 700, fontSize: 12, textAlign: "center", cursor: media.envoi ? "wait" : "pointer", padding: 4 }}>
+                    <span style={{ fontSize: 24 }}>{media.envoi ? "⏳" : "＋"}</span>
+                    {media.envoi ? "Envoi de la vidéo…" : media.images.length ? "Ajouter" : "Photos / vidéo"}
+                    <input type="file" accept="image/*,video/*" multiple style={{ display: "none" }} disabled={media.envoi}
+                      onChange={e => { const fs = Array.from(e.target.files || []); e.target.value = ""; if (fs.length) choisirMedias(fs); }} />
+                  </label>
+                )}
               </div>
-              {/* Photo ou vidéo du bien (obligatoire) */}
-              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", minHeight: 160, marginBottom: 10, borderRadius: 12, overflow: "hidden", cursor: media.envoi ? "wait" : "pointer",
-                border: media.image || media.video_url ? `1px solid ${AMBER_BORDER}` : `2px dashed ${AMBER}`, background: media.image || media.video_url ? "#f1f5f9" : "white" }}>
-                {media.image ? <img src={media.image} alt="" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />
-                  : media.video_url ? <video src={media.video_url} muted autoPlay loop playsInline style={{ width: "100%", maxHeight: 260, display: "block", background: "black" }} />
-                  : <span style={{ textAlign: "center", color: AMBER, fontWeight: 700, fontSize: 14, padding: 16 }}>
-                      {media.envoi ? "Envoi de la vidéo…" : <>📷 🎥<br />Ajouter une photo ou une vidéo *</>}
-                    </span>}
-                <input type="file" accept="image/*,video/*" style={{ display: "none" }} disabled={media.envoi}
-                  onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) choisirMedia(f); }} />
-              </label>
-              {(media.image || media.video_url) && !media.envoi && (
-                <div style={{ fontSize: 12, color: "#92400e", marginTop: -4, marginBottom: 10 }}>Touchez l'image ou la vidéo pour la changer.</div>
-              )}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 10 }}>
-                <select style={inp} value={prForm.type_bien} onChange={e => setPrForm(p => ({ ...p, type_bien: e.target.value }))}>
-                  {["appartement","maison","bureau","boutique","entrepot","terrain","villa","studio"].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
-                </select>
-                <input style={inp} placeholder="Prix (GNF)" type="number" inputMode="numeric" value={prForm.loyer_mensuel} onChange={e => setPrForm(p => ({ ...p, loyer_mensuel: e.target.value }))} />
-                <input style={inp} placeholder="Nom du bien (facultatif)" value={prForm.nom} onChange={e => setPrForm(p => ({ ...p, nom: e.target.value }))} />
-                <input style={inp} placeholder="Adresse / quartier" value={prForm.adresse} onChange={e => setPrForm(p => ({ ...p, adresse: e.target.value }))} />
+              {/* 2. Lieu, type, prix : c'est tout */}
+              <div style={{ display: "grid", gap: 10, marginBottom: 4 }}>
+                <input style={inp} placeholder="📍 Lieu (quartier, ville)" value={prForm.adresse} onChange={e => setPrForm(p => ({ ...p, adresse: e.target.value }))} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <select style={inp} value={prForm.type_bien} onChange={e => setPrForm(p => ({ ...p, type_bien: e.target.value }))}>
+                    {TYPES_BIEN.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                  </select>
+                  <input style={inp} placeholder="Prix (GNF)" type="number" inputMode="numeric" value={prForm.loyer_mensuel} onChange={e => setPrForm(p => ({ ...p, loyer_mensuel: e.target.value }))} />
+                </div>
               </div>
-              <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} placeholder="Description (facultatif)" value={prForm.description} onChange={e => setPrForm(p => ({ ...p, description: e.target.value }))} />
               <button onClick={async () => {
                 if (media.envoi) { alert("Attendez la fin de l'envoi de la vidéo."); return; }
-                if (!media.image && !media.video_url) { alert("Ajoutez une photo ou une vidéo du bien."); return; }
-                const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, loyer_mensuel: +prForm.loyer_mensuel || 0, image: media.image || undefined, video_url: media.video_url || undefined });
+                if (!media.images.length && !media.video_url) { alert("Ajoutez au moins une photo (ou une vidéo) du bien."); return; }
+                const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, loyer_mensuel: +prForm.loyer_mensuel || 0, images: media.images, video_url: media.video_url || undefined });
                 if (d.success) { setShowAddProp(false); setPrForm(BIEN_VIDE); setMedia(MEDIA_VIDE); reloadTab("properties"); } else alert(d.message || "Erreur : rien n'a été enregistré");
-              }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer le bien"}</button>
+              }} disabled={saving || media.envoi} style={{ ...btn(AMBER), marginTop: 10, width: "100%" }}>{saving ? "Enregistrement…" : "Enregistrer le bien"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -355,6 +390,50 @@ export default function GestionImmobilier() {
                         <button onClick={async () => { if (confirm("Supprimer ce bien ?")) { await del(`${BASE(tenantCode!)}/properties/${p.id}`); reloadTab("properties"); } }}
                           style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* ── DEMANDES : pré-demandes envoyées depuis le site ── */}
+      {tab === "demandes" && (
+        <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
+          <h2 style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📩 Demandes reçues du site ({demandes.length})</h2>
+          <p style={{ margin: "0 0 14px", fontSize: 13, color: "#64748b" }}>Les visiteurs de votre site choisissent des biens et vous envoient leur demande. Appelez-les puis marquez la demande comme traitée.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {demandes.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune demande pour l'instant</div> :
+              filtrer(demandes, recherche).map(dm => {
+                const sc = STATUT_DEMANDE[dm.statut] || STATUT_DEMANDE.nouvelle;
+                const biens: any[] = Array.isArray(dm.biens) ? dm.biens : [];
+                return (
+                  <div key={dm.id} style={{ background: "white", border: `1px solid ${dm.statut === "nouvelle" ? "#fecaca" : AMBER_BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{dm.client_nom}</div>
+                        <a href={`tel:${dm.client_telephone}`} style={{ fontSize: 14, fontWeight: 700, color: AMBER, textDecoration: "none" }}>📞 {dm.client_telephone}</a>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{TYPE_DEMANDE[dm.type_demande] || dm.type_demande} · {fmtDate(dm.created_at)}</div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color, borderRadius: 6, padding: "4px 8px" }}>{sc.label}</span>
+                    </div>
+                    <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
+                      {biens.map((bn, k) => (
+                        <div key={k} style={{ fontSize: 13, color: "#334155" }}>🏠 <b>{bn.nom}</b>{bn.prix ? ` — ${fmtMoney(bn.prix)}` : ""}</div>
+                      ))}
+                    </div>
+                    {dm.message && <div style={{ marginTop: 8, fontSize: 13, color: "#475569", background: "#f8fafc", borderRadius: 8, padding: "8px 10px" }}>{dm.message}</div>}
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                      {dm.statut !== "traitee" && (
+                        <button onClick={async () => { const r = await patch(`${BASE(tenantCode!)}/demandes/${dm.id}`, { statut: "traitee" }); if (r.ok) reloadTab("demandes"); }}
+                          style={{ ...btn("#1a8f1a"), padding: "7px 14px" }}>✓ Traitée</button>
+                      )}
+                      {dm.statut === "nouvelle" && (
+                        <button onClick={async () => { if (!confirm("Annuler cette demande ?")) return; const r = await patch(`${BASE(tenantCode!)}/demandes/${dm.id}`, { statut: "annulee" }); if (r.ok) reloadTab("demandes"); }}
+                          style={{ padding: "7px 14px", background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Annuler</button>
+                      )}
                     </div>
                   </div>
                 );

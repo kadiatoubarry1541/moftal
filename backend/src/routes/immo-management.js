@@ -97,8 +97,9 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 // ─── PROPRIÉTÉS ───────────────────────────────────────────────────────────────
 // Photo ou vidéo de chaque bien (affichée sur le site : les clients choisissent en voyant)
 let colonnesMediaBien = null;
-const preparerMediaBien = () => (colonnesMediaBien ||= sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS image_url TEXT`)
+export const preparerMediaBien = () => (colonnesMediaBien ||= sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS image_url TEXT`)
   .then(() => sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS video_url TEXT`))
+  .then(() => sequelize.query(`ALTER TABLE immo_properties ADD COLUMN IF NOT EXISTS images JSONB`))
   .catch((e) => { colonnesMediaBien = null; throw e; }));
 
 router.get('/:tenantCode/properties', authenticate, verifyTenant, async (req, res) => {
@@ -116,10 +117,16 @@ router.post('/:tenantCode/properties', authenticate, verifyTenant, async (req, r
   try {
     const { type_bien, ville, surface, nb_pieces, loyer_mensuel, charges, statut, description } = req.body;
     const code = req.params.tenantCode;
-    // Seule la photo ou la vidéo est obligatoire ; le reste est facultatif
+    // Les photos (jusqu'à 6) ou la vidéo sont choisies à l'ajout : seules obligatoires
     const video = /^https?:\/\//.test(String(req.body.video_url || '')) ? String(req.body.video_url).slice(0, 1000) : null;
-    const image = req.body.image ? await photoDepuisFormulaire(req.body.image, { proprietaire: code, usage: 'photo-bien' }) : null;
-    if (req.body.image && !image) return res.status(400).json({ success: false, message: 'La photo du bien est illisible. Essayez une autre photo.' });
+    const envoyees = (Array.isArray(req.body.images) ? req.body.images : req.body.image ? [req.body.image] : []).filter(Boolean).slice(0, 6);
+    const images = [];
+    for (const photo of envoyees) {
+      const url = await photoDepuisFormulaire(photo, { proprietaire: code, usage: 'photo-bien' });
+      if (!url) return res.status(400).json({ success: false, message: 'Une photo du bien est illisible. Essayez une autre photo.' });
+      images.push(url);
+    }
+    const image = images[0] || null;
     if (!image && !video) return res.status(400).json({ success: false, message: 'Ajoutez une photo ou une vidéo du bien.' });
     const type = String(type_bien || 'appartement').slice(0, 100);
     const adresse = String(req.body.adresse || '').trim().slice(0, 255);
@@ -129,8 +136,8 @@ router.post('/:tenantCode/properties', authenticate, verifyTenant, async (req, r
     const prix = Number(loyer_mensuel);
     await preparerMediaBien();
     const [rows] = await sequelize.query(
-      `INSERT INTO immo_properties (tenant_code,nom,type_bien,adresse,ville,surface,nb_pieces,loyer_mensuel,charges,statut,description,image_url,video_url) VALUES(:code,:nom,:type,:adresse,:ville,:surface,:pieces,:loyer,:charges,:statut,:desc,:image,:video) RETURNING *`,
-      { replacements: { code, nom, type, adresse, ville: ville || '', surface: surface || null, pieces: nb_pieces || null, loyer: Number.isFinite(prix) && prix > 0 ? prix : 0, charges: charges || 0, statut: statut || 'vacant', desc: description || null, image, video } }
+      `INSERT INTO immo_properties (tenant_code,nom,type_bien,adresse,ville,surface,nb_pieces,loyer_mensuel,charges,statut,description,image_url,images,video_url) VALUES(:code,:nom,:type,:adresse,:ville,:surface,:pieces,:loyer,:charges,:statut,:desc,:image,:images::jsonb,:video) RETURNING *`,
+      { replacements: { code, nom, type, adresse, ville: ville || '', surface: surface || null, pieces: nb_pieces || null, loyer: Number.isFinite(prix) && prix > 0 ? prix : 0, charges: charges || 0, statut: statut || 'vacant', desc: description || null, image, images: JSON.stringify(images), video } }
     );
     res.json({ success: true, property: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -150,6 +157,51 @@ router.patch('/:tenantCode/properties/:id', authenticate, verifyTenant, async (r
 router.delete('/:tenantCode/properties/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     await sequelize.query(`DELETE FROM immo_properties WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── PRÉ-DEMANDES REÇUES DU SITE ──────────────────────────────────────────────
+// Le visiteur choisit un ou plusieurs biens sur le site et envoie sa demande
+// (visite, location, achat) : elle arrive ici, comme une commande.
+let tableDemandes = null;
+export const preparerDemandesImmo = () => (tableDemandes ||= sequelize.query(`
+  CREATE TABLE IF NOT EXISTS "immo_demandes" (
+    "id"               SERIAL PRIMARY KEY,
+    "tenant_code"      VARCHAR(50) NOT NULL,
+    "client_nom"       VARCHAR(255) NOT NULL,
+    "client_telephone" VARCHAR(50) NOT NULL,
+    "type_demande"     VARCHAR(20) DEFAULT 'visite',
+    "message"          TEXT,
+    "biens"            JSONB NOT NULL DEFAULT '[]',
+    "statut"           VARCHAR(20) DEFAULT 'nouvelle',
+    "created_at"       TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_immo_demandes_tenant ON "immo_demandes" ("tenant_code", "created_at");
+`).catch((e) => { tableDemandes = null; throw e; }));
+const STATUTS_DEMANDE = ['nouvelle', 'traitee', 'annulee'];
+
+router.get('/:tenantCode/demandes', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await preparerDemandesImmo();
+    const rows = await sequelize.query(
+      `SELECT * FROM immo_demandes WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, demandes: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.patch('/:tenantCode/demandes/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const statut = req.body?.statut;
+    if (!STATUTS_DEMANDE.includes(statut)) return res.status(400).json({ success: false, message: 'Statut invalide.' });
+    await preparerDemandesImmo();
+    const [rows] = await sequelize.query(
+      `UPDATE immo_demandes SET statut=:statut WHERE id=:id AND tenant_code=:code RETURNING id`,
+      { replacements: { statut, id: req.params.id, code: req.params.tenantCode } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
