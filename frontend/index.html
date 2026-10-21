@@ -76,11 +76,63 @@
     </script>
 
     <title>Moftal</title>
-    <script src="https://cdn.logr-in.com/LogRocket.min.js" crossorigin="anonymous"></script>
-<script>window.LogRocket && window.LogRocket.init('0vmbcf/moftal');</script>
+    <!-- Suivi des erreurs : chargé sans bloquer l'affichage (réseau lent ou coupé = le site s'affiche quand même) -->
+    <script async src="https://cdn.logr-in.com/LogRocket.min.js" crossorigin="anonymous" onload="window.LogRocket && window.LogRocket.init('0vmbcf/moftal')"></script>
   </head>
   <body style="background-color:#ffffff;color-scheme:only light;">
     <div id="root" style="background-color:#ffffff;"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Jamais de page blanche : si le site n'a pas démarré (navigateur trop ancien,
+         ancienne copie du site gardée sur le téléphone, connexion coupée), on le dit
+         et on propose de recharger proprement. Écrit en ancien JavaScript exprès :
+         il doit marcher là où le site lui-même ne marche pas. -->
+    <div id="secours-demarrage" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;overflow:auto;background:#ffffff;font-family:system-ui,sans-serif;padding:48px 20px;text-align:center;color:#0f172a">
+      <img src="/logo-moftal.svg" alt="Moftal" width="72" height="72" style="display:block;margin:0 auto 16px" />
+      <h1 style="font-size:20px;margin:0 0 10px">Le site n'a pas pu s'afficher</h1>
+      <p style="font-size:15px;color:#475569;line-height:1.5;margin:0 auto 20px;max-width:420px">Touchez « Recharger ». Si la page reste blanche, mettez à jour votre navigateur internet depuis la boutique d'applications du téléphone, puis réessayez.</p>
+      <button id="secours-recharger" type="button" style="background:#065f46;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:700">Recharger</button>
+    </div>
+    <script>
+      (function () {
+        var vu = false;
+        function montrer() {
+          var racine = document.getElementById('root');
+          if (vu || (racine && racine.children.length)) return;
+          vu = true;
+          var bloc = document.getElementById('secours-demarrage');
+          if (!bloc) return;
+          bloc.style.display = 'block';
+          // Le site finit par démarrer (connexion lente) : le message s'efface
+          var suivi = setInterval(function () {
+            if (racine && racine.children.length) { bloc.style.display = 'none'; clearInterval(suivi); }
+          }, 1000);
+        }
+        // Code du site illisible pour ce navigateur : message tout de suite
+        window.addEventListener('error', function (e) {
+          if (e && e.error && e.error.name === 'SyntaxError') montrer();
+        });
+        setTimeout(montrer, 12000);
+        var bouton = document.getElementById('secours-recharger');
+        if (bouton) bouton.onclick = function () {
+          bouton.disabled = true; bouton.textContent = 'Rechargement…';
+          var fin = function () { location.reload(); };
+          try {
+            var etapes = [];
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              etapes.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+                return Promise.all(rs.map(function (r) { return r.unregister(); }));
+              }));
+            }
+            if (window.caches && caches.keys) {
+              etapes.push(caches.keys().then(function (ks) {
+                return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+              }));
+            }
+            Promise.all(etapes).then(fin, fin);
+            setTimeout(fin, 4000);
+          } catch (e) { fin(); }
+        };
+      })();
+    </script>
   </body>
 </html>

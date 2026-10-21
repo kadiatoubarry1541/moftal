@@ -121,7 +121,7 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
       sourcemap: false,
       minify: "esbuild",
-      target: "es2020",
+      target: ["es2019", "chrome70", "safari12"],
       chunkSizeWarningLimit: 500,
       // Inline les assets < 4KB en base64 (réduit les requêtes HTTP)
       assetsInlineLimit: 4096,
