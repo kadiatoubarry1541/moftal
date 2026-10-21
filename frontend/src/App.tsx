@@ -643,16 +643,19 @@ function App() {
       {isGestionMode && !isEspaceMembreEcole && (
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
           <div style={{ width: "100%", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            {/* Gauche : ← + logo + Professionnel */}
+            {/* Gauche : logo + Professionnel. Pas de flèche retour dans l'application
+                d'un établissement : c'est son application (retour sur Moftal par son bouton) */}
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
-              <button
-                onClick={() => navigate(-1 as any)}
-                style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-              >
-                ‹
-              </button>
+              {!isEspaceTenant && (
+                <button
+                  onClick={() => navigate(-1 as any)}
+                  style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+                >
+                  ‹
+                </button>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, cursor: isEspaceTenant ? "default" : "pointer" }} onClick={() => { if (!isEspaceTenant) navigate("/gestion-interne"); }}>
                 {isEspaceTenant ? (
                   // Même logo que partout dans la gestion (TenantLogo)
