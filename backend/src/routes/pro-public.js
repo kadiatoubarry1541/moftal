@@ -6,6 +6,7 @@ import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { ensureEnrollRequestsTable, ensureSchoolReviewsTable } from './school-management.js';
+import { preparerDemandesImmo, preparerMediaBien } from './immo-management.js';
 
 const router = express.Router();
 
@@ -231,11 +232,12 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
       case 'immo':
       case 'broker':
       case 'immobilier': {
+        await preparerMediaBien().catch(() => {});
         const [propCnt, vacantCnt, properties] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code AND statut='vacant'`, { code }),
           // Colonnes réelles : surface, loyer_mensuel, adresse — renommées pour le site client.
-          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,description,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'video_url' AS video_url FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`, { code }),
+          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,description,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'video_url' AS video_url,to_jsonb(immo_properties)->'images' AS images FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { total: +(propCnt.c||0), vacant: +(vacantCnt.c||0) }, properties });
       }
@@ -432,6 +434,48 @@ router.post('/restaurant/:tenantCode/commande', async (req, res) => {
         { url: `/gestion-restaurant/${code}` });
     }
     res.json({ success: true, commande: { id: rows?.[0]?.id, total } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─── IMMOBILIER : pré-demande envoyée depuis le site ─────────────────────────
+// Le visiteur choisit un ou plusieurs biens et envoie sa demande (visite,
+// location, achat) : elle arrive dans la gestion (onglet Demandes) et le
+// responsable est prévenu. Les biens et leurs prix viennent toujours de la base.
+const TYPES_DEMANDE_IMMO = { visite: 'visite', location: 'location', achat: 'achat' };
+router.post('/immobilier/:tenantCode/demande', async (req, res) => {
+  try {
+    const code = req.params.tenantCode;
+    const nom = String(req.body?.client_nom || '').trim().slice(0, 255);
+    const telephone = String(req.body?.client_telephone || '').trim().slice(0, 50);
+    const type = TYPES_DEMANDE_IMMO[req.body?.type_demande] || 'visite';
+    const message = String(req.body?.message || '').trim().slice(0, 1000);
+    if (!nom || telephone.replace(/[^0-9]/g, '').length < 8) {
+      return res.status(400).json({ success: false, message: 'Votre nom et votre numéro de téléphone sont obligatoires.' });
+    }
+    const ids = [...new Set((Array.isArray(req.body?.biens) ? req.body.biens : []).map((i) => parseInt(i, 10)).filter(Number.isInteger))].slice(0, 30);
+    if (!ids.length) return res.status(400).json({ success: false, message: 'Choisissez au moins un bien.' });
+
+    const [tenant] = await q(`SELECT mt.owner_numero_h, mt.type FROM management_tenants mt WHERE mt.tenant_code = :code AND mt.is_active = true AND ${FILTRE_GESTION_INTERNE} LIMIT 1`, { code });
+    if (!tenant || !typesEnBase('immobilier').includes(tenant.type)) return res.status(404).json({ success: false, message: 'Agence introuvable.' });
+    const biens = await q(`SELECT id, nom, type_bien, adresse, loyer_mensuel AS prix FROM immo_properties WHERE tenant_code = :code AND id IN (:ids)`, { code, ids });
+    if (biens.length !== ids.length) {
+      return res.status(409).json({ success: false, message: "Un bien choisi n'est plus proposé. Rechargez la page et vérifiez votre demande." });
+    }
+
+    await preparerDemandesImmo();
+    const [rows] = await sequelize.query(
+      `INSERT INTO immo_demandes (tenant_code, client_nom, client_telephone, type_demande, message, biens)
+       VALUES (:code, :nom, :tel, :type, :message, :biens::jsonb) RETURNING id`,
+      { replacements: { code, nom, tel: telephone, type, message: message || null, biens: JSON.stringify(biens.map((b) => ({ id: b.id, nom: b.nom, type_bien: b.type_bien, adresse: b.adresse, prix: +b.prix || 0 }))) }, type: sequelize.QueryTypes.INSERT }
+    );
+    if (tenant.owner_numero_h) {
+      await notifierMembreEtablissement(code, tenant.owner_numero_h, 'demande_bien',
+        `${nom} (${telephone}) — ${type} : ${biens.map((b) => b.nom).join(', ')}`,
+        { url: `/gestion-immobilier/${code}` });
+    }
+    res.json({ success: true, demande: { id: rows?.[0]?.id } });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
