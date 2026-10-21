@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/postcss'
 import autoprefixer from 'autoprefixer'
 import cascadeLayers from '@csstools/postcss-cascade-layers'
 import isPseudoClass from '@csstools/postcss-is-pseudo-class'
+import oklabFunction from '@csstools/postcss-oklab-function'
 import selectorParser from 'postcss-selector-parser'
 
 // Téléphones au navigateur ancien (ex. Samsung A11 pas à jour) : sans ces étapes,
@@ -13,6 +14,32 @@ const whereEnIs = {
   postcssPlugin: 'moftal-where-en-is',
   Rule(rule) {
     if (rule.selector.includes(':where(')) rule.selector = rule.selector.replace(/:where\(/g, ':is(')
+  },
+}
+
+// Valeurs par défaut de Tailwind (bordure pleine, ombres, déplacements…) : Tailwind
+// ne les donne aux navigateurs sans @property que derrière un test @supports que les
+// navigateurs anciens ne passent pas toujours. On les applique toujours : même
+// résultat pour les navigateurs récents (mêmes valeurs que leurs @property).
+const valeursParDefautToujours = {
+  postcssPlugin: 'moftal-valeurs-par-defaut',
+  AtRule: {
+    supports(atRule) {
+      if (atRule.params.includes('margin-trim:inline') || atRule.params.includes('margin-trim: inline')) atRule.replaceWith(atRule.nodes)
+    },
+  },
+}
+
+// inset (Chrome 87) : on ajoute avant lui top/right/bottom/left, compris partout
+const insetEnCotes = {
+  postcssPlugin: 'moftal-inset',
+  Declaration: {
+    inset(decl) {
+      const v = decl.value.trim().split(/\s+(?![^(]*\))/)
+      if (!v.length || v.length > 4) return
+      const [t, r = t, b = t, l = r] = v
+      for (const [prop, val] of [['top', t], ['right', r], ['bottom', b], ['left', l]]) decl.cloneBefore({ prop, value: val })
+    },
   },
 }
 
@@ -57,6 +84,10 @@ export default {
     whereEnIs,
     cascadeLayers(),
     isPseudoClass({ preserve: false, onComplexSelector: 'warning' }),
+    valeursParDefautToujours,
+    insetEnCotes,
+    // Couleurs oklch() (Chrome 111) : une couleur RGB de secours est ajoutée avant
+    oklabFunction({ preserve: true }),
     reglesSansCouche,
     autoprefixer(),
   ],
