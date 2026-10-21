@@ -43,6 +43,20 @@ const insetEnCotes = {
   },
 }
 
+// Hauteur de l'écran en dvh/svh/lvh (Chrome 108) : sans secours, la page ne
+// remplit plus l'écran et le pied de page remonte. On ajoute avant la même valeur
+// en vh, comprise partout (les navigateurs récents gardent la valeur dvh).
+const unitesEcranEnVh = {
+  postcssPlugin: 'moftal-dvh-en-vh',
+  Declaration(decl) {
+    if (!/\d(dvh|svh|lvh)\b/.test(decl.value)) return
+    const secours = decl.value.replace(/(\d)(dvh|svh|lvh)\b/g, '$1vh')
+    const avant = decl.prev()
+    if (avant?.type === 'decl' && avant.prop === decl.prop && avant.value === secours) return
+    decl.cloneBefore({ value: secours })
+  },
+}
+
 // Les règles écrites hors Tailwind (globals.css, CSS des composants, bibliothèques)
 // n'ont pas de couche : elles passaient avant toutes les couches. On leur donne le
 // renfort le plus fort, celui que reçoivent les règles sans couche de index.css.
@@ -86,6 +100,7 @@ export default {
     isPseudoClass({ preserve: false, onComplexSelector: 'warning' }),
     valeursParDefautToujours,
     insetEnCotes,
+    unitesEcranEnVh,
     // Couleurs oklch() (Chrome 111) : une couleur RGB de secours est ajoutée avant
     oklabFunction({ preserve: true }),
     reglesSansCouche,
