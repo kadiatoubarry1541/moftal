@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
@@ -14,7 +17,7 @@ import { cheminConnexion } from "../utils/connexionRetour";
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "members" | "publications" | "projects" | "announcements";
+type Tab = "dashboard" | "members" | "publications" | "projects" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 
 const INDIGO = "#4338ca";
@@ -132,6 +135,7 @@ export default function GestionScientifique() {
     { key: "publications", label: "Publications", emoji: "📄" },
     { key: "projects", label: "Projets", emoji: "🧪" },
     { key: "announcements", label: "Annonces", emoji: "📣" },
+    { key: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width:"100%", border:`1px solid ${INDIGO_BORDER}`, borderRadius:8, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" };
@@ -440,6 +444,17 @@ export default function GestionScientifique() {
         )}
 
       </div>
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={INDIGO} emoji="🔬"
+            titre="Renseignements du laboratoire" nomLabel="Nom du laboratoire *" descriptionAide="Vos domaines de recherche…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
+        </div>
+      )}
       {edition && <ModifierFiche {...edition} couleur={INDIGO} onClose={() => setEdition(null)} />}
     </div>
   );

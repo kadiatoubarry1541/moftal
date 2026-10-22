@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
@@ -16,7 +19,7 @@ import { useTraduction } from "../i18n/traduction";
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "membres" | "projets" | "cotisations" | "annonces";
+type Tab = "dashboard" | "membres" | "projets" | "cotisations" | "annonces" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
@@ -173,6 +176,7 @@ export default function GestionReseau() {
     { id: "projets",     label: "Projets",       icon: "📋" },
     { id: "cotisations", label: "Cotisations",   icon: "💰" },
     { id: "annonces",    label: "Annonces",      icon: "📢" },
+    { id: "settings", label: "Paramètres", icon: "⚙️" },
   ];
 
   const inp = { width: "100%", border: "1px solid #bfdbfe", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" as const };
@@ -488,6 +492,17 @@ export default function GestionReseau() {
             ))}
             {annonces.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucune annonce publiée.")}</div>}
           </div>
+        </div>
+      )}
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={BLUE} emoji="🌐"
+            titre="Renseignements de l'association" nomLabel="Nom de l'association *" descriptionAide="Votre mission, vos membres…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
       {edition && <ModifierFiche {...edition} couleur={BLUE} onClose={() => setEdition(null)} />}

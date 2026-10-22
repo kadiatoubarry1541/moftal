@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, getPhotoUrl } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
@@ -18,7 +21,7 @@ import { uploadMedia } from "../utils/uploadMedia";
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "properties" | "demandes" | "tenants" | "payments" | "maintenance" | "announcements";
+type Tab = "dashboard" | "properties" | "demandes" | "tenants" | "payments" | "maintenance" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 
@@ -187,6 +190,7 @@ export default function GestionImmobilier() {
     { id: "payments",     label: "Loyers",        emoji: "💰" },
     { id: "maintenance",  label: "Maintenance",   emoji: "🔧" },
     { id: "announcements",label: "Annonces",      emoji: "📢" },
+    { id: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" };
@@ -663,6 +667,17 @@ export default function GestionImmobilier() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={AMBER} emoji="🏠"
+            titre="Renseignements de l'agence" nomLabel="Nom de l'agence *" descriptionAide="Vos biens, vos quartiers…"
+            horairesAide="Ex : Lun-Sam 8h-18h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
     </div>

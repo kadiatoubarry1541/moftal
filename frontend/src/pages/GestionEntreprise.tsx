@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import ModifierFiche from "../components/ModifierFiche";
 import { envoyerGestion } from "../utils/envoyerGestion";
@@ -15,7 +18,7 @@ import { cheminConnexion } from "../utils/connexionRetour";
 const BASE = (code: string) => `/api/enterprise-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "employees" | "clients" | "contracts" | "announcements";
+type Tab = "dashboard" | "employees" | "clients" | "contracts" | "announcements" | "settings";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 
 const INDIGO = "#4f46e5";
@@ -141,6 +144,7 @@ export default function GestionEntreprise() {
     { id: "clients",       label: "Clients",         emoji: "🤝" },
     { id: "contracts",     label: "Contrats / Projets", emoji: "📑" },
     { id: "announcements", label: "Annonces",        emoji: "📢" },
+    { id: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" };
@@ -481,6 +485,17 @@ export default function GestionEntreprise() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={INDIGO} emoji="🏢"
+            titre="Renseignements de l'entreprise" nomLabel="Nom de l'entreprise *" descriptionAide="Votre activité, vos services…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
         </div>
       )}
       {edition && <ModifierFiche {...edition} couleur={INDIGO} onClose={() => setEdition(null)} />}

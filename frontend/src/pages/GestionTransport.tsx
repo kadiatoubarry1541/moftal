@@ -3,7 +3,10 @@ import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
@@ -26,7 +29,7 @@ async function api(path: string, opts: RequestInit = {}) {
   }
 }
 
-type Tab = "dashboard" | "vehicles" | "drivers" | "trips" | "bookings" | "deliveries" | "announcements";
+type Tab = "dashboard" | "vehicles" | "drivers" | "trips" | "bookings" | "deliveries" | "announcements" | "settings";
 
 const BLUE = "#1e40af";
 const BLUE_LIGHT = "#eff6ff";
@@ -160,6 +163,7 @@ export default function GestionTransport() {
     { key: "bookings",      label: "Réservations",     icon: "🎫" },
     { key: "deliveries",    label: "Livraisons",       icon: "📦" },
     { key: "announcements", label: "Annonces",         icon: "📢" },
+    { key: "settings", label: "Paramètres", icon: "⚙️" },
   ];
 
   const inp: React.CSSProperties = { border: `1px solid ${BLUE_BORDER}`, borderRadius: 8, padding: "8px 12px", fontSize: 14, width: "100%", outline: "none" };
@@ -577,6 +581,17 @@ export default function GestionTransport() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+        {!loading && tab === "settings" && (
+          <div style={{ maxWidth: 640, display: "grid", gap: 16 }}>
+            <TenantCodeCard code={tenantCode} />
+            <RenseignementsEtablissement base={`${config.API_BASE_URL}/transport-mgmt/${code}`} tenantCode={tenantCode} tenant={tenant} couleur={BLUE} emoji="🚌"
+              titre="Renseignements de la société" nomLabel="Nom de la société *" descriptionAide="Vos lignes, vos services de livraison…"
+              horairesAide="Ex : Tous les jours 6h-20h" onSaved={setTenant} />
+            <ParametreLangue />
+            <ParametresEspacePro />
           </div>
         )}
       </div>

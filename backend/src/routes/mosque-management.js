@@ -5,6 +5,7 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { ajouterRouteParametres } from '../utils/routeParametres.js';
 
 const router = express.Router();
 
@@ -115,6 +116,7 @@ router.post('/quartier-managers', authenticate, async (req, res) => {
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
 });
+ajouterRouteParametres(router, [authenticate, verifyTenant]);
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res) => {
