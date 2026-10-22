@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
@@ -15,7 +18,7 @@ import { cheminConnexion } from "../utils/connexionRetour";
 const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "imams" | "predications" | "mosques" | "announcements";
+type Tab = "dashboard" | "imams" | "predications" | "mosques" | "announcements" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 
@@ -196,6 +199,7 @@ export default function GestionImam() {
     { key: "predications",  label: "Prédications",     emoji: "📢" },
     { key: "mosques",       label: "Mosquées",         emoji: "🕌" },
     { key: "announcements", label: "Annonces",         emoji: "📣" },
+    { key: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inputStyle: React.CSSProperties = { width: "100%", border: "1px solid #ddd6fe", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" };
@@ -491,6 +495,17 @@ export default function GestionImam() {
         )}
 
       </div>
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={VIOLET} emoji="🕌"
+            titre="Renseignements du réseau" nomLabel="Nom du réseau *" descriptionAide="Vos imams, vos prédications…"
+            horairesAide="Ex : Tous les jours après Asr" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
+        </div>
+      )}
       {edition && <ModifierFiche {...edition} couleur={VIOLET} onClose={() => setEdition(null)} />}
     </div>
   );

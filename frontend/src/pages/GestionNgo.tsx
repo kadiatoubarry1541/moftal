@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
@@ -15,7 +18,7 @@ import { cheminConnexion } from "../utils/connexionRetour";
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "members" | "projects" | "donations" | "announcements";
+type Tab = "dashboard" | "members" | "projects" | "donations" | "announcements" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
@@ -191,6 +194,7 @@ export default function GestionNgo() {
     { key: "projects",      label: "Projets",          emoji: "📋" },
     { key: "donations",     label: "Collectes",        emoji: "💰" },
     { key: "announcements", label: "Annonces",         emoji: "📣" },
+    { key: "settings", label: "Paramètres", emoji: "⚙️" },
   ];
 
   const inputStyle: React.CSSProperties = { width: "100%", border: "1px solid #fecdd3", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" };
@@ -537,6 +541,17 @@ export default function GestionNgo() {
         )}
 
       </div>
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={ROSE} emoji="🤝"
+            titre="Renseignements de l'organisation" nomLabel="Nom de l'organisation *" descriptionAide="Votre mission, vos actions…"
+            horairesAide="Ex : Lun-Ven 8h-17h" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
+        </div>
+      )}
       {edition && <ModifierFiche {...edition} couleur={ROSE} onClose={() => setEdition(null)} />}
     </div>
   );

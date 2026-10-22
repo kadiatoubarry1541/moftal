@@ -4,7 +4,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import ParametreLangue from "../components/ParametreLangue";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
@@ -16,7 +19,7 @@ import { useTraduction } from "../i18n/traduction";
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "imams" | "members" | "predications" | "partenaires" | "announcements" | "donations" | "quran";
+type Tab = "dashboard" | "imams" | "members" | "predications" | "partenaires" | "announcements" | "donations" | "quran" | "settings";
 
 function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
@@ -244,6 +247,7 @@ export default function GestionMosquee() {
     { id: "announcements",label: "Annonces",             icon: "📢" },
     { id: "donations",    label: "Dons",                 icon: "💚" },
     { id: "quran",        label: "Coran",                icon: "📖" },
+    { id: "settings", label: "Paramètres", icon: "⚙️" },
   ];
 
   const ROLES = ["imam", "muezzin", "enseignant", "responsable", "fidèle"];
@@ -816,6 +820,17 @@ export default function GestionMosquee() {
         </div>
       )}
 
+      {/* ── PARAMÈTRES : identifiant, renseignements, langue, abonnement ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "grid", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
+          <RenseignementsEtablissement base={BASE(tenantCode!)} tenantCode={tenantCode} tenant={tenant} couleur={GREEN} emoji="🕌"
+            titre="Renseignements de la mosquée" nomLabel="Nom de la mosquée *" descriptionAide="Vos activités, vos cours…"
+            horairesAide="Ex : Ouverte pour les 5 prières" onSaved={setTenant} />
+          <ParametreLangue />
+          <ParametresEspacePro />
+        </div>
+      )}
       {edition && <ModifierFiche {...edition} couleur={GREEN} onClose={() => setEdition(null)} />}
     </div>
   );
