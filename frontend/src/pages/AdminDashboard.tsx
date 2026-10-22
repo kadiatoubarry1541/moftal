@@ -2160,6 +2160,37 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Référence Transport */}
+                  <div className="border border-blue-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-blue-800 to-blue-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🚌</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Transport Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-TRANS</p>
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 px-5 py-3 text-sm text-blue-900 border-b border-blue-100">
+                      Véhicules · Chauffeurs · Trajets · Réservations · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une entreprise de transport ou de livraison cliente.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-transport/DEMO-REF-TRANS")}
+                          className="flex-1 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/transport/DEMO-REF-TRANS")}
+                          className="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Référence Juridique (avocats, conseil juridique) — remplie d'exemples */}
                   <div className="border border-red-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="bg-gradient-to-r from-red-900 to-amber-700 px-5 py-4 flex items-center gap-3">
