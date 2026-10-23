@@ -359,6 +359,7 @@ const ar: Record<string, string> = {
   'terre_adam.no_region': '⚠️ لا منطقة مسجلة',
   'terre_adam.no_pays': '⚠️ لا بلد مسجل',
   'terre_adam.no_continent': '⚠️ لا قارة مسجلة',
+  'terre_adam.fill_in_profile': "✏️ أكمل في ملفي الشخصي",
   'terre_adam.members_list': '👥 قائمة الأعضاء',
   'terre_adam.group_photo': '🖼️ صورة ملف الحي',
   'terre_adam.caisse': '💰 الصندوق',

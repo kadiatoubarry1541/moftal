@@ -34,7 +34,9 @@ const KEY_RE = /^(friend|couple|pc|family|residence|activity):[^\s]{0,250}$/;
 
 function normalizeLoc(str) {
   if (!str) return '';
-  return String(str).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const n = String(str).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // « Non spécifié » (compte sans quartier) n'est pas un lieu
+  return n === 'non specifie' ? '' : n;
 }
 
 /** Toutes les conversations du bouton 💬 pour cette personne. */

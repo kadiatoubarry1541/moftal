@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../utils/api";
+import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 interface UserData {
   numeroH: string;
@@ -197,7 +198,7 @@ export default function Identite() {
               🗑️ Supprimer mon compte
             </button>
             <button
-              onClick={() => navigate("/moi/profil")}
+              onClick={() => navigate(PAGE_MAJ_PROFIL)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors duration-200"
             >
               ✏️ Mettre à jour

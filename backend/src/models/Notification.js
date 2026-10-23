@@ -67,6 +67,7 @@ class Notification extends Model {
     try {
       const webpush = (await import('web-push')).default;
       const { default: PushSubscription } = await import('./PushSubscription.js');
+      const { OPTIONS_PUSH } = await import('../services/notificationMessages.js');
       const subs = await PushSubscription.getForUser(recipientNumeroH);
       const pushPayload = JSON.stringify({
         title: notif.title,
@@ -79,7 +80,8 @@ class Notification extends Model {
         try {
           await webpush.sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            pushPayload
+            pushPayload,
+            OPTIONS_PUSH
           );
         } catch (err) {
           if (err.statusCode === 410 || err.statusCode === 404) {

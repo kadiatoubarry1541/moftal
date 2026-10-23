@@ -2,6 +2,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
+import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -154,7 +155,7 @@ export default function Racines() {
         {tr("Pour rejoindre ta communauté automatiquement, tu dois renseigner ton ethnie dans ton profil.")}
       </p>
       <button
-        onClick={() => navigate("/moi/profil")}
+        onClick={() => navigate(PAGE_MAJ_PROFIL)}
         style={{
           background: "linear-gradient(135deg, #22a722, #1a8f1a)",
           color: "#fff", border: "none", borderRadius: 12,
@@ -201,7 +202,7 @@ export default function Racines() {
               {tr("Votre ethnie n'est pas renseignée. Vos utilisateurs verront ici tous les membres qui partagent leur ethnie — avec leurs noms, photos, villes et générations. Ajoutez votre ethnie dans votre profil pour voir votre vraie communauté.")}
             </div>
             <button
-              onClick={() => navigate("/moi/profil")}
+              onClick={() => navigate(PAGE_MAJ_PROFIL)}
               style={{
                 marginTop: 10, background: "#f59e0b", color: "#fff",
                 border: "none", borderRadius: 8, padding: "7px 16px",

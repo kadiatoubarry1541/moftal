@@ -104,6 +104,10 @@ if (_proPathMatch && _manifestLink) {
   // Toujours la racine de la gestion : une seule identité d'application par établissement
   const _encodedStart = encodeURIComponent(_gestionMatch[1]);
   _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[2]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
+} else if (_manifestLink && window.location.hostname.startsWith('gestions.')) {
+  // gestions.moftal.com hors d'une gestion (connexion…) : aucune application à
+  // installer ici. Sinon le téléphone pouvait y installer un deuxième « Moftal ».
+  _manifestLink.remove();
 }
 
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)

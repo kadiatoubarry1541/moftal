@@ -1185,7 +1185,7 @@ router.put('/profile', authenticate, async (req, res) => {
       'prenomMere', 'familleMere', 'numeroHMere', 'treeVisibility',
       'activite1', 'activite2', 'activite3', 'specialite', 'statutMatrimonial',
       'lieu1', 'lieu2', 'lieu3', 'languesAutre',
-      'sousPrefecture'
+      'prefecture', 'sousPrefecture'
     ];
     // Noms envoyés par le formulaire → vraies colonnes du modèle User
     const alias = { region: 'regionOrigine', telephone: 'tel1', nomFamillePere: 'famillePere', nomFamilleMere: 'familleMere' };

@@ -3048,11 +3048,19 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   //    avec la bonne identité → installation directe en 1 clic sans aucune question.
 
   // EspacePro (/espace-pro/:id) — manifest par ID de compte professionnel
+  // Adresse du manifest IDENTIQUE à celle que la page remet ensuite
+  // (frontend/src/main.tsx) : deux adresses pour la même app faisaient que le
+  // téléphone ne la reconnaissait pas comme déjà installée.
+  const originePage = (req) => {
+    const proto = String(req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+    return encodeURIComponent(`${proto}://${req.get('host')}`);
+  };
+
   app.get('/espace-pro/:id', (req, res) => {
     const proId = req.params.id;
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/${proId}">`
+      `<link rel="manifest" href="/api/professionals/pro-manifest/${encodeURIComponent(proId)}?origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');
@@ -3063,10 +3071,11 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   // Couvre tous les types : clinique, école, mosquée, mairie, transport, restaurant…
   app.get(/^\/gestion-[^/]+\/([^/?]+)/, (req, res) => {
     const tenantCode = req.params[0];
-    const startUrl = encodeURIComponent(req.path);
+    // Racine de la gestion seulement (comme main.tsx) : une seule app par établissement
+    const startUrl = encodeURIComponent(req.path.match(/^\/gestion-[^/]+\/[^/?]+/)[0]);
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}">`
+      `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}&origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');

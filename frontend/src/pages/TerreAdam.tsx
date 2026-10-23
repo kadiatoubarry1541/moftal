@@ -17,6 +17,7 @@ import ProfileBadge from '../components/ProfileBadge';
 import PhotoProfil from '../components/PhotoProfil';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 import { useI18n } from '../i18n/useI18n';
+import { PAGE_MAJ_PROFIL } from '../utils/profilPage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -49,6 +50,14 @@ function normalizeLoc(str: string): string {
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+// « Non spécifié » (valeur par défaut d'un compte sans quartier) n'est pas un lieu :
+// sinon tous ces comptes se retrouvaient ensemble dans une salle « Non spécifié ».
+function lieuReel(v: unknown): string | null {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (!t || ['non spécifié', 'non specifie'].includes(t.toLowerCase())) return null;
+  return t;
+}
+
 export default function TerreAdam() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -57,6 +66,13 @@ export default function TerreAdam() {
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  // Salle vide : on renseigne le lieu dans la page unique « Mettre à jour mon profil »
+  const boutonRenseigner = (
+    <button type="button" onClick={() => navigate(PAGE_MAJ_PROFIL)}
+      className="mt-2 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold">
+      {t('terre_adam.fill_in_profile')}
+    </button>
+  );
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
   const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
@@ -155,9 +171,9 @@ export default function TerreAdam() {
 
   /** Codes des 1 à 3 quartiers de l'utilisateur (peuvent être null si non renseignés) */
   const userQuartierCodes: (string | null)[] = [
-    userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1 || null,
-    userData?.quartierCode2 || userData?.lieu2 || userData?.lieuResidence2 || null,
-    userData?.quartierCode3 || userData?.lieu3 || userData?.lieuResidence3 || null
+    lieuReel(userData?.quartierCode) || lieuReel(userData?.lieu1) || lieuReel(userData?.lieuResidence1),
+    lieuReel(userData?.quartierCode2) || lieuReel(userData?.lieu2) || lieuReel(userData?.lieuResidence2),
+    lieuReel(userData?.quartierCode3) || lieuReel(userData?.lieu3) || lieuReel(userData?.lieuResidence3)
   ];
 
   /** Une valeur de lieu est "réelle" si elle est renseignée et différente du placeholder par défaut */
@@ -185,16 +201,16 @@ export default function TerreAdam() {
 
     // ✅ Dynamiquement renommer le label du quartier (code géo ou saisie libre)
     const quartierName = user.quartierCode
-      ? (findLocationByCode(user.quartierCode)?.name || user.lieu1 || user.quartier)
-      : (user.lieu1 || user.quartier || t('terre_adam.default_quartier'));
+      ? (findLocationByCode(user.quartierCode)?.name || lieuReel(user.lieu1) || user.quartier)
+      : (lieuReel(user.lieu1) || user.quartier || t('terre_adam.default_quartier'));
     setTabLabels(quartierName || t('terre_adam.default_quartier'));
 
     // ✅ Choisir automatiquement le bon onglet de résidence:
     // - si seul le 1er quartier est renseigné → Résidence 1
     // - sinon, utiliser le premier des quartiers renseignés (2 ou 3)
-    const slot1Code = user.quartierCode || user.lieu1 || user.lieuResidence1;
-    const slot2Code = user.quartierCode2 || user.lieu2 || user.lieuResidence2;
-    const slot3Code = user.quartierCode3 || user.lieu3 || user.lieuResidence3;
+    const slot1Code = lieuReel(user.quartierCode) || lieuReel(user.lieu1) || lieuReel(user.lieuResidence1);
+    const slot2Code = lieuReel(user.quartierCode2) || lieuReel(user.lieu2) || lieuReel(user.lieuResidence2);
+    const slot3Code = lieuReel(user.quartierCode3) || lieuReel(user.lieu3) || lieuReel(user.lieuResidence3);
     if (slot1Code) {
       setActiveLieuTab('quartier-1');
     } else if (slot2Code) {
@@ -570,7 +586,7 @@ export default function TerreAdam() {
                 );
               })()}
 
-              {((userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
+              {(userQuartierCodes.some(Boolean) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
                 <div className="space-y-2.5">
                   {/* Page Quartier : une page indépendante par résidence (1, 2 ou 3) */}
                   {(activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3') && (
@@ -754,6 +770,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
                   <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 font-bold break-words">{t('terre_adam.no_lieu_residence')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -772,6 +789,7 @@ export default function TerreAdam() {
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_commune')}</p>
+                    {boutonRenseigner}
                   </div>
                 )}
               </div>
@@ -791,6 +809,7 @@ export default function TerreAdam() {
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_prefecture')}</p>
+                    {boutonRenseigner}
                   </div>
                 )}
               </div>
@@ -814,6 +833,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_region')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -836,6 +856,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_pays')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -858,6 +879,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_continent')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>

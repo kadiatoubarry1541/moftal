@@ -59,7 +59,9 @@ function estDansLAmitie(friend, numeroH) {
 // Normalise un nom de lieu : minuscule + sans accents (même règle que résidences)
 function normalizeLoc(str) {
   if (!str) return '';
-  return str.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const n = String(str).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // « Non spécifié » (compte sans quartier) n'est pas un lieu : jamais de salle commune
+  return n === 'non specifie' ? '' : n;
 }
 
 /** NumeroH exclus de "famille élargie" : soi-même, parents, conjoint(s), enfants — ils ont déjà leur propre messagerie dédiée. */
@@ -475,7 +477,7 @@ router.get('/suggestions', async (req, res) => {
     // Score de proximité (colonnes réelles lues dans le modèle)
     const col = (a) => `"User"."${User.rawAttributes[a].field || a}"`;
     const norm = (a) => `LOWER(TRIM(COALESCE(${col(a)}, '')))`;
-    const val = (v) => String(v || '').trim().toLowerCase();
+    const val = (v) => (normalizeLoc(v) ? String(v).trim().toLowerCase() : '');
     const parts = [];
     const mesLieux = [me.lieu1, me.lieu2, me.lieu3].map(val).filter(Boolean);
     if (mesLieux.length && ['lieu1', 'lieu2', 'lieu3'].every((a) => User.rawAttributes[a])) {

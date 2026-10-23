@@ -10,6 +10,11 @@ import { compterNonLus } from '../routes/unread.js';
 
 const MAX_AVEC_COMPTEUR = 300; // au-delà (très grand groupe), pas de calcul du chiffre
 
+// Envoi prioritaire : le téléphone affiche la notification tout de suite, en haut
+// de l'écran, même en veille (sinon Android peut la retarder de plusieurs minutes).
+// Gardée 1 jour si le téléphone est éteint.
+export const OPTIONS_PUSH = { TTL: 86400, urgency: 'high' };
+
 // Photo de l'expéditeur en adresse complète (la notification s'affiche hors du site)
 const ADRESSE_SERVEUR = (process.env.PUBLIC_API_URL || process.env.RENDER_EXTERNAL_URL || 'https://moftal.com').replace(/\/$/, '');
 function photoAbsolue(photo) {
@@ -60,7 +65,7 @@ export function notifierNouveauMessage({ destinataires, expediteur, convKey, mes
         });
         await Promise.allSettled(subs.map(async (sub) => {
           try {
-            await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
+            await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, OPTIONS_PUSH);
           } catch (err) {
             if (err.statusCode === 410 || err.statusCode === 404) await PushSubscription.removeExpired(sub.endpoint);
           }
