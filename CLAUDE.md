@@ -51,6 +51,8 @@ On montre uniquement ce que le modèle montre, rien de plus.
   « par message », « Nous écrire », jamais « comme … » ni « via … ».
 - Seuls restent, invisibles pour l'utilisateur, les noms techniques indispensables
   (détection du navigateur, adresse d'un lien, configuration d'un service d'envoi).
+- Un nom de métier reste tel quel (ex. « Youtubeur/Youtubeuse » dans la liste des
+  activités) : la règle vise les phrases qui renvoient ou se comparent à une autre application.
 
 ## 4. Notifications de l'application d'un établissement
 
