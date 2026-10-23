@@ -40,6 +40,7 @@ interface UserData {
   lieu1?: string;
   lieu2?: string;
   lieu3?: string;
+  prefecture?: string;
   sousPrefecture?: string;
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
@@ -103,6 +104,9 @@ export default function EditProfileModal({
   // Compte provisoire (TMP-…, créé avec téléphone + mot de passe) : cette même page
   // demande aussi les champs qui fabriquent le NuméroH, puis l'attribue.
   const provisoire = Boolean(userData?.numeroH?.startsWith("TMP-"));
+  // Pays pas encore renseigné : même choix dans la liste des pays que pour un
+  // compte provisoire (ses salles Pays et Continent dans Terre ADAM en dépendent)
+  const choixPays = provisoire || !userData?.pays;
   const [geo, setGeo] = useState({ paysCode: "", continentCode: "", regionCode: "" });
   const modalRef = useRef<HTMLDivElement>(null);
   const countries = useMemo(
@@ -124,6 +128,7 @@ export default function EditProfileModal({
   const vitrineVideoInputRef = useRef<HTMLInputElement>(null);
   const allQuartiers = useMemo(() => getAllLocationsForGroups('quartier'), []);
   const allSousPrefectures = useMemo(() => getAllLocationsForGroups('sous_prefecture'), []);
+  const allPrefectures = useMemo(() => getAllLocationsForGroups('prefecture'), []);
 
   useEffect(() => {
     if (open && userData) {
@@ -266,7 +271,7 @@ export default function EditProfileModal({
         // Champs du profil envoyés avec l'identité (jamais le téléphone de connexion)
         const profil: Record<string, unknown> = {};
         for (const k of ["genre", "pays", "nationalite", "religion", "handicap", "activite1", "activite2", "activite3",
-          "specialite", "statutMatrimonial", "lieu1", "lieu2", "lieu3", "sousPrefecture", "numeroHPere",
+          "specialite", "statutMatrimonial", "lieu1", "lieu2", "lieu3", "prefecture", "sousPrefecture", "numeroHPere",
           "numeroHMere", "languesAutre", "dateNaissance"]) {
           if (formData[k]) profil[k] = formData[k];
         }
@@ -392,6 +397,7 @@ export default function EditProfileModal({
         lieu1: formData.lieu1,
         lieu2: formData.lieu2,
         lieu3: formData.lieu3,
+        prefecture: formData.prefecture,
         sousPrefecture: formData.sousPrefecture,
         numeroHPere: formData.numeroHPere,
         numeroHMere: formData.numeroHMere,
@@ -785,10 +791,10 @@ export default function EditProfileModal({
               <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
                 value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
             )}
-            {provisoire ? (
+            {choixPays ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pays *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{provisoire ? "Pays *" : "Pays"}</label>
                   <select
                     value={geo.paysCode ? `${geo.continentCode}_${geo.paysCode}` : ""}
                     onChange={(e) => {
@@ -806,7 +812,7 @@ export default function EditProfileModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Région *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{provisoire ? "Région *" : "Région"}</label>
                   <input
                     type="text"
                     list="region-options"
@@ -1035,6 +1041,23 @@ export default function EditProfileModal({
                 />
                 <datalist id="lieu3-options">
                   {allQuartiers.map((loc) => (
+                    <option key={loc.code} value={loc.name} />
+                  ))}
+                </datalist>
+              </div>
+              {/* Préfecture : sa salle dans Terre ADAM (comme à l'inscription) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Préfecture</label>
+                <input
+                  type="text"
+                  list="prefecture-options"
+                  value={formData.prefecture || ""}
+                  onChange={(e) => handleInputChange("prefecture", e.target.value)}
+                  placeholder="Choisissez dans la liste ou tapez le nom de la préfecture"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <datalist id="prefecture-options">
+                  {allPrefectures.map((loc) => (
                     <option key={loc.code} value={loc.name} />
                   ))}
                 </datalist>

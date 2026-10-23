@@ -17,6 +17,7 @@ import ProfileBadge from '../components/ProfileBadge';
 import PhotoProfil from '../components/PhotoProfil';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 import { useI18n } from '../i18n/useI18n';
+import { PAGE_MAJ_PROFIL } from '../utils/profilPage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -57,6 +58,13 @@ export default function TerreAdam() {
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  // Salle vide : on renseigne le lieu dans la page unique « Mettre à jour mon profil »
+  const boutonRenseigner = (
+    <button type="button" onClick={() => navigate(PAGE_MAJ_PROFIL)}
+      className="mt-2 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-semibold">
+      {t('terre_adam.fill_in_profile')}
+    </button>
+  );
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
   const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
@@ -754,6 +762,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
                   <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 font-bold break-words">{t('terre_adam.no_lieu_residence')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -772,6 +781,7 @@ export default function TerreAdam() {
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_commune')}</p>
+                    {boutonRenseigner}
                   </div>
                 )}
               </div>
@@ -791,6 +801,7 @@ export default function TerreAdam() {
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_prefecture')}</p>
+                    {boutonRenseigner}
                   </div>
                 )}
               </div>
@@ -814,6 +825,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_region')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -836,6 +848,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_pays')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>
@@ -858,6 +871,7 @@ export default function TerreAdam() {
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                   <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_continent')}</p>
+                    {boutonRenseigner}
                 </div>
               )}
             </div>

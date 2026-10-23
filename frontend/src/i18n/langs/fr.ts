@@ -359,6 +359,7 @@ const fr: Record<string, string> = {
   'terre_adam.no_region': '⚠️ Aucune région enregistrée',
   'terre_adam.no_pays': '⚠️ Aucun pays enregistré',
   'terre_adam.no_continent': '⚠️ Aucun continent enregistré',
+  'terre_adam.fill_in_profile': "✏️ Renseigner dans mon profil",
   'terre_adam.members_list': '👥 Liste des membres',
   'terre_adam.group_photo': '🖼️ Photo de profil du quartier',
   'terre_adam.caisse': '💰 Caisse',
