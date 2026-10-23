@@ -50,6 +50,14 @@ function normalizeLoc(str: string): string {
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+// « Non spécifié » (valeur par défaut d'un compte sans quartier) n'est pas un lieu :
+// sinon tous ces comptes se retrouvaient ensemble dans une salle « Non spécifié ».
+function lieuReel(v: unknown): string | null {
+  const t = typeof v === 'string' ? v.trim() : '';
+  if (!t || ['non spécifié', 'non specifie'].includes(t.toLowerCase())) return null;
+  return t;
+}
+
 export default function TerreAdam() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -163,9 +171,9 @@ export default function TerreAdam() {
 
   /** Codes des 1 à 3 quartiers de l'utilisateur (peuvent être null si non renseignés) */
   const userQuartierCodes: (string | null)[] = [
-    userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1 || null,
-    userData?.quartierCode2 || userData?.lieu2 || userData?.lieuResidence2 || null,
-    userData?.quartierCode3 || userData?.lieu3 || userData?.lieuResidence3 || null
+    lieuReel(userData?.quartierCode) || lieuReel(userData?.lieu1) || lieuReel(userData?.lieuResidence1),
+    lieuReel(userData?.quartierCode2) || lieuReel(userData?.lieu2) || lieuReel(userData?.lieuResidence2),
+    lieuReel(userData?.quartierCode3) || lieuReel(userData?.lieu3) || lieuReel(userData?.lieuResidence3)
   ];
 
   /** Une valeur de lieu est "réelle" si elle est renseignée et différente du placeholder par défaut */
@@ -193,16 +201,16 @@ export default function TerreAdam() {
 
     // ✅ Dynamiquement renommer le label du quartier (code géo ou saisie libre)
     const quartierName = user.quartierCode
-      ? (findLocationByCode(user.quartierCode)?.name || user.lieu1 || user.quartier)
-      : (user.lieu1 || user.quartier || t('terre_adam.default_quartier'));
+      ? (findLocationByCode(user.quartierCode)?.name || lieuReel(user.lieu1) || user.quartier)
+      : (lieuReel(user.lieu1) || user.quartier || t('terre_adam.default_quartier'));
     setTabLabels(quartierName || t('terre_adam.default_quartier'));
 
     // ✅ Choisir automatiquement le bon onglet de résidence:
     // - si seul le 1er quartier est renseigné → Résidence 1
     // - sinon, utiliser le premier des quartiers renseignés (2 ou 3)
-    const slot1Code = user.quartierCode || user.lieu1 || user.lieuResidence1;
-    const slot2Code = user.quartierCode2 || user.lieu2 || user.lieuResidence2;
-    const slot3Code = user.quartierCode3 || user.lieu3 || user.lieuResidence3;
+    const slot1Code = lieuReel(user.quartierCode) || lieuReel(user.lieu1) || lieuReel(user.lieuResidence1);
+    const slot2Code = lieuReel(user.quartierCode2) || lieuReel(user.lieu2) || lieuReel(user.lieuResidence2);
+    const slot3Code = lieuReel(user.quartierCode3) || lieuReel(user.lieu3) || lieuReel(user.lieuResidence3);
     if (slot1Code) {
       setActiveLieuTab('quartier-1');
     } else if (slot2Code) {
@@ -578,7 +586,7 @@ export default function TerreAdam() {
                 );
               })()}
 
-              {((userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
+              {(userQuartierCodes.some(Boolean) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
                 <div className="space-y-2.5">
                   {/* Page Quartier : une page indépendante par résidence (1, 2 ou 3) */}
                   {(activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3') && (
