@@ -5,7 +5,11 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { useI18n } from '../i18n/useI18n';
 
-type PublishMode = 'ecrit' | 'photo_audio' | 'video';
+type PublishMode = 'ecrit' | 'photo_audio' | 'video' | 'lot';
+
+// Publication de plusieurs produits à la fois : une photo = une annonce
+const MAX_LOT = 5;
+interface LotItem { file: File; preview: string; title: string; price: string; }
 type Level = 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire';
 
 interface UserData {
@@ -55,6 +59,17 @@ function getModes(t: (key: string) => string) {
       text: 'text-blue-700',
       btn: 'bg-blue-600 hover:bg-blue-700',
     },
+    {
+      key: 'lot' as PublishMode,
+      icon: '🖼️',
+      label: t('echange_publier.mode_lot_label'),
+      sub: t('echange_publier.mode_lot_sub'),
+      desc: t('echange_publier.mode_lot_desc'),
+      border: 'border-violet-500',
+      bg: 'bg-violet-50',
+      text: 'text-violet-700',
+      btn: 'bg-violet-600 hover:bg-violet-700',
+    },
   ];
 }
 
@@ -64,7 +79,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'error' | 's
     return () => clearTimeout(t);
   }, [onClose]);
   return (
-    <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-semibold border whitespace-nowrap ${
+    <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-semibold border w-[calc(100%-2rem)] max-w-md ${
       type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'
     }`}>
       <span>{type === 'error' ? '⚠️' : '✅'}</span>
@@ -79,7 +94,7 @@ export default function EchangePublier() {
   const MODES = getModes(t);
   const [searchParams] = useSearchParams();
   const modeFromUrl = searchParams.get('mode') as PublishMode | null;
-  const validMode = modeFromUrl && ['ecrit', 'photo_audio', 'video'].includes(modeFromUrl) ? modeFromUrl : null;
+  const validMode = modeFromUrl && ['ecrit', 'photo_audio', 'video', 'lot'].includes(modeFromUrl) ? modeFromUrl : null;
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [publishMode, setPublishMode] = useState<PublishMode | null>(validMode);
@@ -94,11 +109,14 @@ export default function EchangePublier() {
     photoForAudio: null as File | null,
     audio30s: null as File | null,
   });
+  const [lot, setLot] = useState<LotItem[]>([]);
+  const [lotProgress, setLotProgress] = useState<{ done: number; total: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const imgCaptureRef = useRef<HTMLInputElement>(null);
   const imgGalleryRef = useRef<HTMLInputElement>(null);
+  const lotGalleryRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const categories = level === 'primaire' ? CATEGORIES_PRIMAIRE : level === 'secondaire' ? CATEGORIES_SECONDAIRE : level === 'tertiaire' ? CATEGORIES_TERTIAIRE : CATEGORIES_QUATERNAIRE;
@@ -131,6 +149,24 @@ export default function EchangePublier() {
 
   const showToast = (message: string, type: 'error' | 'success') => setToast({ message, type });
 
+  const ajouterAuLot = (files: File[]) => {
+    const images = files.filter(f => f.type.startsWith('image/'));
+    const place = MAX_LOT - lot.length;
+    if (images.length > place) showToast(t('echange_publier.lot_max_reached'), 'error');
+    const nouveaux = images.slice(0, Math.max(0, place)).map(file => ({ file, preview: URL.createObjectURL(file), title: '', price: '' }));
+    if (nouveaux.length) setLot(l => [...l, ...nouveaux]);
+  };
+
+  const retirerDuLot = (i: number) => {
+    setLot(l => {
+      URL.revokeObjectURL(l[i].preview);
+      return l.filter((_, j) => j !== i);
+    });
+  };
+
+  const modifierLot = (i: number, champ: 'title' | 'price', valeur: string) =>
+    setLot(l => l.map((it, j) => (j === i ? { ...it, [champ]: valeur } : it)));
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     if (publishMode === 'ecrit') {
@@ -148,6 +184,14 @@ export default function EchangePublier() {
       if (!product.title.trim()) errs.title = t('echange_publier.err_title_required');
       if (!product.category) errs.category = t('echange_publier.err_category_required');
       if (product.videos.length === 0) errs.videos = t('echange_publier.err_video_required');
+    } else if (publishMode === 'lot') {
+      if (!product.category) errs.category = t('echange_publier.err_category_required');
+      if (!product.location.trim()) errs.location = t('echange_publier.err_location_required');
+      if (lot.length === 0) errs.images = t('echange_publier.err_images_required');
+      lot.forEach((it, i) => {
+        if (!it.title.trim()) errs[`lot_${i}_title`] = t('echange_publier.err_title_required');
+        if (!it.price || Number(it.price) <= 0) errs[`lot_${i}_price`] = t('echange_publier.err_price_required');
+      });
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -205,9 +249,66 @@ export default function EchangePublier() {
     }
   };
 
+  // Chaque photo part avec son nom et son prix : une annonce par photo, envoyées
+  // l'une après l'autre. Celles déjà publiées sortent de la liste, pour qu'un
+  // nouvel essai n'envoie que les restantes (jamais de doublon).
+  const handleSubmitLot = async () => {
+    if (!validate()) { showToast(t('echange_publier.toast_fix_fields'), 'error'); return; }
+    setSubmitting(true);
+    const token = localStorage.getItem('token');
+    const items = [...lot];
+    let publies = 0;
+    setLotProgress({ done: 0, total: items.length });
+    for (const it of items) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      try {
+        const formData = new FormData();
+        formData.append('title', it.title.trim());
+        formData.append('description', product.description.trim() || 'Produit présenté');
+        formData.append('category', product.category);
+        formData.append('price', String(Number(it.price) || 0));
+        formData.append('currency', product.currency);
+        formData.append('condition', product.condition);
+        formData.append('location', product.location.trim());
+        formData.append('image_0', it.file);
+        const res = await fetch(`${config.API_BASE_URL}/exchange/${level}/products`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || t('echange_publier.toast_error_publish'));
+        }
+        publies++;
+        setLotProgress({ done: publies, total: items.length });
+        URL.revokeObjectURL(it.preview);
+        setLot(l => l.filter(x => x !== it));
+      } catch (err) {
+        clearTimeout(timeoutId);
+        const raison = err instanceof DOMException && err.name === 'AbortError' ? t('echange_publier.toast_timeout')
+          : err instanceof TypeError ? t('echange_publier.toast_network_error')
+          : (err instanceof Error && err.message) || t('echange_publier.toast_error_publish');
+        showToast(publies > 0 ? `${publies}/${items.length} ${t('echange_publier.lot_partial')} ${raison}` : raison, 'error');
+        setSubmitting(false);
+        setLotProgress(null);
+        return;
+      }
+    }
+    setSubmitting(false);
+    setLotProgress(null);
+    showToast(`${publies} ${t('echange_publier.lot_success')}`, 'success');
+    setTimeout(() => navigate('/echange'), 1500);
+  };
+
   const resetForm = () => {
     setPublishMode(null);
     setErrors({});
+    lot.forEach(it => URL.revokeObjectURL(it.preview));
+    setLot([]);
     setProduct({ title: '', description: '', category: '', price: '', currency: 'FG', condition: 'bon', location: '', images: [], videos: [], photoForAudio: null, audio30s: null });
   };
 
@@ -252,7 +353,7 @@ export default function EchangePublier() {
               <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">{t('echange_publier.how_publish_title')}</h1>
               <p className="mt-2 text-gray-500 text-sm">{t('echange_publier.how_publish_desc')}</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {MODES.map((m, i) => (
                 <button
                   key={m.key}
@@ -607,19 +708,115 @@ export default function EchangePublier() {
               </div>
             )}
 
+            {/* ── Mode 4 : Plusieurs produits à la fois ── */}
+            {publishMode === 'lot' && (
+              <div className="p-6 sm:p-8 space-y-5">
+                <div className="pb-4 border-b border-violet-100">
+                  <h2 className="text-lg font-bold text-gray-800">{t('echange_publier.lot_title')}</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('echange_publier.lot_desc')}</p>
+                </div>
+
+                {/* Photos de la galerie */}
+                <div>
+                  <input ref={lotGalleryRef} type="file" accept="image/*" multiple className="hidden"
+                    onChange={e => { ajouterAuLot(Array.from(e.target.files || [])); e.target.value = ''; }} />
+                  {lot.length < MAX_LOT && (
+                    <button onClick={() => lotGalleryRef.current?.click()} disabled={submitting}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
+                      {t('echange_publier.lot_choose_btn')} ({lot.length}/{MAX_LOT})
+                    </button>
+                  )}
+                  {errors.images && <p className="mt-1 text-xs text-red-500">{errors.images}</p>}
+                </div>
+
+                {/* Un nom et un prix pour chaque photo */}
+                {lot.length > 0 && (
+                  <div className="space-y-3">
+                    {lot.map((it, i) => (
+                      <div key={it.preview} className="flex gap-3 p-3 rounded-2xl border-2 border-violet-100 bg-violet-50/40">
+                        <div className="relative flex-shrink-0">
+                          <img src={it.preview} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                          {!submitting && (
+                            <button onClick={() => retirerDuLot(i)}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-bold flex items-center justify-center shadow">
+                              ×
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <input type="text" value={it.title} onChange={e => modifierLot(i, 'title', e.target.value)} disabled={submitting}
+                            placeholder={t('echange_publier.lot_name_placeholder')}
+                            className={`w-full px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors[`lot_${i}_title`] ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-violet-200 focus:border-violet-400'}`} />
+                          <div className="flex items-center gap-2">
+                            <input type="number" value={it.price} onChange={e => modifierLot(i, 'price', e.target.value)} disabled={submitting}
+                              placeholder={t('echange_publier.price_placeholder')}
+                              className={`flex-1 min-w-0 px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors[`lot_${i}_price`] ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-violet-200 focus:border-violet-400'}`} />
+                            <span className="text-sm font-semibold text-gray-500">{product.currency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Infos communes à toutes les photos */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('echange_publier.category_required_label')}</label>
+                    <select value={product.category} onChange={e => setProduct({ ...product, category: e.target.value })}
+                      className={`w-full px-3 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors.category ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-violet-200 focus:border-violet-400'}`}>
+                      <option value="">{t('echange_publier.choose_dash')}</option>
+                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('echange_quaternaire.condition_label')}</label>
+                    <select value={product.condition} onChange={e => setProduct({ ...product, condition: e.target.value })}
+                      className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400">
+                      <option value="neuf">{t('echange_primaire.condition_new')}</option>
+                      <option value="bon">{t('echange_quaternaire.condition_good')}</option>
+                      <option value="moyen">{t('echange_quaternaire.condition_medium')}</option>
+                      <option value="usé">{t('echange_quaternaire.condition_worn_badge')}</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('echange_publier.lot_currency_label')}</label>
+                    <select value={product.currency} onChange={e => setProduct({ ...product, currency: e.target.value })}
+                      className="w-full px-3 py-3 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-violet-200">
+                      <option value="FG">FG</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('echange_publier.location_required_label')}</label>
+                    <input type="text" value={product.location} onChange={e => setProduct({ ...product, location: e.target.value })}
+                      placeholder={t('echange_publier.location_placeholder')}
+                      className={`w-full px-3 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors.location ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-violet-200 focus:border-violet-400'}`} />
+                    {errors.location && <p className="mt-1 text-xs text-red-500">{errors.location}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ══ BOUTONS D'ACTION ══ */}
             <div className="px-6 sm:px-8 py-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
               <button
-                onClick={handleSubmit}
+                onClick={publishMode === 'lot' ? handleSubmitLot : handleSubmit}
                 disabled={submitting}
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-white text-sm font-bold rounded-xl shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed ${modeConfig?.btn || 'bg-emerald-600 hover:bg-emerald-700'}`}
               >
                 {submitting ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    {t('echange_publier.publishing')}
+                    {t('echange_publier.publishing')}{lotProgress ? ` ${lotProgress.done}/${lotProgress.total}` : ''}
                   </>
-                ) : t('echange_publier.publish_product_btn')}
+                ) : publishMode === 'lot' && lot.length > 0
+                  ? `${t('echange_publier.lot_publish_btn')} (${lot.length})`
+                  : t('echange_publier.publish_product_btn')}
               </button>
               <button
                 onClick={resetForm}
