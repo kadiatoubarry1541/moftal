@@ -219,21 +219,43 @@ function useCodeChrome(actif: boolean) {
   return code;
 }
 
-// Vérifie auprès du navigateur (Chrome/Edge/Android uniquement — API absente sur
-// iOS Safari et Firefox) si l'app est toujours réellement installée. Si le drapeau
-// local dit "installée" mais que le navigateur ne la voit plus, on le corrige pour
-// faire réapparaître le bouton Installer.
+// Demande au navigateur (Chrome/Edge/Android uniquement — API absente sur iOS
+// Safari et Firefox) si l'app est installée. Une réponse positive confirme la note
+// « installée ». Une réponse vide ne l'efface PAS : ce navigateur ne voit souvent
+// pas l'app installée, et effacer la note faisait revenir le bouton « Installer »,
+// d'où des installations en double. Si l'app a vraiment été désinstallée, le
+// navigateur propose à nouveau l'installation (beforeinstallprompt) et la note est
+// effacée à ce moment-là.
 export async function reconcileInstalledFlag(storageKey: string | null, setInstalled: (v: boolean) => void) {
   if (!storageKey) return;
   const nav = navigator as any;
   if (typeof nav.getInstalledRelatedApps !== "function") return;
   try {
     const related = await nav.getInstalledRelatedApps();
-    if (!related || related.length === 0) {
-      localStorage.removeItem(storageKey);
-      setInstalled(false);
+    if (related && related.length > 0) {
+      localStorage.setItem(storageKey, "1");
+      setInstalled(true);
     }
   } catch { /* silencieux */ }
+}
+
+// Moftal (l'app principale) ne s'installe que depuis moftal.com, et une gestion
+// que depuis gestions.moftal.com : la même page installée depuis deux adresses
+// fait deux applications différentes sur le téléphone.
+function surDomaineGestions() {
+  return window.location.hostname.startsWith("gestions.");
+}
+function surSiteMoftal() {
+  return /(^|\.)moftal\.com$/.test(window.location.hostname) && !surDomaineGestions();
+}
+// Adresse de la gestion sur gestions.moftal.com, pour l'installer au bon endroit
+async function ouvrirGestionPourInstaller() {
+  const m = window.location.pathname.match(/^\/gestion-[^/]+\/[^/]+/);
+  if (!m) return;
+  const code = await Promise.race([demanderCodeOuverture(), new Promise<null>(r => setTimeout(() => r(null), 4000))]);
+  const q = new URLSearchParams({ installer: "1" });
+  if (code) q.set("_c", code);
+  window.location.href = `https://gestions.moftal.com${m[0]}?${q.toString()}`;
 }
 
 // Petit logo Moftal cliquable pour revenir au site principal — jamais un bouton de
@@ -286,6 +308,8 @@ function estEnModeApp() {
 export default function InstallAppButton({ name, logoUrl, themeColor, color, label, variant = "icon" }: Props = {}) {
 
   const onGestionPage = isGestionPage();
+  // Sur gestions.moftal.com (connexion…), jamais l'installation de Moftal
+  if (!onGestionPage && surDomaineGestions()) return null;
 
   // ══════════════════════════════════════════════════════════════════════════
   // MODE 1 — PAGE D'ACCUEIL : installer l'application Moftal principale
@@ -352,7 +376,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
       let depuisMoftal = false;
       try { depuisMoftal = sessionStorage.getItem("gestionOuverteDepuisMoftal") === "1"; } catch { /* ignore */ }
       const dejaInstallee = (estEnModeApp() && !depuisMoftal) || (cleInstallee && localStorage.getItem(cleInstallee) === "1");
-      if (!cleInvitation || dejaInstallee || !invitationPossible(cleInvitation)) return;
+      if (!cleInvitation || dejaInstallee || surSiteMoftal() || !invitationPossible(cleInvitation)) return;
       minuterie = setTimeout(() => { noterInvitation(cleInvitation); setOuvert(true); }, 2500);
     }
 
@@ -422,7 +446,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           </div>
         </div>
         {etat === "installee" ? (
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — son icône apparaît sur l'écran d'accueil (cela peut prendre une minute). Ne l'installez pas une deuxième fois.")}</p>
         ) : isIOS() ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             <ConsignesIPhone couleur={themeColor} />
@@ -445,7 +469,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
               <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Elle est peut-être déjà installée : cherchez son icône sur votre écran d'accueil. Sinon :")}</div>
             )}
             <div>{gras(tr("1. Appuyez sur le menu **⋮** de Chrome (en haut à droite)"))}</div>
-            <div>{gras(tr("2. Choisissez « **Installer l'application** » ou « **Ajouter à l'écran d'accueil** »"))}</div>
+            <div>{gras(tr("2. Choisissez « **Installer l'application** » (ou « **Ajouter à l'écran d'accueil** » puis « **Installer** ») — jamais « Créer un raccourci », qui fait une icône en double"))}</div>
             <div>{tr("3. Confirmez.")}</div>
             <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans vos applications.")}</div>
           </div>
@@ -472,7 +496,7 @@ export function InvitationInstallerMoftal() {
 
   useEffect(() => {
     // Jamais si Moftal est déjà sur le téléphone (app du site OU du Play Store)
-    if (isGestionPage() || estEnModeApp() || localStorage.getItem("mainAppInstalled") === "1" || appPlayInstallee()) return;
+    if (isGestionPage() || surDomaineGestions() || estEnModeApp() || localStorage.getItem("mainAppInstalled") === "1" || appPlayInstallee()) return;
     const cle = "installInvite_moftal";
     if (!invitationPossible(cle)) return;
     const minuterie = setTimeout(() => { noterInvitation(cle); setOuvert(true); }, 2500);
@@ -517,7 +541,7 @@ export function InvitationInstallerMoftal() {
           </div>
         </div>
         {etat === "installee" ? (
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — son icône apparaît sur l'écran d'accueil (cela peut prendre une minute). Ne l'installez pas une deuxième fois.")}</p>
         ) : etat === "manuel" || (ios && etat === "") ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             {ios ? (
@@ -529,7 +553,7 @@ export function InvitationInstallerMoftal() {
             ) : (
               <>
                 <div>{gras(tr("1. Ouvrez le menu **⋮** du navigateur"))}</div>
-                <div>{gras(tr("2. Choisissez « **Installer l'application** » ou « **Ajouter à l'écran d'accueil** »"))}</div>
+                <div>{gras(tr("2. Choisissez « **Installer l'application** » (ou « **Ajouter à l'écran d'accueil** » puis « **Installer** ») — jamais « Créer un raccourci », qui fait une icône en double"))}</div>
                 <div>{tr("3. Confirmez.")}</div>
               </>
             )}
@@ -560,7 +584,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    setInstalled(standalone);
+    setInstalled(standalone || localStorage.getItem("mainAppInstalled") === "1");
     if (!standalone) reconcileInstalledFlag("mainAppInstalled", setInstalled);
 
     // Récupérer le prompt déjà capturé dans main.tsx
@@ -631,7 +655,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
         style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f0fdf4", color: "#166534", borderBottom: "1px solid #f0f0f0" }}
       >
         <span style={{ fontSize: 18 }}>✅</span>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>{tr("Application installée")}</span>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>{tr("Application installée — ouvrez-la depuis son icône (elle peut mettre une minute à apparaître).")}</span>
       </div>
     );
   }
@@ -650,7 +674,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
         ]
       : [
           { icon: "⋮", text: tr("Ouvrez le menu de votre navigateur (en haut ou en bas de l'écran)") },
-          { icon: "＋", text: tr("Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »") },
+          { icon: "＋", text: tr("Choisissez « Installer l'application » — jamais « Créer un raccourci », qui fait une icône en double") },
           { icon: "✅", text: tr("Confirmez — c'est fait !") },
         ];
     return (
@@ -802,9 +826,13 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       setPrompt(existing);
       if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
     }
-    // On n'affirme « installée » que si c'est certain (dans l'app, ou confirmé par
-    // le téléphone plus bas) — jamais sur la seule foi d'une note locale.
-    setInstalled(appGestion);
+    // Installée : dans l'app, ou notée sur ce téléphone lors de l'installation
+    // (effacée dès que le navigateur propose à nouveau d'installer, plus haut et
+    // dans onPrompt). Sans cette note, le bouton « Installer » revenait et l'on
+    // installait la même gestion 2 ou 3 fois.
+    const notee = !!STORAGE_KEY && localStorage.getItem(STORAGE_KEY) === "1" && !existing;
+    setInstalled(appGestion || notee);
+    setDejaSurEcran(notee);
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -852,6 +880,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   }, []);
 
   const handleInstall = async () => {
+    // Sur moftal.com : l'app de la gestion s'installe sur gestions.moftal.com
+    if (surSiteMoftal()) { setInstalling(true); await ouvrirGestionPourInstaller(); setInstalling(false); return; }
     if (!prompt) {
       // Android, hors d'un vrai onglet Chrome (app Moftal ou autre application) :
       // l'installation n'est possible que dans Chrome → on l'ouvre directement,
@@ -887,7 +917,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   if (installed && dejaSurEcran && !dansLApp) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
-        {tr("✅ Application installée sur votre écran d'accueil — ouvrez-la depuis l'icône.")}
+        {tr("✅ Application déjà installée sur ce téléphone — ouvrez-la depuis son icône (elle peut mettre une minute à apparaître). Ne l'installez pas une deuxième fois.")}
       </span>
     );
   }
@@ -932,7 +962,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
           {!android && <strong>{tr("Le téléphone n'a pas ouvert l'installation. Faites-le à la main :")}</strong>}
           <div>{gras(tr("1. Menu **⋮** du navigateur (en haut à droite)"))}</div>
           {android && <div>{gras(tr("2. Si vous voyez « **Ouvrir dans Chrome** », choisissez-le, puis rouvrez le menu **⋮**"))}</div>}
-          <div>{gras(tr("{n}. « **Installer l'application** » ou « **Ajouter à l'écran d'accueil** »", { n: android ? 3 : 2 }))}</div>
+          <div>{gras(tr("{n}. « **Installer l'application** » (ou « **Ajouter à l'écran d'accueil** » puis « **Installer** ») — jamais « Créer un raccourci », qui fait une icône en double", { n: android ? 3 : 2 }))}</div>
           <div>{tr("{n}. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.", { n: android ? 4 : 3 })}</div>
           <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans la liste de vos applications.")}</div>
           </>)}
