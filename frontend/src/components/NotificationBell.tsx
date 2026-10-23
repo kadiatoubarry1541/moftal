@@ -191,19 +191,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
-function showBrowserNotification(notif: Notification) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const n = new window.Notification(notif.title, {
-    body: notif.message,
-    icon: "/logo-moftal.svg",
-    badge: "/logo-moftal.svg",
-    tag: notif.id,
-    renotify: true
-  } as NotificationOptions & { renotify?: boolean });
-  const path = getNavigationPath(notif.type);
-  if (path) n.onclick = () => { window.focus(); n.close(); };
-}
-
 interface PanelPos { top: number; right: number; width: number; }
 
 function isMainAppInstalled(): boolean {
@@ -264,7 +251,9 @@ export default function NotificationBell() {
     socket.on("new-notification", (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
       setUnreadCount(c => c + 1);
-      showBrowserNotification(notif);
+      // La notification du téléphone arrive par le service worker (push) ; ici,
+      // application ouverte : petite vibration + bandeau dans l'application.
+      try { navigator.vibrate?.([200, 100, 200]); } catch { /* non pris en charge */ }
       toast(
         (t) => (
           <div className="flex gap-3 items-start cursor-pointer" onClick={() => {
