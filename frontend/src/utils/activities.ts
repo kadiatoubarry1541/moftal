@@ -235,7 +235,7 @@ export const ACTIVITES_PROFESSIONNELLES = [
   'Community manager',
   'Influenceur/Influenceuse',
   'Blogueur/Blogueuse',
-  'Créateur/Créatrice de vidéos en ligne',
+  'Youtubeur/Youtubeuse',
   
   // Arts et culture
   'Artiste',
@@ -582,7 +582,7 @@ export const CATEGORIES_ACTIVITES = {
     'Community manager',
     'Influenceur/Influenceuse',
     'Blogueur/Blogueuse',
-    'Créateur/Créatrice de vidéos en ligne'
+    'Youtubeur/Youtubeuse'
   ],
   
   'Arts et culture': [
