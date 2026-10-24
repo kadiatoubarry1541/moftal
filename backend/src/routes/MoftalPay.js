@@ -2,11 +2,11 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
-import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { fondsDe } from '../utils/fondsFamille.js';
 
 // Commission prélevée par la plateforme sur chaque dépôt externe (via Djomy)
 // Les transferts internes (famille → pro) sont GRATUITS — pas de commission
@@ -104,7 +104,7 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
   try {
     const { proAccountId, categorie, description } = req.body;
     // categorie = 'sante' | 'nourriture' | 'urgence' | 'projet'
-    const { numeroH, nomFamille } = req.user;
+    const { numeroH } = req.user;
     // Montant converti en nombre entier : une valeur texte (« 1000 ») était
     // collée au solde au lieu d'y être ajoutée (argent créé de rien).
     const montant = Number(req.body.montant);
@@ -135,10 +135,8 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
 
     // Débit de la famille et crédit du pro : tout ou rien, comptes verrouillés
     const resultat = await sequelize.transaction(async (transaction) => {
-      const fund = await FamilyFund.findOne({
-        where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true },
-        transaction, lock: transaction.LOCK.UPDATE,
-      });
+      // Compte de l'arbre familial de la personne (jamais celui d'un homonyme)
+      const { fund } = await fondsDe(req.user, { transaction, lock: true });
       if (!fund) return { statut: 404, message: 'Compte famille introuvable.' };
       if (fund.gerant1NumeroH !== numeroH && fund.gerant2NumeroH !== numeroH) {
         return { statut: 403, message: 'Seuls les gérants peuvent effectuer ce paiement.' };

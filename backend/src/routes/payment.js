@@ -16,6 +16,7 @@ import {
   sendSubscriptionRenewedEmail,
 } from '../services/emailService.js';
 import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
+import { fondsDe } from '../utils/fondsFamille.js';
 import { elevesLiesEcole } from './school-management.js';
 import { elevesLiesMadrasa } from './madrasa-management.js';
 
@@ -733,9 +734,7 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     }
     // Jamais d'encaissement sans compte pour recevoir l'argent
     if (purpose === 'wallet_depot_famille') {
-      const fund = user?.nomFamille
-        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: String(user.nomFamille).trim() }, isActive: true } })
-        : null;
+      const { fund } = await fondsDe(user);
       if (!fund) return { error: 'Aucun compte famille actif : créez d\'abord le compte de votre famille.' };
     }
     if (purpose === 'wallet_depot_pro') {
@@ -1092,10 +1091,10 @@ export async function handlePostPayment(payment) {
     if (payment.purpose === 'wallet_depot_famille') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
       const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
-      const fund = user?.nomFamille
-        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: user.nomFamille.trim() }, isActive: true } })
-        : null;
-      if (fund) {
+      // Compte de l'arbre familial du payeur, verrouillé pendant le crédit
+      const credite = await sequelize.transaction(async (transaction) => {
+        const { fund } = await fondsDe(user, { transaction, lock: true });
+        if (!fund) return false;
         const repartition = FamilyFund.repartir(montantNet);
         await fund.update({
           solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
@@ -1104,13 +1103,16 @@ export async function handlePostPayment(payment) {
           solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
           solde_projet:     Number(fund.solde_projet)     + repartition.projet,
           total_depose:     Number(fund.total_depose)     + montantNet,
-        });
+        }, { transaction });
         await FamilyFundTransaction.create({
           fundId: fund.id, acteurNumeroH: payment.payerNumeroH,
           acteurNom: `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim(),
           type: 'depot', montant: montantNet, repartition, fedapayRef: payment.txRef, statut: 'confirme',
           description: `Dépôt Moftal Pay — ${montantNet.toLocaleString()} GNF (${Number(payment.amount).toLocaleString()} - commission 1% : ${commission.toLocaleString()} GNF) — réf: ${payment.txRef}`
-        });
+        }, { transaction });
+        return true;
+      });
+      if (credite) {
         await enregistrerCommissionPlateforme('depot_famille', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {

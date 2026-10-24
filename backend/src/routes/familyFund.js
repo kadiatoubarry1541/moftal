@@ -3,9 +3,9 @@ import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import User from '../models/User.js';
-import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
+import { fondsDe, nbMembresArbre, estMembreArbre } from '../utils/fondsFamille.js';
 
 // Tenant fournisseur dédié à l'admin pour la vente de riz aux familles
 // (géré via /gestion-fournisseur/RIZ-MOFTAL-ADMIN, accessible au master admin)
@@ -18,27 +18,13 @@ function estAdmin(fund, numeroH) {
     || fund.conseillerNumeroH === numeroH;
 }
 
-// Compte les membres actifs d'un arbre par nom de famille
-async function compterMembresArbre(nomFamille) {
-  try {
-    const tree = await FamilyTree.findOne({
-      where: { familyName: { [Op.iLike]: nomFamille.trim() } }
-    });
-    if (!tree) return 0;
-    return Array.isArray(tree.members) ? tree.members.length : 0;
-  } catch { return 0; }
-}
-
 // Détecte le Patriarche = le plus âgé membre vivant de l'arbre (dateNaissance la plus ancienne)
-async function detecterPatriarche(nomFamille) {
+async function detecterPatriarche(arbre) {
   try {
-    const tree = await FamilyTree.findOne({
-      where: { familyName: { [Op.iLike]: nomFamille.trim() } }
-    });
-    if (!tree || !Array.isArray(tree.members) || tree.members.length === 0) return null;
+    if (!arbre || !Array.isArray(arbre.members) || arbre.members.length === 0) return null;
     const membres = await User.findAll({
       where: {
-        numeroH: { [Op.in]: tree.members },
+        numeroH: { [Op.in]: arbre.members },
         type: 'vivant',
         isActive: true,
         dateNaissance: { [Op.not]: null }
@@ -84,16 +70,17 @@ router.get('/mon-compte', async (req, res) => {
       return res.json({ success: true, existe: false, message: 'Aucun nom de famille dans votre profil.' });
     }
 
-    let fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille.trim() }, isActive: true }
-    });
+    // Le compte appartient à l'arbre familial de la personne (sa lignée), jamais
+    // à tous ceux qui portent le même nom
+    let { fund, arbre } = await fondsDe(req.user);
 
     if (!fund) {
-      const nbMembres = await compterMembresArbre(nomFamille);
-      // Auto-création si l'arbre atteint 10 membres
-      if (nbMembres >= 3) {
+      const nbMembres = nbMembresArbre(arbre);
+      // Auto-création dès 3 membres dans l'arbre
+      if (arbre && nbMembres >= 3) {
         fund = await FamilyFund.create({
-          nomFamille: nomFamille.trim(),
+          nomFamille: (arbre.familyName || nomFamille).trim(),
+          treeId: arbre.id,
           gerant1NumeroH: req.user.numeroH
         });
         // Ré-continuer sous le bloc fund existant
@@ -109,7 +96,7 @@ router.get('/mon-compte', async (req, res) => {
 
     // Auto-détecter le Patriarche = le plus âgé membre vivant
     try {
-      const patriarche = await detecterPatriarche(nomFamille);
+      const patriarche = await detecterPatriarche(arbre);
       if (patriarche && fund.conseillerNumeroH !== patriarche.numeroH) {
         await fund.update({
           conseillerNumeroH: patriarche.numeroH,
@@ -128,21 +115,9 @@ router.get('/mon-compte', async (req, res) => {
       limit: 20
     });
 
-    const nbMembres = await compterMembresArbre(nomFamille);
-
-    // Récupérer le familyCode et bloodNumber depuis l'arbre
-    let familyCode = null;
-    let bloodNumber = null;
-    try {
-      const tree = await FamilyTree.findOne({
-        where: { familyName: { [Op.iLike]: nomFamille.trim() } },
-        attributes: ['familyCode', 'bloodNumber']
-      });
-      if (tree && nbMembres >= 3) {
-        familyCode = tree.familyCode || null;
-        bloodNumber = tree.bloodNumber || null;
-      }
-    } catch { /* non bloquant */ }
+    const nbMembres = nbMembresArbre(arbre);
+    const familyCode = nbMembres >= 3 ? (arbre.familyCode || null) : null;
+    const bloodNumber = nbMembres >= 3 ? (arbre.bloodNumber || null) : null;
 
     res.json({
       success: true,
@@ -211,9 +186,10 @@ router.post('/creer', async (req, res) => {
       });
     }
 
-    // Vérification : l'arbre doit avoir au moins 10 membres
-    const nbMembres = await compterMembresArbre(nomFamille);
-    if (nbMembres < 3) {
+    // L'arbre familial doit avoir au moins 3 membres
+    const { fund: existe, arbre } = await fondsDe(req.user);
+    const nbMembres = nbMembresArbre(arbre);
+    if (!arbre || nbMembres < 3) {
       return res.status(403).json({
         success: false,
         message: `Votre arbre familial n'a que ${nbMembres} membre${nbMembres > 1 ? 's' : ''}. Le Moftal Pay familial s'ouvre à partir de 3 membres.`,
@@ -222,16 +198,14 @@ router.post('/creer', async (req, res) => {
       });
     }
 
-    const existe = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille.trim() }, isActive: true }
-    });
     if (existe) {
       return res.status(400).json({ success: false, message: 'Votre famille a déjà un compte.' });
     }
 
     // Le créateur devient gérant 1 par défaut
     const fund = await FamilyFund.create({
-      nomFamille: nomFamille.trim(),
+      nomFamille: (arbre.familyName || nomFamille).trim(),
+      treeId: arbre.id,
       gerant1NumeroH: req.user.numeroH
     });
 
@@ -254,33 +228,20 @@ router.post('/creer', async (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/payer', async (req, res) => {
   try {
-    const { type, montant, beneficiaireNom, beneficiaireContact, description } = req.body;
-    const { numeroH, nomFamille } = req.user;
+    const { type, beneficiaireNom, beneficiaireContact, description } = req.body;
+    const { numeroH } = req.user;
+    // Montant converti en nombre entier : une valeur texte (« 1000 ») était collée
+    // au total au lieu d'y être ajoutée
+    const montant = Number(req.body?.montant);
 
     const typesValides = ['paiement_sante', 'paiement_nourriture', 'urgence', 'projet'];
     if (!typesValides.includes(type)) {
       return res.status(400).json({ success: false, message: 'Type de paiement invalide.' });
     }
-    if (!montant || montant <= 0) {
+    if (!Number.isInteger(montant) || montant <= 0) {
       return res.status(400).json({ success: false, message: 'Montant invalide.' });
     }
 
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
-    if (!fund) {
-      return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
-    }
-
-    // Seuls les 3 admins peuvent payer : gérant1, gérant2 ou conseiller
-    if (!estAdmin(fund, numeroH)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Seuls les 2 gérants élus ou le Conseiller (doyen de l\'arbre) peuvent effectuer des paiements.'
-      });
-    }
-
-    // Vérifier le solde du bon compartiment
     const soldeMap = {
       paiement_sante:      'solde_sante',
       paiement_nourriture: 'solde_nourriture',
@@ -288,37 +249,45 @@ router.post('/payer', async (req, res) => {
       projet:              'solde_projet'
     };
     const champSolde = soldeMap[type];
-    const soldeActuel = Number(fund[champSolde]);
 
-    if (soldeActuel < montant) {
-      return res.status(400).json({
-        success: false,
-        message: `Solde insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF`
-      });
+    // Compte verrouillé pendant le débit : deux paiements en même temps ne
+    // dépensent jamais deux fois le même argent
+    const resultat = await sequelize.transaction(async (transaction) => {
+      const { fund } = await fondsDe(req.user, { transaction, lock: true });
+      if (!fund) return { statut: 404, message: 'Compte famille introuvable.' };
+      // Seuls les 3 admins peuvent payer : gérant1, gérant2 ou conseiller
+      if (!estAdmin(fund, numeroH)) {
+        return { statut: 403, message: 'Seuls les 2 gérants élus ou le Conseiller (doyen de l\'arbre) peuvent effectuer des paiements.' };
+      }
+      const soldeActuel = Number(fund[champSolde]);
+      if (soldeActuel < montant) {
+        return { statut: 400, message: `Solde insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF` };
+      }
+      await fund.update({
+        [champSolde]:    soldeActuel - montant,
+        total_depense:   Number(fund.total_depense) + montant,
+      }, { transaction });
+      await FamilyFundTransaction.create({
+        fundId:            fund.id,
+        acteurNumeroH:     numeroH,
+        acteurNom:         req.user.prenom || '',
+        type,
+        montant,
+        beneficiaireNom:   beneficiaireNom || null,
+        beneficiaireContact: beneficiaireContact || null,
+        description:       description || null,
+        statut:            'confirme'
+      }, { transaction });
+      return { statut: 200, nouveauSolde: soldeActuel - montant };
+    });
+    if (resultat.statut !== 200) {
+      return res.status(resultat.statut).json({ success: false, message: resultat.message });
     }
-
-    // Débiter le bon compartiment
-    await fund.update({
-      [champSolde]:    soldeActuel - montant,
-      total_depense:   Number(fund.total_depense) + montant,
-    });
-
-    await FamilyFundTransaction.create({
-      fundId:            fund.id,
-      acteurNumeroH:     numeroH,
-      acteurNom:         req.user.prenom || '',
-      type,
-      montant,
-      beneficiaireNom:   beneficiaireNom || null,
-      beneficiaireContact: beneficiaireContact || null,
-      description:       description || null,
-      statut:            'confirme'
-    });
 
     res.json({
       success: true,
       message: `Paiement de ${montant.toLocaleString()} GNF effectué vers ${beneficiaireNom || 'le bénéficiaire'}.`,
-      nouveauSolde: soldeActuel - montant
+      nouveauSolde: resultat.nouveauSolde
     });
   } catch (err) {
     console.error('family-fund/payer:', err);
@@ -360,86 +329,78 @@ router.get('/riz-info', async (req, res) => {
 router.post('/acheter-riz', async (req, res) => {
   try {
     const { nombreSacs } = req.body;
-    const { numeroH, nomFamille } = req.user;
+    const { numeroH } = req.user;
 
     const sacs = parseInt(nombreSacs);
     if (!sacs || sacs < 1) {
       return res.status(400).json({ success: false, message: 'Indiquez un nombre de sacs valide.' });
     }
 
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
-    if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
-
-    if (!estAdmin(fund, numeroH)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Seuls les 2 gérants élus ou le Conseiller (doyen de l\'arbre) peuvent effectuer des paiements.'
-      });
-    }
-
-    const [produit] = await sequelize.query(
-      `SELECT * FROM supplier_products WHERE tenant_code=:code AND nom ILIKE '%riz%' AND is_active=true ORDER BY id DESC LIMIT 1`,
-      { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!produit) {
-      return res.status(404).json({ success: false, message: 'Le riz n\'est pas disponible pour le moment.' });
-    }
-    if (Number(produit.stock) < sacs) {
-      return res.status(400).json({ success: false, message: `Stock insuffisant. Disponible : ${produit.stock} sac(s).` });
-    }
-
-    const prixParSac = Number(produit.prix_detail);
-    const montant = prixParSac * sacs;
-
-    const soldeActuel = Number(fund.solde_nourriture);
-    if (soldeActuel < montant) {
-      return res.status(400).json({
-        success: false,
-        message: `Solde alimentation insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF, requis : ${montant.toLocaleString()} GNF.`
-      });
-    }
-
-    await fund.update({
-      solde_nourriture: soldeActuel - montant,
-      total_depense: Number(fund.total_depense) + montant,
-    });
-
-    await sequelize.query(
-      `UPDATE supplier_products SET stock = stock - :sacs WHERE tenant_code=:code AND id=:id`,
-      { replacements: { sacs, code: RIZ_TENANT_CODE, id: produit.id } }
-    );
-
-    await sequelize.query(
-      `INSERT INTO supplier_orders (tenant_code, client_nom, montant_total, statut, notes)
-       VALUES (:code, :clientNom, :montant, 'en_attente', :notes)`,
-      {
-        replacements: {
-          code: RIZ_TENANT_CODE,
-          clientNom: `Famille ${fund.nomFamille}`,
-          montant,
-          notes: `${sacs} sac(s) de riz — commande via Moftal Pay`
-        }
+    // Compte famille et stock verrouillés : jamais deux débits ni un stock négatif
+    const resultat = await sequelize.transaction(async (transaction) => {
+      const { fund } = await fondsDe(req.user, { transaction, lock: true });
+      if (!fund) return { statut: 404, message: 'Compte famille introuvable.' };
+      if (!estAdmin(fund, numeroH)) {
+        return { statut: 403, message: 'Seuls les 2 gérants élus ou le Conseiller (doyen de l\'arbre) peuvent effectuer des paiements.' };
       }
-    );
 
-    await FamilyFundTransaction.create({
-      fundId: fund.id,
-      acteurNumeroH: numeroH,
-      acteurNom: req.user.prenom || '',
-      type: 'paiement_nourriture',
-      montant,
-      beneficiaireNom: 'Riz Moftal (Admin)',
-      description: `${sacs} sac(s) de riz`,
-      statut: 'confirme'
+      const [produit] = await sequelize.query(
+        `SELECT * FROM supplier_products WHERE tenant_code=:code AND nom ILIKE '%riz%' AND is_active=true ORDER BY id DESC LIMIT 1 FOR UPDATE`,
+        { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT, transaction }
+      );
+      if (!produit) return { statut: 404, message: 'Le riz n\'est pas disponible pour le moment.' };
+      if (Number(produit.stock) < sacs) {
+        return { statut: 400, message: `Stock insuffisant. Disponible : ${produit.stock} sac(s).` };
+      }
+
+      const montant = Number(produit.prix_detail) * sacs;
+      const soldeActuel = Number(fund.solde_nourriture);
+      if (soldeActuel < montant) {
+        return { statut: 400, message: `Solde alimentation insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF, requis : ${montant.toLocaleString()} GNF.` };
+      }
+
+      await fund.update({
+        solde_nourriture: soldeActuel - montant,
+        total_depense: Number(fund.total_depense) + montant,
+      }, { transaction });
+      await sequelize.query(
+        `UPDATE supplier_products SET stock = stock - :sacs WHERE tenant_code=:code AND id=:id`,
+        { replacements: { sacs, code: RIZ_TENANT_CODE, id: produit.id }, transaction }
+      );
+      await sequelize.query(
+        `INSERT INTO supplier_orders (tenant_code, client_nom, montant_total, statut, notes)
+         VALUES (:code, :clientNom, :montant, 'en_attente', :notes)`,
+        {
+          replacements: {
+            code: RIZ_TENANT_CODE,
+            clientNom: `Famille ${fund.nomFamille}`,
+            montant,
+            notes: `${sacs} sac(s) de riz — commande via Moftal Pay`
+          },
+          transaction
+        }
+      );
+      await FamilyFundTransaction.create({
+        fundId: fund.id,
+        acteurNumeroH: numeroH,
+        acteurNom: req.user.prenom || '',
+        type: 'paiement_nourriture',
+        montant,
+        beneficiaireNom: 'Riz Moftal (Admin)',
+        description: `${sacs} sac(s) de riz`,
+        statut: 'confirme'
+      }, { transaction });
+      return { statut: 200, montant, nouveauSolde: soldeActuel - montant };
     });
+    if (resultat.statut !== 200) {
+      return res.status(resultat.statut).json({ success: false, message: resultat.message });
+    }
 
     res.json({
       success: true,
       message: `Commande de ${sacs} sac(s) de riz confirmée. L'administrateur vous livrera après réception du paiement.`,
-      montant,
-      nouveauSolde: soldeActuel - montant
+      montant: resultat.montant,
+      nouveauSolde: resultat.nouveauSolde
     });
   } catch (err) {
     console.error('family-fund/acheter-riz:', err);
@@ -455,16 +416,21 @@ router.post('/acheter-riz', async (req, res) => {
 router.put('/gerants', async (req, res) => {
   try {
     const { gerant1NumeroH, gerant2NumeroH } = req.body;
-    const { nomFamille, numeroH } = req.user;
+    const { numeroH } = req.user;
 
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
+    const { fund, arbre } = await fondsDe(req.user);
     if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
 
     const peutModifier = !fund.gerant1NumeroH || estAdmin(fund, numeroH);
     if (!peutModifier) {
       return res.status(403).json({ success: false, message: 'Seul un admin du compte peut changer les gérants.' });
+    }
+
+    // Les gérants sont choisis parmi les membres de l'arbre de la famille
+    for (const n of [gerant1NumeroH, gerant2NumeroH]) {
+      if (n && !estMembreArbre(arbre, n)) {
+        return res.status(400).json({ success: false, message: `${n} n'est pas membre de votre arbre familial.` });
+      }
     }
 
     const updates = { gerant1NumeroH, gerant2NumeroH };
@@ -499,16 +465,18 @@ router.put('/gerants', async (req, res) => {
 router.put('/conseiller', async (req, res) => {
   try {
     const { conseillerNumeroH } = req.body;
-    const { nomFamille, numeroH } = req.user;
+    const { numeroH } = req.user;
 
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
+    const { fund, arbre } = await fondsDe(req.user);
     if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
 
     // Seul un admin existant ou le conseiller actuel peut changer le conseiller
     if (fund.conseillerNumeroH && fund.conseillerNumeroH !== numeroH && !estAdmin(fund, numeroH)) {
       return res.status(403).json({ success: false, message: 'Seul le Conseiller actuel peut passer son rôle.' });
+    }
+
+    if (!estMembreArbre(arbre, conseillerNumeroH)) {
+      return res.status(400).json({ success: false, message: 'Le Conseiller doit être membre de votre arbre familial.' });
     }
 
     const nouveauConseiller = await User.findOne({ where: { numeroH: conseillerNumeroH } });
