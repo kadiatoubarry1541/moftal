@@ -1213,6 +1213,18 @@ router.put('/profile', authenticate, async (req, res) => {
       updates[champ] = req.body[cle];
     });
 
+    // Une adresse e-mail = un seul compte : message clair au lieu d'une erreur serveur
+    if (updates.email !== undefined) {
+      const email = String(updates.email || '').trim();
+      updates.email = email || null;
+      if (email) {
+        const autre = await User.findOne({ where: { email: { [Op.iLike]: email.replace(/[\\%_]/g, '\\$&') }, numeroH: { [Op.ne]: user.numeroH } } });
+        if (autre) {
+          return res.status(409).json({ success: false, message: 'Cette adresse email est déjà associée à un autre compte.' });
+        }
+      }
+    }
+
     // Un numéro de téléphone = un seul compte (même écrit autrement)
     const nouveauTel = String(updates.tel1 || updates.telephone || '').replace(/[^0-9]/g, '');
     if (nouveauTel.length >= 6) {
