@@ -18,6 +18,7 @@ import {
 import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
 import { fondsDe } from '../utils/fondsFamille.js';
 import { compteMoftalPayPro } from '../utils/compteMoftalPayPro.js';
+import { finAbonnementPaye, DUREES_IA } from '../utils/finAbonnement.js';
 import { elevesLiesEcole } from './school-management.js';
 import { elevesLiesMadrasa } from './madrasa-management.js';
 
@@ -548,28 +549,11 @@ router.get('/prix-outils', authenticate, (req, res) => {
  */
 router.get('/acces-ia', authenticate, async (req, res) => {
   try {
-    const maintenant = new Date();
-    const unMoisAvant = new Date(maintenant); unMoisAvant.setMonth(unMoisAvant.getMonth() - 1);
-    const unAnAvant   = new Date(maintenant); unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-
-    const passMois = await Payment.findOne({
-      where: { payerNumeroH: req.user.numeroH, purpose: 'subscription_ia_mois', status: 'completed', createdAt: { [Op.gte]: unMoisAvant } },
-      order: [['createdAt', 'DESC']]
-    });
-    const passAn = await Payment.findOne({
-      where: { payerNumeroH: req.user.numeroH, purpose: 'subscription_ia_an', status: 'completed', createdAt: { [Op.gte]: unAnAvant } },
-      order: [['createdAt', 'DESC']]
-    });
-
-    const paiement = passMois || passAn;
-    let expireAt = null;
-    if (passMois) {
-      expireAt = new Date(passMois.createdAt); expireAt.setMonth(expireAt.getMonth() + 1);
-    } else if (passAn) {
-      expireAt = new Date(passAn.createdAt); expireAt.setFullYear(expireAt.getFullYear() + 1);
-    }
-
-    res.json({ success: true, aAcces: !!paiement, expireAt, type: passMois ? 'mensuel' : passAn ? 'annuel' : null });
+    // Chaque pass prolonge le précédent (mensuel ou annuel)
+    const { fin, dernier } = await finAbonnementPaye(req.user.numeroH, DUREES_IA);
+    const aAcces = !!fin && fin > new Date();
+    const type = aAcces && dernier ? (dernier.purpose === 'subscription_ia_mois' ? 'mensuel' : 'annuel') : null;
+    res.json({ success: true, aAcces, expireAt: aAcces ? fin : null, type });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -1255,14 +1239,8 @@ router.get('/acces-livres', authenticate, async (req, res) => {
       return res.json({ success: true, aAcces: true, expireAt: null, admin: true });
     }
 
-    const passAn = await hasLivresAccess(req.user);
-
-    let expireAt = null;
-    if (passAn) {
-      expireAt = new Date(new Date(passAn.createdAt).setFullYear(new Date(passAn.createdAt).getFullYear() + 1));
-    }
-
-    res.json({ success: true, aAcces: !!passAn, expireAt });
+    const fin = await hasLivresAccess(req.user);
+    res.json({ success: true, aAcces: !!fin, expireAt: fin instanceof Date ? fin : null });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
