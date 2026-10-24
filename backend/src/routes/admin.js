@@ -228,6 +228,20 @@ router.patch('/users/:numeroH/role', async (req, res) => {
         message: 'Rôle invalide'
       });
     }
+
+    // Donner ou retirer des droits d'administration : administrateur principal
+    // (G7) ou super-admin seulement — jamais un admin simple ni le petit admin G0.
+    // Seul l'administrateur principal nomme un super-admin.
+    const estPrincipal = req.user.numeroH === 'G7C7P7R7E7F7 7';
+    const estSuper = estPrincipal || req.user.role === 'super-admin';
+    if (!estSuper || (role === 'super-admin' && !estPrincipal)) {
+      return res.status(403).json({
+        success: false,
+        message: role === 'super-admin'
+          ? "Seul l'administrateur principal peut nommer un super-admin."
+          : "Seul un super-admin peut changer le rôle d'un utilisateur."
+      });
+    }
     
     const user = await User.findByNumeroH(numeroH);
     
@@ -239,6 +253,9 @@ router.patch('/users/:numeroH/role', async (req, res) => {
     }
     
     if (estCompteMaitre(user.numeroH)) return refusCompteMaitre(res);
+    if (user.role === 'super-admin' && !estPrincipal) {
+      return res.status(403).json({ success: false, message: "Seul l'administrateur principal peut changer le rôle d'un super-admin." });
+    }
 
     // Ne pas permettre de changer son propre rôle
     if (user.numeroH === req.user.numeroH) {
