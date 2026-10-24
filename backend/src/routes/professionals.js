@@ -965,7 +965,8 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous ne pouvez pas approuver votre propre compte.' });
     }
 
-    if (account.status === 'rejected' && account.approvedAt) {
+    const dejaApprouve = account.status === 'rejected' && !!account.approvedAt;
+    if (dejaApprouve) {
       // Déjà approuvé une fois puis rejeté : on rétablit le compte sans relancer
       // l'essai gratuit (l'abonnement garde ses dates).
       await account.update({ status: 'approved', approvedBy: req.userId, rejectionReason: null });
@@ -993,7 +994,10 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       recipientNumeroH: account.ownerNumeroH,
       type: 'account_approved',
       title: 'Compte approuvé !',
-      message: `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" a été approuvé ! Vous bénéficiez de 3 mois d'essai gratuit. Profitez-en pour explorer votre espace professionnel, recevoir des rendez-vous et gérer votre activité.`,
+      // Un compte rétabli (déjà approuvé une fois) garde ses dates : pas de nouvel essai
+      message: dejaApprouve
+        ? `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" est de nouveau approuvé. Votre abonnement garde ses dates.`
+        : `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" a été approuvé ! Vous bénéficiez de 3 mois d'essai gratuit. Profitez-en pour explorer votre espace professionnel, recevoir des rendez-vous et gérer votre activité.`,
       relatedId: account.id
     });
 

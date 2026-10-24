@@ -870,7 +870,8 @@ const TENANT_PREFIX = {
   scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU',
   vendor: 'VENT', producer: 'PROD', broker: 'BROK',
   restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU', lawyer: 'AVOC', legal_advisor: 'JURI',
-  artisan: 'ARTI', mairie: 'MAIR',
+  // Mêmes préfixes que la création de la gestion (professionals.js, ensure-tenant)
+  artisan: 'ARTIS', mairie: 'MAIR', immobilier: 'IMMO', reseau: 'RESEAU',
 };
 
 // Commission plateforme (1%) prélevée sur chaque dépôt externe Moftal Pay
