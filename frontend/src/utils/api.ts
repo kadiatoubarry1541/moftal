@@ -299,6 +299,14 @@ export const api = {
     if (!response.ok) {
       return { success: false, message: data.message || 'Erreur lors du changement de mot de passe' }
     }
+    // Nouvelle session pour cet appareil (les anciennes sont refusées par le serveur)
+    if (data.token) {
+      localStorage.setItem('token', data.token)
+      try {
+        const s = JSON.parse(localStorage.getItem('session_user') || 'null')
+        if (s) localStorage.setItem('session_user', JSON.stringify({ ...s, token: data.token }))
+      } catch { /* session illisible : le jeton suffit */ }
+    }
     return { success: true, message: data.message }
   },
 

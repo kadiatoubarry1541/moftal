@@ -22,9 +22,9 @@ export function initSocket(httpServer, corsOrigins) {
       const decoded = jwt.verify(token, config.JWT_SECRET);
       if (decoded.purpose) return next(new Error('Invalid token')); // jeton de récupération : jamais une session
       // Compte réel et actif (désactivé ou supprimé → plus de temps réel)
-      const { findUserFollowingAlias } = await import('./middleware/auth.js');
+      const { findUserFollowingAlias, sessionRevoquee } = await import('./middleware/auth.js');
       const user = await findUserFollowingAlias(decoded.numeroH);
-      if (!user || !user.isActive) return next(new Error('Invalid token'));
+      if (!user || !user.isActive || sessionRevoquee(user, decoded)) return next(new Error('Invalid token'));
       socket.user = { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, role: user.role };
       next();
     } catch {

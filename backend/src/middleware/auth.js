@@ -82,6 +82,12 @@ async function ownsApprovedProAccount(numeroH) {
   } catch { return false; }
 }
 
+/** Session ouverte avant le dernier changement de mot de passe : refusée. */
+export function sessionRevoquee(user, decoded) {
+  const depuis = user?.sessionsValidesDepuis ? new Date(user.sessionsValidesDepuis).getTime() : 0;
+  return !!depuis && (!decoded?.iat || decoded.iat * 1000 < depuis);
+}
+
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
   return authenticate(req, res, next);
@@ -129,6 +135,14 @@ export const authenticate = async (req, res, next) => {
         return res.status(401).json({
           success: false,
           message: 'Compte désactivé'
+        });
+      }
+
+      if (sessionRevoquee(user, decoded)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Mot de passe changé : reconnectez-vous.',
+          expired: true
         });
       }
 

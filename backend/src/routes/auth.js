@@ -1495,7 +1495,8 @@ router.put('/change-password', authenticate, [
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
 
-    res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+    // Les autres appareils sont déconnectés ; celui-ci reçoit une nouvelle session
+    res.json({ success: true, message: 'Mot de passe modifié avec succès. Vos autres appareils ont été déconnectés.', token: signToken(user.numeroH) });
   } catch (error) {
     console.error('Erreur lors du changement de mot de passe:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

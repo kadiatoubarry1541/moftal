@@ -445,6 +445,13 @@ User.init({
     defaultValue: false,
     field: 'is_verified'
   },
+  // Toute session ouverte avant cette date est refusée (mot de passe changé :
+  // les autres appareils, ou un téléphone volé, sont déconnectés)
+  sessionsValidesDepuis: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'sessions_valides_depuis'
+  },
   role: {
     type: DataTypes.STRING, // ENUM converti en STRING ('user', 'admin', 'super-admin')
     defaultValue: 'user'
@@ -501,6 +508,14 @@ User.beforeSave(async (user) => {
 // changement), la « première connexion » par téléphone / e-mail est fermée.
 User.addHook('afterUpdate', async (user, options) => {
   if (user.changed && user.changed('password')) {
+    // Les sessions ouvertes avant ce changement ne valent plus rien (à la
+    // seconde près, comme la date d'émission d'un jeton)
+    const depuis = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await User.sequelize.query(
+      'UPDATE users SET sessions_valides_depuis = :depuis WHERE numero_h = :nh',
+      { replacements: { depuis, nh: user.numeroH }, transaction: options?.transaction }
+    ).catch((e) => console.error('sessions_valides_depuis:', e.message));
+    user.setDataValue('sessionsValidesDepuis', depuis);
     await User.sequelize.query(
       'UPDATE users SET mot_de_passe_a_choisir = false WHERE numero_h = :nh AND mot_de_passe_a_choisir = true',
       { replacements: { nh: user.numeroH }, transaction: options?.transaction }
