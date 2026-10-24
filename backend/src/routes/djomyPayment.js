@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import Payment from '../models/Payment.js';
-import { computeAmountForPurpose, handlePostPayment } from './payment.js';
+import { computeAmountForPurpose, debloquerPaiement } from './payment.js';
 
 const router = express.Router();
 
@@ -86,7 +86,7 @@ async function completeIfNeeded(payment) {
     { where: { id: payment.id, status: { [Op.ne]: 'completed' } } }
   );
   payment.status = 'completed';
-  if (nb === 1) await handlePostPayment(payment);
+  if (nb === 1) await debloquerPaiement(payment);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

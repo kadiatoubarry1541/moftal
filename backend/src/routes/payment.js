@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { isInspirAdmin, hasLivresAccess } from '../services/inspirAccess.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
@@ -799,6 +799,47 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
 }
 
 /**
+ * Débloque ce qui a été payé ; si cela échoue, le paiement (déjà encaissé) est
+ * marqué « à traiter » au lieu d'être oublié. Renvoie true si tout est débloqué.
+ */
+export async function debloquerPaiement(payment) {
+  try {
+    await handlePostPayment(payment);
+    await sequelize.query(`UPDATE payments SET deblocage_erreur = NULL WHERE id = :id`, { replacements: { id: payment.id } }).catch(() => {});
+    return true;
+  } catch (err) {
+    console.error(`🚨 PAIEMENT ENCAISSÉ NON DÉBLOQUÉ — ${payment.txRef} (${payment.purpose}) : ${err.message}`);
+    await sequelize.query(
+      `UPDATE payments SET deblocage_erreur = :e WHERE id = :id`,
+      { replacements: { e: String(err.message || err).slice(0, 1000), id: payment.id } }
+    ).catch(() => {});
+    return false;
+  }
+}
+
+// GET /api/payment/admin/a-traiter — paiements encaissés dont le déblocage a échoué
+router.get('/admin/a-traiter', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const paiements = await sequelize.query(
+      `SELECT id, tx_ref, payer_numero_h, amount, purpose, related_id, created_at, deblocage_erreur
+         FROM payments WHERE status = 'completed' AND deblocage_erreur IS NOT NULL ORDER BY created_at DESC LIMIT 200`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, paiements });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// POST /api/payment/admin/relancer/:id — refaire le déblocage (après correction)
+router.post('/admin/relancer/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id);
+    if (!payment || payment.status !== 'completed') return res.status(404).json({ success: false, message: 'Paiement encaissé introuvable.' });
+    const ok = await debloquerPaiement(payment);
+    res.status(ok ? 200 : 500).json({ success: ok, message: ok ? 'Déblocage effectué.' : 'Le déblocage a encore échoué (voir le message enregistré).' });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+/**
  * GET /api/payment/verify/:txRef
  * Vérifie le statut d'un paiement
  */
@@ -1200,6 +1241,8 @@ export async function handlePostPayment(payment) {
     }
   } catch (err) {
     console.error('Erreur handlePostPayment:', err);
+    // L'appelant doit savoir que rien n'a été débloqué (jamais un échec silencieux)
+    throw err;
   }
 }
 

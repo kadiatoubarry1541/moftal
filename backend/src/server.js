@@ -1829,6 +1829,8 @@ async function initAllTables() {
     // le webhook, mais absent de la table créée à l'origine — le webhook ne retrouvait donc
     // jamais le paiement et ne débloquait jamais ce que le client venait de payer.
     await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "gateway_ref" VARCHAR(200);`).catch(() => {});
+    // Paiement encaissé dont le déblocage a échoué : gardé pour être relancé par l'admin
+    await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "deblocage_erreur" TEXT;`).catch(() => {});
     await sequelize.query(`CREATE INDEX IF NOT EXISTS "idx_payments_gateway_ref" ON "payments" ("gateway_ref");`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
