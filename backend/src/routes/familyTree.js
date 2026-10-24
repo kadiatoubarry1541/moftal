@@ -138,7 +138,8 @@ async function createOrFindFamilyTree(user) {
 
     if (existingTree) {
       // Ajouter l'utilisateur à l'arbre existant
-      const members = existingTree.members || [];
+      // Copie : modifier le tableau en place n'est jamais enregistré
+      const members = [...(existingTree.members || [])];
       if (!members.includes(user.numeroH)) {
         members.push(user.numeroH);
         await existingTree.update({ members });
@@ -161,7 +162,8 @@ async function createOrFindFamilyTree(user) {
 
 // Fonction pour récupérer les membres vivants de l'arbre
 async function getTreeMembers(tree) {
-  const members = tree.members || [];
+  // Copie : modifier le tableau en place n'est jamais enregistré
+  const members = [...(tree.members || [])];
   const users = await User.findAll({
     where: {
       numeroH: { [Op.in]: members },
@@ -506,7 +508,8 @@ router.put('/set-family-heads', async (req, res) => {
     }
 
     // Vérifier que les nouveaux chefs sont membres de l'arbre
-    const members = tree.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(tree.members || [])];
     if (chefFamille1 && !members.includes(chefFamille1)) {
       return res.status(400).json({
         success: false,
@@ -941,7 +944,8 @@ export async function addUserToFamilyTree(numeroH, numeroHPereRaw, numeroHMereRa
 
   if (tree) {
     // Ajouter l'utilisateur à l'arbre existant
-    const members = tree.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(tree.members || [])];
     if (!members.includes(numeroH)) {
       if (members.length >= MAX_MEMBRES_ARBRE) {
         return { tree, limitReached: true };
@@ -1046,7 +1050,8 @@ export async function addDeceasedToFamilyTree(numeroHD, numeroHPereRaw, numeroHM
 
   if (tree) {
     // Ajouter le décédé à l'arbre existant
-    const deceasedMembers = tree.deceasedMembers || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const deceasedMembers = [...(tree.deceasedMembers || [])];
     if (!deceasedMembers.includes(numeroHD)) {
       deceasedMembers.push(numeroHD);
       await tree.update({ deceasedMembers });

@@ -156,7 +156,8 @@ router.post('/communities/:id/join', async (req, res) => {
       });
     }
     
-    const members = community.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(community.members || [])];
     if (!members.includes(numeroH)) {
       members.push(numeroH);
       await community.update({ members });
@@ -190,7 +191,8 @@ router.post('/communities/:id/posts', async (req, res) => {
       });
     }
     
-    const posts = community.posts || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const posts = [...(community.posts || [])];
     const newPost = {
       id: Date.now().toString(),
       author,

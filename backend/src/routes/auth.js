@@ -157,7 +157,8 @@ async function createActivityGroupsForUser(user) {
           });
         } else {
           // Ajouter l'utilisateur au groupe existant s'il n'est pas déjà membre
-          const members = group.members || [];
+          // Copie : modifier le tableau en place n'est jamais enregistré
+          const members = [...(group.members || [])];
           if (!members.includes(user.numeroH)) {
             members.push(user.numeroH);
             await group.update({ members });

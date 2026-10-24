@@ -232,7 +232,8 @@ router.post('/groups/:id/join', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(numeroH)) {
       members.push(numeroH);
       await group.update({ members });
@@ -266,7 +267,8 @@ router.post('/groups/:id/posts', async (req, res) => {
       });
     }
     
-    const posts = group.posts || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const posts = [...(group.posts || [])];
     const newPost = {
       id: Date.now().toString(),
       author,

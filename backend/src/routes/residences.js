@@ -117,7 +117,8 @@ router.get('/groups', async (req, res) => {
     } else if (normalizedLocation && groups.length > 0) {
       // Auto-rejoindre le premier groupe du quartier si pas encore membre
       const group = groups[0];
-      const members = group.members || [];
+      // Copie : modifier le tableau en place n'est jamais enregistré
+      const members = [...(group.members || [])];
       if (!members.includes(req.user.numeroH)) {
         members.push(req.user.numeroH);
         await group.update({ members });
@@ -219,7 +220,8 @@ router.post('/groups/:id/join', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (members.includes(req.user.numeroH)) {
       return res.status(400).json({
         success: false,
@@ -261,7 +263,8 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     // Ajouter automatiquement l'utilisateur s'il n'est pas membre
     if (!members.includes(req.user.numeroH)) {
       members.push(req.user.numeroH);
@@ -321,7 +324,8 @@ router.get('/groups/:id/messages', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
 
     const isAdminUser =
       req.user &&

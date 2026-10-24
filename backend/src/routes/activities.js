@@ -59,7 +59,8 @@ router.get('/my-group', async (req, res) => {
       });
     } else {
       // Auto-rejoindre si pas encore membre
-      const members = group.members || [];
+      // Copie : modifier le tableau en place n'est jamais enregistré
+      const members = [...(group.members || [])];
       if (!members.includes(req.user.numeroH)) {
         members.push(req.user.numeroH);
         await group.update({ members });
@@ -168,7 +169,8 @@ router.post('/groups/:id/join', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(numeroH)) {
       await group.update({ members: [...members, numeroH] });
     }
@@ -204,7 +206,8 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     }
     
     // Vérifier si l'utilisateur est membre, sinon l'ajouter automatiquement
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(user.numeroH)) {
       members.push(user.numeroH);
       await group.update({ members });
@@ -226,6 +229,33 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       mediaUrl
     });
     notifierNouveauMessage({ destinataires: group.members || [], expediteur: user, convKey: `activity:${group.id}`, message, groupe: group.name || group.activity || 'Activité' });
+
+    // Publication des pages Activité (atelier, collaboration, spectacle…) : elle
+    // est aussi rangée dans les publications du groupe, avec ses détails, pour
+    // être affichée et rejointe (avant, elle n'apparaissait jamais).
+    if (req.body.type) {
+      const lireDetails = (cle) => { try { return req.body[cle] ? JSON.parse(req.body[cle]) : undefined; } catch { return undefined; } };
+      const publication = {
+        id: String(message.id),
+        author: user.numeroH,
+        authorName: `${user.prenom || ''} ${user.nomFamille || ''}`.trim(),
+        content: content || '',
+        type: String(req.body.type).slice(0, 30),
+        mediaUrl,
+        likes: [],
+        comments: [],
+        createdAt: new Date().toISOString(),
+      };
+      for (const cle of ['meetingDetails', 'workshopDetails', 'collaborationDetails', 'exhibitionDetails', 'performanceDetails', 'projectDetails']) {
+        const d = lireDetails(cle);
+        if (d && typeof d === 'object') {
+          // Les inscrits viennent toujours du serveur, jamais du formulaire
+          publication[cle] = { ...d, participants: [], performers: [], artists: [] };
+        }
+      }
+      const frais = await ActivityGroup.findByPk(id);
+      await frais.update({ posts: [publication, ...(Array.isArray(frais.posts) ? frais.posts : [])].slice(0, 300) });
+    }
     
     // Récupérer le nom de l'auteur
     const author = await User.findOne({ where: { numero_h: user.numeroH } });
@@ -247,6 +277,46 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
   }
 });
 
+// @route   POST /api/activities/:niveau/posts/:postId/:action
+// @desc    Rejoindre un atelier, une collaboration, un spectacle ou un projet
+//          publié dans le groupe de son activité
+// @access  Membre du groupe
+const ACTIONS_REJOINDRE = {
+  'join-meeting':       { cle: 'meetingDetails',       liste: 'participants', max: 'maxParticipants' },
+  'join-workshop':      { cle: 'workshopDetails',      liste: 'participants', max: 'maxParticipants' },
+  'join-collaboration': { cle: 'collaborationDetails', liste: 'participants' },
+  'join-exhibition':    { cle: 'exhibitionDetails',    liste: 'artists',      max: 'maxArtists' },
+  'join-performance':   { cle: 'performanceDetails',   liste: 'performers',   max: 'maxPerformers' },
+  'join-project':       { cle: 'projectDetails',       liste: 'participants' },
+};
+router.post('/:niveau(activity1|activity2|activity3)/posts/:postId/:action', async (req, res) => {
+  try {
+    const regle = ACTIONS_REJOINDRE[req.params.action];
+    if (!regle) return res.status(404).json({ success: false, message: 'Action inconnue.' });
+    const me = req.user.numeroH;
+    const message = await ActivityMessage.findByPk(req.params.postId).catch(() => null);
+    const group = message ? await ActivityGroup.findByPk(message.groupId) : null;
+    if (!group) return res.status(404).json({ success: false, message: 'Publication introuvable.' });
+    if (!(group.members || []).includes(me)) {
+      return res.status(403).json({ success: false, message: "Vous n'êtes pas membre de ce groupe." });
+    }
+    const posts = Array.isArray(group.posts) ? [...group.posts] : [];
+    const i = posts.findIndex((p) => String(p.id) === String(req.params.postId));
+    const details = i >= 0 ? posts[i][regle.cle] : null;
+    if (!details) return res.status(404).json({ success: false, message: 'Publication introuvable.' });
+    const inscrits = Array.isArray(details[regle.liste]) ? details[regle.liste] : [];
+    if (inscrits.includes(me)) return res.json({ success: true, message: 'Vous êtes déjà inscrit(e).' });
+    const max = regle.max ? Number(details[regle.max]) : 0;
+    if (max > 0 && inscrits.length >= max) return res.status(400).json({ success: false, message: 'Il n\'y a plus de place.' });
+    posts[i] = { ...posts[i], [regle.cle]: { ...details, [regle.liste]: [...inscrits, me] } };
+    await group.update({ posts });
+    res.json({ success: true, post: posts[i] });
+  } catch (error) {
+    console.error('Erreur inscription activité:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @route   GET /api/activities/groups/:id/messages
 // @desc    Récupérer les messages d'un organisation d'activité
 // @access  Authentifié
@@ -263,7 +333,8 @@ router.get('/groups/:id/messages', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(req.user.numeroH)) {
       return res.status(403).json({
         success: false,

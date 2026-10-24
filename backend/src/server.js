@@ -2851,6 +2851,8 @@ app.post('/api/auth/login', limiteurConnexion);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/badges', badgeRoutes);
+// Adresse utilisée par la gestion des badges de l'admin (BadgeManager)
+app.use('/api/admin/badges', badgeRoutes);
 app.use('/api/logos', logoRoutes);
 app.use('/api/page-admins', pageAdminRoutes);
 app.use('/api/activities', activityRoutes);

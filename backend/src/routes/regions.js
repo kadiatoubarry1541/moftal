@@ -107,7 +107,8 @@ router.post('/groups/:id/join', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(numeroH)) {
       members.push(numeroH);
       await group.update({ members });
@@ -144,7 +145,8 @@ router.post('/groups/:id/posts', upload.single('media'), async (req, res) => {
       });
     }
     
-    const posts = group.posts || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const posts = [...(group.posts || [])];
     const newPost = {
       id: Date.now().toString(),
       author,
@@ -224,7 +226,8 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     const isCreator = group.createdBy === numeroH;
     
     // Vérifier si l'utilisateur est membre du groupe
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     const isMember = members.includes(numeroH);
     
     // Permettre à tous les membres de publier, ou vérifier la permission
