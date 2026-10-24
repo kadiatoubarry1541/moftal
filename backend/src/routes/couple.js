@@ -256,8 +256,9 @@ router.post('/confirm/:linkId', async (req, res) => {
     if (link.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Ce lien n\'est plus en attente' });
     }
+    // Un lien de couple n'est jamais confirmé à la place de la personne (pas même par un admin)
     const isDestinataire = link.initiatedByNumeroH !== user.numeroH && (link.numeroH1 === user.numeroH || link.numeroH2 === user.numeroH);
-    if (!isDestinataire && !isAdmin(user)) {
+    if (!isDestinataire) {
       return res.status(403).json({ success: false, message: 'Seul le destinataire (votre partenaire) peut confirmer ce lien' });
     }
     link.status = 'active';
@@ -292,6 +293,16 @@ router.post('/reject/:linkId', async (req, res) => {
     }
     link.status = 'rejected';
     await link.save();
+    // L'initiateur est vraiment prévenu (cloche + téléphone)
+    if (link.initiatedByNumeroH && link.initiatedByNumeroH !== user.numeroH) {
+      await Notification.createNotification({
+        recipientNumeroH: link.initiatedByNumeroH,
+        type: 'couple_rejected',
+        title: 'Demande de lien refusée',
+        message: String(message || 'Désolé, je ne souhaite pas créer ce lien.').slice(0, 500),
+        relatedId: link.id
+      }).catch((e) => console.error('Notification refus couple:', e.message));
+    }
     res.json({
       success: true,
       message: 'Lien refusé. L\'autre personne sera notifiée.',

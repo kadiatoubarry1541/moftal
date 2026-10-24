@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
 import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
 import ProfessionalAccount, { STATUTS_VISIBLES } from '../models/ProfessionalAccount.js';
+import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
 import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
@@ -778,14 +779,24 @@ router.post('/:id/connect-client', authenticate, async (req, res) => {
     const { clientNumeroH } = req.body;
     if (!clientNumeroH) return res.status(400).json({ success: false, message: 'clientNumeroH requis' });
 
-    // Notifier le client
-    await Notification.create({
-      recipientNumeroH: clientNumeroH,
-      senderNumeroH: req.userId,
-      type: 'pro_connection',
-      message: `${account.name} vous a connecté à son espace professionnel.`,
-      isRead: false
-    }).catch(() => {}); // non bloquant si le champ type n'est pas dans l'ENUM
+    // Le client est vraiment relié au compte (liste des membres, rôle « client ») :
+    // avant, seul un message était envoyé et rien n'était enregistré.
+    const client = await User.findByNumeroH(String(clientNumeroH).trim());
+    if (!client) return res.status(404).json({ success: false, message: 'Aucun membre avec ce NuméroH.' });
+    await sequelize.query(
+      `INSERT INTO professional_account_members (professional_account_id, numero_h, role, nom_display, added_by)
+       VALUES (:id, :n, 'client', :nom, :by)
+       ON CONFLICT (professional_account_id, numero_h) DO UPDATE SET is_active = true`,
+      { replacements: { id: account.id, n: client.numeroH, nom: `${client.prenom || ''} ${client.nomFamille || ''}`.trim(), by: req.userId } }
+    );
+
+    await Notification.createNotification({
+      recipientNumeroH: client.numeroH,
+      type: 'pro_member_added',
+      title: 'Nouvel établissement',
+      message: `${account.name} vous a ajouté(e) à ses clients. Vous le retrouverez dans « Mes établissements liés » sur votre profil.`,
+      relatedId: account.id
+    }).catch(() => {});
 
     res.json({ success: true, message: `Client connecté à ${account.name} avec succès.` });
   } catch (e) {
