@@ -25,9 +25,11 @@ const upload = multer({
 });
 
 // Rate limit pour les uploads publics (inscription) : 50 uploads/IP/heure
+// Envoi sans compte (inscription : une photo + une vidéo) : 10 envois par heure
+// au plus (50 envois de 200 Mo permettaient de remplir le stockage)
 const registerUploadLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 50,
+  max: 10,
   message: { success: false, message: 'Trop de tentatives, réessayez dans 1 heure' },
   keyGenerator: (req) => `ip:${adresseVisiteur(req)}`,
   validate: validationLimite,
