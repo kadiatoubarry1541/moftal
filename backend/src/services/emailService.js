@@ -407,20 +407,26 @@ export async function sendSubscriptionExpiringSoonEmail({ proEmail, proName = ''
 
 // ─── Dernier avertissement 24h (Brevo → MailerSend secours) ──────────────────
 
-export async function sendSubscriptionCutoffWarningEmail({ proEmail, proName = '', expiredAt }) {
+// coupureLe : date à laquelle le compte sera bloqué sans paiement (vendeurs
+// Échange : le lendemain ; Visibilité / Gestion Interne : fin du délai de grâce
+// de 3 mois). Sans date : 24 heures.
+export async function sendSubscriptionCutoffWarningEmail({ proEmail, proName = '', expiredAt, coupureLe = null }) {
   if (!proEmail) return;
-  const subject = '🚨 Dernier avertissement : coupure de votre compte dans 24h';
+  const dans24h = !coupureLe || (new Date(coupureLe).getTime() - Date.now()) < 2 * 24 * 3600 * 1000;
+  const subject = dans24h
+    ? '🚨 Dernier avertissement : coupure de votre compte dans 24h'
+    : '⚠️ Votre abonnement a expiré : réglez-le avant le blocage du compte';
   const renewLink = `${FRONTEND_URL}/mes-comptes-pro`;
   const htmlContent = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:2px solid #dc2626;border-radius:8px;">
       <div style="background:#991b1b;border-radius:6px 6px 0 0;padding:16px 24px;margin:-24px -24px 24px;">
-        <h2 style="color:#ffffff;margin:0;">🚨 Coupure dans 24 heures</h2>
+        <h2 style="color:#ffffff;margin:0;">${dans24h ? '🚨 Coupure dans 24 heures' : '⚠️ Abonnement expiré'}</h2>
       </div>
       <p style="color:#374151;">Bonjour <strong>${proName}</strong>,</p>
       <p style="color:#374151;">Votre abonnement a expiré le <strong>${formatDate(expiredAt)}</strong>.</p>
       <div style="background:#fef2f2;border:2px solid #dc2626;border-radius:6px;padding:16px 18px;margin:20px 0;">
         <p style="color:#991b1b;margin:0;font-size:16px;font-weight:bold;text-align:center;">
-          Sans action, votre compte sera désactivé dans 24 heures.
+          ${dans24h ? 'Sans action, votre compte sera désactivé dans 24 heures.' : `Votre compte reste ouvert jusqu'au ${formatDate(coupureLe)}. Sans paiement d'ici là, il sera bloqué.`}
         </p>
       </div>
       <div style="text-align:center;margin:32px 0;">

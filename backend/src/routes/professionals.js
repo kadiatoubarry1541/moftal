@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
 import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
-import ProfessionalAccount from '../models/ProfessionalAccount.js';
+import ProfessionalAccount, { STATUTS_VISIBLES } from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
 import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
@@ -296,8 +296,8 @@ router.get('/approved', async (req, res) => {
       accounts = await ProfessionalAccount.getApprovedByType(type);
     } else {
       accounts = await ProfessionalAccount.findAll({
-        // Visible publiquement UNIQUEMENT si approuvé + actif + abonnement actif
-        where: { status: 'approved', isActive: true, subscriptionStatus: 'active' },
+        // Visible publiquement si approuvé + actif + abonnement actif ou en délai de grâce
+        where: { status: 'approved', isActive: true, subscriptionStatus: { [Op.in]: STATUTS_VISIBLES } },
         order: [['name', 'ASC']]
       });
     }

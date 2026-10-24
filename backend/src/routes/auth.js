@@ -344,12 +344,16 @@ router.post('/register', validateUser, async (req, res) => {
       delete userWithoutPassword.password;
 
       // ✅ RÉPONSE IMMÉDIATE (< 1 s) : l'utilisateur voit tout de suite le succès
-      res.status(201).json({
-        success: true,
-        message: 'Utilisateur créé avec succès',
-        user: userWithoutPassword,
-        token
-      });
+      // (si le délai d'attente a déjà répondu, le compte est quand même créé et
+      // les tâches ci-dessous doivent quand même tourner)
+      if (!res.headersSent) {
+        res.status(201).json({
+          success: true,
+          message: 'Utilisateur créé avec succès',
+          user: userWithoutPassword,
+          token
+        });
+      }
 
       // Tâches lourdes en arrière-plan (ne bloquent plus la réponse)
       setImmediate(() => {
@@ -367,10 +371,14 @@ router.post('/register', validateUser, async (req, res) => {
       await Promise.race([registerWork, timeoutPromise]);
     } catch (dbError) {
       if (dbError?.message === 'TIMEOUT' && !res.headersSent) {
+        // L'enregistrement continue en arrière-plan : on ne dit jamais « rien
+        // n'a été enregistré » (la personne recommençait et se voyait refuser
+        // son propre téléphone)
         console.error('❌ Inscription: timeout (réponse trop lente)');
         return res.status(503).json({
           success: false,
-          message: 'Le serveur met trop de temps à répondre. Réessayez dans un moment.'
+          code: 'INSCRIPTION_EN_COURS',
+          message: "Le serveur est lent : votre inscription est peut-être déjà enregistrée. Essayez d'abord de vous connecter avec votre téléphone et votre mot de passe avant de recommencer."
         });
       }
       // Erreur de contrainte d'unicité (email ou téléphone déjà utilisé)

@@ -653,6 +653,8 @@ export default function EspacePro() {
   const [account, setAccount]           = useState<ProAccount | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [tab, setTab]                   = useState<TabType>("pending");
+  // Abonnement expiré mais encore dans le délai de grâce : le pro choisit d'ouvrir le paiement
+  const [voirPaiementAbonnement, setVoirPaiementAbonnement] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [loading, setLoading]           = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -1297,7 +1299,15 @@ export default function EspacePro() {
   const showMoftalPay = hasGestionInterne && account.planType !== "visibility";
 
   // Mur d'abonnement — bypassé pour les admins (ils doivent pouvoir inspecter n'importe quel dashboard)
-  if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
+  // Délai de grâce (« overdue ») : 3 mois après l'expiration, l'espace reste ouvert
+  // (le serveur ne bloque qu'ensuite) — un bandeau propose de payer. Le mur ne
+  // s'affiche d'office que pour un compte bloqué ou jamais payé.
+  const enDelaiDeGrace = account.subscriptionStatus === "overdue";
+  const finDeGrace = enDelaiDeGrace && account.subscriptionValidUntil
+    ? (() => { const d = new Date(account.subscriptionValidUntil); d.setMonth(d.getMonth() + 3); return d; })()
+    : null;
+  if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active"
+      && (!enDelaiDeGrace || voirPaiementAbonnement)) {
     return (
       <SubscriptionPaymentWall account={account} userData={userData} onSuccess={() => window.location.reload()} />
     );
@@ -1325,6 +1335,14 @@ export default function EspacePro() {
         <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm font-semibold sticky top-[72px] z-50 shadow-md">
           <span>👁️ Mode Admin — Vue lecture seule · Compte de <strong>{account.ownerNumeroH}</strong></span>
           <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Profil modifiable par l'admin</span>
+        </div>
+      )}
+      {enDelaiDeGrace && !isAdminViewing && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
+          <span>⚠️ Votre abonnement a expiré.{finDeGrace ? ` Votre espace reste ouvert jusqu'au ${finDeGrace.toLocaleDateString("fr-FR")} ; sans paiement, il sera bloqué.` : " Réglez-le pour éviter le blocage."}</span>
+          <button onClick={() => setVoirPaiementAbonnement(true)} className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold">
+            Régler maintenant
+          </button>
         </div>
       )}
       {/* Admin : formule en clair (la changer), ouvrir la gestion, lien de l'application */}
