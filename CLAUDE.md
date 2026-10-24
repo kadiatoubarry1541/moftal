@@ -53,6 +53,10 @@ On montre uniquement ce que le modèle montre, rien de plus.
   (détection du navigateur, adresse d'un lien, configuration d'un service d'envoi).
 - Un nom de métier reste tel quel (ex. « Youtubeur/Youtubeuse » dans la liste des
   activités) : la règle vise les phrases qui renvoient ou se comparent à une autre application.
+- Exception validée par la propriétaire : on garde les noms **nécessaires pour guider**
+  l'utilisateur, quand il doit choisir le bon outil — le navigateur à utiliser pour installer
+  l'application (Safari, Chrome, Edge…) et son moyen de paiement (Orange Money, MTN MoMo,
+  carte Visa / Mastercard). Jamais pour comparer Moftal ni renvoyer vers une autre application.
 
 ## 4. Notifications de l'application d'un établissement
 
