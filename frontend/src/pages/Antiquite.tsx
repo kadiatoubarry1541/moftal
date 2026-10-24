@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAdmin } from '../utils/auth';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -227,7 +228,8 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
         });
         loadSections();
       } else {
-        alert('Erreur lors de la création de la section');
+        const d = await response.json().catch(() => null);
+        alert(d?.message || 'Erreur lors de la création de la section');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -289,7 +291,7 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
       {/* Actions rapides */}
       <div className="flex gap-4 mb-8">
         <button
-          onClick={() => setShowCreateSection(true)}
+          onClick={() => isAdmin(userData) ? setShowCreateSection(true) : alert("Seul un administrateur peut ajouter une section d'histoire.")}
           className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
         >
           <span className="text-xl">➕</span>
@@ -544,7 +546,7 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
           <h3 className="text-2xl font-bold mb-4">Aucune section antique</h3>
           <p className="text-lg mb-6">Soyez le premier à contribuer à l'histoire de l'antiquité guinéenne !</p>
           <button
-            onClick={() => setShowCreateSection(true)}
+            onClick={() => isAdmin(userData) ? setShowCreateSection(true) : alert("Seul un administrateur peut ajouter une section d'histoire.")}
             className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-semibold shadow-lg"
           >
             ➕ Créer la première section

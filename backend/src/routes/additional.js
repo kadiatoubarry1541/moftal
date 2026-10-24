@@ -1,10 +1,10 @@
 import express from 'express';
+import { Op } from 'sequelize';
 import { authenticateToken, requireAdmin, requireMuslimOrAdmin } from '../middleware/auth.js';
 import {
   HistorySection,
   FamilyMember,
   FamilyTree,
-  Document,
   EmergencyCall,
   LocationCheck,
   Donation,
@@ -13,9 +13,6 @@ import {
   Hospital,
   Doctor,
   HealthProduct,
-  Supplier,
-  ExchangeProduct,
-  PoorPerson,
   DocumentPermission
 } from '../models/index.js';
 
@@ -36,9 +33,14 @@ router.get('/history/sections', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/history/sections', authenticateToken, async (req, res) => {
+// Une section d'Histoire est publiée pour tout le site : administrateurs seulement,
+// et seuls les champs du contenu sont repris (jamais l'auteur ni l'état).
+router.post('/history/sections', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const section = await HistorySection.create(req.body);
+    const b = req.body || {};
+    const champs = ['title', 'description', 'content', 'images', 'videos', 'documents', 'category', 'period', 'location', 'importance'];
+    const donnees = Object.fromEntries(champs.filter((c) => b[c] !== undefined).map((c) => [c, b[c]]));
+    const section = await HistorySection.create({ ...donnees, createdBy: req.user.numeroH });
     res.status(201).json({ section });
   } catch (error) {
     console.error('Erreur lors de la création de la section:', error);
@@ -47,53 +49,6 @@ router.post('/history/sections', authenticateToken, async (req, res) => {
 });
 
 // Routes pour les Échanges
-router.get('/exchange/products', authenticateToken, async (req, res) => {
-  try {
-    const { level } = req.query;
-    const products = await ExchangeProduct.findAll({
-      where: level ? { level } : {},
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ products });
-  } catch (error) {
-    console.error('Erreur lors du chargement des produits:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.post('/exchange/products', authenticateToken, async (req, res) => {
-  try {
-    const product = await ExchangeProduct.create(req.body);
-    res.status(201).json({ product });
-  } catch (error) {
-    console.error('Erreur lors de la création du produit:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.get('/exchange/suppliers', authenticateToken, async (req, res) => {
-  try {
-    const suppliers = await Supplier.findAll({
-      where: { isApproved: true },
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ suppliers });
-  } catch (error) {
-    console.error('Erreur lors du chargement des fournisseurs:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.post('/exchange/suppliers', authenticateToken, async (req, res) => {
-  try {
-    const supplier = await Supplier.create(req.body);
-    res.status(201).json({ supplier });
-  } catch (error) {
-    console.error('Erreur lors de l\'inscription du fournisseur:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 // Routes pour la Santé
 router.get('/health/hospitals', authenticateToken, async (req, res) => {
   try {
@@ -174,30 +129,6 @@ router.get('/health/products', authenticateToken, async (req, res) => {
 });
 
 // Routes pour la Famille
-router.get('/family/members', authenticateToken, async (req, res) => {
-  try {
-    const { relation } = req.query;
-    const members = await FamilyMember.findAll({
-      where: relation ? { relation } : {},
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ members });
-  } catch (error) {
-    console.error('Erreur lors du chargement des membres de la famille:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.post('/family/members', authenticateToken, async (req, res) => {
-  try {
-    const member = await FamilyMember.create(req.body);
-    res.status(201).json({ member });
-  } catch (error) {
-    console.error('Erreur lors de l\'ajout du membre:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 router.get('/family/tree', authenticateToken, async (req, res) => {
   try {
     const tree = await FamilyTree.findOne({
@@ -211,39 +142,7 @@ router.get('/family/tree', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/family/tree/messages', authenticateToken, async (req, res) => {
-  try {
-    // Logique pour envoyer un message à la famille
-    res.status(201).json({ message: 'Message envoyé' });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 // Routes pour les États
-router.get('/etats/documents', authenticateToken, async (req, res) => {
-  try {
-    const documents = await Document.findAll({
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ documents });
-  } catch (error) {
-    console.error('Erreur lors du chargement des documents:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.post('/etats/documents', authenticateToken, async (req, res) => {
-  try {
-    const document = await Document.create(req.body);
-    res.status(201).json({ document });
-  } catch (error) {
-    console.error('Erreur lors de l\'upload du document:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
 router.get('/etats/permissions', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const permissions = await DocumentPermission.findAll({
@@ -309,7 +208,17 @@ router.get('/security/emergency-calls', authenticateToken, async (req, res) => {
 
 router.post('/security/emergency-calls', authenticateToken, async (req, res) => {
   try {
-    const call = await EmergencyCall.create(req.body);
+    // L'appel est toujours au nom de la personne connectée ; ni le statut ni
+    // l'agent ne viennent du téléphone.
+    const b = req.body || {};
+    const call = await EmergencyCall.create({
+      caller: req.user.numeroH,
+      callerName: [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || req.user.numeroH,
+      location: b.location,
+      coordinates: b.coordinates,
+      emergencyType: b.emergencyType,
+      description: b.description,
+    });
     res.status(201).json({ call });
   } catch (error) {
     console.error('Erreur lors de l\'appel d\'urgence:', error);
@@ -332,15 +241,23 @@ router.get('/security/location-checks', authenticateToken, async (req, res) => {
 
 router.post('/security/location-checks', authenticateToken, async (req, res) => {
   try {
-    // Logique pour vérifier la sécurité d'une localisation
-    const safetyLevel = Math.random() > 0.5 ? 'safe' : 'moderate';
-    const recommendations = ['Restez vigilant', 'Évitez les heures tardives'];
-    
+    // Aucune source vérifiée sur la sécurité d'un lieu : on ne l'invente jamais
+    // (un niveau « Sûr » tiré au hasard pouvait mettre quelqu'un en danger).
+    const safetyLevel = 'inconnu';
+    const recommendations = [
+      "Moftal n'a pas encore d'information de sécurité vérifiée pour ce lieu.",
+      'En cas de doute ou de danger, appelez un agent de sécurité de votre pays (liste ci-dessous).',
+    ];
+    const b = req.body || {};
+    // L'historique est un plus : s'il ne s'enregistre pas, la réponse reste la même
     const check = await LocationCheck.create({
-      ...req.body,
+      user: req.user.numeroH,
+      userName: [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || req.user.numeroH,
+      destination: b.destination,
+      coordinates: b.coordinates,
       safetyLevel,
       recommendations
-    });
+    }).catch((e) => { console.warn('location-checks:', e.message); return null; });
     
     res.status(201).json({ check, safetyLevel, recommendations });
   } catch (error) {
@@ -350,83 +267,6 @@ router.post('/security/location-checks', authenticateToken, async (req, res) => 
 });
 
 // Routes pour Zakat et Dons
-router.get('/zakat/poor-people', authenticateToken, async (req, res) => {
-  try {
-    const people = await PoorPerson.findAll({
-      where: { isActive: true },
-      order: [['urgency', 'DESC'], ['createdAt', 'DESC']]
-    });
-    res.json({ poorPeople: people });
-  } catch (error) {
-    console.error('Erreur lors du chargement des pauvres:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.get('/zakat/donations', authenticateToken, async (req, res) => {
-  try {
-    const donations = await Donation.findAll({
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ donations });
-  } catch (error) {
-    console.error('Erreur lors du chargement des dons:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.post('/zakat/donations', authenticateToken, async (req, res) => {
-  try {
-    const donation = await Donation.create(req.body);
-    res.status(201).json({ donation });
-  } catch (error) {
-    console.error('Erreur lors du don:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Route make-donation utilisée par le frontend Solidarité
-router.post('/zakat/make-donation', authenticateToken, async (req, res) => {
-  try {
-    const { donor, donorName, recipient, recipientName, amount, currency, type, description, donationType } = req.body;
-    const dt = donationType || 'sadaqah';
-    if (dt === 'zakat') {
-      const role = (req.user.role || '').toLowerCase();
-      const isAdminUser =
-        role === 'admin' ||
-        role === 'super-admin' ||
-        req.user.isAdmin === true ||
-        ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'].includes(req.user.numeroH);
-      if (!isAdminUser && req.user.religion !== 'Islam') {
-        return res.status(403).json({
-          success: false,
-          message: 'La zakat est réservée aux comptes enregistrés comme musulmans'
-        });
-      }
-    }
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant invalide' });
-    }
-    const donation = await Donation.create({
-      donor,
-      donorName,
-      recipient,
-      recipientName,
-      amount,
-      currency: currency || 'FG',
-      type: type || 'money',
-      description: description || '',
-      donationType: donationType || 'sadaqah',
-      status: 'completed',
-      createdAt: new Date()
-    });
-    res.status(201).json({ success: true, donation });
-  } catch (error) {
-    console.error('Erreur lors du don:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur lors du don' });
-  }
-});
-
 router.get('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, async (req, res) => {
   try {
     const calculations = await ZakatCalculation.findAll({
@@ -446,7 +286,10 @@ router.post('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, asyn
     const zakatAmount = totalWealth * 0.025; // 2.5%
     
     const calculation = await ZakatCalculation.create({
-      ...req.body,
+      user: req.user.numeroH,
+      userName: [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || req.user.numeroH,
+      totalWealth,
+      currency,
       zakatAmount
     });
     
@@ -462,7 +305,8 @@ router.post('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, asyn
 // GET /api/developpement/stats → total collecté et répartition par domaine
 router.get('/developpement/stats', authenticateToken, async (req, res) => {
   try {
-    const dons = await Donation.findAll({ where: { donationType: 'developpement', status: 'completed' } });
+    // Seuls les dons réellement payés (date de paiement posée par le paiement)
+    const dons = await Donation.findAll({ where: { donationType: 'developpement', status: 'completed', completedAt: { [Op.ne]: null } } });
     const totalCollecte = dons.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
     const parDomaine = {};
     dons.forEach(d => {
@@ -489,30 +333,34 @@ router.get('/developpement/mes-dons', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/developpement/donate → soumettre un don pour le développement
+// POST /api/developpement/donate → prépare un don pour le développement.
+// Le don est enregistré « en attente » : il ne compte qu'une fois PAYÉ (paiement
+// Djomy, objet « don_developpement », voir payment.js). Avant, il était noté
+// « complété » sans aucun paiement et gonflait les totaux affichés.
 router.post('/developpement/donate', authenticateToken, async (req, res) => {
   try {
-    const { amount, currency, domaine, domaineLabel, message } = req.body;
+    const { domaine, domaineLabel, message } = req.body || {};
     const user = req.user;
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      return res.status(400).json({ success: false, error: 'Montant invalide' });
+    const montant = Math.round(Number(req.body?.amount));
+    if (!Number.isFinite(montant) || montant < 1000) {
+      return res.status(400).json({ success: false, message: 'Montant minimum : 1 000 GNF.' });
     }
     const don = await Donation.create({
       donor: user.numeroH,
-      donorName: `${user.prenom} ${user.nomFamille}`,
-      recipient: domaine || 'general',
-      recipientName: domaineLabel || 'Fonds Général de Développement',
-      amount: parseFloat(amount),
-      currency: currency || 'FG',
+      donorName: `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH,
+      recipient: String(domaine || 'general').slice(0, 100),
+      recipientName: String(domaineLabel || 'Fonds Général de Développement').slice(0, 200),
+      amount: montant,
+      currency: 'GNF',
       type: 'money',
       donationType: 'developpement',
-      description: message || `Don pour le développement — ${domaineLabel || 'Fonds Général'}`,
-      status: 'completed'
+      description: String(message || `Don pour le développement — ${domaineLabel || 'Fonds Général'}`).slice(0, 2000),
+      status: 'pending'
     });
-    res.status(201).json({ success: true, don });
+    res.status(201).json({ success: true, don, donId: don.id, montant });
   } catch (error) {
     console.error('Erreur /api/developpement/donate:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

@@ -3060,7 +3060,7 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
     const proId = req.params.id;
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/${encodeURIComponent(proId)}?origin=${originePage(req)}">`
+      () => `<link rel="manifest" href="/api/professionals/pro-manifest/${encodeURIComponent(proId)}?origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');
@@ -3070,12 +3070,14 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   // Pages gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.) — manifest par tenantCode
   // Couvre tous les types : clinique, école, mosquée, mairie, transport, restaurant…
   app.get(/^\/gestion-[^/]+\/([^/?]+)/, (req, res) => {
-    const tenantCode = req.params[0];
+    // Code de l'établissement pris dans l'adresse : toujours encodé avant d'être
+    // mis dans la page (sinon une adresse piégée y injectait un script).
+    const tenantCode = encodeURIComponent(req.params[0]);
     // Racine de la gestion seulement (comme main.tsx) : une seule app par établissement
     const startUrl = encodeURIComponent(req.path.match(/^\/gestion-[^/]+\/[^/?]+/)[0]);
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}&origin=${originePage(req)}">`
+      () => `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}&origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');

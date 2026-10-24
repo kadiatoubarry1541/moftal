@@ -287,6 +287,8 @@ export default function Securite() {
           safetyLevel: data.safetyLevel,
           recommendations: data.recommendations || [],
         });
+      } else {
+        setLocationCheckResult({ safetyLevel: 'error', recommendations: [tr('La vérification a échoué. Réessayez.')] });
       }
     } catch (e) {
       console.error(e);
@@ -366,6 +368,7 @@ export default function Securite() {
                     {locationCheckResult.safetyLevel === 'moderate' && tr('⚠️ Modéré')}
                     {locationCheckResult.safetyLevel === 'risky' && tr('⚠️ Risqué')}
                     {locationCheckResult.safetyLevel === 'dangerous' && tr('🔴 Dangereux')}
+                    {locationCheckResult.safetyLevel === 'inconnu' && tr('❔ Non évalué')}
                     {locationCheckResult.safetyLevel === 'error' && tr('❌ Erreur')}
                   </p>
                   {locationCheckResult.recommendations?.length ? (

@@ -1,4 +1,4 @@
-
+import crypto from 'crypto';
 const config = {
   PORT: process.env.PORT || 5002,
   DB_HOST: process.env.DB_HOST || 'localhost',
@@ -8,8 +8,11 @@ const config = {
   DB_PASSWORD: process.env.DB_PASSWORD || '',
   // En production, le secret doit venir de l'environnement (la valeur de secours
   // est connue de tous ceux qui lisent le code : n'importe qui fabriquerait un jeton).
+  // Sans secret en production : clé aléatoire propre à ce démarrage (jamais une
+  // valeur connue) — les sessions seront à refaire après chaque redémarrage
+  // tant que JWT_SECRET n'est pas défini.
   JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
-    ? (console.error('🚨 JWT_SECRET absent en production : définissez-le sur Render !'), 'enfants-adam-dev-only-change-in-production')
+    ? (console.error('🚨 JWT_SECRET absent en production : définissez-le sur Render ! Clé temporaire utilisée.'), crypto.randomBytes(48).toString('hex'))
     : 'enfants-adam-dev-only-change-in-production'),
   JWT_EXPIRE: process.env.JWT_EXPIRE || '365d',
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 10,

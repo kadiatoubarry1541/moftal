@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import PaymentModal from "../components/PaymentModal";
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -39,6 +40,8 @@ export default function Developpement() {
   const [parDomaine, setParDomaine] = useState<Record<string, number>>({});
   const [nbDonneurs, setNbDonneurs] = useState(0);
   const [showDon, setShowDon] = useState(false);
+  // Don préparé, en attente de paiement (il ne compte qu'une fois payé)
+  const [donAPayer, setDonAPayer] = useState<{ id: string; montant: number } | null>(null);
   const [showMesDons, setShowMesDons] = useState(false);
   const [mesDons, setMesDons] = useState<any[]>([]);
   const [donLoading, setDonLoading] = useState(false);
@@ -92,13 +95,13 @@ export default function Developpement() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(donForm)
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.donId) {
         setShowDon(false);
-        setDonForm({ amount: "", currency: "FG", domaine: "general", domaineLabel: "Fonds Général de Développement", message: "" });
-        loadStats();
-        alert("Cotisation enregistrée ! Merci pour votre soutien au développement du quartier.");
+        // Le don n'est compté qu'après le paiement
+        setDonAPayer({ id: data.donId, montant: data.montant });
       } else {
-        alert("Erreur lors du don. Veuillez réessayer.");
+        alert(data?.message || "Erreur lors du don. Veuillez réessayer.");
       }
     } catch {
       alert("Erreur lors du don. Veuillez réessayer.");
@@ -469,7 +472,9 @@ export default function Developpement() {
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-green-700">{parseFloat(don.amount).toLocaleString()} {don.currency}</div>
-                            <div className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Effectué</div>
+                            {don.status === "completed"
+                              ? <div className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Payé</div>
+                              : <div className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Non payé</div>}
                           </div>
                         </div>
                         {don.description && (
@@ -491,6 +496,25 @@ export default function Developpement() {
             </div>
           </div>
         </div>
+      )}
+
+      {donAPayer && (
+        <PaymentModal
+          isOpen={!!donAPayer}
+          onClose={() => setDonAPayer(null)}
+          onSuccess={() => {
+            setDonAPayer(null);
+            setDonForm({ amount: "", currency: "FG", domaine: "general", domaineLabel: "Fonds Général de Développement", message: "" });
+            loadStats();
+            loadMesDons();
+            alert("Paiement confirmé ! Merci pour votre soutien au développement du quartier.");
+          }}
+          amount={donAPayer.montant}
+          currency="GNF"
+          purpose="don_developpement"
+          relatedId={donAPayer.id}
+          description="Cotisation pour le développement"
+        />
       )}
 
       {/* ─── Modal : Soumettre un projet ──────────────────────────────────────── */}
