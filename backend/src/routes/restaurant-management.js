@@ -211,7 +211,7 @@ router.patch('/:tenantCode/orders/:id', authenticate, verifyTenant, async (req, 
       { replacements: { statut, id: req.params.id, code } }
     );
     if (statut === 'servi') {
-      const [order] = await sequelize.query(`SELECT table_id FROM resto_orders WHERE id=:id`, { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT });
+      const [order] = await sequelize.query(`SELECT table_id FROM resto_orders WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
       if (order?.table_id) {
         await sequelize.query(`UPDATE resto_tables SET statut='libre' WHERE id=:id AND tenant_code=:code`, { replacements: { id: order.table_id, code } }).catch(() => {});
       }

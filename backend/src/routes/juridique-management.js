@@ -234,7 +234,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       un(`SELECT COUNT(*) as c FROM juridique_clients WHERE tenant_code=:code AND is_active=true`),
       un(`SELECT COUNT(*) as c FROM juridique_dossiers WHERE tenant_code=:code AND statut IN ('ouvert','en_cours')`),
       un(`SELECT COUNT(*) as c FROM juridique_dossiers WHERE tenant_code=:code AND statut IN ('ouvert','en_cours') AND date_echeance BETWEEN CURRENT_DATE AND CURRENT_DATE + 7`),
-      select(`SELECT jb.*, js.nom as service_nom FROM juridique_bookings jb LEFT JOIN juridique_services js ON jb.service_id=js.id WHERE jb.tenant_code=:code ORDER BY jb.date_rdv DESC LIMIT 5`, { code }),
+      select(`SELECT jb.*, js.nom as service_nom FROM juridique_bookings jb LEFT JOIN juridique_services js ON jb.service_id=js.id AND js.tenant_code=jb.tenant_code WHERE jb.tenant_code=:code ORDER BY jb.date_rdv DESC LIMIT 5`, { code }),
     ]);
     res.json({ success: true, totalServices: services, totalStaff: staff, rdvAujourdhui: today, rdvEnAttente: pending, totalClients: clients, dossiersOuverts, echeancesSemaine: echeances, recentBookings: recent });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -298,7 +298,7 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/bookings', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await select(
-      `SELECT jb.*, js.nom as service_nom, js.prix as service_prix, st.nom as staff_nom FROM juridique_bookings jb LEFT JOIN juridique_services js ON jb.service_id=js.id LEFT JOIN juridique_staff st ON jb.staff_id=st.id WHERE jb.tenant_code=:code ORDER BY jb.date_rdv DESC LIMIT 200`,
+      `SELECT jb.*, js.nom as service_nom, js.prix as service_prix, st.nom as staff_nom FROM juridique_bookings jb LEFT JOIN juridique_services js ON jb.service_id=js.id AND js.tenant_code=jb.tenant_code LEFT JOIN juridique_staff st ON jb.staff_id=st.id AND st.tenant_code=jb.tenant_code WHERE jb.tenant_code=:code ORDER BY jb.date_rdv DESC LIMIT 200`,
       { code: req.params.tenantCode }
     );
     res.json({ success: true, bookings: rows });
@@ -351,7 +351,7 @@ router.post('/:tenantCode/clients', authenticate, verifyTenant, async (req, res)
 router.get('/:tenantCode/dossiers', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await select(
-      `SELECT d.*, st.nom AS responsable_nom, st.prenom AS responsable_prenom FROM juridique_dossiers d LEFT JOIN juridique_staff st ON d.responsable_id=st.id WHERE d.tenant_code=:code ORDER BY (d.statut='clos'), d.date_echeance NULLS LAST, d.created_at DESC LIMIT 500`,
+      `SELECT d.*, st.nom AS responsable_nom, st.prenom AS responsable_prenom FROM juridique_dossiers d LEFT JOIN juridique_staff st ON d.responsable_id=st.id AND st.tenant_code=d.tenant_code WHERE d.tenant_code=:code ORDER BY (d.statut='clos'), d.date_echeance NULLS LAST, d.created_at DESC LIMIT 500`,
       { code: req.params.tenantCode }
     );
     res.json({ success: true, dossiers: rows });
@@ -426,7 +426,7 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
 // ── Rapport du mois (honoraires encaissés) ──
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
   recettes: [
-    { label: 'Consultations terminées', table: 'juridique_bookings jb JOIN juridique_services js ON jb.service_id=js.id', alias: 'jb', montant: 'js.prix', date: 'jb.date_rdv', where: "jb.statut = 'termine'" },
+    { label: 'Consultations terminées', table: 'juridique_bookings jb JOIN juridique_services js ON jb.service_id=js.id AND js.tenant_code=jb.tenant_code', alias: 'jb', montant: 'js.prix', date: 'jb.date_rdv', where: "jb.statut = 'termine'" },
     { label: 'Honoraires des dossiers', table: 'juridique_dossiers', montant: 'montant_paye', date: 'updated_at', where: 'montant_paye > 0' },
   ],
 });

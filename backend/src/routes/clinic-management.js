@@ -260,7 +260,7 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, refuserPerso
 router.get('/:tenantCode/appointments', authenticate, verifyTenant, async (req, res) => {
   try {
     const { statut } = req.query;
-    let q = `SELECT a.*,p.nom as p_nom,p.prenom as p_prenom,p.telephone as p_tel,s.nom as s_nom,s.prenom as s_prenom FROM clinic_appointments_mgmt a LEFT JOIN clinic_patients p ON a.patient_id=p.id LEFT JOIN clinic_staff s ON a.staff_id=s.id WHERE a.tenant_code=:code`;
+    let q = `SELECT a.*,p.nom as p_nom,p.prenom as p_prenom,p.telephone as p_tel,s.nom as s_nom,s.prenom as s_prenom FROM clinic_appointments_mgmt a LEFT JOIN clinic_patients p ON a.patient_id=p.id AND p.tenant_code=a.tenant_code LEFT JOIN clinic_staff s ON a.staff_id=s.id AND s.tenant_code=a.tenant_code WHERE a.tenant_code=:code`;
     if (statut) q += ` AND a.statut=:statut`;
     q += ` ORDER BY a.date_rdv DESC, a.heure`;
     const appts = await sequelize.query(q, { replacements: { code: req.params.tenantCode, statut }, type: sequelize.QueryTypes.SELECT });
@@ -275,7 +275,7 @@ router.post('/:tenantCode/appointments', authenticate, verifyTenant, async (req,
     // Agenda médecin : empêcher la double réservation au même créneau, sauf si l'utilisateur confirme explicitement (force)
     if (staff_id && date_rdv && heure && !force) {
       const [clash] = await sequelize.query(
-        `SELECT a.id, p.nom as p_nom, p.prenom as p_prenom FROM clinic_appointments_mgmt a LEFT JOIN clinic_patients p ON a.patient_id=p.id
+        `SELECT a.id, p.nom as p_nom, p.prenom as p_prenom FROM clinic_appointments_mgmt a LEFT JOIN clinic_patients p ON a.patient_id=p.id AND p.tenant_code=a.tenant_code
          WHERE a.tenant_code=:code AND a.staff_id=:sid AND a.date_rdv=:date AND a.heure=:heure AND a.statut NOT IN ('cancelled') LIMIT 1`,
         { replacements: { code, sid: staff_id, date: date_rdv, heure }, type: sequelize.QueryTypes.SELECT }
       );
@@ -303,7 +303,7 @@ router.put('/:tenantCode/appointments/:id', authenticate, verifyTenant, async (r
 router.get('/:tenantCode/prescriptions', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT p.*,pt.nom as p_nom,pt.prenom as p_prenom,s.nom as s_nom FROM clinic_prescriptions p LEFT JOIN clinic_patients pt ON p.patient_id=pt.id LEFT JOIN clinic_staff s ON p.staff_id=s.id WHERE p.tenant_code=:code ORDER BY p.created_at DESC`,
+      `SELECT p.*,pt.nom as p_nom,pt.prenom as p_prenom,s.nom as s_nom FROM clinic_prescriptions p LEFT JOIN clinic_patients pt ON p.patient_id=pt.id AND pt.tenant_code=p.tenant_code LEFT JOIN clinic_staff s ON p.staff_id=s.id AND s.tenant_code=p.tenant_code WHERE p.tenant_code=:code ORDER BY p.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, prescriptions: rows });
@@ -330,7 +330,7 @@ router.post('/:tenantCode/prescriptions', authenticate, verifyTenant, async (req
 router.get('/:tenantCode/records', authenticate, verifyTenant, async (req, res) => {
   try {
     const { patient_id } = req.query;
-    let q = `SELECT r.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom FROM clinic_medical_records r LEFT JOIN clinic_patients p ON r.patient_id=p.id LEFT JOIN clinic_staff s ON r.staff_id=s.id WHERE r.tenant_code=:code`;
+    let q = `SELECT r.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom FROM clinic_medical_records r LEFT JOIN clinic_patients p ON r.patient_id=p.id AND p.tenant_code=r.tenant_code LEFT JOIN clinic_staff s ON r.staff_id=s.id AND s.tenant_code=r.tenant_code WHERE r.tenant_code=:code`;
     if (patient_id) q += ` AND r.patient_id=:pid`;
     q += ` ORDER BY r.date_visite DESC`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, pid: patient_id }, type: sequelize.QueryTypes.SELECT });
@@ -375,7 +375,7 @@ router.get('/:tenantCode/exams', authenticate, verifyTenant, async (req, res) =>
     await ensureExamsTable();
     const { categorie, patient_id } = req.query;
     let q = `SELECT e.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom,s.prenom as s_prenom
-      FROM clinic_exams e LEFT JOIN clinic_patients p ON e.patient_id=p.id LEFT JOIN clinic_staff s ON e.staff_id=s.id
+      FROM clinic_exams e LEFT JOIN clinic_patients p ON e.patient_id=p.id AND p.tenant_code=e.tenant_code LEFT JOIN clinic_staff s ON e.staff_id=s.id AND s.tenant_code=e.tenant_code
       WHERE e.tenant_code=:code`;
     if (categorie) q += ` AND e.categorie=:cat`;
     if (patient_id) q += ` AND e.patient_id=:pid`;
@@ -442,7 +442,7 @@ router.get('/:tenantCode/vaccinations', authenticate, verifyTenant, async (req, 
     await ensureVaccinationsTable();
     const { patient_id } = req.query;
     let q = `SELECT v.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom
-      FROM clinic_vaccinations v LEFT JOIN clinic_patients p ON v.patient_id=p.id LEFT JOIN clinic_staff s ON v.staff_id=s.id
+      FROM clinic_vaccinations v LEFT JOIN clinic_patients p ON v.patient_id=p.id AND p.tenant_code=v.tenant_code LEFT JOIN clinic_staff s ON v.staff_id=s.id AND s.tenant_code=v.tenant_code
       WHERE v.tenant_code=:code`;
     if (patient_id) q += ` AND v.patient_id=:pid`;
     q += ` ORDER BY v.date_administration DESC`;
@@ -476,7 +476,7 @@ router.delete('/:tenantCode/vaccinations/:id', authenticate, verifyTenant, async
 router.get('/:tenantCode/payments', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT p.*,pt.nom as p_nom,pt.prenom as p_prenom FROM clinic_payments_mgmt p LEFT JOIN clinic_patients pt ON p.patient_id=pt.id WHERE p.tenant_code=:code ORDER BY p.created_at DESC`,
+      `SELECT p.*,pt.nom as p_nom,pt.prenom as p_prenom FROM clinic_payments_mgmt p LEFT JOIN clinic_patients pt ON p.patient_id=pt.id AND pt.tenant_code=p.tenant_code WHERE p.tenant_code=:code ORDER BY p.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, payments: rows });
@@ -524,7 +524,7 @@ router.get('/:tenantCode/invoices', authenticate, verifyTenant, async (req, res)
   try {
     await ensureInvoicesTable();
     const rows = await sequelize.query(
-      `SELECT i.*,p.nom as p_nom,p.prenom as p_prenom,p.telephone as p_tel,s.nom as s_nom,s.prenom as s_prenom FROM clinic_invoices i LEFT JOIN clinic_patients p ON i.patient_id=p.id LEFT JOIN clinic_staff s ON i.staff_id=s.id WHERE i.tenant_code=:code ORDER BY i.created_at DESC`,
+      `SELECT i.*,p.nom as p_nom,p.prenom as p_prenom,p.telephone as p_tel,s.nom as s_nom,s.prenom as s_prenom FROM clinic_invoices i LEFT JOIN clinic_patients p ON i.patient_id=p.id AND p.tenant_code=i.tenant_code LEFT JOIN clinic_staff s ON i.staff_id=s.id AND s.tenant_code=i.tenant_code WHERE i.tenant_code=:code ORDER BY i.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, invoices: rows });
@@ -655,8 +655,8 @@ router.get('/:tenantCode/pharmacy/pending', authenticate, verifyTenant, async (r
     const rows = await sequelize.query(
       `SELECT p.*,pt.nom as p_nom,pt.prenom as p_prenom,pt.numero_matricule as p_matricule,s.nom as s_nom,s.prenom as s_prenom
        FROM clinic_prescriptions p
-       LEFT JOIN clinic_patients pt ON p.patient_id=pt.id
-       LEFT JOIN clinic_staff s ON p.staff_id=s.id
+       LEFT JOIN clinic_patients pt ON p.patient_id=pt.id AND pt.tenant_code=p.tenant_code
+       LEFT JOIN clinic_staff s ON p.staff_id=s.id AND s.tenant_code=p.tenant_code
        WHERE p.tenant_code=:code AND (p.pharma_statut IS NULL OR p.pharma_statut='en_attente')
        ORDER BY p.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
@@ -675,9 +675,9 @@ router.get('/:tenantCode/pharmacy/history', authenticate, verifyTenant, async (r
               s.nom as s_nom,s.prenom as s_prenom,
               pr.numero_ordo,pr.diagnostic
        FROM clinic_pharmacy_dispensing d
-       LEFT JOIN clinic_patients p ON d.patient_id=p.id
-       LEFT JOIN clinic_staff s ON d.staff_id=s.id
-       LEFT JOIN clinic_prescriptions pr ON d.prescription_id=pr.id
+       LEFT JOIN clinic_patients p ON d.patient_id=p.id AND p.tenant_code=d.tenant_code
+       LEFT JOIN clinic_staff s ON d.staff_id=s.id AND s.tenant_code=d.tenant_code
+       LEFT JOIN clinic_prescriptions pr ON d.prescription_id=pr.id AND pr.tenant_code=d.tenant_code
        WHERE d.tenant_code=:code ORDER BY d.dispense_at DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
@@ -811,7 +811,7 @@ router.get('/:tenantCode/admissions', authenticate, verifyTenant, async (req, re
     await ensureHospitalisationTables();
     const { statut } = req.query;
     let q = `SELECT a.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom,b.numero as bed_numero
-      FROM clinic_admissions a LEFT JOIN clinic_patients p ON a.patient_id=p.id LEFT JOIN clinic_staff s ON a.staff_id=s.id LEFT JOIN clinic_beds b ON a.bed_id=b.id
+      FROM clinic_admissions a LEFT JOIN clinic_patients p ON a.patient_id=p.id AND p.tenant_code=a.tenant_code LEFT JOIN clinic_staff s ON a.staff_id=s.id AND s.tenant_code=a.tenant_code LEFT JOIN clinic_beds b ON a.bed_id=b.id AND b.tenant_code=a.tenant_code
       WHERE a.tenant_code=:code`;
     if (statut) q += ` AND a.statut=:statut`;
     q += ` ORDER BY a.date_admission DESC`;

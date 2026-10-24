@@ -349,13 +349,14 @@ router.put('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async 
     await ensureCommerceExtras();
     const { delta } = req.body;
     const code = req.params.tenantCode;
-    await sequelize.query(
-      `UPDATE commerce_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code`,
+    // Seulement un produit de CET établissement (jamais celui d'un autre)
+    const [lignes] = await sequelize.query(
+      `UPDATE commerce_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code RETURNING stock`,
       { replacements: { delta: delta || 0, id: req.params.id, code } }
     );
+    if (!lignes.length) return res.status(404).json({ success: false, message: 'Produit introuvable.' });
     await logStockMovement(code, req.params.id, delta || 0, 'ajustement_manuel');
-    const [prod] = await sequelize.query(`SELECT stock FROM commerce_products WHERE id=:id`, { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT });
-    res.json({ success: true, newStock: prod?.stock });
+    res.json({ success: true, newStock: lignes[0].stock });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -619,8 +620,8 @@ router.get('/:tenantCode/purchases', authenticate, verifyTenant, async (req, res
     await ensureSuppliersTables();
     const rows = await sequelize.query(
       `SELECT p.*, pr.nom as product_nom, s.nom as supplier_nom FROM commerce_purchases p
-       LEFT JOIN commerce_products pr ON p.product_id = pr.id
-       LEFT JOIN commerce_suppliers s ON p.supplier_id = s.id
+       LEFT JOIN commerce_products pr ON p.product_id = pr.id AND pr.tenant_code=p.tenant_code
+       LEFT JOIN commerce_suppliers s ON p.supplier_id = s.id AND s.tenant_code=p.tenant_code
        WHERE p.tenant_code=:code ORDER BY p.created_at DESC LIMIT 200`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );

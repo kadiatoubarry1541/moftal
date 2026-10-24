@@ -55,7 +55,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM transport_bookings WHERE tenant_code=:code AND statut='en_attente'`, { code }),
       q(`SELECT COUNT(*) as c FROM transport_announcements WHERE tenant_code=:code`, { code }),
       sequelize.query(
-        `SELECT t.*, d.nom as chauffeur_nom FROM transport_trips t LEFT JOIN transport_drivers d ON t.driver_id=d.id WHERE t.tenant_code=:code ORDER BY t.date_depart DESC LIMIT 5`,
+        `SELECT t.*, d.nom as chauffeur_nom FROM transport_trips t LEFT JOIN transport_drivers d ON t.driver_id=d.id AND d.tenant_code=t.tenant_code WHERE t.tenant_code=:code ORDER BY t.date_depart DESC LIMIT 5`,
         { replacements: { code }, type: sequelize.QueryTypes.SELECT }
       ).catch(() => []),
     ]);
@@ -77,7 +77,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 router.get('/:tenantCode/vehicles', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT v.*, d.nom as chauffeur_nom, d.prenom as chauffeur_prenom FROM transport_vehicles v LEFT JOIN transport_drivers d ON v.driver_id=d.id WHERE v.tenant_code=:code ORDER BY v.created_at DESC`,
+      `SELECT v.*, d.nom as chauffeur_nom, d.prenom as chauffeur_prenom FROM transport_vehicles v LEFT JOIN transport_drivers d ON v.driver_id=d.id AND d.tenant_code=v.tenant_code WHERE v.tenant_code=:code ORDER BY v.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, vehicles: rows });
@@ -155,7 +155,7 @@ router.delete('/:tenantCode/drivers/:id', authenticate, verifyTenant, async (req
 router.get('/:tenantCode/trips', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT t.*, d.nom as chauffeur_nom, v.immatriculation as vehicule_immat FROM transport_trips t LEFT JOIN transport_drivers d ON t.driver_id=d.id LEFT JOIN transport_vehicles v ON t.vehicle_id=v.id WHERE t.tenant_code=:code ORDER BY t.date_depart DESC`,
+      `SELECT t.*, d.nom as chauffeur_nom, v.immatriculation as vehicule_immat FROM transport_trips t LEFT JOIN transport_drivers d ON t.driver_id=d.id AND d.tenant_code=t.tenant_code LEFT JOIN transport_vehicles v ON t.vehicle_id=v.id AND v.tenant_code=t.tenant_code WHERE t.tenant_code=:code ORDER BY t.date_depart DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, trips: rows });
@@ -193,7 +193,7 @@ router.delete('/:tenantCode/trips/:id', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/bookings', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT b.*, t.lieu_depart, t.lieu_arrivee, t.date_depart FROM transport_bookings b LEFT JOIN transport_trips t ON b.trip_id=t.id WHERE b.tenant_code=:code ORDER BY b.created_at DESC`,
+      `SELECT b.*, t.lieu_depart, t.lieu_arrivee, t.date_depart FROM transport_bookings b LEFT JOIN transport_trips t ON b.trip_id=t.id AND t.tenant_code=b.tenant_code WHERE b.tenant_code=:code ORDER BY b.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, bookings: rows });
@@ -259,7 +259,7 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
 router.get('/:tenantCode/deliveries', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT d.*, dr.nom as chauffeur_nom, v.immatriculation as vehicule_immat FROM transport_deliveries d LEFT JOIN transport_drivers dr ON d.driver_id=dr.id LEFT JOIN transport_vehicles v ON d.vehicle_id=v.id WHERE d.tenant_code=:code ORDER BY d.created_at DESC`,
+      `SELECT d.*, dr.nom as chauffeur_nom, v.immatriculation as vehicule_immat FROM transport_deliveries d LEFT JOIN transport_drivers dr ON d.driver_id=dr.id AND dr.tenant_code=d.tenant_code LEFT JOIN transport_vehicles v ON d.vehicle_id=v.id AND v.tenant_code=d.tenant_code WHERE d.tenant_code=:code ORDER BY d.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, deliveries: rows });

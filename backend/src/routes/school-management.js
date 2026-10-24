@@ -83,7 +83,7 @@ export async function elevesLiesEcole(code, numeroH) {
   return sequelize.query(
     `SELECT s.id, s.prenom, s.nom, s.niveau, c.nom AS classe
      FROM school_students s
-     LEFT JOIN school_classrooms c ON c.id = s.classroom_id
+     LEFT JOIN school_classrooms c ON c.id = s.classroom_id AND c.tenant_code = s.tenant_code
      WHERE s.tenant_code = :code
        AND EXISTS (SELECT 1 FROM school_members m WHERE m.tenant_code = :code AND m.numero_h = :nh AND m.is_active = true)
        AND (s.id IN (SELECT l.student_id FROM school_member_students l WHERE l.tenant_code = :code AND l.numero_h = :nh)
@@ -185,7 +185,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   try {
     const { search, classroom_id } = req.query;
-    let q = `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.tenant_code=:code AND s.statut='actif'`;
+    let q = `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE s.tenant_code=:code AND s.statut='actif'`;
     if (search) q += ` AND (s.nom ILIKE :s OR s.prenom ILIKE :s OR s.numero_matricule ILIKE :s)`;
     if (classroom_id) q += ` AND s.classroom_id=:cid`;
     q += ` ORDER BY s.nom`;
@@ -323,7 +323,7 @@ router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, re
       `SELECT c.*,c.professeur_principal_id as professeur_id,s.nom as prof_nom,s.prenom as prof_prenom,
               COUNT(st.id)::int as nb_eleves, COUNT(st.id)::int as student_count
        FROM school_classrooms c
-       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id
+       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id AND s.tenant_code=c.tenant_code
        LEFT JOIN school_students st ON st.tenant_code=c.tenant_code AND st.statut='actif'
          AND (st.classroom_id=c.id OR (st.classroom_id IS NULL AND st.niveau=c.niveau))
        WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
@@ -394,7 +394,7 @@ router.get('/:tenantCode/attendance', authenticate, verifyTenant, async (req, re
     const d = date || new Date().toISOString().split('T')[0];
     let q = `SELECT a.*,COALESCE(a.statut, CASE WHEN a.est_present THEN 'present' ELSE 'absent' END) as statut,
                     s.nom,s.prenom,s.numero_matricule
-             FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id
+             FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id AND s.tenant_code=a.tenant_code
              WHERE a.tenant_code=:code AND a.date_presence=:date`;
     if (classroom_id) q += ` AND a.classroom_id=:cid`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, date: d, cid: classroom_id || null }, type: sequelize.QueryTypes.SELECT });
@@ -453,7 +453,7 @@ router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async 
 router.get('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
   try {
     const { student_id, classroom_id, periode } = req.query;
-    let q = `SELECT g.*,s.nom as student_nom,s.prenom as student_prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id WHERE g.tenant_code=:code`;
+    let q = `SELECT g.*,s.nom as student_nom,s.prenom as student_prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id AND s.tenant_code=g.tenant_code WHERE g.tenant_code=:code`;
     if (student_id) q += ` AND g.student_id=:sid`;
     if (classroom_id) q += ` AND g.classroom_id=:cid`;
     if (periode) q += ` AND g.periode=:periode`;
@@ -499,7 +499,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
+      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id AND s.tenant_code=f.tenant_code WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, fees: rows });
@@ -677,7 +677,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
       if (studentId) {
         const rep = { replacements: { sid: studentId, code }, type: sequelize.QueryTypes.SELECT };
         const [student] = await sequelize.query(
-          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.id=:sid AND s.tenant_code=:code LIMIT 1`, rep
+          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE s.id=:sid AND s.tenant_code=:code LIMIT 1`, rep
         );
         const grades = await sequelize.query(
           `SELECT * FROM school_grades WHERE student_id=:sid AND tenant_code=:code ORDER BY created_at DESC LIMIT 50`, rep
@@ -705,7 +705,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   try {
     const { periode, student_id } = req.query;
-    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
+    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id AND s.tenant_code=b.tenant_code LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE b.tenant_code=:code`;
     if (periode)    q += ` AND b.periode=:periode`;
     if (student_id) q += ` AND b.student_id=:sid`;
     q += ` ORDER BY s.nom`;

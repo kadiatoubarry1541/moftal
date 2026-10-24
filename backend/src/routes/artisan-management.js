@@ -58,7 +58,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM artisan_interventions WHERE tenant_code=:code AND statut='terminee' AND DATE(date_fin)=CURRENT_DATE`, { code }),
       q(`SELECT COUNT(*) as c FROM artisan_clients WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COALESCE(SUM(COALESCE(NULLIF(cout_reel,0),cout_estime,0)),0) as t FROM artisan_interventions WHERE tenant_code=:code AND statut='terminee' AND EXTRACT(MONTH FROM date_fin)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_fin)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
-      sequelize.query(`SELECT ai.*, ac.nom as client_nom, ase.nom as service_nom FROM artisan_interventions ai LEFT JOIN artisan_clients ac ON ai.client_id=ac.id LEFT JOIN artisan_services ase ON ai.service_id=ase.id WHERE ai.tenant_code=:code ORDER BY ai.date_debut DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
+      sequelize.query(`SELECT ai.*, ac.nom as client_nom, ase.nom as service_nom FROM artisan_interventions ai LEFT JOIN artisan_clients ac ON ai.client_id=ac.id AND ac.tenant_code=ai.tenant_code LEFT JOIN artisan_services ase ON ai.service_id=ase.id AND ase.tenant_code=ai.tenant_code WHERE ai.tenant_code=:code ORDER BY ai.date_debut DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
     res.json({ success: true, totalServices: +(services.c||0), interventionsEnCours: +(interventions.c||0), enCours: +(enCours.c||0), terminéesAujourdhui: +(terminees.c||0), totalClients: +(clients.c||0), caCeMois: +(caTotal.t||0), recentInterventions: recent });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -95,7 +95,7 @@ router.delete('/:tenantCode/services/:id', authenticate, verifyTenant, async (re
 router.get('/:tenantCode/interventions', authenticate, verifyTenant, async (req, res) => {
   try {
     const { statut } = req.query;
-    let q = `SELECT ai.*, ac.nom as client_nom, ac.telephone as client_telephone, ase.nom as service_nom FROM artisan_interventions ai LEFT JOIN artisan_clients ac ON ai.client_id=ac.id LEFT JOIN artisan_services ase ON ai.service_id=ase.id WHERE ai.tenant_code=:code`;
+    let q = `SELECT ai.*, ac.nom as client_nom, ac.telephone as client_telephone, ase.nom as service_nom FROM artisan_interventions ai LEFT JOIN artisan_clients ac ON ai.client_id=ac.id AND ac.tenant_code=ai.tenant_code LEFT JOIN artisan_services ase ON ai.service_id=ase.id AND ase.tenant_code=ai.tenant_code WHERE ai.tenant_code=:code`;
     if (statut) q += ` AND ai.statut=:statut`;
     q += ` ORDER BY ai.date_debut DESC LIMIT 100`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, statut: statut||null }, type: sequelize.QueryTypes.SELECT });

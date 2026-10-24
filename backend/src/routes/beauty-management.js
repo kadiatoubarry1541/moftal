@@ -58,7 +58,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM beauty_bookings WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_rdv)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_rdv)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
       q(`SELECT COUNT(*) as c FROM beauty_bookings WHERE tenant_code=:code AND statut='en_attente'`, { code }),
       q(`SELECT COUNT(*) as c FROM beauty_clients WHERE tenant_code=:code AND is_active=true`, { code }),
-      sequelize.query(`SELECT bb.*, bs.nom as service_nom FROM beauty_bookings bb LEFT JOIN beauty_services bs ON bb.service_id=bs.id WHERE bb.tenant_code=:code ORDER BY bb.date_rdv DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
+      sequelize.query(`SELECT bb.*, bs.nom as service_nom FROM beauty_bookings bb LEFT JOIN beauty_services bs ON bb.service_id=bs.id AND bs.tenant_code=bb.tenant_code WHERE bb.tenant_code=:code ORDER BY bb.date_rdv DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
     res.json({ success: true, totalServices: +(services.c||0), totalStaff: +(staff.c||0), rdvAujourdhui: +(today.c||0), rdvCeMois: +(month.c||0), rdvEnAttente: +(pending.c||0), totalClients: +(clients.c||0), recentBookings: recent });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -133,7 +133,7 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/bookings', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT bb.*, bs.nom as service_nom, bs.prix as service_prix, bst.nom as staff_nom FROM beauty_bookings bb LEFT JOIN beauty_services bs ON bb.service_id=bs.id LEFT JOIN beauty_staff bst ON bb.staff_id=bst.id WHERE bb.tenant_code=:code ORDER BY bb.date_rdv DESC LIMIT 100`,
+      `SELECT bb.*, bs.nom as service_nom, bs.prix as service_prix, bst.nom as staff_nom FROM beauty_bookings bb LEFT JOIN beauty_services bs ON bb.service_id=bs.id AND bs.tenant_code=bb.tenant_code LEFT JOIN beauty_staff bst ON bb.staff_id=bst.id AND bst.tenant_code=bb.tenant_code WHERE bb.tenant_code=:code ORDER BY bb.date_rdv DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, bookings: rows });
@@ -210,7 +210,7 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
 
 // ── Rapport du mois (recettes, dépenses, bénéfice) ──
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
-  recettes: [{ label: 'Prestations terminées', table: 'beauty_bookings bb JOIN beauty_services bs ON bb.service_id=bs.id', alias: 'bb', montant: 'bs.prix', date: 'bb.date_rdv', where: "bb.statut = 'termine'" }],
+  recettes: [{ label: 'Prestations terminées', table: 'beauty_bookings bb JOIN beauty_services bs ON bb.service_id=bs.id AND bs.tenant_code=bb.tenant_code', alias: 'bb', montant: 'bs.prix', date: 'bb.date_rdv', where: "bb.statut = 'termine'" }],
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──

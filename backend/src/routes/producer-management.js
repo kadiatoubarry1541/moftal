@@ -57,7 +57,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM producer_orders WHERE tenant_code=:code AND statut IN ('en_attente','en_production')`, { code }),
       q(`SELECT COUNT(*) as c FROM producer_staff WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COALESCE(SUM(montant_total),0) as t FROM producer_orders WHERE tenant_code=:code AND statut='livre' AND EXTRACT(MONTH FROM date_livraison)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_livraison)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
-      sequelize.query(`SELECT po.*, pp.nom as produit_nom FROM producer_orders po LEFT JOIN producer_products pp ON po.product_id=pp.id WHERE po.tenant_code=:code ORDER BY po.created_at DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
+      sequelize.query(`SELECT po.*, pp.nom as produit_nom FROM producer_orders po LEFT JOIN producer_products pp ON po.product_id=pp.id AND pp.tenant_code=po.tenant_code WHERE po.tenant_code=:code ORDER BY po.created_at DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
     res.json({ success: true, totalProducts: +(products.c||0), lotsEnCours: +(activeLots.c||0), commandesEnAttente: +(pendingOrders.c||0), totalStaff: +(staff.c||0), caCeMois: +(caMonth.t||0), recentOrders });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -102,7 +102,7 @@ router.delete('/:tenantCode/products/:id', authenticate, verifyTenant, async (re
 // ─── LOTS DE PRODUCTION ───────────────────────────────────────────────────────
 router.get('/:tenantCode/lots', authenticate, verifyTenant, async (req, res) => {
   try {
-    const rows = await sequelize.query(`SELECT pl.*, pp.nom as produit_nom FROM producer_lots pl LEFT JOIN producer_products pp ON pl.product_id=pp.id WHERE pl.tenant_code=:code ORDER BY pl.date_debut DESC LIMIT 50`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    const rows = await sequelize.query(`SELECT pl.*, pp.nom as produit_nom FROM producer_lots pl LEFT JOIN producer_products pp ON pl.product_id=pp.id AND pp.tenant_code=pl.tenant_code WHERE pl.tenant_code=:code ORDER BY pl.date_debut DESC LIMIT 50`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, lots: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -155,7 +155,7 @@ router.patch('/:tenantCode/lots/:id', authenticate, verifyTenant, async (req, re
 // ─── COMMANDES ────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/orders', authenticate, verifyTenant, async (req, res) => {
   try {
-    const rows = await sequelize.query(`SELECT po.*, pp.nom as produit_nom FROM producer_orders po LEFT JOIN producer_products pp ON po.product_id=pp.id WHERE po.tenant_code=:code ORDER BY po.created_at DESC LIMIT 100`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    const rows = await sequelize.query(`SELECT po.*, pp.nom as produit_nom FROM producer_orders po LEFT JOIN producer_products pp ON po.product_id=pp.id AND pp.tenant_code=po.tenant_code WHERE po.tenant_code=:code ORDER BY po.created_at DESC LIMIT 100`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, orders: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
