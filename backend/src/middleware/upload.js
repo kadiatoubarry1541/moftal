@@ -28,13 +28,20 @@ const storage = multer.diskStorage({
 
 // Filtre des types de fichiers autorisés
 const fileFilter = (req, file, cb) => {
-  const allowedExtensions = /jpeg|jpg|png|gif|webp|mp4|avi|mov|wav|mp3|pdf|doc|docx/;
+  // Extension exacte obligatoire (avant, « .html » passait si le type annoncé
+  // était une image, et une extension contenant « jpg » quelque part suffisait)
+  const allowedExtensions = /^\.(jpeg|jpg|png|gif|webp|mp4|avi|mov|wav|mp3|pdf|doc|docx)$/;
   const allowedMimes = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|avi|quicktime|x-msvideo)|audio\/(wav|mpeg|mp3)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)/;
 
-  const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  // Sans extension (photo envoyée par le navigateur : « blob ») : le type décide
+  const extname = ext ? allowedExtensions.test(ext) : true;
   const mimetype = allowedMimes.test(file.mimetype);
 
-  if (extname || mimetype) {
+  // Le type annoncé peut manquer sur certains téléphones : l'extension décide,
+  // mais un type annoncé qui n'est pas autorisé est refusé
+  const typeVide = !file.mimetype || file.mimetype === 'application/octet-stream';
+  if (extname && (mimetype || (typeVide && ext))) {
     return cb(null, true);
   } else {
     cb(new Error('Type de fichier non autorisé. Types acceptés: images (jpg, png, gif, webp), vidéos, audio, documents PDF/Word'));

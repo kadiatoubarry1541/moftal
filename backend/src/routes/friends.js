@@ -147,7 +147,9 @@ const sansComptesAdmin = (prefixe = '') => `NOT (
  */
 async function numerosHParTelephones(telephones, exclu) {
   const fins = [...new Set(
-    telephones.map((t) => String(t || '').replace(/[^0-9]/g, '')).filter((d) => d.length >= 6).map((d) => d.slice(-9))
+    // Au moins 8 chiffres : avec 6, la fin d'un numéro correspond à bien
+    // trop de comptes (la recherche trouvait une autre personne)
+    telephones.map((t) => String(t || '').replace(/[^0-9]/g, '')).filter((d) => d.length >= 8).map((d) => d.slice(-9))
   )].slice(0, 200);
   if (fins.length === 0) return [];
   const replacements = { exclu: exclu || '' };
@@ -553,11 +555,8 @@ router.get('/trouver-personne', async (req, res) => {
 router.get('/search-by-phone', async (req, res) => {
   try {
     const { tel } = req.query;
-    if (!tel || tel.trim().length < 6) {
-      return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
-    }
-    if (tel.replace(/[^0-9]/g, '').length < 6) {
-      return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
+    if (!tel || tel.replace(/[^0-9]/g, '').length < 8) {
+      return res.status(400).json({ success: false, message: 'Numéro complet requis (au moins 8 chiffres)' });
     }
     const [trouve] = await numerosHParTelephones([tel], req.user.numeroH);
     if (!trouve) {

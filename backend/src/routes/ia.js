@@ -1579,11 +1579,12 @@ router.post('/log', async function(req, res) {
     if (!question || !response) {
       return res.status(400).json({ success: false, message: 'Les champs "question" et "response" sont obligatoires.' });
     }
+    // Route ouverte sans connexion : tailles bornées (jamais des mégaoctets en base)
     await IaConversation.create({
-      sessionId: sessionId || null,
-      userMessage: question,
-      botResponse: response,
-      source: source || 'professeur_ia',
+      sessionId: sessionId ? String(sessionId).slice(0, 100) : null,
+      userMessage: String(question).slice(0, 4000),
+      botResponse: String(response).slice(0, 8000),
+      source: String(source || 'professeur_ia').slice(0, 50),
     });
     return res.json({ success: true, message: 'Conversation IA enregistree.' });
   } catch (error) {

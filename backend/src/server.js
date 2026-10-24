@@ -2809,11 +2809,18 @@ app.use('/api', limiter);
 // Limite élevée pour enregistrement vivant (photo + vidéo en base64)
 // rawBody : texte exact reçu, nécessaire pour vérifier la signature des
 // notifications de paiement Djomy (le JSON re-sérialisé peut différer).
-app.use(express.json({
-  limit: '200mb',
-  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); }
-}));
-app.use(express.urlencoded({ extended: true, limit: '200mb' }));
+// 200 Mo seulement pour une personne connectée (photos / vidéos en base64) et
+// pour l'inscription avec vidéo ; 5 Mo pour toute autre requête anonyme (sinon
+// n'importe qui pouvait envoyer 200 Mo à n'importe quelle route publique).
+const verifierCorps = (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); };
+const jsonGrand = express.json({ limit: '200mb', verify: verifierCorps });
+const jsonPetit = express.json({ limit: '5mb', verify: verifierCorps });
+const formGrand = express.urlencoded({ extended: true, limit: '200mb' });
+const formPetit = express.urlencoded({ extended: true, limit: '5mb' });
+const corpsGrandPermis = (req) => String(req.headers.authorization || '').startsWith('Bearer ')
+  || /^\/api\/auth\/register(\/|$|\?)/.test(req.originalUrl || '');
+app.use((req, res, next) => (corpsGrandPermis(req) ? jsonGrand : jsonPetit)(req, res, next));
+app.use((req, res, next) => (corpsGrandPermis(req) ? formGrand : formPetit)(req, res, next));
 
 // Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
 // n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois

@@ -861,6 +861,17 @@ router.post('/products/:id/commander', async (req, res) => {
     }
     const vendeur = product.numeroH || product.createdBy;
     if (!vendeur) return res.status(400).json({ success: false, message: 'Le vendeur de cette publication est introuvable.' });
+    if (product.isAvailable === false) {
+      return res.status(409).json({ success: false, message: 'Ce produit n\'est plus disponible.' });
+    }
+    // Vendeur Échange bloqué pour impayé : il ne reçoit plus de commandes
+    const [vendeurBloque] = await sequelize.query(
+      `SELECT 1 FROM professional_accounts WHERE owner_numero_h = :v AND type = 'moftal_vendor' AND subscription_status = 'blocked' LIMIT 1`,
+      { replacements: { v: vendeur }, type: sequelize.QueryTypes.SELECT }
+    ).catch(() => []);
+    if (vendeurBloque) {
+      return res.status(409).json({ success: false, message: 'Ce vendeur ne prend plus de commandes pour le moment.' });
+    }
     if (vendeur === acheteur) {
       return res.status(400).json({ success: false, message: 'Vous ne pouvez pas commander votre propre publication.' });
     }
