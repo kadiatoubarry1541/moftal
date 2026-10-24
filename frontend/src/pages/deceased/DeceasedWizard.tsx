@@ -144,14 +144,10 @@ export function DeceasedWizard() {
     const ethnieCode = ethnieEntry?.code || generateAutoCode(state.ethnie || '', 'E', ETHNIE_CODES.map(e => e.code))
     const familleCode = familleEntry?.code || generateAutoCode(state.nom || '', 'F', FAMILLE_CODES.map(f => f.code))
     
-    // Générer un numéro unique basé sur le préfixe complet pour défunt
+    // Numéro provisoire : le NuméroHD définitif (DM0001, DM0002…) est attribué
+    // par le serveur, jamais par un compteur gardé dans le téléphone
     const prefix = `${decet}${generation}${continentCode}${paysCode}${regionCode}${ethnieCode}${familleCode}`
-    const counterKey = `numeroHD_counter_${prefix}`
-    const counter = parseInt(localStorage.getItem(counterKey) || '0', 10) || 0
-    const nextNumber = counter + 1
-    localStorage.setItem(counterKey, String(nextNumber))
-    
-    let numero = `${prefix} ${nextNumber}`
+    let numero = `${prefix} 1`
     
     // ✅ Données complètes pour le défunt
     const complet = { 
@@ -188,8 +184,6 @@ export function DeceasedWizard() {
     complet.numeroH = numero
     const { password: _pw, confirmPassword: _cpw, ...sansMotDePasse } = complet
 
-    // Copie locale pour l'affichage immédiat dans l'arbre (la base reste la référence)
-    localStorage.setItem('dernier_defunt', JSON.stringify(sansMotDePasse))
 
     // L'arbre généalogique lit les défunts depuis le serveur (/api/family-tree/tree) :
     // plus de copie dans le téléphone.

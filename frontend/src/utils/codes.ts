@@ -60,40 +60,5 @@ export function listDecetCodes(max: number = MAX_INDEX): `D${number}`[] {
   return Array.from({ length: m }, (_, i) => `D${i + 1}` as const)
 }
 
-// Gestion des séquences locales pour unicité (par combinaison)
-function nextSequenceFor(prefix: string): number {
-  const key = `seq:${prefix}`
-  const current = parseInt(localStorage.getItem(key) || '0', 10) || 0
-  const next = current + 1
-  localStorage.setItem(key, String(next))
-  return next
-}
-
-// NumeroH = G?C?P?R?E?F? <index>
-export function buildNumeroH(params: {
-  generation: `G${number}`
-  continent: string
-  pays: string
-  region: string
-  ethnie: string
-  famille: string
-}): string {
-  const prefix = `${params.generation}${params.continent}${params.pays}${params.region}${params.ethnie}${params.famille}`
-  const index = nextSequenceFor(prefix)
-  return `${prefix} ${index}`
-}
-
-// NumeroHD = D?G?C?P?R?E?F? <index>
-export function buildNumeroHD(params: {
-  decet: `D${number}`
-  generation: `G${number}`
-  continent: string
-  pays: string
-  region: string
-  ethnie: string
-  famille: string
-}): string {
-  const prefix = `${params.decet}${params.generation}${params.continent}${params.pays}${params.region}${params.ethnie}${params.famille}`
-  const index = nextSequenceFor(prefix)
-  return `${prefix} ${index}`
-}
+// Le NuméroH / NuméroHD définitif est toujours attribué par le serveur (numéro
+// d'ordre suivant) : plus de compteur gardé dans le téléphone.
