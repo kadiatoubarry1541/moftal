@@ -62,6 +62,8 @@ router.post('/admin/creer', authenticate, requireAdmin, async (req, res) => {
     res.status(201).json({
       success: true,
       compteExistant: !trouve.cree,
+      // À donner au propriétaire pour sa toute première connexion
+      codePremiereConnexion: trouve.codePremiereConnexion || null,
       account: { id: account.id, name: account.name, type: account.type, planType, tenant_code: account.tenant_code || null, phone: account.phone, email: account.email },
     });
   } catch (e) {

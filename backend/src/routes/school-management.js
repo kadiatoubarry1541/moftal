@@ -258,7 +258,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     if (!String(telephone || email || numero_h || '').trim() && !(req.body.nom && req.body.prenom)) {
       return res.status(400).json({ success: false, message: "Indiquez au moins le téléphone, l'e-mail ou le nom de l'enseignant." });
     }
-    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nh, personne, codePremiereConnexion } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const code = req.params.tenantCode;
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
@@ -275,7 +275,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
       await notifierMembreEtablissement(code, nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}/enseignant`, { url: `/gestion-ecole/${code}` });
     }
-    res.json({ success: true, staff: rows[0] });
+    res.json({ success: true, staff: rows[0], codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -283,7 +283,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
   try {
     await ensureStaffPhotoColumn();
     const { role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
-    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nh, personne, codePremiereConnexion } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const [ancien] = await sequelize.query(`SELECT numero_h FROM school_staff WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role, niveau: req.body.acces_gestion });
@@ -300,7 +300,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
        WHERE id=:id AND tenant_code=:code`,
       { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, ...champsSitePersonnel(req.body), id: req.params.id, code: req.params.tenantCode } }
     );
-    res.json({ success: true });
+    res.json({ success: true, codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -612,7 +612,7 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
       );
     }
     await notifierMembreEtablissement(code, numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}). Suivez vos enfants dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}`, { url: `/gestion-ecole/${code}` });
-    res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom } });
+    res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom }, codePremiereConnexion: trouve.codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 

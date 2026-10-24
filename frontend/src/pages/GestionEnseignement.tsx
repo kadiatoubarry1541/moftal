@@ -24,6 +24,12 @@ import { echap } from "../utils/echapperHtml";
 
 interface Props { mode: "school" | "madrasa"; }
 
+// Personne ajoutée qui n'a pas encore de mot de passe : le code à lui donner
+// pour sa première connexion (sans lui, personne d'autre ne peut prendre son compte)
+function afficherCodePremiereConnexion(code?: string | null) {
+  if (code) alert(trHors("Code de première connexion à donner à cette personne : {code}\n\nElle se connecte avec son téléphone / e-mail, saisit ce code et choisit son mot de passe.", { code }));
+}
+
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "settings";
@@ -309,11 +315,11 @@ export default function GestionEnseignement({ mode }: Props) {
         }
         if (form.id) {
           const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1] });
-          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); }
+          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); afficherCodePremiereConnexion(d.codePremiereConnexion); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
-          if (d.staff) { setStaff(p => [{ ...d.staff, acces_gestion: form.acces_gestion || "aucun" }, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)")); }
+          if (d.staff) { setStaff(p => [{ ...d.staff, acces_gestion: form.acces_gestion || "aucun" }, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)")); afficherCodePremiereConnexion(d.codePremiereConnexion); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-groupe") {
@@ -423,6 +429,7 @@ export default function GestionEnseignement({ mode }: Props) {
       const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
       if (!d.success) { showToast(tr(d.message || "Erreur"), false); return; }
       showToast(d.user ? tr("Parent relié ({nom})", { nom: `${d.user.prenom} ${d.user.nom}` }) : tr("Parent relié"));
+      afficherCodePremiereConnexion(d.codePremiereConnexion);
       setNhParent(""); await chargerMembres();
     } catch { showToast(tr("Erreur de connexion. Réessayez."), false); }
     finally { setParentsBusy(false); }

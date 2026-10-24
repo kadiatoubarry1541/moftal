@@ -18,6 +18,8 @@ export function Login() {
   // (propriétaire, employé, professeur, parent) : elle choisit son mot de passe
   const [premiere, setPremiere] = useState(false)
   const [confirmation, setConfirmation] = useState('')
+  // Code à 6 chiffres remis par l'établissement qui a ajouté la personne
+  const [codePremiere, setCodePremiere] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
@@ -69,9 +71,10 @@ export function Login() {
   const choisirMotDePasse = async () => {
     if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return }
     if (password !== confirmation) { setError('Les mots de passe ne correspondent pas.'); return }
+    if (!/^[0-9]{6}$/.test(codePremiere.replace(/\s+/g, ''))) { setError("Saisissez le code de première connexion (6 chiffres) que l'établissement vous a donné."); return }
     const r = await fetch(`${config.API_BASE_URL}/auth/premiere-connexion`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifiant: numeroH.trim(), password }),
+      body: JSON.stringify({ identifiant: numeroH.trim(), code: codePremiere.replace(/\s+/g, ''), password }),
     })
     const d = await r.json().catch(() => ({}))
     if (!r.ok || !d.success) { setError(d.message || "Le mot de passe n'a pas été enregistré. Réessayez."); return }
@@ -216,7 +219,13 @@ export function Login() {
         {premiere && (
           <div className="stack">
             <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2.5 rounded-lg text-sm">
-              <b>Première connexion.</b> Vous avez été ajouté(e) par un établissement : choisissez votre mot de passe (au moins 6 caractères). Ensuite, vous vous connecterez toujours avec ce téléphone / cet e-mail et ce mot de passe.
+              <b>Première connexion.</b> Vous avez été ajouté(e) par un établissement : saisissez le code à 6 chiffres qu'il vous a donné, puis choisissez votre mot de passe (au moins 6 caractères). Ensuite, vous vous connecterez toujours avec ce téléphone / cet e-mail et ce mot de passe.
+            </div>
+            <div className="field">
+              <label>Code de première connexion</label>
+              <input inputMode="numeric" maxLength={7} value={codePremiere} placeholder="Ex. : 123456"
+                onChange={(e)=>setCodePremiere(e.target.value.replace(/[^0-9 ]/g, ''))} autoComplete="one-time-code" />
+              <p className="text-xs text-gray-500 mt-1">Pas de code ? Demandez-le à l'établissement qui vous a ajouté(e).</p>
             </div>
             <div className="field">
               <label>Confirmez le mot de passe</label>

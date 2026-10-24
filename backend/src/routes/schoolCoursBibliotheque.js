@@ -88,7 +88,7 @@ export async function personnelRelie({ numero_h, telephone, email }) {
   if (!contact) return { nh: null, personne: null };
   const trouve = await trouverOuPreparerPersonne(contact);
   if (trouve.erreur) return { nh: null, personne: null };
-  return { nh: trouve.personne.numero_h || trouve.personne.numeroH || null, personne: trouve.personne };
+  return { nh: trouve.personne.numero_h || trouve.personne.numeroH || null, personne: trouve.personne, codePremiereConnexion: trouve.codePremiereConnexion || null };
 }
 
 // Ce que le site de l'école montre de son personnel et de ses classes : un

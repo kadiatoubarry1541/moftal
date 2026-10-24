@@ -21,7 +21,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
   const [photo, setPhoto] = useState("");
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
-  const [resultat, setResultat] = useState<{ lien: string; nom: string; telephone?: string; email?: string; compteExistant: boolean } | null>(null);
+  const [resultat, setResultat] = useState<{ lien: string; nom: string; telephone?: string; email?: string; compteExistant: boolean; code?: string | null } | null>(null);
   const echanges = ["vendor", "supplier", "producer"].includes(type);
 
   const creer = async () => {
@@ -50,7 +50,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
         }
         if (code) lien = lienAppGestion(d.account.type, code);
       }
-      setResultat({ lien, nom: d.account.name, telephone: d.account.phone || undefined, email: d.account.email || undefined, compteExistant: !!d.compteExistant });
+      setResultat({ lien, nom: d.account.name, telephone: d.account.phone || undefined, email: d.account.email || undefined, compteExistant: !!d.compteExistant, code: d.codePremiereConnexion || null });
       onCree?.();
     } catch {
       setErreur(tr("Erreur de connexion. Vérifiez internet puis réessayez."));
@@ -72,11 +72,16 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
           <div>
             <p className="text-sm text-green-700 font-semibold">{tr("✅ « {nom} » est créé et publié.", { nom: resultat.nom })}</p>
             <p className="text-sm text-gray-600 mt-1">
-              {resultat.compteExistant
-                ? tr("Ce téléphone / e-mail a déjà un compte Moftal : il se connecte avec son mot de passe habituel.")
-                : tr("Envoyez-lui ce lien : il se connecte avec ce téléphone / cet e-mail, choisit son mot de passe la première fois, puis installe.")}
+              {resultat.code
+                ? tr("Envoyez-lui ce lien et ce code : il se connecte avec ce téléphone / cet e-mail, saisit le code, choisit son mot de passe la première fois, puis installe.")
+                : tr("Ce téléphone / e-mail a déjà un compte Moftal : il se connecte avec son mot de passe habituel.")}
             </p>
-            <EnvoiLien lien={resultat.lien} message={messageLienApplication(resultat.nom, resultat.lien, true)} telephone={resultat.telephone} email={resultat.email} sujet={tr("Votre application {nom} sur Moftal", { nom: resultat.nom })} />
+            {resultat.code && (
+              <p className="text-sm bg-white border border-dashed border-green-500 rounded-lg px-3 py-2">
+                {tr("🔑 Code de première connexion :")} <b className="text-lg tracking-widest">{resultat.code}</b>
+              </p>
+            )}
+            <EnvoiLien lien={resultat.lien} message={messageLienApplication(resultat.nom, resultat.lien, true) + (resultat.code ? `\n${tr("Code de première connexion :")} ${resultat.code}` : "")} telephone={resultat.telephone} email={resultat.email} sujet={tr("Votre application {nom} sur Moftal", { nom: resultat.nom })} />
             <button onClick={onClose} className="mt-4 w-full py-2.5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm">{tr("Fermer")}</button>
           </div>
         ) : (

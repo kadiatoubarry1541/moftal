@@ -272,7 +272,7 @@ export function ajouterRoutesAccesEmployes(router, [authentifier, verifierPropri
          RETURNING id, numero_h, nom, poste, niveau, is_active, created_at`,
         { replacements: { code: req.params.tenantCode, nh: user.numero_h, nom, poste, niveau, par: req.userId || null } }
       );
-      res.json({ success: true, employe: rows[0], nouveauCompte: userCree });
+      res.json({ success: true, employe: rows[0], nouveauCompte: userCree, codePremiereConnexion: trouve.codePremiereConnexion || null });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
   });
 

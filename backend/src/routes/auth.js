@@ -16,10 +16,10 @@ import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
-import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAdminUtilisateur } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
-import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion } from '../services/comptesProvisoires.js';
+import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion, empreinteCodePremiereConnexion, donnerCodePremiereConnexion } from '../services/comptesProvisoires.js';
 
 const router = Router();
 
@@ -655,17 +655,74 @@ router.post('/premiere-connexion/verifier', async (req, res) => {
   }
 });
 
-// POST /api/auth/premiere-connexion { identifiant, password } → connecté
+// POST /api/auth/code-premiere-connexion { numeroH, tenantCode } → { code }
+// Nouveau code pour une personne ajoutée par CET établissement qui n'a pas
+// encore choisi son mot de passe (code perdu). Responsable de l'établissement
+// (propriétaire ou co-responsable « tous les droits ») ou administrateur.
+router.post('/code-premiere-connexion', authenticate, async (req, res) => {
+  try {
+    const numeroH = String(req.body?.numeroH || '').trim();
+    const tenantCode = String(req.body?.tenantCode || '').trim();
+    if (!numeroH || !tenantCode) return res.status(400).json({ success: false, message: 'Personne et établissement requis.' });
+    const q = (sql, rep) => User.sequelize.query(sql, { replacements: rep, type: User.sequelize.QueryTypes.SELECT }).catch(() => []);
+    if (!estAdminUtilisateur(req.user)) {
+      const [proprio] = await q('SELECT 1 FROM management_tenants WHERE tenant_code = :c AND owner_numero_h = :me LIMIT 1', { c: tenantCode, me: req.user.numeroH });
+      const [coResp] = proprio ? [true] : await q(`SELECT 1 FROM management_staff_access WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:me) AND niveau = 'total' AND is_active = true LIMIT 1`, { c: tenantCode, me: req.user.numeroH });
+      if (!proprio && !coResp) return res.status(403).json({ success: false, message: "Seul le responsable de l'établissement peut donner un code." });
+      const liens = await Promise.all([
+        q('SELECT 1 FROM management_staff_access WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM school_members WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM madrasa_members WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM school_staff WHERE tenant_code = :c AND LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM madrasa_staff WHERE tenant_code = :c AND LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+      ]);
+      if (!liens.some((r) => r.length)) return res.status(404).json({ success: false, message: "Cette personne n'a pas été ajoutée par votre établissement." });
+    }
+    const code = await donnerCodePremiereConnexion(numeroH);
+    if (!code) return res.status(400).json({ success: false, message: 'Cette personne a déjà choisi son mot de passe : elle se connecte normalement.' });
+    res.json({ success: true, code });
+  } catch (e) {
+    console.error('code-premiere-connexion:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/auth/premiere-connexion { identifiant, code, password } → connecté
+// Le code à 6 chiffres est remis par l'établissement qui a ajouté la personne :
+// sans lui, quiconque connaissait le téléphone prenait le compte.
+const essaisPremiere = new Map(); // numeroH → { n, t }
 router.post('/premiere-connexion', async (req, res) => {
   try {
     const password = String(req.body?.password || '');
+    const code = String(req.body?.code || '').replace(/\s+/g, '');
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
     const nh = await compteAPremiereConnexion(req.body?.identifiant);
     if (!nh) return res.status(400).json({ success: false, message: 'Ce compte a déjà un mot de passe : connectez-vous normalement.' });
+    if (!/^[0-9]{6}$/.test(code)) {
+      return res.status(400).json({ success: false, code: 'CODE_REQUIS', message: "Saisissez le code de première connexion (6 chiffres) que l'établissement vous a donné." });
+    }
+    const essai = essaisPremiere.get(nh);
+    const recent = essai && Date.now() - essai.t < 15 * 60 * 1000;
+    if (recent && essai.n >= 5) {
+      return res.status(429).json({ success: false, message: "Trop d'essais. Réessayez dans 15 minutes, ou demandez un nouveau code à l'établissement." });
+    }
+    const [ligne] = await User.sequelize.query(
+      'SELECT code_premiere_connexion FROM users WHERE numero_h = :nh LIMIT 1',
+      { replacements: { nh }, type: User.sequelize.QueryTypes.SELECT }
+    );
+    const attendu = Buffer.from(String(ligne?.code_premiere_connexion || ''), 'utf8');
+    const donne = Buffer.from(empreinteCodePremiereConnexion(nh, code), 'utf8');
+    if (!ligne?.code_premiere_connexion || attendu.length !== donne.length || !crypto.timingSafeEqual(attendu, donne)) {
+      essaisPremiere.set(nh, { n: (recent ? essai.n : 0) + 1, t: Date.now() });
+      return res.status(400).json({ success: false, code: 'CODE_INCORRECT', message: "Code incorrect. Vérifiez le code donné par l'établissement (ou demandez-lui un nouveau code)." });
+    }
+    essaisPremiere.delete(nh);
     const user = await User.findByPk(nh);
     if (!user) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
     user.password = await bcrypt.hash(password, config.BCRYPT_ROUNDS);
     await user.save();
+    // Le code ne sert qu'une fois
+    await User.sequelize.query('UPDATE users SET code_premiere_connexion = NULL WHERE numero_h = :nh', { replacements: { nh } }).catch(() => {});
     const donnees = { ...user.dataValues };
     delete donnees.password;
     res.json({ success: true, message: 'Mot de passe enregistré', user: donnees, token: signToken(nh), profileIncomplete: true });
@@ -844,6 +901,7 @@ setInterval(() => {
   const limite = Date.now() - 15 * 60 * 1000; // un code expire après 10 min
   for (const [k, t] of demandesRecuperation) if (t < limite) demandesRecuperation.delete(k);
   for (const [k, v] of essaisCode) if (v.t < limite) essaisCode.delete(k);
+  for (const [k, v] of essaisPremiere) if (v.t < limite) essaisPremiere.delete(k);
 }, 10 * 60 * 1000).unref();
 
 // @route   POST /api/auth/forgot-password/verify

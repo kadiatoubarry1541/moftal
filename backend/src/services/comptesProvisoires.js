@@ -17,10 +17,31 @@ let colonnePrete = null;
 export function preparerColonne() {
   if (!colonnePrete) {
     colonnePrete = sequelize.query(
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS mot_de_passe_a_choisir BOOLEAN NOT NULL DEFAULT false`
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS mot_de_passe_a_choisir BOOLEAN NOT NULL DEFAULT false;
+       ALTER TABLE users ADD COLUMN IF NOT EXISTS code_premiere_connexion VARCHAR(64);`
     ).catch((e) => { colonnePrete = null; throw e; });
   }
   return colonnePrete;
+}
+
+// ── Code de première connexion ───────────────────────────────────────────────
+// Sans code, la première personne qui tapait ce téléphone choisissait le mot
+// de passe et prenait le compte. L'établissement qui ajoute la personne reçoit
+// un code à 6 chiffres qu'il lui transmet ; seule son empreinte est gardée.
+export function empreinteCodePremiereConnexion(numeroH, code) {
+  return crypto.createHmac('sha256', config.JWT_SECRET).update(`premiere|${numeroH}|${String(code).trim()}`).digest('hex');
+}
+
+/** Nouveau code pour un compte qui n'a pas encore choisi son mot de passe (sinon null). */
+export async function donnerCodePremiereConnexion(numeroH) {
+  if (!numeroH) return null;
+  await preparerColonne();
+  const code = String(crypto.randomInt(100000, 1000000));
+  const [lignes] = await sequelize.query(
+    `UPDATE users SET code_premiere_connexion = :h WHERE numero_h = :nh AND mot_de_passe_a_choisir = true RETURNING numero_h`,
+    { replacements: { h: empreinteCodePremiereConnexion(numeroH, code), nh: numeroH } }
+  );
+  return lignes.length ? code : null;
 }
 
 export function analyserIdentifiant(identifiant) {
@@ -56,10 +77,15 @@ async function creerCompteProvisoire(identifiant) {
  */
 export async function trouverOuPreparerPersonne(identifiant) {
   const trouve = await trouverPersonne(identifiant);
-  if (trouve.personne) return { personne: trouve.personne, cree: false };
+  // Personne ajoutée (ou ajoutée à nouveau) sans mot de passe encore : un code
+  // de première connexion neuf est remis à l'établissement
+  if (trouve.personne) {
+    return { personne: trouve.personne, cree: false, codePremiereConnexion: await donnerCodePremiereConnexion(trouve.personne.numero_h) };
+  }
   const { valide } = analyserIdentifiant(identifiant);
   if (trouve.statut !== 404 || !valide) return { erreur: trouve.erreur || 'Téléphone ou e-mail invalide.', statut: trouve.statut || 400 };
-  return { personne: await creerCompteProvisoire(identifiant), cree: true };
+  const personne = await creerCompteProvisoire(identifiant);
+  return { personne, cree: true, codePremiereConnexion: await donnerCodePremiereConnexion(personne.numero_h) };
 }
 
 /** La personne a-t-elle été ajoutée quelque part (propriétaire, employé, parent…) ? */
