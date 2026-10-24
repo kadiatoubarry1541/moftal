@@ -17,6 +17,7 @@ import {
 } from '../services/emailService.js';
 import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
 import { fondsDe } from '../utils/fondsFamille.js';
+import { compteMoftalPayPro } from '../utils/compteMoftalPayPro.js';
 import { elevesLiesEcole } from './school-management.js';
 import { elevesLiesMadrasa } from './madrasa-management.js';
 
@@ -738,8 +739,8 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
       if (!fund) return { error: 'Aucun compte famille actif : créez d\'abord le compte de votre famille.' };
     }
     if (purpose === 'wallet_depot_pro') {
-      const pro = await ProfessionalAccount.findOne({ where: { ownerNumeroH: user?.numeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
-      if (!pro) return { error: 'Aucun compte professionnel approuvé pour recevoir ce dépôt.' };
+      const pro = await compteMoftalPayPro(user?.numeroH);
+      if (!pro) return { error: 'Aucun compte Moftal Pay Pro (Santé ou Alimentation, formule Gestion Interne) pour recevoir ce dépôt.' };
     }
     amount = montantDepot;
   }
@@ -1161,7 +1162,8 @@ export async function handlePostPayment(payment) {
         await enregistrerCommissionPlateforme('depot_famille', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_famille sans compte famille trouvé pour ${payment.payerNumeroH}`);
+        // Encaissé sans compte à créditer : à traiter par l'admin (jamais oublié)
+        throw new Error(`Dépôt wallet_depot_famille sans compte famille pour ${payment.payerNumeroH}`);
       }
     }
 
@@ -1183,40 +1185,36 @@ export async function handlePostPayment(payment) {
         await enregistrerCommissionPlateforme('depot_quartier_fund', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt Compte Solidarité — ${montantNet.toLocaleString()} GNF crédités (50/20/30) | ${scope}/${location} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_quartier_fund sans compte trouvé pour relatedId=${payment.relatedId}`);
+        throw new Error(`Dépôt wallet_depot_quartier_fund sans compte pour relatedId=${payment.relatedId}`);
       }
     }
 
     // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
     if (payment.purpose === 'wallet_depot_pro') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
-      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
+      // Même compte que celui affiché dans Moftal Pay Pro ; crédit verrouillé
+      // (un retrait validé en même temps ne fait plus perdre de dépôt)
+      const proAccount = await compteMoftalPayPro(payment.payerNumeroH);
       if (proAccount) {
-        let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
-        if (!wallet) {
-          wallet = await ProfessionalWallet.create({
-            proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
-            nomPro: proAccount.name, typePro: proAccount.type,
-          });
-        }
-        await wallet.update({
-          solde:     Number(wallet.solde)     + montantNet,
-          totalRecu: Number(wallet.totalRecu) + montantNet,
+        await ProfessionalWallet.sequelize.transaction(async (transaction) => {
+          let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id }, transaction, lock: transaction.LOCK.UPDATE });
+          if (!wallet) {
+            wallet = await ProfessionalWallet.create({
+              proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
+              nomPro: proAccount.name, typePro: proAccount.type,
+            }, { transaction });
+          }
+          await wallet.update({
+            solde:     Number(wallet.solde)     + montantNet,
+            totalRecu: Number(wallet.totalRecu) + montantNet,
+          }, { transaction });
         });
         await enregistrerCommissionPlateforme('depot_pro', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt wallet pro — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_pro sans compte professionnel approuvé pour ${payment.payerNumeroH}`);
+        // Encaissé sans compte à créditer : à traiter par l'admin (jamais oublié)
+        throw new Error(`Dépôt wallet_depot_pro sans compte Moftal Pay Pro pour ${payment.payerNumeroH}`);
       }
-    }
-
-    // ── Don « Développement » payé : il compte désormais dans les totaux ──
-    if (payment.purpose === 'don_developpement' && payment.relatedId) {
-      await Donation.update(
-        { status: 'completed', completedAt: new Date() },
-        { where: { id: payment.relatedId, status: { [Op.ne]: 'completed' } } }
-      );
-      console.log(`✅ Don développement payé — ${payment.relatedId} | txRef: ${payment.txRef}`);
     }
 
     // ── Dépôt compte Zakat — pas de commission plateforme (argent religieux) ──

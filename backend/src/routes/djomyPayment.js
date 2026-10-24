@@ -258,7 +258,7 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
     const token = await getBearerToken();
 
     const { ok: djomyOk, data } = await djomyFetch(
-      `${DJOMY_BASE_URL}/v1/payments/${req.params.transactionId}/status`,
+      `${DJOMY_BASE_URL}/v1/payments/${encodeURIComponent(req.params.transactionId)}/status`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -272,7 +272,13 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
       const payment = await Payment.findOne({
         where: { gatewayRef: req.params.transactionId, payerNumeroH: req.user.numeroH }
       });
-      await completeIfNeeded(payment);
+      // Comme le webhook : rien n'est débloqué si le montant payé est inférieur au montant dû
+      const paye = data.paidAmount ?? data.data?.paidAmount;
+      if (payment && paye != null && Number(paye) < Number(payment.amount)) {
+        console.warn(`djomy/status: montant insuffisant (${paye} < ${payment.amount}) pour`, req.params.transactionId);
+      } else {
+        await completeIfNeeded(payment);
+      }
     }
 
     res.json({ success: djomyOk, ...data });
