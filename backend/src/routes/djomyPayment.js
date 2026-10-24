@@ -65,6 +65,15 @@ async function getBearerToken() {
 }
 
 // Formater le numéro de téléphone guinéen en format international 00224XXXXXXXXX
+// Retour après paiement : sur le site d'où vient le client (moftal.com ou
+// gestions.moftal.com), page qui vérifie le paiement auprès du serveur
+function urlsRetour(req, ref) {
+  const origine = String(req.headers.origin || '');
+  const base = /^https:\/\/([a-z0-9-]+\.)?moftal\.com$/.test(origine) ? origine : 'https://moftal.com';
+  const page = `${base}/paiement/resultat?txRef=${encodeURIComponent(ref)}`;
+  return { returnUrl: page, cancelUrl: `${page}&status=cancelled` };
+}
+
 function formatPhone(phone) {
   if (!phone) return '';
   const clean = phone.replace(/\D/g, '');
@@ -131,8 +140,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       countryCode: 'GN',
       description: description || 'Paiement Moftal',
       merchantPaymentReference: ref,
-      returnUrl:  'https://moftal.com/payment/success',
-      cancelUrl:  'https://moftal.com/payment/cancel',
+      ...urlsRetour(req, ref),
       metadata:   { userId: user.numeroH, ref }
     };
 
@@ -204,8 +212,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       allowedPaymentMethods: allowedPaymentMethods || ['OM', 'MOMO', 'CARD', 'PAYCARD'],
       description: description || 'Paiement Moftal',
       merchantPaymentReference: ref,
-      returnUrl:  'https://moftal.com/payment/success',
-      cancelUrl:  'https://moftal.com/payment/cancel',
+      ...urlsRetour(req, ref),
       metadata:   { userId: user.numeroH, ref }
     };
 
