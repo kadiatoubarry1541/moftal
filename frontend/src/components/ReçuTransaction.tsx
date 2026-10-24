@@ -1,5 +1,6 @@
 ﻿import { useRef } from 'react';
 import { useTraduction } from '../i18n/traduction';
+import { echap } from "../utils/echapperHtml";
 
 interface ReçuProps {
   id: string;
@@ -41,7 +42,7 @@ export function ReçuTransaction({
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-      <title>${tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' })}</title>
+      <title>${echap(tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' }))}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; color: #111; }

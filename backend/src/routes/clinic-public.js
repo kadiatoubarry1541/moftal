@@ -187,6 +187,12 @@ router.post('/:tenantCode/quick-request', async (req, res) => {
     await ensureAppointmentRequestsTable();
     const { nom, telephone, service, date_souhaitee, motif } = req.body;
     if (!nom || !telephone) return res.status(400).json({ success: false, message: 'Nom et téléphone requis.' });
+    // Seulement pour une clinique qui existe et est active (pas de demandes vers un code inventé)
+    const [clinique] = await sequelize.query(
+      `SELECT tenant_code FROM management_tenants WHERE tenant_code = :code AND is_active = true LIMIT 1`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!clinique) return res.status(404).json({ success: false, message: 'Clinique introuvable.' });
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_appointment_requests (tenant_code, nom, telephone, service, date_souhaitee, motif)
        VALUES (:code, :nom, :tel, :svc, :date, :motif) RETURNING *`,

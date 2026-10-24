@@ -120,6 +120,14 @@ function matieresDe(rows) {
 router.get('/:type/:tenantCode/data', async (req, res) => {
   const { type, tenantCode: code } = req.params;
   try {
+    // Même contrôle que la fiche publique : établissement actif, du bon secteur,
+    // et dont la formule inclut le site (jamais les données d'un compte désactivé)
+    const [actif] = await q(
+      `SELECT mt.tenant_code FROM management_tenants mt
+        WHERE mt.tenant_code = :code AND mt.type IN (:types) AND mt.is_active = true AND ${FILTRE_GESTION_INTERNE} LIMIT 1`,
+      { code, types: typesEnBase(type) }
+    );
+    if (!actif) return res.status(404).json({ success: false, message: 'Espace introuvable ou inactif.' });
     switch (type) {
 
       case 'school': {
@@ -362,6 +370,9 @@ router.post('/school/:tenantCode/enroll-request', async (req, res) => {
     await ensureEnrollRequestsTable();
     const { nom_enfant, date_naissance, niveau_souhaite, nom_parent, telephone_parent } = req.body;
     if (!nom_enfant || !telephone_parent) return res.status(400).json({ success: false, message: 'Nom de l\'enfant et téléphone requis.' });
+    // Seulement pour une école qui existe et est active
+    const [ecole] = await q(`SELECT tenant_code FROM management_tenants WHERE tenant_code = :code AND is_active = true LIMIT 1`, { code: tenantCode });
+    if (!ecole) return res.status(404).json({ success: false, message: 'École introuvable.' });
     const [rows] = await sequelize.query(
       `INSERT INTO school_enroll_requests (tenant_code, nom_enfant, date_naissance, niveau_souhaite, nom_parent, telephone_parent)
        VALUES (:code, :nom, :dob, :niveau, :parent, :tel) RETURNING *`,
@@ -410,7 +421,7 @@ router.post('/restaurant/:tenantCode/commande', async (req, res) => {
       .filter((i) => Number.isInteger(i.id));
     if (!demandes.length) return res.status(400).json({ success: false, message: 'Choisissez au moins un plat.' });
 
-    const [tenant] = await q(`SELECT mt.owner_numero_h, mt.name FROM management_tenants mt WHERE mt.tenant_code = :code AND ${FILTRE_GESTION_INTERNE} LIMIT 1`, { code });
+    const [tenant] = await q(`SELECT mt.owner_numero_h, mt.name FROM management_tenants mt WHERE mt.tenant_code = :code AND mt.is_active = true AND ${FILTRE_GESTION_INTERNE} LIMIT 1`, { code });
     if (!tenant) return res.status(404).json({ success: false, message: 'Restaurant introuvable.' });
     const plats = await q(`SELECT id, nom, prix FROM resto_dishes WHERE tenant_code = :code AND disponible = true AND id IN (:ids)`, { code, ids: demandes.map((d) => d.id) });
     const parId = new Map(plats.map((p) => [p.id, p]));

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AccesEmployes from "./AccesEmployes";
 import { useTraduction } from "../i18n/traduction";
+import { echap } from "../utils/echapperHtml";
 
 // « 📊 Rapport du mois » des gestions internes : recettes, dépenses et
 // bénéfice du mois choisi, comparés au mois précédent, avec impression.
@@ -81,9 +82,9 @@ export default function RapportMois({ base, etablissement, couleur = "#1a8f1a", 
     const g = (n: number) => gnf(n, locale);
     const nm = (m: string) => nomMois(m, locale);
     const debut = isAr ? "right" : "left", fin = isAr ? "left" : "right";
-    const lignes = (t: Ligne[]) => t.map(l => `<tr><td>${tr(l.label)}</td><td class="c">${l.n}</td><td class="r">${g(l.total)}</td></tr>`).join("");
+    const lignes = (t: Ligne[]) => t.map(l => `<tr><td>${echap(tr(l.label))}</td><td class="c">${echap(l.n)}</td><td class="r">${g(l.total)}</td></tr>`).join("");
     const entete = `<tr><th>${tr("Source")}</th><th class="c">${tr("Nombre")}</th><th class="r">${tr("Montant")}</th></tr>`;
-    const logo = etablissement?.logo_url ? `<img src="${/^(data:|https?:)/.test(etablissement.logo_url) ? etablissement.logo_url : window.location.origin + etablissement.logo_url}" style="width:60px;height:60px;object-fit:contain">` : "";
+    const logo = etablissement?.logo_url ? `<img src="${echap(/^(data:|https?:)/.test(etablissement.logo_url) ? etablissement.logo_url : window.location.origin + etablissement.logo_url)}" style="width:60px;height:60px;object-fit:contain">` : "";
     w.document.write(`<!doctype html><html lang="${isAr ? "ar" : "fr"}" dir="${isAr ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${tr("Rapport {mois}", { mois: nm(r.mois) })}</title><style>
       body{font-family:'Segoe UI',Arial,sans-serif;padding:28px;color:#0f172a;max-width:720px;margin:auto}
       .h{display:flex;gap:14px;align-items:center;border-bottom:3px solid ${couleur};padding-bottom:14px;margin-bottom:18px}
@@ -91,7 +92,7 @@ export default function RapportMois({ base, etablissement, couleur = "#1a8f1a", 
       table{width:100%;border-collapse:collapse}td,th{padding:7px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:${debut}}
       .c{text-align:center}.r{text-align:${fin}}.t{font-weight:800;font-size:16px}
     </style></head><body>
-      <div class="h">${logo}<div><h1>${etablissement?.name || ""}</h1><div>${tr("Rapport du mois — {mois}", { mois: nm(r.mois) })}</div></div></div>
+      <div class="h">${logo}<div><h1>${echap(etablissement?.name)}</h1><div>${tr("Rapport du mois — {mois}", { mois: nm(r.mois) })}</div></div></div>
       <h2>${tr("Recettes")}</h2><table>${entete}${lignes(r.recettes)}
       <tr><td class="t">${tr("Total recettes")}</td><td></td><td class="r t">${g(r.totalRecettes)}</td></tr></table>
       ${r.depenses.length ? `<h2>${tr("Dépenses")}</h2><table>${entete}${lignes(r.depenses)}

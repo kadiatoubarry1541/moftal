@@ -20,6 +20,7 @@ import ParametreLangue from "../components/ParametreLangue";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 import { cheminConnexion } from "../utils/connexionRetour";
+import { echap } from "../utils/echapperHtml";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -42,16 +43,16 @@ function printFeeReceipt(f: any, tenant: any, color: string) {
   });
 }
 
-const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
+const logoHtml = (url?: string | null) => url ? `<img src="${echap(/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url)}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
 function printBulletin(b: any, orgName: string, color: string, logoUrl?: string | null) {
   const ar = langueCourante() === "ar";
-  const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${trHors("Bulletin {nom}", { nom: b.student_nom })}</title>
+  const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${echap(trHors("Bulletin {nom}", { nom: b.student_nom }))}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
-<div class="header"><div class="title">${logoHtml(logoUrl)}${orgName}</div><div style="text-align:end;font-size:12px;color:#64748b">${trHors(b.periode || "")} — ${b.annee_scolaire || ""}</div></div>
+<div class="header"><div class="title">${logoHtml(logoUrl)}${echap(orgName)}</div><div style="text-align:end;font-size:12px;color:#64748b">${echap(trHors(b.periode || ""))} — ${echap(b.annee_scolaire)}</div></div>
 <h2 style="margin-bottom:16px">${trHors("Bulletin de progression")}</h2>
-<div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${trHors(b.niveau || b.classe || "")}</span></div>
-<div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${trHors(b.mention || "")}</div></div>
+<div class="box"><strong>${echap(b.student_prenom)} ${echap(b.student_nom)}</strong><br><span style="color:#64748b;font-size:13px">${echap(trHors(b.niveau || b.classe || ""))}</span></div>
+<div class="moy">${echap(b.moyenne_generale)}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${echap(trHors(b.mention || ""))}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">${trHors("Signature & Cachet")}</div></div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
