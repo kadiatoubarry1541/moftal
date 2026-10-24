@@ -498,13 +498,18 @@ function SubscriptionPaymentWall({
     { key: "an",        label: "Annuel",   sub: "2 mois offerts",           badge: "2 mois offerts" },
   ];
 
-  const PURPOSE_MAP: Record<string, string> = {
-    mois: "visibilite_mois", troisMois: "visibilite_3mois", an: "visibilite_an",
-  };
+  // Le mur renouvelle la formule du compte : Visibilité + Rendez-vous, ou
+  // Visibilité + Gestion Interne (jamais la Visibilité, moins chère, pour un
+  // compte en formule complète)
+  const formuleComplete = account.planType !== "visibility";
+  const PURPOSE_MAP: Record<string, string> = formuleComplete
+    ? { mois: "gestion_mois", troisMois: "gestion_3mois", an: "gestion_an" }
+    : { mois: "visibilite_mois", troisMois: "visibilite_3mois", an: "visibilite_an" };
+  const prixFormule = (k: "mois" | "troisMois" | "an") => (formuleComplete ? prix?.gestionInterne[k] : prix?.visibilite[k]) ?? 0;
 
-  const montantChoisi = prix?.visibilite[periodeChoisie] ?? 0;
+  const montantChoisi = prixFormule(periodeChoisie);
   const purposeChoisi = PURPOSE_MAP[periodeChoisie];
-  const descChoisi    = `Visibilité ${PERIODES.find(p => p.key === periodeChoisie)?.label} — ${account.name}`;
+  const descChoisi    = `${formuleComplete ? "Gestion Interne" : "Visibilité"} ${PERIODES.find(p => p.key === periodeChoisie)?.label} — ${account.name}`;
 
   const FEATURES_VISIBILITE = [
     "Profil public visible dans les recherches de la plateforme",
@@ -523,7 +528,9 @@ function SubscriptionPaymentWall({
           <div className="text-center mb-4">
             <div className="text-5xl mb-2">{isOverdue ? "⏰" : "👁️"}</div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-              {isOverdue ? "Renouveler votre Visibilité" : "Activer votre Visibilité"}
+              {formuleComplete
+                ? (isOverdue ? "Renouveler votre Gestion Interne" : "Activer votre Gestion Interne")
+                : (isOverdue ? "Renouveler votre Visibilité" : "Activer votre Visibilité")}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isNeverPaid
@@ -534,9 +541,11 @@ function SubscriptionPaymentWall({
 
           {/* Ce que comprend la Visibilité */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 mb-4">
-            <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-2 uppercase tracking-wide">Visibilité + Rendez-vous</p>
+            <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-2 uppercase tracking-wide">{formuleComplete ? "Visibilité + Gestion Interne" : "Visibilité + Rendez-vous"}</p>
             <div className="space-y-1.5">
-              {FEATURES_VISIBILITE.map(f => (
+              {(formuleComplete
+                ? [...FEATURES_VISIBILITE, "Gestion interne complète de l'établissement", "Votre application, avec votre logo", "Moftal Pay"]
+                : FEATURES_VISIBILITE).map(f => (
                 <div key={f} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
                   <span className="text-blue-500 mt-0.5 flex-shrink-0">✓</span>
                   <span>{f}</span>
@@ -569,7 +578,7 @@ function SubscriptionPaymentWall({
                       </span>
                     )}
                     <span className={`font-bold text-sm ${periodeChoisie === opt.key ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>
-                      {(prix.visibilite[opt.key] || 0).toLocaleString("fr-GN")} GNF
+                      {prixFormule(opt.key).toLocaleString("fr-GN")} GNF
                     </span>
                   </div>
                 </button>
@@ -596,8 +605,8 @@ function SubscriptionPaymentWall({
           </button>
         </div>
 
-        {/* ── Upgrade vers Gestion Interne ── */}
-        {prix && (
+        {/* ── Upgrade vers Gestion Interne (formule Visibilité seulement) ── */}
+        {prix && !formuleComplete && (
           <div className="rounded-2xl overflow-hidden shadow-md">
             <div className="bg-gradient-to-br from-green-700 to-green-900 p-5 text-white">
               <div className="flex items-start gap-3 mb-3">

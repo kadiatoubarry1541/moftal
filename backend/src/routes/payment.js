@@ -933,8 +933,12 @@ export async function handlePostPayment(payment) {
       const periode = payment.purpose === 'visibilite_mois' ? 'mois' : payment.purpose === 'visibilite_3mois' ? 'troisMois' : 'an';
       const actuel = await ProfessionalAccount.findByPk(payment.relatedId);
       const expiration = calculerExpiration(periode, actuel?.subscriptionValidUntil);
+      // Payer la Visibilité = formule Visibilité + Rendez-vous : un compte en
+      // formule complète passe en Visibilité (avant, il gardait sa Gestion
+      // Interne pour le prix, plus bas, de la Visibilité). Une Gestion Interne
+      // déjà payée à part reste valable jusqu'à sa date.
       await ProfessionalAccount.update(
-        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false },
+        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false, planType: 'visibility' },
         { where: { id: payment.relatedId } }
       );
       console.log(`✅ Visibilité activée (${periode}) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);

@@ -413,6 +413,11 @@ export default function MesComptesPro() {
                             <p className="text-[11px] text-blue-600 dark:text-blue-400 mb-2 leading-tight">
                               {tr("Profil public · Recevoir des rendez-vous · Vitrine")}
                             </p>
+                            {acc.planType !== "visibility" && (
+                              <p className="text-[11px] text-amber-700 dark:text-amber-400 mb-2 leading-tight font-semibold">
+                                {tr("Votre compte passera en formule Visibilité (sans Gestion Interne).")}
+                              </p>
+                            )}
                             {(['mois','troisMois','an'] as const).map(p => (
                               <button key={p}
                                 onClick={() => handlePay(acc, 'visibilite', p)}
