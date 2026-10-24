@@ -16,6 +16,7 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { ajouterRouteParametres } from '../utils/routeParametres.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { prochainNumero } from '../utils/prochainNumero.js';
 
 const router = express.Router();
 
@@ -363,8 +364,7 @@ router.post('/:tenantCode/dossiers', authenticate, verifyTenant, async (req, res
     const { titre, client_nom, client_telephone, domaine, responsable_id, prochaine_etape, date_echeance, honoraires, notes } = req.body;
     if (!titre) return res.status(400).json({ success: false, message: 'Intitulé du dossier requis.' });
     const code = req.params.tenantCode;
-    const [{ n }] = await select(`SELECT COUNT(*)::int + 1 AS n FROM juridique_dossiers WHERE tenant_code=:code`, { code });
-    const reference = `D-${new Date().getFullYear()}-${String(n).padStart(4, '0')}`;
+    const reference = await prochainNumero('juridique_dossiers', code, `D-${new Date().getFullYear()}-`, 4);
     const [row] = await select(
       `INSERT INTO juridique_dossiers (tenant_code,reference,titre,client_nom,client_telephone,domaine,responsable_id,prochaine_etape,date_echeance,honoraires,notes)
        VALUES (:code,:ref,:titre,:cnom,:ctel,:dom,:resp,:etape,:ech,:hon,:notes) RETURNING *`,

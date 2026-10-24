@@ -7,6 +7,7 @@ import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { numeroHComplet } from './schoolCoursBibliotheque.js';
+import { prochainNumero } from '../utils/prochainNumero.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -238,8 +239,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, refuserPersonnel, 
     // NuméroH complet du compte Moftal (ex. saisie sans le compteur final) pour que
     // ce membre du personnel puisse ensuite se connecter à la gestion.
     const nh = numero_h ? await numeroHComplet(numero_h) : null;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `STAFF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
+    const mat = await prochainNumero('clinic_staff', code, `STAFF-${code.slice(-4)}-`, 3);
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_staff (tenant_code,nom,prenom,role,service,specialite,telephone,email,matricule,numero_h) VALUES(:code,:nom,:prenom,:role,:svc,:spec,:tel,:email,:mat,:nh) RETURNING *`,
       { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: nh || null }, type: sequelize.QueryTypes.INSERT }
@@ -314,8 +314,7 @@ router.post('/:tenantCode/prescriptions', authenticate, verifyTenant, async (req
   try {
     const { patient_id, staff_id, medicaments, diagnostic, notes } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_prescriptions WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `ORD-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const num = await prochainNumero('clinic_prescriptions', code, `ORD-${new Date().getFullYear()}-`, 4);
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_prescriptions (tenant_code,patient_id,staff_id,medicaments,diagnostic,notes,numero_ordo,pharma_statut)
        VALUES(:code,:pid,:sid,:meds::jsonb,:diag,:notes,:num,'en_attente') RETURNING *`,
@@ -536,8 +535,7 @@ router.post('/:tenantCode/invoices', authenticate, verifyTenant, async (req, res
     await ensureInvoicesTable();
     const { patient_id, staff_id, lignes, sous_total, remise, total, statut, mode_paiement, notes, date_facture } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_invoices WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `FAC-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const num = await prochainNumero('clinic_invoices', code, `FAC-${new Date().getFullYear()}-`, 4);
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_invoices (tenant_code,patient_id,staff_id,numero_facture,lignes,sous_total,remise,total,statut,mode_paiement,notes,date_facture) VALUES(:code,:pid,:sid,:num,:lignes::jsonb,:st,:rem,:tot,:statut,:mode,:notes,:date) RETURNING *`,
       { replacements: { code, pid: patient_id || null, sid: staff_id || null, num, lignes: JSON.stringify(lignes || []), st: sous_total || 0, rem: remise || 0, tot: total || 0, statut: statut || 'impaye', mode: mode_paiement || 'especes', notes: notes || null, date: date_facture || null }, type: sequelize.QueryTypes.INSERT }

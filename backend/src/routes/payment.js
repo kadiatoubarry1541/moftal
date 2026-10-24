@@ -1037,7 +1037,10 @@ export async function handlePostPayment(payment) {
     if (payment.purpose === 'publication_formation' && payment.relatedId) {
       // relatedId = id de la formation_annonce (créée en statut 'en_attente')
       await sequelize.query(
-        `UPDATE formation_annonces SET is_active = true, fedapay_ref = :ref WHERE id = :id`,
+        // La durée choisie compte à partir du paiement (pas de la préparation de l'annonce)
+        `UPDATE formation_annonces SET is_active = true, fedapay_ref = :ref,
+                expire_le = NOW() + (COALESCE(duree_jours, 7) || ' days')::interval
+          WHERE id = :id`,
         { replacements: { ref: payment.txRef, id: payment.relatedId } }
       ).catch(() => {});
       console.log(`✅ Annonce formation activée — id: ${payment.relatedId} | txRef: ${payment.txRef}`);

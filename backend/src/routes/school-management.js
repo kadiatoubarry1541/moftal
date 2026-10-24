@@ -12,6 +12,7 @@ import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { prochainNumero } from '../utils/prochainNumero.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -202,8 +203,7 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
     await ensureSchoolColumns();
     // Photo facultative, enregistrée dans la base (table fichiers)
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-eleve' });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const mat = await prochainNumero('school_students', code, `ELV-${code.slice(-4)}-${new Date().getFullYear()}-`, 4);
     const [rows] = await sequelize.query(
       `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h,photo_url) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh,:photo) RETURNING *`,
       { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo }, type: sequelize.QueryTypes.INSERT }
@@ -263,8 +263,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     const code = req.params.tenantCode;
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
     if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
+    const mat = await prochainNumero('school_staff', code, `PROF-${code.slice(-4)}-`, 3);
     const mats = matieres || (specialite ? [specialite] : []);
     await preparerColonnesSite('school_staff');
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-personnel' });
@@ -801,8 +800,7 @@ router.put('/:tenantCode/enroll-requests/:id/convert', authenticate, verifyTenan
     const code = req.params.tenantCode;
     const [reqRow] = await sequelize.query(`SELECT * FROM school_enroll_requests WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
     if (!reqRow) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const mat = await prochainNumero('school_students', code, `ELV-${code.slice(-4)}-${new Date().getFullYear()}-`, 4);
     const nameParts = (reqRow.nom_enfant || '').trim().split(/\s+/);
     const prenom = nameParts.shift() || reqRow.nom_enfant;
     const nom = nameParts.join(' ') || '—';

@@ -66,8 +66,8 @@ export function initSocket(httpServer, corsOrigins) {
     // Room personnelle
     socket.join(`user-${numeroH}`);
 
-    // Informer les autres que l'utilisateur est en ligne
-    socket.broadcast.emit('user-online', { numeroH, prenom, nomFamille });
+    // Pas d'annonce « en ligne » à tous les connectés : nom et présence de
+    // chacun n'ont pas à être envoyés à tout le site
 
     // Rejoindre la room familiale
     // Seulement SA famille (même nom de famille que la messagerie familiale)
@@ -133,7 +133,6 @@ export function initSocket(httpServer, corsOrigins) {
     // ──── Déconnexion ─────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
       onlineUsers.delete(numeroH);
-      socket.broadcast.emit('user-offline', { numeroH });
     });
   });
 
