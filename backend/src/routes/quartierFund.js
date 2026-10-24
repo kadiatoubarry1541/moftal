@@ -164,8 +164,10 @@ router.put('/chefs', async (req, res) => {
     const fund = await trouverFund(scope, location);
     if (!fund) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
 
-    if (!fund.estChef(req.user.numeroH) && !isJournalistOrAdmin(req.user)) {
-      return res.status(403).json({ success: false, message: 'Seul un chef actuel ou un administrateur peut changer les chefs.' });
+    // Changer les chefs revient à changer qui valide les paiements : jamais un
+    // chef seul (il pouvait retirer les autres et dépenser sans confirmation).
+    if (!isJournalistOrAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Seul un administrateur peut changer les chefs de ce compte.' });
     }
 
     const updates = {};
@@ -177,6 +179,15 @@ router.put('/chefs', async (req, res) => {
       updates[`chef${i}NumeroH`] = num;
       updates[`chef${i}Nom`] = `${u.prenom || ''} ${u.nomFamille || ''}`.trim();
       updates[`chef${i}Photo`] = u.photo || null;
+    }
+
+    // Comme à la création : au moins 2 chefs différents (2 confirmations par paiement)
+    const apres = [1, 2, 3].map((i) => (`chef${i}NumeroH` in updates ? updates[`chef${i}NumeroH`] : fund[`chef${i}NumeroH`])).filter(Boolean);
+    if (new Set(apres).size !== apres.length) {
+      return res.status(400).json({ success: false, message: 'Une même personne ne peut pas être deux fois chef.' });
+    }
+    if (!req.user.isMasterAdmin && apres.length < 2) {
+      return res.status(400).json({ success: false, message: 'Il faut au moins 2 chefs (2 confirmations sont requises pour chaque paiement).' });
     }
 
     await fund.update(updates);
@@ -191,7 +202,9 @@ router.put('/chefs', async (req, res) => {
 // Pour 'orphelins' : achat de riz auprès du fournisseur riz de l'admin (comme
 // le compte famille). Pour 'sante' : enregistrement seul, le paiement direct
 // à l'hôpital se fait hors-app par les chefs.
-async function executerPaiement(fund, demande) {
+// Exécute le paiement d'une demande : à appeler dans une transaction où le
+// compte et la demande sont verrouillés (jamais deux exécutions).
+async function executerPaiement(fund, demande, transaction) {
   const champSolde = demande.type === 'sante' ? 'solde_sante' : 'solde_orphelins';
   const soldeActuel = Number(fund[champSolde]);
   const montant = Number(demande.montant);
@@ -204,13 +217,13 @@ async function executerPaiement(fund, demande) {
     const sacs = Number(demande.nombreSacs) || 1;
     const [produit] = await sequelize.query(
       `SELECT * FROM supplier_products WHERE tenant_code=:code AND nom ILIKE '%riz%' AND is_active=true ORDER BY id DESC LIMIT 1`,
-      { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT, transaction }
     );
     if (produit) {
       await sequelize.query(
         `UPDATE supplier_products SET stock = GREATEST(stock - :sacs, 0) WHERE tenant_code=:code AND id=:id`,
-        { replacements: { sacs, code: RIZ_TENANT_CODE, id: produit.id } }
-      ).catch(() => {});
+        { replacements: { sacs, code: RIZ_TENANT_CODE, id: produit.id }, transaction }
+      );
       await sequelize.query(
         `INSERT INTO supplier_orders (tenant_code, client_nom, montant_total, statut, notes)
          VALUES (:code, :clientNom, :montant, 'en_attente', :notes)`,
@@ -220,17 +233,18 @@ async function executerPaiement(fund, demande) {
             clientNom: `Compte Solidarité — ${fund.locationName || fund.location}`,
             montant,
             notes: `${sacs} sac(s) de riz — ${demande.description || `orphelin ${demande.beneficiaireNom || ''}`}`
-          }
+          },
+          transaction
         }
-      ).catch(() => {});
+      );
     }
   }
 
   await fund.update({
     [champSolde]: soldeActuel - montant,
     total_depense: Number(fund.total_depense) + montant
-  });
-  await demande.update({ statut: 'approuve', executedAt: new Date() });
+  }, { transaction });
+  await demande.update({ statut: 'approuve', executedAt: new Date() }, { transaction });
 
   return { ok: true };
 }
@@ -294,10 +308,15 @@ router.post('/demander', async (req, res) => {
 
     // Cas rare : un seul chef désigné sur le compte → sa propre demande suffit
     if (demande.confirmations.length >= fund.getSeuilConfirmation()) {
-      const resultat = await executerPaiement(fund, demande);
+      const resultat = await QuartierFund.sequelize.transaction(async (transaction) => {
+        const f = await QuartierFund.findByPk(fund.id, { transaction, lock: transaction.LOCK.UPDATE });
+        const d = await QuartierFundRequest.findByPk(demande.id, { transaction, lock: transaction.LOCK.UPDATE });
+        return executerPaiement(f, d, transaction);
+      });
       if (!resultat.ok) {
         return res.status(400).json({ success: false, message: resultat.message });
       }
+      return res.json({ success: true, message: 'Paiement exécuté.', execute: true, demandeId: demande.id });
     }
 
     res.json({ success: true, message: 'Demande créée. En attente de confirmation par un autre chef.', demandeId: demande.id });
@@ -313,38 +332,38 @@ router.post('/demander', async (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/confirmer/:id', async (req, res) => {
   try {
-    const demande = await QuartierFundRequest.findByPk(req.params.id);
-    if (!demande) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
-    if (demande.statut !== 'en_attente') {
-      return res.status(400).json({ success: false, message: `Cette demande est déjà ${demande.statut}.` });
-    }
+    // Demande et compte verrouillés : deux chefs qui confirment en même temps
+    // ne déclenchent jamais deux paiements, et aucune confirmation ne se perd.
+    const verdict = await QuartierFundRequest.sequelize.transaction(async (transaction) => {
+      const demande = await QuartierFundRequest.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!demande) return { statut: 404, message: 'Demande introuvable.' };
+      if (demande.statut !== 'en_attente') return { statut: 400, message: `Cette demande est déjà ${demande.statut}.` };
 
-    const fund = await QuartierFund.findByPk(demande.fundId);
-    if (!fund) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
-    if (!fund.estChef(req.user.numeroH)) {
-      return res.status(403).json({ success: false, message: 'Seuls les chefs de ce compte peuvent confirmer.' });
-    }
+      const fund = await QuartierFund.findByPk(demande.fundId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!fund) return { statut: 404, message: 'Compte introuvable.' };
+      if (!fund.estChef(req.user.numeroH)) return { statut: 403, message: 'Seuls les chefs de ce compte peuvent confirmer.' };
 
-    const dejaConfirme = demande.confirmations.some(c => c.numeroH === req.user.numeroH);
-    if (dejaConfirme) {
-      return res.status(400).json({ success: false, message: 'Vous avez déjà confirmé cette demande.' });
-    }
-
-    const nouvellesConfirmations = [
-      ...demande.confirmations,
-      { numeroH: req.user.numeroH, nom: `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim(), date: new Date() }
-    ];
-    await demande.update({ confirmations: nouvellesConfirmations });
-
-    if (nouvellesConfirmations.length >= fund.getSeuilConfirmation()) {
-      const resultat = await executerPaiement(fund, demande);
-      if (!resultat.ok) {
-        return res.status(400).json({ success: false, message: resultat.message });
+      if (demande.confirmations.some(c => c.numeroH === req.user.numeroH)) {
+        return { statut: 400, message: 'Vous avez déjà confirmé cette demande.' };
       }
-      return res.json({ success: true, message: 'Paiement exécuté — seuil de confirmations atteint.', execute: true });
-    }
 
-    res.json({ success: true, message: 'Confirmation enregistrée. En attente d\'une confirmation supplémentaire.', execute: false });
+      const nouvellesConfirmations = [
+        ...demande.confirmations,
+        { numeroH: req.user.numeroH, nom: `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim(), date: new Date() }
+      ];
+      // Seules les confirmations des chefs ACTUELS comptent
+      const valides = nouvellesConfirmations.filter((c) => fund.estChef(c.numeroH));
+      await demande.update({ confirmations: nouvellesConfirmations }, { transaction });
+
+      if (valides.length >= fund.getSeuilConfirmation()) {
+        const resultat = await executerPaiement(fund, demande, transaction);
+        if (!resultat.ok) return { statut: 400, message: resultat.message };
+        return { statut: 200, corps: { success: true, message: 'Paiement exécuté — seuil de confirmations atteint.', execute: true } };
+      }
+      return { statut: 200, corps: { success: true, message: 'Confirmation enregistrée. En attente d\'une confirmation supplémentaire.', execute: false } };
+    });
+    if (verdict.statut !== 200) return res.status(verdict.statut).json({ success: false, message: verdict.message });
+    res.json(verdict.corps);
   } catch (err) {
     console.error('quartier-fund/confirmer:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
