@@ -4,7 +4,8 @@ import { isInspirAdmin, hasLivresAccess } from '../services/inspirAccess.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
-import { FamilyTree, Donation } from '../models/additional.js';
+import { FamilyTree } from '../models/additional.js';
+import DeveloppementDon from '../models/DeveloppementDon.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import QuartierFund from '../models/QuartierFund.js';
@@ -772,10 +773,10 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
   // Don « Développement » préparé par /api/developpement/donate — relatedId = id
   // du don en attente ; le montant vient toujours du don enregistré.
   if (purpose === 'don_developpement') {
-    const don = relatedId ? await Donation.findByPk(relatedId).catch(() => null) : null;
-    if (!don || don.donationType !== 'developpement') return { error: 'Don introuvable.' };
-    if (don.donor !== user?.numeroH) return { error: 'Ce don ne vous appartient pas.' };
-    if (don.status === 'completed') return { error: 'Ce don est déjà payé.' };
+    const don = relatedId ? await DeveloppementDon.findByPk(relatedId).catch(() => null) : null;
+    if (!don) return { error: 'Don introuvable.' };
+    if (don.numeroH !== user?.numeroH) return { error: 'Ce don ne vous appartient pas.' };
+    if (don.statut === 'paye') return { error: 'Ce don est déjà payé.' };
     amount = Math.round(Number(don.amount));
   }
 
@@ -1203,6 +1204,15 @@ export async function handlePostPayment(payment) {
         // Encaissé sans compte à créditer : à traiter par l'admin (jamais oublié)
         throw new Error(`Dépôt wallet_depot_pro sans compte Moftal Pay Pro pour ${payment.payerNumeroH}`);
       }
+    }
+
+    // ── Don « Développement » payé : il compte désormais dans les totaux ──
+    if (payment.purpose === 'don_developpement' && payment.relatedId) {
+      await DeveloppementDon.update(
+        { statut: 'paye', payeLe: new Date() },
+        { where: { id: payment.relatedId, statut: { [Op.ne]: 'paye' } } }
+      );
+      console.log(`✅ Don développement payé — ${payment.relatedId} | txRef: ${payment.txRef}`);
     }
 
     // ── Dépôt compte Zakat — pas de commission plateforme (argent religieux) ──

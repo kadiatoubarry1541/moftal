@@ -11,6 +11,9 @@ const DeveloppementDon = sequelize.define('DeveloppementDon', {
   message: { type: DataTypes.TEXT },
   scope: { type: DataTypes.STRING(30), allowNull: false },
   location: { type: DataTypes.STRING(100), allowNull: false },
+  // Un don ne compte qu'une fois payé (paiement Djomy « don_developpement »)
+  statut: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'en_attente' },
+  payeLe: { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName: 'developpement_dons',
   underscored: true,

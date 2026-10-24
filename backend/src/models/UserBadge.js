@@ -53,7 +53,7 @@ class UserBadge extends Model {
       indexes: [
         {
           unique: true,
-          fields: ['numero_h', 'badgeId']
+          fields: ['numeroH', 'badgeId']
         }
       ]
     });
@@ -120,7 +120,7 @@ class UserBadge extends Model {
     const stats = await this.findAll({
       attributes: [
         'badgeId',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        [sequelize.fn('COUNT', sequelize.col('UserBadge.id')), 'count']
       ],
       include: [{
         model: sequelize.models.Badge,
@@ -128,7 +128,7 @@ class UserBadge extends Model {
         attributes: ['name', 'category', 'rarity']
       }],
       group: ['badgeId', 'badge.id'],
-      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+      order: [[sequelize.fn('COUNT', sequelize.col('UserBadge.id')), 'DESC']]
     });
 
     return stats;

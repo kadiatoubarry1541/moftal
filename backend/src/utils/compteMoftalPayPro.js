@@ -18,7 +18,7 @@ export async function compteMoftalPayPro(ownerNumeroH, options = {}) {
       type: { [Op.in]: MOFTAL_PAY_PRO_TYPES },
       planType: { [Op.or]: [{ [Op.ne]: 'visibility' }, { [Op.is]: null }] },
     },
-    order: [['createdAt', 'ASC']],
+    order: [['created_at', 'ASC']],
     ...options,
   });
 }

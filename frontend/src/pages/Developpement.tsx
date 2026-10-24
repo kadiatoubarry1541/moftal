@@ -459,26 +459,26 @@ export default function Developpement() {
               ) : (
                 <div className="space-y-3">
                   {mesDons.map((don: any) => {
-                    const dom = DOMAINES.find(d => d.id === don.recipient);
+                    const dom = DOMAINES.find(d => d.id === (don.domaine || don.recipient));
                     return (
                       <div key={don.id} className="border rounded-xl p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-xl">{dom ? dom.emoji : "🌍"}</span>
                             <div>
-                              <div className="font-semibold text-slate-800 text-sm">{don.recipientName}</div>
+                              <div className="font-semibold text-slate-800 text-sm">{don.domaineLabel || don.recipientName}</div>
                               <div className="text-xs text-slate-500">{new Date(don.createdAt).toLocaleDateString("fr-FR")}</div>
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-green-700">{parseFloat(don.amount).toLocaleString()} {don.currency}</div>
-                            {don.status === "completed"
+                            {(don.statut === "paye" || don.status === "completed")
                               ? <div className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Payé</div>
                               : <div className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Non payé</div>}
                           </div>
                         </div>
-                        {don.description && (
-                          <p className="text-xs text-slate-500 mt-2 italic">"{don.description}"</p>
+                        {(don.message || don.description) && (
+                          <p className="text-xs text-slate-500 mt-2 italic">"{don.message || don.description}"</p>
                         )}
                       </div>
                     );

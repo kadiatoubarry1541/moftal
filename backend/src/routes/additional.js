@@ -1,5 +1,4 @@
 import express from 'express';
-import { Op } from 'sequelize';
 import { authenticateToken, requireAdmin, requireMuslimOrAdmin } from '../middleware/auth.js';
 import {
   HistorySection,
@@ -297,70 +296,6 @@ router.post('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, asyn
   } catch (error) {
     console.error('Erreur lors du calcul:', error);
     res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ─── Routes /api/developpement ───────────────────────────────────────────────
-
-// GET /api/developpement/stats → total collecté et répartition par domaine
-router.get('/developpement/stats', authenticateToken, async (req, res) => {
-  try {
-    // Seuls les dons réellement payés (date de paiement posée par le paiement)
-    const dons = await Donation.findAll({ where: { donationType: 'developpement', status: 'completed', completedAt: { [Op.ne]: null } } });
-    const totalCollecte = dons.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
-    const parDomaine = {};
-    dons.forEach(d => {
-      parDomaine[d.recipient] = (parDomaine[d.recipient] || 0) + parseFloat(d.amount || 0);
-    });
-    res.json({ success: true, totalCollecte, parDomaine, nbDonneurs: dons.length });
-  } catch (error) {
-    console.error('Erreur /api/developpement/stats:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// GET /api/developpement/mes-dons → dons de l'utilisateur connecté
-router.get('/developpement/mes-dons', authenticateToken, async (req, res) => {
-  try {
-    const dons = await Donation.findAll({
-      where: { donor: req.user.numeroH, donationType: 'developpement' },
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({ success: true, dons });
-  } catch (error) {
-    console.error('Erreur /api/developpement/mes-dons:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// POST /api/developpement/donate → prépare un don pour le développement.
-// Le don est enregistré « en attente » : il ne compte qu'une fois PAYÉ (paiement
-// Djomy, objet « don_developpement », voir payment.js). Avant, il était noté
-// « complété » sans aucun paiement et gonflait les totaux affichés.
-router.post('/developpement/donate', authenticateToken, async (req, res) => {
-  try {
-    const { domaine, domaineLabel, message } = req.body || {};
-    const user = req.user;
-    const montant = Math.round(Number(req.body?.amount));
-    if (!Number.isFinite(montant) || montant < 1000) {
-      return res.status(400).json({ success: false, message: 'Montant minimum : 1 000 GNF.' });
-    }
-    const don = await Donation.create({
-      donor: user.numeroH,
-      donorName: `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH,
-      recipient: String(domaine || 'general').slice(0, 100),
-      recipientName: String(domaineLabel || 'Fonds Général de Développement').slice(0, 200),
-      amount: montant,
-      currency: 'GNF',
-      type: 'money',
-      donationType: 'developpement',
-      description: String(message || `Don pour le développement — ${domaineLabel || 'Fonds Général'}`).slice(0, 2000),
-      status: 'pending'
-    });
-    res.status(201).json({ success: true, don, donId: don.id, montant });
-  } catch (error) {
-    console.error('Erreur /api/developpement/donate:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
