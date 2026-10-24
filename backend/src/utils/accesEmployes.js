@@ -49,6 +49,19 @@ async function accesActif(tenantCode, numeroH) {
   return row || null;
 }
 
+/** L'utilisateur a-t-il un accès employé actif dans au moins un établissement ? */
+export async function aUnAccesEmploye(numeroH) {
+  if (!numeroH) return false;
+  try {
+    await preparerTableAcces();
+    const [row] = await sequelize.query(
+      `SELECT 1 FROM management_staff_access WHERE LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`,
+      { replacements: { nh: numeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+    return !!row;
+  } catch { return false; }
+}
+
 // L'utilisateur est-il employé actif de l'établissement visé par cette URL
 // de gestion (/api/<secteur>-mgmt/<code>/…) ?
 export async function estEmployeDeLaGestion(numeroH, url) {

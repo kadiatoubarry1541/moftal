@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
-import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion } from '../utils/accesEmployes.js';
+import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion, aUnAccesEmploye } from '../utils/accesEmployes.js';
 
 // NumeroH des comptes administrateurs spéciaux
 export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
@@ -73,6 +73,7 @@ const PROVISIONAL_PRO_SPACE_ROUTES = [
   /^\/api\/payment\//,                 // abonnement de la gestion
   /^\/api\/djomy\/(initiate|gateway|status\/)/, // paiement Djomy (PaymentModal) : payer / débloquer son abonnement
   /^\/api\/education/,                  // outils de la gestion école
+  /^\/api\/upload\/?(\?|$)/,             // envoi d'une photo / vidéo depuis la gestion
 ];
 
 async function ownsApprovedProAccount(numeroH) {
@@ -162,7 +163,9 @@ export const authenticate = async (req, res, next) => {
           // même si son propre profil n'est pas encore complété.
           && !(await estEmployeDeLaGestion(user.numeroH, req.originalUrl))
           // Enseignant, parent ou élève ajouté par l'école : pareil, dans cette école
-          && !(await estMembreEcoleDeLaGestion(user.numeroH, req.originalUrl))) {
+          && !(await estMembreEcoleDeLaGestion(user.numeroH, req.originalUrl))
+          // Envoi d'un fichier (photo, vidéo) par un employé, depuis sa gestion
+          && !(/^\/api\/upload\/?(\?|$)/.test(req.originalUrl || '') && await aUnAccesEmploye(user.numeroH))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',
