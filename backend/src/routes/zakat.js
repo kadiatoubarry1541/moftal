@@ -176,34 +176,33 @@ router.post('/donner-au-pauvre/:poorId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Personne introuvable ou inactive.' });
     }
 
-    // Vérifier que le donateur a assez de solde (atomique — pas de triche)
-    const [, meta] = await sequelize.query(`
-      UPDATE zakat_comptes_donateurs
-      SET solde = solde - :m, total_donne = total_donne + :m, updated_at = NOW()
-      WHERE numero_h = :numeroH AND solde >= :m
-    `, { replacements: { m, numeroH } });
-
-    const lignesModifiees = meta?.rowCount ?? meta?.affectedRows ?? 0;
-    if (lignesModifiees === 0) {
+    // Débit du donateur, crédit du bénéficiaire et opération : tout ou rien
+    // (une panne entre les deux ne fait plus disparaître l'argent)
+    const nomPauvre = `${pauvre.prenom} ${pauvre.nom_famille}`;
+    const debite = await sequelize.transaction(async (transaction) => {
+      const [, meta] = await sequelize.query(`
+        UPDATE zakat_comptes_donateurs
+        SET solde = solde - :m, total_donne = total_donne + :m, updated_at = NOW()
+        WHERE numero_h = :numeroH AND solde >= :m
+      `, { replacements: { m, numeroH }, transaction });
+      if ((meta?.rowCount ?? meta?.affectedRows ?? 0) === 0) return false;
+      await sequelize.query(`
+        UPDATE zakat_poor_people
+        SET solde_recu = solde_recu + :m, total_recu = total_recu + :m, updated_at = NOW()
+        WHERE id = :poorId
+      `, { replacements: { m, poorId }, transaction });
+      await sequelize.query(`
+        INSERT INTO zakat_operations (type, de_numero_h, de_nom, vers_id, vers_nom, montant, currency, description, statut, created_at)
+        VALUES ('don_au_pauvre', :numeroH, :nomDonateur, :poorId, :nomPauvre, :m, 'GNF', :desc, 'confirme', NOW())
+      `, { replacements: { numeroH, nomDonateur, poorId, nomPauvre, m, desc: description || `Zakat de ${nomDonateur} → ${nomPauvre}` }, transaction });
+      return true;
+    });
+    if (!debite) {
       return res.status(400).json({
         success: false,
         message: 'Solde Zakat insuffisant. Déposez d\'abord de l\'argent dans votre compte Zakat.'
       });
     }
-
-    // Créditer le pauvre
-    const nomPauvre = `${pauvre.prenom} ${pauvre.nom_famille}`;
-    await sequelize.query(`
-      UPDATE zakat_poor_people
-      SET solde_recu = solde_recu + :m, total_recu = total_recu + :m, updated_at = NOW()
-      WHERE id = :poorId
-    `, { replacements: { m, poorId } });
-
-    // Enregistrer l'opération
-    await sequelize.query(`
-      INSERT INTO zakat_operations (type, de_numero_h, de_nom, vers_id, vers_nom, montant, currency, description, statut, created_at)
-      VALUES ('don_au_pauvre', :numeroH, :nomDonateur, :poorId, :nomPauvre, :m, 'GNF', :desc, 'confirme', NOW())
-    `, { replacements: { numeroH, nomDonateur, poorId, nomPauvre, m, desc: description || `Zakat de ${nomDonateur} → ${nomPauvre}` } });
 
     res.json({
       success: true,
@@ -288,56 +287,58 @@ router.post('/payer-professionnel', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous n\'êtes pas inscrit comme bénéficiaire Zakat.' });
     }
 
-    // Vérifier et débiter le solde du pauvre (atomique)
-    const [, meta] = await sequelize.query(`
-      UPDATE zakat_poor_people
-      SET solde_recu = solde_recu - :m, updated_at = NOW()
-      WHERE id = :poorId AND solde_recu >= :m
-    `, { replacements: { m, poorId: pauvre.id } });
+    // Le professionnel est vérifié AVANT tout débit : compte approuvé et actif,
+    // du secteur choisi (clinique → santé, fournisseur → alimentation). Sinon
+    // l'argent de la Zakat pouvait partir vers n'importe quel compte.
+    const proAccount = await ProfessionalAccount.findByPk(proAccountId);
+    const typeAttendu = type === 'clinique' ? 'clinic' : 'supplier';
+    if (!proAccount || proAccount.status !== 'approved' || proAccount.isActive === false || proAccount.type !== typeAttendu) {
+      return res.status(404).json({ success: false, message: type === 'clinique' ? 'Clinique introuvable. Aucun débit effectué.' : 'Fournisseur introuvable. Aucun débit effectué.' });
+    }
 
-    const lignesModifiees = meta?.rowCount ?? meta?.affectedRows ?? 0;
-    if (lignesModifiees === 0) {
+    // Débit du bénéficiaire, crédit du Moftal Pay Pro et opération : tout ou
+    // rien, comptes verrouillés
+    const typeOp = type === 'clinique' ? 'paiement_clinique' : 'paiement_fournisseur';
+    const nomPauvre = `${pauvre.prenom} ${pauvre.nom_famille}`;
+    const debite = await sequelize.transaction(async (transaction) => {
+      const [, meta] = await sequelize.query(`
+        UPDATE zakat_poor_people
+        SET solde_recu = solde_recu - :m, updated_at = NOW()
+        WHERE id = :poorId AND solde_recu >= :m
+      `, { replacements: { m, poorId: pauvre.id }, transaction });
+      if ((meta?.rowCount ?? meta?.affectedRows ?? 0) === 0) return false;
+
+      let comptePro = await ProfessionalWallet.findOne({ where: { proAccountId }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!comptePro) {
+        comptePro = await ProfessionalWallet.create({
+          proAccountId,
+          ownerNumeroH: proAccount.ownerNumeroH,
+          nomPro:  proAccount.name,
+          typePro: proAccount.type,
+        }, { transaction });
+      }
+      await comptePro.update({
+        solde:     Number(comptePro.solde)     + m,
+        totalRecu: Number(comptePro.totalRecu) + m,
+      }, { transaction });
+
+      await sequelize.query(`
+        INSERT INTO zakat_operations (type, de_numero_h, de_nom, vers_id, vers_nom, montant, currency, description, statut, created_at)
+        VALUES (:typeOp, :numeroH, :nomPauvre, :proAccountId, :nomPro, :m, 'GNF', :desc, 'confirme', NOW())
+      `, { replacements: {
+        typeOp, numeroH, nomPauvre, proAccountId,
+        nomPro: proAccount.name,
+        m,
+        desc: description || `Paiement ${type} depuis solde Zakat → ${proAccount.name}`
+      }, transaction });
+      return true;
+    });
+    if (!debite) {
       return res.status(400).json({
         success: false,
         message: `Solde Zakat insuffisant. Disponible : ${parseFloat(pauvre.solde_recu).toLocaleString('fr-GN')} GNF`
       });
     }
-
-    // Vérifier que le professionnel existe
-    const proAccount = await ProfessionalAccount.findByPk(proAccountId);
-    if (!proAccount) {
-      // Rembourser si pro introuvable
-      await sequelize.query(`UPDATE zakat_poor_people SET solde_recu = solde_recu + :m WHERE id = :poorId`, { replacements: { m, poorId: pauvre.id } });
-      return res.status(404).json({ success: false, message: 'Professionnel introuvable. Paiement annulé.' });
-    }
-
-    // Créditer le Moftal Pay Pro du professionnel (créer si besoin)
-    let comptePro = await ProfessionalWallet.findOne({ where: { proAccountId } });
-    if (!comptePro) {
-      comptePro = await ProfessionalWallet.create({
-        proAccountId,
-        ownerNumeroH: proAccount.ownerNumeroH,
-        nomPro:  proAccount.name,
-        typePro: proAccount.type,
-      });
-    }
-    await comptePro.update({
-      solde:     Number(comptePro.solde)     + m,
-      totalRecu: Number(comptePro.totalRecu) + m,
-    });
-
-    // Enregistrer l'opération
-    const typeOp = type === 'clinique' ? 'paiement_clinique' : 'paiement_fournisseur';
-    const nomPauvre = `${pauvre.prenom} ${pauvre.nom_famille}`;
-    await sequelize.query(`
-      INSERT INTO zakat_operations (type, de_numero_h, de_nom, vers_id, vers_nom, montant, currency, description, statut, created_at)
-      VALUES (:typeOp, :numeroH, :nomPauvre, :proAccountId, :nomPro, :m, 'GNF', :desc, 'confirme', NOW())
-    `, { replacements: {
-      typeOp, numeroH, nomPauvre, proAccountId,
-      nomPro: proAccount.name,
-      m,
-      desc: description || `Paiement ${type} depuis solde Zakat → ${proAccount.name}`
-    }});
 
     res.json({
       success: true,
