@@ -86,8 +86,11 @@ export function ReçuTransaction({
           <div className="recu">
             {/* Header */}
             <div className="header" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', padding: '24px', textAlign: 'center', color: 'white' }}>
+              {/* Logo de l'établissement en entier (jamais rogné ni remplacé par un emoji) */}
               {logoUrl ? (
-                <img src={logoUrl} alt={proNom} className="logo" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', marginBottom: 10, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                <img src={logoUrl} alt={proNom} className="logo" style={{ width: 72, height: 72, objectFit: 'contain', background: '#fff', borderRadius: 12, border: '3px solid rgba(255,255,255,0.5)', marginBottom: 10, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+              ) : proNom ? (
+                <div style={{ width: 72, height: 72, borderRadius: 12, background: 'rgba(255,255,255,0.2)', fontSize: 32, fontWeight: 800, lineHeight: '72px', margin: '0 auto 10px' }}>{proNom.trim().charAt(0).toUpperCase()}</div>
               ) : (
                 <div style={{ fontSize: 40, marginBottom: 8 }}>💰</div>
               )}

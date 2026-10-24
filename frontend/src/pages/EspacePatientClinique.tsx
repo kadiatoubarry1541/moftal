@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 const TEAL = "#1a8f1a";
@@ -203,7 +204,8 @@ export default function EspacePatientClinique() {
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {clinic?.logo_url ? <img src={clinic.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>✚</span>}
+                {/* Logo de la clinique, en entier — jamais un symbole à sa place */}
+                <LogoEtablissement src={clinic?.logo_url} name={clinic?.name} type="clinic" fontSize={16} />
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: "white" }}>{clinic?.name}</div>
