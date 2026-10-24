@@ -102,114 +102,16 @@ export default function TrouverProfesseur() {
         const data = await response.json();
         setProfesseurs(data.professors || []);
       } else {
-        setProfesseurs(getDefaultProfessors());
+        setProfesseurs([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des professeurs:', error);
-      setProfesseurs(getDefaultProfessors());
+      setProfesseurs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultProfessors = (): Professor[] => [
-    {
-      id: '1',
-      name: 'Dr. Alpha Barry',
-      specialties: ['Développement Web', 'Base de données', 'JavaScript'],
-      qualifications: ['Master en Informatique', 'Certification AWS', 'Certification Google Cloud'],
-      experience: 8,
-      city: 'Conakry',
-      address: 'Commune de Kaloum',
-      phone: '+224 123 456 789',
-      email: 'alpha.barry@example.com',
-      consultationFee: 50000,
-      availability: { monday: '09:00-17:00', tuesday: '09:00-17:00', wednesday: '09:00-17:00' },
-      languages: ['français', 'anglais'],
-      isActive: true,
-      isAvailable: true,
-      ratings: [],
-      reviews: [],
-      createdBy: 'G0C0P0R0E0F0 0',
-      bio: 'Expert en développement web avec plus de 8 ans d\'expérience. Spécialisé dans les technologies modernes.',
-      education: ['Master en Informatique - Université de Conakry', 'Certification AWS Solutions Architect'],
-      certifications: ['AWS Solutions Architect', 'Google Cloud Professional', 'Microsoft Azure'],
-      teachingStyle: 'Pratique et interactif',
-      subjects: ['React', 'Node.js', 'PostgreSQL', 'JavaScript', 'TypeScript']
-    },
-    {
-      id: '2',
-      name: 'Prof. Fatoumata Diallo',
-      specialties: ['Gestion de Projet', 'Leadership', 'Management'],
-      qualifications: ['MBA', 'PMP Certification', 'Certification Agile'],
-      experience: 12,
-      city: 'Conakry',
-      address: 'Commune de Dixinn',
-      phone: '+224 987 654 321',
-      email: 'fatoumata.diallo@example.com',
-      consultationFee: 75000,
-      availability: { wednesday: '10:00-18:00', thursday: '10:00-18:00', friday: '10:00-18:00' },
-      languages: ['français', 'anglais', 'pular'],
-      isActive: true,
-      isAvailable: true,
-      ratings: [],
-      reviews: [],
-      createdBy: 'G0C0P0R0E0F0 0',
-      bio: 'Experte en gestion de projet avec une expérience internationale. Formée aux meilleures pratiques.',
-      education: ['MBA - INSEAD', 'Master en Management - Université de Conakry'],
-      certifications: ['PMP', 'Certified Scrum Master', 'Agile Certified Practitioner'],
-      teachingStyle: 'Structuré et méthodique',
-      subjects: ['Gestion de projet', 'Leadership', 'Agile', 'Scrum', 'Management']
-    },
-    {
-      id: '3',
-      name: 'Mme. Aminata Traoré',
-      specialties: ['Marketing Digital', 'Réseaux sociaux', 'E-commerce'],
-      qualifications: ['Master en Marketing', 'Certification publicité en ligne', 'Certification marketing digital'],
-      experience: 6,
-      city: 'Conakry',
-      address: 'Commune de Ratoma',
-      phone: '+224 555 123 456',
-      email: 'aminata.traore@example.com',
-      consultationFee: 40000,
-      availability: { monday: '14:00-20:00', tuesday: '14:00-20:00', saturday: '09:00-15:00' },
-      languages: ['français', 'anglais'],
-      isActive: true,
-      isAvailable: true,
-      ratings: [],
-      reviews: [],
-      createdBy: 'G0C0P0R0E0F0 0',
-      bio: 'Spécialiste du marketing digital avec une expertise en e-commerce et réseaux sociaux.',
-      education: ['Master en Marketing - Université de Conakry', 'Certification Digital Marketing'],
-      certifications: ['Certifié publicité en ligne', 'Marketing digital', 'Marketing de contenu'],
-      teachingStyle: 'Créatif et pratique',
-      subjects: ['SEO', 'Publicité en ligne', 'Analyse d\'audience', 'Content Marketing', 'E-commerce']
-    },
-    {
-      id: '4',
-      name: 'M. Mamadou Bah',
-      specialties: ['Comptabilité', 'Fiscalité', 'Audit'],
-      qualifications: ['Expert-Comptable', 'Master en Finance', 'Certification IFRS'],
-      experience: 15,
-      city: 'Conakry',
-      address: 'Commune de Matam',
-      phone: '+224 777 888 999',
-      email: 'mamadou.bah@example.com',
-      consultationFee: 60000,
-      availability: { monday: '08:00-16:00', tuesday: '08:00-16:00', wednesday: '08:00-16:00' },
-      languages: ['français', 'anglais', 'soussou'],
-      isActive: true,
-      isAvailable: true,
-      ratings: [],
-      reviews: [],
-      createdBy: 'G0C0P0R0E0F0 0',
-      bio: 'Expert-comptable avec une longue expérience dans l\'audit et la fiscalité.',
-      education: ['Expert-Comptable', 'Master en Finance - Université de Conakry'],
-      certifications: ['Expert-Comptable', 'Certification IFRS', 'Certification Audit'],
-      teachingStyle: 'Rigoureux et détaillé',
-      subjects: ['Comptabilité générale', 'Fiscalité', 'Audit', 'IFRS', 'Excel avancé']
-    }
-  ];
 
   const requestProfessor = async () => {
     if (!selectedProfessor || !professorRequest.numeroH.trim()) {

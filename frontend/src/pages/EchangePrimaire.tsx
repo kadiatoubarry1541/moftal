@@ -177,7 +177,7 @@ export default function EchangePrimaire() {
         const geo = getUserGeoContext();
         setRawProducts(productsData.products || []);
       } else {
-        setRawProducts(getDefaultProducts());
+        setRawProducts([]);
       }
 
       // Charger les fournisseurs
@@ -198,72 +198,13 @@ export default function EchangePrimaire() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setRawProducts(getDefaultProducts());
+      setRawProducts([]);
       setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultProducts = (): ExchangeProduct[] => [
-    {
-      id: '1',
-      title: 'Riz Local Premium',
-      description: 'Riz de qualité supérieure cultivé localement, idéal pour la consommation familiale.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 15000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Ville Principale',
-      seller: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      sellerName: `${userData?.prenom} ${userData?.nomFamille}`,
-      contactInfo: { phone: '+224 123 456 789' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'Huile de Palme Artisanale',
-      description: 'Huile de palme extraite artisanalement, sans conservateurs chimiques.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 8000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Kindia',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Producteur Local',
-      contactInfo: { phone: '+224 987 654 321' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Coton Biologique',
-      description: 'Coton cultivé sans pesticides, parfait pour la confection de vêtements.',
-      category: 'Textile',
-      level: 'primaire',
-      price: 25000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Faranah',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Coopérative Agricole',
-      contactInfo: { phone: '+224 555 123 456' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    }
-  ];
 
   const createProduct = async () => {
     try {

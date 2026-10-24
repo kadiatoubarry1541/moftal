@@ -121,112 +121,16 @@ export default function Reflechissons() {
         const data = await response.json();
         setReflections(data.reflections || []);
       } else {
-        setReflections(getDefaultReflections());
+        setReflections([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des réflexions:', error);
-      setReflections(getDefaultReflections());
+      setReflections([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultReflections = (): ReflectionContent[] => [
-    {
-      id: '1',
-      title: 'La Prière du Matin',
-      description: 'Vidéo inspirante sur l\'importance de la prière matinale et ses bienfaits spirituels',
-      type: 'video',
-      content: { videoUrl: '/videos/priere-matin.mp4', transcript: 'Dans cette vidéo, nous explorons...' },
-      religion: 'Islam',
-      category: 'priere',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      duration: 15,
-      views: 1250,
-      likes: 89,
-      tags: ['prière', 'matin', 'spiritualité', 'guidance']
-    },
-    {
-      id: '2',
-      title: 'Versets de Paix',
-      description: 'Audio contenant des versets apaisants pour la méditation et la réflexion',
-      type: 'audio',
-      content: { audioUrl: '/audio/versets-paix.mp3', transcript: 'Écoutez ces versets sacrés...' },
-      religion: 'Islam',
-      category: 'verset',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      duration: 8,
-      views: 890,
-      likes: 67,
-      tags: ['versets', 'paix', 'méditation', 'audio']
-    },
-    {
-      id: '3',
-      title: 'Réflexion Spirituelle du Jour',
-      description: 'Message quotidien de guidance spirituelle pour nourrir votre foi',
-      type: 'message',
-      content: { text: 'La foi est un voyage intérieur qui nous guide vers la paix et la sagesse. Chaque jour, nous avons l\'opportunité de renforcer notre connexion avec le Divin à travers la prière, la méditation et les actes de bonté. Rappelons-nous que la patience et la gratitude sont les piliers d\'une vie spirituelle épanouie.' },
-      religion: 'Islam',
-      category: 'reflexion',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      views: 2100,
-      likes: 156,
-      tags: ['réflexion', 'guidance', 'spiritualité', 'quotidien']
-    },
-    {
-      id: '4',
-      title: 'Les Psaumes de David',
-      description: 'Audio des plus beaux psaumes pour la méditation chrétienne',
-      type: 'audio',
-      content: { audioUrl: '/audio/psaumes-david.mp3', transcript: 'Les psaumes de David...' },
-      religion: 'Christianisme',
-      category: 'psaume',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      duration: 12,
-      views: 750,
-      likes: 45,
-      tags: ['psaumes', 'David', 'méditation', 'chrétien']
-    },
-    {
-      id: '5',
-      title: 'Le Sermon de la Montagne',
-      description: 'Vidéo expliquant les enseignements du Sermon de la Montagne',
-      type: 'video',
-      content: { videoUrl: '/videos/sermon-montagne.mp4', transcript: 'Dans ce sermon historique...' },
-      religion: 'Christianisme',
-      category: 'enseignement',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      duration: 25,
-      views: 980,
-      likes: 78,
-      tags: ['sermon', 'enseignement', 'Jésus', 'montagne']
-    },
-    {
-      id: '6',
-      title: 'Méditation sur la Gratitude',
-      description: 'Message inspirant sur l\'importance de la gratitude dans notre vie spirituelle',
-      type: 'message',
-      content: { text: 'La gratitude est une porte vers la paix intérieure. Quand nous reconnaissons les bénédictions dans notre vie, même les plus petites, nous ouvrons notre cœur à plus de joie et de sérénité. Chaque matin, prenons un moment pour remercier pour ce que nous avons, et chaque soir, réfléchissons sur les leçons apprises.' },
-      religion: 'Islam',
-      category: 'meditation',
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      views: 1650,
-      likes: 134,
-      tags: ['gratitude', 'méditation', 'paix', 'bénédictions']
-    }
-  ];
 
   const createReflection = async () => {
     try {

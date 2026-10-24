@@ -95,102 +95,16 @@ export default function InscriptionFormation() {
         const data = await response.json();
         setFormations(data.formations || []);
       } else {
-        setFormations(getDefaultFormations());
+        setFormations([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des formations:', error);
-      setFormations(getDefaultFormations());
+      setFormations([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultFormations = (): Formation[] => [
-    {
-      id: '1',
-      title: 'Développement Web Full Stack',
-      description: 'Formation complète en développement web avec React, Node.js et PostgreSQL',
-      category: 'tertiaire',
-      duration: 6,
-      level: 'intermédiaire',
-      requirements: { prerequis: 'Connaissances de base en programmation' },
-      curriculum: ['HTML/CSS', 'JavaScript', 'React', 'Node.js', 'PostgreSQL'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 30,
-      price: 500000,
-      instructor: 'Dr. Alpha Barry',
-      startDate: '2024-01-15',
-      endDate: '2024-07-15',
-      schedule: 'Lundi, Mercredi, Vendredi 18h-20h',
-      location: 'Centre de Formation Tech, Conakry',
-      prerequisites: ['JavaScript de base', 'HTML/CSS'],
-      skills: ['React', 'Node.js', 'PostgreSQL', 'API REST']
-    },
-    {
-      id: '2',
-      title: 'Gestion de Projet',
-      description: 'Apprendre les méthodologies de gestion de projet',
-      category: 'professionnel',
-      duration: 3,
-      level: 'débutant',
-      requirements: { prerequis: 'Aucun prérequis' },
-      curriculum: ['Planification', 'Suivi', 'Communication'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 25,
-      price: 300000,
-      instructor: 'Prof. Fatoumata Diallo',
-      startDate: '2024-02-01',
-      endDate: '2024-05-01',
-      schedule: 'Samedi 9h-12h',
-      location: 'Institut de Management, Conakry',
-      prerequisites: [],
-      skills: ['Planification', 'Gestion d\'équipe', 'Communication']
-    },
-    {
-      id: '3',
-      title: 'Marketing Digital',
-      description: 'Formation complète en marketing digital et réseaux sociaux',
-      category: 'professionnel',
-      duration: 4,
-      level: 'débutant',
-      requirements: { prerequis: 'Aucun prérequis' },
-      curriculum: ['SEO', 'Réseaux sociaux', 'Publicité en ligne', 'Analytics'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 20,
-      price: 400000,
-      instructor: 'Mme. Aminata Traoré',
-      startDate: '2024-03-01',
-      endDate: '2024-07-01',
-      schedule: 'Dimanche 14h-17h',
-      location: 'Centre de Formation Digital, Conakry',
-      prerequisites: [],
-      skills: ['SEO', 'Publicité en ligne', 'Analyse d\'audience', 'Content Marketing']
-    },
-    {
-      id: '4',
-      title: 'Comptabilité Générale',
-      description: 'Formation en comptabilité générale et gestion financière',
-      category: 'tertiaire',
-      duration: 5,
-      level: 'intermédiaire',
-      requirements: { prerequis: 'Mathématiques de base' },
-      curriculum: ['Comptabilité générale', 'Fiscalité', 'Audit', 'Gestion financière'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 25,
-      price: 450000,
-      instructor: 'M. Mamadou Bah',
-      startDate: '2024-01-20',
-      endDate: '2024-06-20',
-      schedule: 'Mardi, Jeudi 18h-20h',
-      location: 'École de Commerce, Conakry',
-      prerequisites: ['Mathématiques de base'],
-      skills: ['Comptabilité', 'Fiscalité', 'Audit', 'Excel']
-    }
-  ];
 
   const registerToFormation = async () => {
     if (!selectedFormation || !registrationData.numeroH.trim()) {

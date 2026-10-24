@@ -177,11 +177,11 @@ export default function MesCours() {
         const data = await response.json();
         setCourses(data.courses || []);
       } else {
-        setCourses(getDefaultCourses());
+        setCourses([]);
       }
     } catch (error) {
       console.error('Erreur:', error);
-      setCourses(getDefaultCourses());
+      setCourses([]);
     }
   };
 
@@ -211,11 +211,11 @@ export default function MesCours() {
         const data = await response.json();
         setBooks(data.books || []);
       } else {
-        setBooks(getDefaultBooks());
+        setBooks([]);
       }
     } catch (error) {
       console.error('Erreur:', error);
-      setBooks(getDefaultBooks());
+      setBooks([]);
     }
   };
 
@@ -241,59 +241,7 @@ export default function MesCours() {
     }
   };
 
-  const getDefaultCourses = (): Course[] => [
-    {
-      id: '1',
-      title: 'Introduction à la programmation',
-      description: 'Cours complet pour débuter en programmation',
-      category: 'video',
-      content: [],
-      progress: 45,
-      completed: false,
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      title: 'Grammaire française',
-      description: 'Améliorer votre grammaire française',
-      category: 'audio',
-      content: [],
-      progress: 60,
-      completed: false,
-      createdAt: '2024-01-10T10:00:00Z'
-    },
-    {
-      id: '3',
-      title: 'Histoire de la Guinée',
-      description: 'Découvrez l\'histoire de votre pays',
-      category: 'ecrit',
-      content: [],
-      progress: 30,
-      completed: false,
-      createdAt: '2024-01-20T10:00:00Z'
-    }
-  ];
 
-  const getDefaultBooks = (): Book[] => [
-    {
-      id: '1',
-      title: 'Les fondateurs de la Guinée',
-      author: 'Alpha Diallo',
-      description: 'Biographie des grands hommes de la Guinée',
-      category: 'Histoire',
-      pages: 250,
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      title: 'Cuisine guinéenne traditionnelle',
-      author: 'Mariama Camara',
-      description: 'Recettes et traditions culinaires',
-      category: 'Cuisine',
-      pages: 180,
-      createdAt: '2024-01-10T10:00:00Z'
-    }
-  ];
 
   const updateProgress = (courseId: string, contentId: string) => {
     // Mettre à jour le progrès du cours

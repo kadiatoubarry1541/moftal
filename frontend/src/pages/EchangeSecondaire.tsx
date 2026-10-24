@@ -180,7 +180,7 @@ export default function EchangeSecondaire() {
         const productsData = await productsResponse.json();
         setRawProducts(productsData.products || []);
       } else {
-        setRawProducts(getDefaultProducts());
+        setRawProducts([]);
       }
 
       // Charger les fournisseurs
@@ -201,91 +201,13 @@ export default function EchangeSecondaire() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setRawProducts(getDefaultProducts());
+      setRawProducts([]);
       setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultProducts = (): ExchangeProduct[] => [
-    {
-      id: '1',
-      title: 'Téléphone Portable Samsung',
-      description: 'Smartphone Samsung Galaxy en excellent état, avec accessoires complets.',
-      category: 'Électronique',
-      level: 'secondaire',
-      price: 450000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Ville Principale',
-      seller: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      sellerName: `${userData?.prenom} ${userData?.nomFamille}`,
-      contactInfo: { phone: '+224 123 456 789' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'Machine à Coudre Industrielle',
-      description: 'Machine à coudre professionnelle pour atelier de couture.',
-      category: 'Machinerie',
-      level: 'secondaire',
-      price: 1200000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Kindia',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Atelier Textile ABC',
-      contactInfo: { phone: '+224 987 654 321' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Générateur Diesel 5KVA',
-      description: 'Générateur diesel de 5KVA, idéal pour usage professionnel.',
-      category: 'Équipement',
-      level: 'secondaire',
-      price: 2500000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'moyen',
-      location: 'Labé',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Équipements Pro',
-      contactInfo: { phone: '+224 555 123 456' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '4',
-      title: 'Véhicule Utilitaire',
-      description: 'Pick-up Toyota Hilux 2018, parfait pour transport de marchandises.',
-      category: 'Automobile',
-      level: 'secondaire',
-      price: 45000000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Ville Principale',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Auto Import',
-      contactInfo: { phone: '+224 666 777 888' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    }
-  ];
 
   const createProduct = async () => {
     try {

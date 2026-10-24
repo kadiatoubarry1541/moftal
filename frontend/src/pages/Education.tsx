@@ -626,11 +626,11 @@ export default function Education() {
         const data = await response.json();
         setStages(data.stages || []);
       } else {
-        setStages(getDefaultStages());
+        setStages([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des stages:', error);
-      setStages(getDefaultStages());
+      setStages([]);
     }
   };
 
@@ -707,17 +707,14 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/request-professor`, {
+      const response = await fetch(`${config.API_BASE_URL}/education/professors/${encodeURIComponent(selectedProfessor.id)}/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          professorId: selectedProfessor.id,
-          studentNumeroH: userData?.numeroH || professorRequestForm.numeroH,
-          subject: professorRequestForm.subject,
-          message: professorRequestForm.message
+          requestMessage: [professorRequestForm.subject, professorRequestForm.message].filter(Boolean).join(' — ')
         })
       });
       
@@ -726,7 +723,8 @@ export default function Education() {
         setShowProfessorRequestForm(false);
         loadMyRequests();
       } else {
-        alert('Erreur lors de l\'envoi de la demande');
+        const d = await response.json().catch(() => null);
+        alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
       console.error('Erreur lors de la demande:', error);
@@ -750,17 +748,14 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/request-stage`, {
+      const response = await fetch(`${config.API_BASE_URL}/education/stages/${encodeURIComponent(selectedStage.id)}/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          stageId: selectedStage.id,
-          studentNumeroH: numeroH,
-          subject: stageRequestForm.subject,
-          message: stageRequestForm.message
+          motivation: [stageRequestForm.subject, stageRequestForm.message].filter(Boolean).join(' — ')
         })
       });
       
@@ -769,7 +764,8 @@ export default function Education() {
         setShowStageRequestForm(false);
         loadMyStageRequests();
       } else {
-        alert('Erreur lors de l\'envoi de la demande');
+        const d = await response.json().catch(() => null);
+        alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
       console.error('Erreur lors de la demande de stage:', error);
@@ -777,89 +773,7 @@ export default function Education() {
     }
   };
 
-  const getDefaultProfessors = (): Professor[] => [
-    {
-      id: '1',
-      name: 'Dr. Alpha Diallo',
-      specialties: ['Mathématiques', 'Physique'],
-      qualifications: ['PhD Mathématiques', 'Master Physique'],
-      experience: 15,
-      city: 'Conakry',
-      address: 'Hamdallaye',
-      phone: '+224 123 456 789',
-      email: 'alpha.diallo@email.com',
-      consultationFee: 25000,
-      availability: { monday: true, tuesday: true },
-      languages: ['Français', 'Anglais'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.8,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      name: 'Prof. Fatou Camara',
-      specialties: ['Français', 'Littérature'],
-      qualifications: ['Master Français', 'Licence Littérature'],
-      experience: 10,
-      city: 'Conakry',
-      address: 'Kaloum',
-      phone: '+224 987 654 321',
-      email: 'fatou.camara@email.com',
-      consultationFee: 20000,
-      availability: { wednesday: true, thursday: true },
-      languages: ['Français', 'Soussou'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.5,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
-  const getDefaultStages = (): Stage[] => [
-    {
-      id: '1',
-      title: 'Stage en Arabe - Coran',
-      description: 'Apprenez le Coran et la langue arabe',
-      specialties: ['Coran', 'Arabe', 'Tajwid'],
-      qualifications: ['Maîtrise du Coran', 'Diplôme en Arabe'],
-      experience: 10,
-      city: 'Conakry',
-      address: 'Hamdallaye',
-      phone: '+224 123 456 789',
-      email: 'stage.arabe@email.com',
-      consultationFee: 15000,
-      availability: { monday: true, tuesday: true, wednesday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.9,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      title: 'Stage en Arabe - Hadith',
-      description: 'Étude des Hadiths et sciences islamiques',
-      specialties: ['Hadith', 'Fiqh', 'Arabe'],
-      qualifications: ['Maîtrise en Hadith', 'Diplôme en Fiqh'],
-      experience: 8,
-      city: 'Conakry',
-      address: 'Kaloum',
-      phone: '+224 987 654 321',
-      email: 'stage.hadith@email.com',
-      consultationFee: 18000,
-      availability: { thursday: true, friday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.7,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
   const getDefaultCourses = (): Course[] => [
     {

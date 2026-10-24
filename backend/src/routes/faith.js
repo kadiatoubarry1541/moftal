@@ -53,7 +53,7 @@ router.get('/content', async (req, res) => {
 // @access  Authentifié
 router.post('/content', async (req, res) => {
   try {
-    const { title, description, type, content, category, religion, createdBy } = req.body;
+    const { title, description, type, content, category, religion } = req.body;
     
     const faithContent = await FaithContent.create({
       title,
@@ -62,7 +62,8 @@ router.post('/content', async (req, res) => {
       content,
       category,
       religion,
-      createdBy: createdBy || req.user.numeroH
+      // Toujours au nom de la personne connectée (jamais un auteur choisi par le téléphone)
+      createdBy: req.user.numeroH
     });
     
     res.status(201).json({
@@ -76,6 +77,38 @@ router.post('/content', async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la création du contenu'
     });
+  }
+});
+
+// ========== RÉFLÉCHISSONS (page /reflechissons) ==========
+// Les réflexions sont le contenu de foi publié par les membres.
+router.get('/reflections', async (req, res) => {
+  try {
+    const reflections = await FaithContent.findAll({ where: { isActive: true }, order: [['created_at', 'DESC']], limit: 200 });
+    res.json({ success: true, reflections });
+  } catch (error) {
+    console.error('Erreur réflexions:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors du chargement des réflexions' });
+  }
+});
+
+router.post('/reflections', async (req, res) => {
+  try {
+    const { title, description, type, content, category, religion } = req.body || {};
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre est obligatoire.' });
+    const reflection = await FaithContent.create({
+      title: String(title).trim().slice(0, 255),
+      description: description || '',
+      type: ['video', 'audio', 'message'].includes(type) ? type : 'message',
+      content: content || '',
+      category: category || 'reflexion',
+      religion: religion || req.user.religion || '',
+      createdBy: req.user.numeroH
+    });
+    res.status(201).json({ success: true, reflection });
+  } catch (error) {
+    console.error('Erreur création réflexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la création de la réflexion' });
   }
 });
 

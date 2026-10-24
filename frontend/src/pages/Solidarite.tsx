@@ -160,82 +160,6 @@ export default function Solidarite() {
     }
   ];
 
-  const getDefaultHolyBooks = (): HolyBook[] => [
-    {
-      id: '1',
-      title: 'Le Coran',
-      author: 'Révélation Divine',
-      description: 'Livre sacré de l\'Islam',
-      content: 'Contenu du Coran...',
-      language: 'Arabe',
-      category: 'Livre Sacré',
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z',
-      reflexions: `📖 Points de réflexion sur le Coran :
-
-1. La miséricorde divine
-   "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux"
-   - Réfléchissez sur la place centrale de la miséricorde dans l'Islam
-   - Comment cette miséricorde se manifeste-t-elle dans votre vie quotidienne ?
-
-2. L'unicité de Dieu (Tawhid)
-   "Dis : Il est Allah, Unique. Allah, Le Seul à être imploré pour ce que nous désirons."
-   - Méditez sur le concept d'unicité divine
-   - Comment cette unicité influence-t-elle votre relation avec le Créateur ?
-
-3. La justice et l'équité
-   "Ô vous qui croyez ! Soyez stricts (dans vos devoirs) envers Allah et (soyez) des témoins équitables."
-   - Réfléchissez sur l'importance de la justice dans la société
-   - Comment pouvez-vous contribuer à une société plus juste ?`
-    },
-    {
-      id: '2',
-      title: 'La Bible',
-      author: 'Révélation Divine',
-      description: 'Livre sacré du Christianisme',
-      content: 'Contenu de la Bible...',
-      language: 'Français',
-      category: 'Livre Sacré',
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z',
-      reflexions: `📖 Points de réflexion sur la Bible :
-
-1. L'amour du prochain
-   "Tu aimeras ton prochain comme toi-même."
-   - Réfléchissez sur la portée de cet amour inconditionnel
-   - Comment cet amour se manifeste-t-il dans vos relations quotidiennes ?
-
-2. Le pardon
-   "Pardonne-nous nos offenses, comme nous aussi nous pardonnons à ceux qui nous ont offensés."
-   - Méditez sur la puissance du pardon
-   - Quels sont les obstacles qui vous empêchent de pardonner ?`
-    },
-    {
-      id: '3',
-      title: 'Les Traditions Guinéennes',
-      author: 'Ancêtres Guinéens',
-      description: 'Sagesse et traditions des ancêtres',
-      content: 'Contenu des traditions...',
-      language: 'Français',
-      category: 'Sagesse Traditionnelle',
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z',
-      reflexions: `📖 Points de réflexion sur les Traditions Guinéennes :
-
-1. Le respect des ancêtres
-   "Les ancêtres sont les piliers de notre société"
-   - Réfléchissez sur l'importance de la mémoire et de l'héritage
-   - Comment honorez-vous la sagesse de vos ancêtres ?
-
-2. L'unité communautaire
-   "Un seul doigt ne peut pas ramasser la farine"
-   - Méditez sur la force de la communauté
-   - Comment contribuez-vous à l'harmonie de votre communauté ?`
-    }
-  ];
 
   const loadPoorPeople = async () => {
     try {
@@ -382,11 +306,11 @@ export default function Solidarite() {
         const data = await response.json();
         setHolyBooks(data.books || []);
       } else {
-        setHolyBooks(getDefaultHolyBooks());
+        setHolyBooks([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des livres:', error);
-      setHolyBooks(getDefaultHolyBooks());
+      setHolyBooks([]);
     }
   };
 

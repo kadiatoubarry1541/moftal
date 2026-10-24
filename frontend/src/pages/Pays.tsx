@@ -422,10 +422,10 @@ export default function Pays() {
         const data = await response.json();
           groups = data.groups || [];
         } catch (jsonError) {
-          groups = getDefaultRegionGroups();
+          groups = [];
         }
       } else {
-        groups = getDefaultRegionGroups();
+        groups = [];
       }
       
       // Filtrer les groupes par région active
@@ -433,7 +433,7 @@ export default function Pays() {
       
       // Si aucun groupe, utiliser les groupes par défaut
       if (filtered.length === 0) {
-        const defaultGroups = getDefaultRegionGroups();
+        const defaultGroups = [];
         const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
         setRegionGroups(defaultFiltered);
         
@@ -489,7 +489,7 @@ export default function Pays() {
       }
     } catch (error) {
       // Erreur silencieuse - utiliser les groupes par défaut
-      const defaultGroups = getDefaultRegionGroups();
+      const defaultGroups = [];
       const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
       setRegionGroups(defaultFiltered);
       // Auto-sélectionner le premier groupe par défaut pour permettre la publication
@@ -502,30 +502,6 @@ export default function Pays() {
     }
   };
 
-  const getDefaultRegionGroups = (): RegionGroup[] => [
-    {
-      id: '5',
-      name: 'Communauté Unie',
-      description: 'Communauté nationale de tous les membres',
-      region: 'Communauté',
-      members: [],
-      posts: [
-        {
-          id: '5',
-          author: '',
-          authorName: 'Ousmane Barry',
-          content: 'Fiers d\'être ensemble ! Notre communauté est magnifique',
-          type: 'text',
-          likes: [],
-          comments: [],
-          createdAt: '2024-01-16T09:45:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z'
-    }
-  ];
 
 
   const handleJoinGroup = async (groupId: string) => {
@@ -776,23 +752,9 @@ export default function Pays() {
     }
   }, [residenceActiveTab, userData]);
 
-  const getDefaultResidenceGroups = useCallback((): ResidenceGroup[] => {
-    const location = getCurrentLocation();
-    return [
-    {
-      id: '1',
-        name: `Organisation ${location}`,
-        description: `Rencontres entre personnes résidant au même endroit : ${location}`,
-        location: location,
-      type: residenceActiveTab,
-      members: [userData?.numeroH || ''],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString()
-    }
-  ];
-  }, [getCurrentLocation, residenceActiveTab, userData]);
+  // Sans réponse du serveur : aucun groupe inventé (un faux groupe ne pouvait pas
+  // être rejoint et faisait croire à des membres)
+  const getDefaultResidenceGroups = useCallback((): ResidenceGroup[] => [], []);
 
 
   const joinResidenceGroup = async (groupId: string) => {
