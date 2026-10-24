@@ -404,7 +404,7 @@ export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite
           ))}
         </div>
         <p style={{ fontSize:11, color:"#bfdbfe", marginTop:12, marginBottom:0, textAlign:"center" }}>
-          Orange Money · Wave · Visa · Mastercard
+          Mobile money · Carte bancaire
         </p>
       </div>
 

@@ -595,7 +595,7 @@ function SubscriptionPaymentWall({
           >
             💳 Payer {montantChoisi > 0 ? `${montantChoisi.toLocaleString("fr-GN")} GNF` : "..."}
           </button>
-          <p className="text-xs text-gray-400 text-center mb-3">Orange Money · Wave · Visa · Mastercard</p>
+          <p className="text-xs text-gray-400 text-center mb-3">Mobile money · Carte bancaire</p>
 
           <button
             onClick={() => navigate("/mes-comptes-pro")}
