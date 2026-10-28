@@ -1,6 +1,7 @@
 import express from 'express';
 import { Op } from 'sequelize';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { estNomReserve } from '../utils/nomsReserves.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { finalizeApproval } from './professionals.js';
 import { analyserIdentifiant, trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
@@ -38,6 +39,10 @@ router.post('/admin/creer', authenticate, requireAdmin, async (req, res) => {
     }
     const { estEmail, valide } = analyserIdentifiant(identifiant);
     if (!valide) return res.status(400).json({ success: false, message: 'Indiquez le téléphone ou l\'e-mail de l\'établissement.' });
+    // Établissement préparé pour quelqu'un d'autre : jamais un nom Moftal
+    if (estNomReserve(name)) {
+      return res.status(409).json({ success: false, message: `Le nom "${name}" est réservé à l'entreprise Moftal. Veuillez en choisir un autre.` });
+    }
     const pris = await ProfessionalAccount.findOne({
       where: { name: { [Op.iLike]: name }, status: { [Op.ne]: 'rejected' }, isActive: true }
     });

@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
 import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
+import { refusNomReserve } from '../utils/nomsReserves.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
@@ -229,6 +230,10 @@ router.post('/register', authenticate, async (req, res) => {
     if (echangesTypes.includes(type) && !['primaire', 'secondaire', 'tertiaire'].includes(subSector)) {
       return res.status(400).json({ success: false, message: 'Veuillez choisir le niveau d\'échanges (primaire, secondaire ou tertiaire).' });
     }
+
+    // ── Moftal, Moftal Pay, moftal.com… : réservés à l'entreprise (admin) ──────
+    const refusReserve = refusNomReserve(name, req.user);
+    if (refusReserve) return res.status(409).json({ success: false, message: refusReserve, champ: 'name' });
 
     // ── Vérification : le nom doit être unique (insensible à la casse) ──────────
     const nomNettoye = name.trim();
@@ -810,6 +815,11 @@ router.put('/:id', authenticate, async (req, res) => {
     if (account.ownerNumeroH !== req.userId) console.log(`✏️ Profil du compte ${account.id} modifié par l'admin ${req.userId}`);
 
   const { name, description, address, city, country, phone, email, services, specialties, photo, billingInfo } = req.body;
+    if (name && name.trim().toLowerCase() !== String(account.name || '').toLowerCase()) {
+      const proprietaire = await findUserFollowingAlias(account.ownerNumeroH);
+      const refusReserve = refusNomReserve(name, proprietaire);
+      if (refusReserve) return res.status(409).json({ success: false, message: refusReserve, champ: 'name' });
+    }
     await account.update({
       name: name || account.name,
       description: description !== undefined ? description : account.description,
@@ -1223,6 +1233,8 @@ router.put('/admin/:id/identite', authenticate, requireAdmin, async (req, res) =
       return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
     }
     if (name && name.toLowerCase() !== String(account.name || '').toLowerCase()) {
+      const refusReserve = refusNomReserve(name, await findUserFollowingAlias(account.ownerNumeroH));
+      if (refusReserve) return res.status(409).json({ success: false, message: refusReserve });
       const pris = await ProfessionalAccount.findOne({
         where: { name: { [Op.iLike]: name }, status: { [Op.ne]: 'rejected' }, isActive: true, id: { [Op.ne]: account.id } }
       });

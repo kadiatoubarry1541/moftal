@@ -214,6 +214,8 @@ router.use((req, res, next) => { reparerDemandesAnciensIdentifiants().finally(ne
 router.get('/list', async (req, res) => {
   try {
     const numeroH = req.user.numeroH;
+    // Le compte administrateur n'a pas d'amis
+    if (estCompteAdmin(req.user)) return res.json({ success: true, friends: [] });
     const liens = await liensDe(req.user);
     const friendships = await Friend.findAll({
       where: {
@@ -236,7 +238,7 @@ router.get('/list', async (req, res) => {
 
         const friendUser = await User.findByNumeroH(friendNumeroH);
         // Compte de l'administration : 100 % isolé, jamais montré à un membre
-        if (estCompteAdmin(friendUser) && !estCompteAdmin(req.user)) return null;
+        if (estCompteAdmin(friendUser)) return null;
         const precieux = precieuxVuPar(friendship, numeroH);
         const sexeCommun = memeSexe(req.user, friendUser);
 
@@ -280,6 +282,7 @@ router.get('/list', async (req, res) => {
 // ─── GET /api/friends/requests → demandes en attente reçues ──────────────────
 router.get('/requests', async (req, res) => {
   try {
+    if (estCompteAdmin(req.user)) return res.json({ success: true, requests: [] });
     const requests = await FriendRequest.findAll({
       where: { toUser: req.user.numeroH, status: 'pending' },
       // Colonne réelle « created_at » (createdAt est renommé dans le modèle) :
@@ -292,7 +295,7 @@ router.get('/requests', async (req, res) => {
       const data = r.toJSON();
       const sender = await User.findByNumeroH(data.fromUser);
       // Compte de l'administration : jamais montré à un membre
-      if (estCompteAdmin(sender) && !estCompteAdmin(req.user)) return null;
+      if (estCompteAdmin(sender)) return null;
       if (!data.fromUserName && sender) {
         data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
       }
@@ -310,6 +313,9 @@ router.get('/requests', async (req, res) => {
 router.post('/send-request', async (req, res) => {
   try {
     const fromUser = req.user.numeroH;
+    if (estCompteAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Le compte administrateur n\'a pas d\'amis.' });
+    }
     const { message, ref } = req.body;
     // Invitation depuis « Personnes que vous pourriez connaître » : code protégé
     const toUser = ref ? lireSuggestion(ref) : req.body.toUser;
@@ -327,7 +333,9 @@ router.post('/send-request', async (req, res) => {
     // Si on stockait toUserTrimmed tel quel, la requête GET /requests du
     // destinataire — qui compare toUser à son numeroH canonique par égalité
     // stricte — ne la retrouverait jamais : la demande semblerait "perdue".
-    const targetUser = await trouverDestinataire(toUserTrimmed, fromUser, req.user);
+    const trouve = await trouverDestinataire(toUserTrimmed, fromUser, req.user);
+    // Le compte administrateur : introuvable, personne ne peut le demander en ami
+    const targetUser = estCompteAdmin(trouve) ? null : trouve;
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NuméroH, cet e-mail ou ce numéro de téléphone' });
     }
@@ -416,6 +424,11 @@ router.post('/respond-request', async (req, res) => {
     if (request.toUser !== req.user.numeroH) {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
+    // Aucune amitié avec le compte administrateur
+    if (estCompteAdmin(req.user) || estCompteAdmin(await User.findByNumeroH(request.fromUser))) {
+      await request.update({ status: 'rejected' });
+      return res.status(404).json({ success: false, message: 'Demande non trouvée' });
+    }
 
     const status = action === 'accept' ? 'accepted' : 'rejected';
     await request.update({ status });
@@ -477,6 +490,7 @@ router.get('/suggestions', async (req, res) => {
   try {
     const me = req.user;
     const numeroH = me.numeroH;
+    if (estCompteAdmin(me)) return res.json({ success: true, suggestions: [], hasMore: false });
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
@@ -762,7 +776,7 @@ router.post('/start-conversation', async (req, res) => {
       User.findOne({ where: { numeroH } }),
       User.findOne({ where: { numeroH: toUser } })
     ]);
-    if (!target) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    if (!target || estCompteAdmin(target) || estCompteAdmin(me)) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
 
     let eligible = false;
 
@@ -834,12 +848,12 @@ router.get('/admin/all-links', async (req, res) => {
     const numeroHs = [...new Set(links.flatMap(l => [l.userNumeroH, l.friendNumeroH]))];
     const users = await User.findAll({
       where: { numeroH: { [Op.in]: numeroHs } },
-      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'role']
     });
     const byNumeroH = Object.fromEntries(users.map(u => [u.numeroH, u]));
     res.json({
       success: true,
-      links: links.map(l => ({
+      links: links.filter(l => !estCompteAdmin(byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH }) && !estCompteAdmin(byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH })).map(l => ({
         id: l.id,
         userA: byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH },
         userB: byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH },
