@@ -871,7 +871,9 @@ router.get('/admin/all-links', async (req, res) => {
         id: l.id,
         userA: byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH },
         userB: byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH },
-        acceptedAt: l.acceptedAt
+        acceptedAt: l.acceptedAt,
+        // 💎 seulement le type de lien — jamais le contenu de la galerie
+        precieux: !!(l.precieuxUser && l.precieuxFriend)
       }))
     });
   } catch (error) {

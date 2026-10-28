@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTraduction } from "../i18n/traduction";
+import ApercuPrecieux from "../components/ApercuPrecieux";
 
 /**
  * Relations Amitié — réservé au chef unique (G7), pour la sécurité des
@@ -23,6 +24,7 @@ interface ConversationLink {
   userA: LinkUser;
   userB: LinkUser;
   acceptedAt?: string;
+  precieux?: boolean;
 }
 
 export default function AdminAmitieMessages() {
@@ -70,6 +72,13 @@ export default function AdminAmitieMessages() {
       </div>
 
       <div className="max-w-lg mx-auto p-4">
+        <ApercuPrecieux />
+
+        {!loading && !error && (
+          <p className="text-sm text-gray-600 mb-2">
+            👥 {links.length} {tr("relations")} · 💎 {links.filter((l) => l.precieux).length} {tr("précieuses")}
+          </p>
+        )}
         <input
           type="text"
           value={search}
@@ -88,7 +97,9 @@ export default function AdminAmitieMessages() {
             {filteredLinks.map((link) => (
               <div key={link.id} className="bg-white border border-gray-200 rounded-xl p-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{label(link.userA)} ↔ {label(link.userB)}</p>
+                  <p className="font-semibold text-gray-900 text-sm truncate">
+                    {label(link.userA)} ↔ {label(link.userB)}{link.precieux && <span className="ml-1">💎</span>}
+                  </p>
                   <p className="text-xs text-gray-400">{link.userA.numeroH} · {link.userB.numeroH}</p>
                 </div>
               </div>
