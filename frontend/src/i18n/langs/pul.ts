@@ -670,6 +670,7 @@ const pul: Record<string, string> = {
   'footer.tagline': "Tawi e iyiɗe Aadama",
   'footer.system': "Teelte njobdi e ɓe",
   'footer.conditions': "Laawol huutoraade",
+  'footer.privacy': "Politique de Confidentialité",
   'footer.pro_space': 'Moftal · Fanɗe Kawɗo',
 
   // Boutons

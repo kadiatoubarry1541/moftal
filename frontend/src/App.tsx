@@ -1010,6 +1010,10 @@ function App() {
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
+            <span className="text-gray-400 text-[9px]">{" · "}</span>
+            <Link to="/politique-confidentialite" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
+              {t('footer.privacy')}
+            </Link>
             {guideReady && (
               <div className="absolute right-0 bottom-0">
                 <Suspense fallback={null}>

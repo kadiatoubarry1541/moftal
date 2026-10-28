@@ -295,6 +295,10 @@ export function Login() {
           <Link to="/conditions-utilisation" className="text-xs text-gray-400 hover:text-gray-600 underline">
             Consulter nos Conditions Générales d'Utilisation
           </Link>
+          {" · "}
+          <Link to="/politique-confidentialite" className="text-xs text-gray-400 hover:text-gray-600 underline">
+            Politique de Confidentialité
+          </Link>
         </div>
       </div>
     </div>
