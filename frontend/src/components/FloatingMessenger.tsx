@@ -8,11 +8,18 @@ import { ActivityGroupChat, type ActivityGroupInfo } from './ActivityGroupChat'
 import { findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography'
 import { isActivityBlocked } from '../utils/activityIcons'
 import { ActivityIcon } from './ActivityIconBadge'
+import LienBadge, { type Lien } from './LienBadge'
 import { chargerMessagesNonLus, marquerConversationLue, EVENEMENT_MESSAGES_LUS, type MessagesNonLus } from '../utils/messagesNonLus'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-const CONTACT_ENDPOINTS = ['family-contacts', 'quartier-contacts', 'activity-contacts']
+// Chaque liste de contacts porte son lien ; une personne garde le premier
+// trouvé (famille, puis voisin, puis même activité) — un seul lien partout.
+const CONTACT_ENDPOINTS: { endpoint: string; lien: Lien }[] = [
+  { endpoint: 'family-contacts', lien: 'famille' },
+  { endpoint: 'quartier-contacts', lien: 'voisin' },
+  { endpoint: 'activity-contacts', lien: 'activite' },
+]
 
 // Normalise un nom de lieu comme dans Terre ADAM : "TÉLIKO" = "teliko" = "Téliko"
 function normalizeLoc(str: string): string {
@@ -24,6 +31,7 @@ interface Contact {
   prenom?: string
   nomFamille?: string
   photo?: string
+  lien?: Lien
 }
 
 type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family' | 'residence' | 'activity'
@@ -60,6 +68,7 @@ interface Conversation {
   photo?: string | null
   icon: string
   activityName?: string
+  lien?: Lien
   lastMessage: string
   lastMessageAt: string | null
   lastMessageMine: boolean
@@ -78,6 +87,7 @@ interface FriendItem {
   prenom?: string
   nomFamille?: string
   profilePicture?: string | null
+  lien?: Lien | null
 }
 
 interface WifeItem {
@@ -387,7 +397,7 @@ export function FloatingMessenger() {
 
       if (friendsRes?.success) {
         (friendsRes.friends || []).forEach((f: FriendItem) => {
-          base.push({ key: `friend-${f.id}`, type: 'friend', linkId: f.id, numeroH: f.numeroH, label: `${f.prenom || ''} ${f.nomFamille || ''}`.trim(), photo: f.profilePicture, icon: ICONS.friend })
+          base.push({ key: `friend-${f.id}`, type: 'friend', linkId: f.id, numeroH: f.numeroH, label: `${f.prenom || ''} ${f.nomFamille || ''}`.trim(), photo: f.profilePicture, icon: ICONS.friend, lien: f.lien || 'connaissance' })
         })
       }
 
@@ -397,24 +407,24 @@ export function FloatingMessenger() {
       if (wives.length > 0) {
         wives.forEach((w) => {
           if (!w.wife) return
-          base.push({ key: `couple-${w.link.id}`, type: 'couple', linkId: w.link.id, numeroH: w.wife.numeroH, label: `${w.wife.prenom || ''} ${w.wife.nomFamille || ''}`.trim(), photo: w.wife.photo, icon: ICONS.couple })
+          base.push({ key: `couple-${w.link.id}`, type: 'couple', linkId: w.link.id, numeroH: w.wife.numeroH, label: `${w.wife.prenom || ''} ${w.wife.nomFamille || ''}`.trim(), photo: w.wife.photo, icon: ICONS.couple, lien: 'famille' })
         })
       } else if (partnerRes?.success && partnerRes.partner && partnerRes.link) {
-        base.push({ key: `couple-${partnerRes.link.id}`, type: 'couple', linkId: partnerRes.link.id, numeroH: partnerRes.partner.numeroH, label: `${partnerRes.partner.prenom || ''} ${partnerRes.partner.nomFamille || ''}`.trim(), photo: partnerRes.partner.photo, icon: ICONS.couple })
+        base.push({ key: `couple-${partnerRes.link.id}`, type: 'couple', linkId: partnerRes.link.id, numeroH: partnerRes.partner.numeroH, label: `${partnerRes.partner.prenom || ''} ${partnerRes.partner.nomFamille || ''}`.trim(), photo: partnerRes.partner.photo, icon: ICONS.couple, lien: 'famille' })
       }
 
       if (childrenRes?.success) {
         (childrenRes.children || []).forEach((c: RelativeItem) => {
           // Enfant sans compte (fiche ajoutée par un parent) : pas de messagerie
           if (!c.child || c.child.numeroH.startsWith('ENF-')) return
-          base.push({ key: `child-${c.id}`, type: 'child', linkId: c.id, numeroH: c.child.numeroH, label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(), photo: c.child.photo, icon: ICONS.child })
+          base.push({ key: `child-${c.id}`, type: 'child', linkId: c.id, numeroH: c.child.numeroH, label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(), photo: c.child.photo, icon: ICONS.child, lien: 'famille' })
         })
       }
 
       if (parentsRes?.success) {
         (parentsRes.parents || []).forEach((p: RelativeItem) => {
           if (!p.parent) return
-          base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent })
+          base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent, lien: 'famille' })
         })
       }
 
@@ -478,16 +488,18 @@ export function FloatingMessenger() {
     try {
       const token = localStorage.getItem('token')
       const results = await Promise.all(
-        CONTACT_ENDPOINTS.map(endpoint =>
+        CONTACT_ENDPOINTS.map(({ endpoint }) =>
           fetch(`${API_BASE}/api/friends/${endpoint}`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then(res => res.json()).catch(() => null)
         )
       )
       const byNumeroH = new Map<string, Contact>()
-      results.forEach(data => {
+      results.forEach((data, i) => {
         if (data?.success) {
-          (data.contacts || []).forEach((c: Contact) => byNumeroH.set(c.numeroH, c))
+          (data.contacts || []).forEach((c: Contact) => {
+            if (!byNumeroH.has(c.numeroH)) byNumeroH.set(c.numeroH, { ...c, lien: CONTACT_ENDPOINTS[i].lien })
+          })
         }
       })
       setContacts([...byNumeroH.values()])
@@ -619,6 +631,7 @@ export function FloatingMessenger() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 text-sm truncate">{conv.label}</p>
+                        {conv.lien && <LienBadge lien={conv.lien} className="mt-0.5" />}
                         <p className={`text-xs truncate ${nbNonLus > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
                           {conv.lastMessage ? (conv.lastMessageMine ? `Vous : ${conv.lastMessage}` : conv.lastMessage) : 'Dites bonjour 👋'}
                         </p>
@@ -647,6 +660,7 @@ export function FloatingMessenger() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 text-sm truncate">{c.prenom} {c.nomFamille}</p>
+                            {c.lien && <LienBadge lien={c.lien} className="mt-0.5" />}
                           </div>
                           <button
                             onClick={() => startConversation(c)}

@@ -9,6 +9,7 @@ import ProfileBadge from '../../components/ProfileBadge';
 import PhotoProfil from '../../components/PhotoProfil';
 import SuggestionsAmis from '../../components/SuggestionsAmis';
 import GalerieSouvenirs from '../../components/GalerieSouvenirs';
+import LienBadge from '../../components/LienBadge';
 import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -43,6 +44,8 @@ interface Friend {
   vitrinePhoto1?: string | null;
   vitrinePhoto2?: string | null;
   vitrineVideo?: string | null;
+  // Lien unique : famille / voisin / activite ne sont pas des amis (messagerie)
+  lien?: string | null;
   // 💎 Précieux : activé de chaque côté ; précieux = les deux l'ont activé
   memeSexe?: boolean;
   precieuxParMoi?: boolean;
@@ -91,6 +94,8 @@ interface MesAmoursStory {
   publishedAt: string;
   // Photo de profil de l'auteur (cercle) — différente de l'image publiée
   authorPhoto?: string | null;
+  // Lien avec l'auteur : ami, famille ou voisin
+  lien?: string | null;
 }
 
 export interface MesAmoursHandle {
@@ -122,12 +127,12 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   const [contactMatches, setContactMatches] = useState<{ numeroH: string; prenom: string; nomFamille: string; photo?: string }[] | null>(null);
   const [contactMatchesLoading, setContactMatchesLoading] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
-  const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
+  const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string; lien?: string | null } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
   const [phoneSearchError, setPhoneSearchError] = useState('');
 
   const [emailInput, setEmailInput] = useState('');
-  const [emailResult, setEmailResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
+  const [emailResult, setEmailResult] = useState<{ numeroH: string; prenom: string; nomFamille: string; lien?: string | null } | null>(null);
   const [emailSearchLoading, setEmailSearchLoading] = useState(false);
   const [emailSearchError, setEmailSearchError] = useState('');
   const [qrSubMode, setQrSubMode] = useState<'show' | 'scan'>('show');
@@ -851,6 +856,13 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     }
   };
 
+  // Personne trouvée déjà liée : pas d'invitation (famille, voisin, déjà amis)
+  const dejaLie = (lien?: string | null) =>
+    lien === 'famille' ? `🏠 ${t('lien.deja_famille')}`
+      : lien === 'voisin' ? `🏘️ ${t('lien.deja_voisins')}`
+      : lien === 'connaissance' || lien === 'precieux' ? `👥 ${t('lien.deja_amis')}`
+      : null;
+
   // 💎 Activer / retirer précieux de son côté (enregistré sur le serveur)
   const changerPrecieux = async (friend: Friend, actif: boolean) => {
     setPrecieuxEnCours(friend.id);
@@ -878,10 +890,13 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     }
   };
 
-  const amisPrecieux = friends.filter((f) => f.precieux);
-  const connaissances = friends.filter((f) => !f.precieux);
+  // La page Amitié ne montre que les amis : la famille, les voisins et les
+  // conversations de même activité restent dans la messagerie.
+  const amis = friends.filter((f) => !f.lien || f.lien === 'connaissance' || f.lien === 'precieux');
+  const amisPrecieux = amis.filter((f) => f.precieux);
+  const connaissances = amis.filter((f) => !f.precieux);
   // Ceux qui m'ont choisi(e) sans que je l'aie encore fait : « Moi aussi » d'un geste
-  const choisiParEux = friends.filter((f) => f.memeSexe && f.precieuxParLui && !f.precieuxParMoi);
+  const choisiParEux = amis.filter((f) => f.memeSexe && f.precieuxParLui && !f.precieuxParMoi);
 
   const carteAmi = (friend: Friend) => (
     <div
@@ -1047,6 +1062,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                         (story.authorName || '?')[0].toUpperCase()
                       )}
                     </span>
+                    {story.lien && <LienBadge lien={story.lien} className="absolute top-1.5 right-1.5 !px-1.5" />}
                     <span className="absolute bottom-2 left-2 right-2 text-xs font-bold text-white text-left truncate">{story.authorName}</span>
                   </button>
                 );
@@ -1158,7 +1174,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               </>
             )}
 
-            {friendRequests.length === 0 && friends.length === 0 && (
+            {friendRequests.length === 0 && amis.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-5xl mb-3">👥</div>
                 <p className="text-gray-500 text-lg font-medium">{t('amitie.empty_title')}</p>
@@ -1337,8 +1353,12 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                         <div>
                           <p className="font-semibold text-gray-900">{phoneResult.prenom} {phoneResult.nomFamille}</p>
                           <p className="text-xs text-gray-500">{phoneResult.numeroH}</p>
+                          <LienBadge lien={phoneResult.lien} className="mt-1" />
                         </div>
                       </div>
+                      {dejaLie(phoneResult.lien) ? (
+                        <p className="text-sm font-semibold text-gray-700 bg-white rounded-lg px-3 py-2 text-center">{dejaLie(phoneResult.lien)}</p>
+                      ) : (<>
                       <div>
                         <textarea
                           value={addFriendForm.message}
@@ -1356,6 +1376,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                       >
                         {t('amitie.add_friend.send_invitation')}
                       </button>
+                      </>)}
                     </div>
                   )}
 
@@ -1401,8 +1422,12 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                         <div>
                           <p className="font-semibold text-gray-900">{emailResult.prenom} {emailResult.nomFamille}</p>
                           <p className="text-xs text-gray-500">{emailResult.numeroH}</p>
+                          <LienBadge lien={emailResult.lien} className="mt-1" />
                         </div>
                       </div>
+                      {dejaLie(emailResult.lien) ? (
+                        <p className="text-sm font-semibold text-gray-700 bg-white rounded-lg px-3 py-2 text-center">{dejaLie(emailResult.lien)}</p>
+                      ) : (<>
                       <div>
                         <textarea
                           value={addFriendForm.message}
@@ -1420,6 +1445,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                       >
                         {t('amitie.add_friend.send_invitation')}
                       </button>
+                      </>)}
                     </div>
                   )}
 

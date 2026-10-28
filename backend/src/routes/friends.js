@@ -15,11 +15,8 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
-import { FamilyTree } from '../models/additional.js';
-import CoupleLink from '../models/CoupleLink.js';
-import ParentChildLink from '../models/ParentChildLink.js';
-import ResidenceGroup from '../models/ResidenceGroup.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { normalizeLoc, getImmediateFamilyNumeroHs, findMyFamilyTree, findMyQuartierGroups, liensDe, lienAvec, LIEN_MESSAGE } from '../utils/liens.js';
 
 // Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
 const uploadFriendMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -54,6 +51,20 @@ async function ensureFriendMessagesTable() {
 /** Vérifie que l'utilisateur fait bien partie de cette amitié. */
 function estDansLAmitie(friend, numeroH) {
   return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
+}
+
+/** Lien avec une personne trouvée (recherche) : famille, voisin, ami… ou null. */
+async function lienAvecPersonne(moi, numeroH) {
+  const friend = await Friend.findOne({
+    where: {
+      status: 'accepted',
+      [Op.or]: [
+        { userNumeroH: moi.numeroH, friendNumeroH: numeroH },
+        { userNumeroH: numeroH, friendNumeroH: moi.numeroH }
+      ]
+    }
+  });
+  return lienAvec(await liensDe(moi), numeroH, friend);
 }
 
 // ─── 💎 Précieux ─────────────────────────────────────────────────────────────
@@ -98,55 +109,6 @@ async function ensureFriendSouvenirsTable() {
   } catch (err) {
     console.warn('⚠️ ensureFriendSouvenirsTable:', err.message);
   }
-}
-
-// Normalise un nom de lieu : minuscule + sans accents (même règle que résidences)
-function normalizeLoc(str) {
-  if (!str) return '';
-  const n = String(str).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  // « Non spécifié » (compte sans quartier) n'est pas un lieu : jamais de salle commune
-  return n === 'non specifie' ? '' : n;
-}
-
-/** NumeroH exclus de "famille élargie" : soi-même, parents, conjoint(s), enfants — ils ont déjà leur propre messagerie dédiée. */
-async function getImmediateFamilyNumeroHs(numeroH) {
-  const excluded = new Set([numeroH]);
-  const [parentLinks, childLinks, coupleLinks] = await Promise.all([
-    ParentChildLink.getMyParents(numeroH),
-    ParentChildLink.getMyChildren(numeroH),
-    CoupleLink.findAll({
-      where: {
-        [Op.or]: [{ husbandNumeroH: numeroH }, { wifeNumeroH: numeroH }],
-        status: 'active', isActive: true, isArchived: false
-      }
-    })
-  ]);
-  parentLinks.forEach(l => excluded.add(l.parentNumeroH));
-  childLinks.forEach(l => excluded.add(l.childNumeroH));
-  coupleLinks.forEach(l => excluded.add(l.husbandNumeroH === numeroH ? l.wifeNumeroH : l.husbandNumeroH));
-  return excluded;
-}
-
-/** Arbre familial (élargi) de l'utilisateur, ou null. */
-async function findMyFamilyTree(numeroH) {
-  return FamilyTree.findOne({
-    where: {
-      [Op.or]: [
-        { rootMember: numeroH },
-        { members: { [Op.contains]: [numeroH] } },
-        { chefFamille1: numeroH },
-        { chefFamille2: numeroH }
-      ],
-      isActive: true
-    }
-  });
-}
-
-/** Groupes de quartier (Terre ADAM) de l'utilisateur, d'après ses lieux de résidence enregistrés. */
-async function findMyQuartierGroups(user) {
-  const locations = [user?.lieu1, user?.lieu2, user?.lieu3].map(normalizeLoc).filter(Boolean);
-  if (locations.length === 0) return [];
-  return ResidenceGroup.findAll({ where: { location: { [Op.in]: locations }, isActive: true } });
 }
 
 /**
@@ -271,6 +233,7 @@ router.use((req, res, next) => { reparerDemandesAnciensIdentifiants().finally(ne
 router.get('/list', async (req, res) => {
   try {
     const numeroH = req.user.numeroH;
+    const liens = await liensDe(req.user);
     const friendships = await Friend.findAll({
       where: {
         [Op.or]: [
@@ -309,6 +272,13 @@ router.get('/list', async (req, res) => {
           acceptedAt: friendship.acceptedAt,
           mutualFriends: friendship.mutualFriends || 0,
           commonInterests: friendship.commonInterests || [],
+          // Lien unique : famille / voisin / activite / precieux / connaissance.
+          // La page Amitié ne montre que connaissance et precieux ; la
+          // messagerie montre tout, avec l'étiquette du lien.
+          lien: (() => {
+            const l = lienAvec(liens, friendNumeroH, friendship);
+            return l === 'precieux' && !sexeCommun ? 'connaissance' : l;
+          })(),
           memeSexe: sexeCommun,
           precieuxParMoi: sexeCommun && precieux.parMoi,
           precieuxParLui: sexeCommun && precieux.parLui,
@@ -384,6 +354,12 @@ router.post('/send-request', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous ajouter vous-même' });
     }
 
+    // Famille et voisins sont déjà liés : ils ne deviennent jamais aussi amis
+    const lienExistant = lienAvec(await liensDe(req.user), toUserCanonical);
+    if (LIEN_MESSAGE[lienExistant]) {
+      return res.status(400).json({ success: false, lien: lienExistant, message: LIEN_MESSAGE[lienExistant] });
+    }
+
     // Vérifier si une demande est déjà en cours (dans les deux sens)
     const existingRequest = await FriendRequest.findOne({
       where: {
@@ -404,7 +380,8 @@ router.post('/send-request', async (req, res) => {
           { userNumeroH: fromUser, friendNumeroH: toUserCanonical },
           { userNumeroH: toUserCanonical, friendNumeroH: fromUser }
         ],
-        status: 'accepted'
+        status: 'accepted',
+        origine: { [Op.ne]: 'messagerie' }
       }
     });
     if (alreadyFriends) {
@@ -471,11 +448,15 @@ router.post('/respond-request', async (req, res) => {
         }
       });
 
-      if (!existing) {
+      if (existing) {
+        // Simple conversation de messagerie qui devient une vraie amitié
+        await existing.update({ status: 'accepted', origine: 'invitation', acceptedAt: existing.acceptedAt || new Date() });
+      } else {
         await Friend.create({
           userNumeroH: request.fromUser,
           friendNumeroH: request.toUser,
           status: 'accepted',
+          origine: 'invitation',
           requestedAt: request.createdAt,
           acceptedAt: new Date(),
           mutualFriends: 0,
@@ -522,6 +503,10 @@ router.get('/suggestions', async (req, res) => {
     ]);
     const exclus = new Set([numeroH]);
     liens.forEach((f) => exclus.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+    // Famille et voisins : déjà liés, rien à leur proposer ici
+    const { famille, voisin } = await liensDe(me);
+    famille.forEach((nh) => exclus.add(nh));
+    voisin.forEach((nh) => exclus.add(nh));
     demandes.forEach((d) => exclus.add(d.fromUser === numeroH ? d.toUser : d.fromUser));
 
     // Score de proximité (colonnes réelles lues dans le modèle)
@@ -529,10 +514,12 @@ router.get('/suggestions', async (req, res) => {
     const norm = (a) => `LOWER(TRIM(COALESCE(${col(a)}, '')))`;
     const val = (v) => (normalizeLoc(v) ? String(v).trim().toLowerCase() : '');
     const parts = [];
+    // Même quartier = voisins : déjà liés, jamais proposés ici
     const mesLieux = [me.lieu1, me.lieu2, me.lieu3].map(val).filter(Boolean);
+    const sansVoisins = [];
     if (mesLieux.length && ['lieu1', 'lieu2', 'lieu3'].every((a) => User.rawAttributes[a])) {
       const liste = mesLieux.map((l) => sequelize.escape(l)).join(', ');
-      parts.push(`CASE WHEN ${norm('lieu1')} IN (${liste}) OR ${norm('lieu2')} IN (${liste}) OR ${norm('lieu3')} IN (${liste}) THEN 4 ELSE 0 END`);
+      sansVoisins.push(sequelize.literal(`NOT (${norm('lieu1')} IN (${liste}) OR ${norm('lieu2')} IN (${liste}) OR ${norm('lieu3')} IN (${liste}))`));
     }
     for (const [attr, poids] of [['nomFamille', 3], ['activite1', 2], ['regionOrigine', 1], ['pays', 1]]) {
       if (!User.rawAttributes[attr]) continue;
@@ -545,7 +532,7 @@ router.get('/suggestions', async (req, res) => {
       where: {
         numeroH: { [Op.notIn]: [...exclus], [Op.notLike]: 'TMP-%' },
         isActive: true,
-        [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))]
+        [Op.and]: [sequelize.literal(sansComptesAdmin('"User".')), ...sansVoisins]
       },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'lieu1', 'lieu2', 'lieu3', 'treeVisibility'],
       order: [[sequelize.literal(score), 'DESC'], ['created_at', 'DESC']],
@@ -553,11 +540,9 @@ router.get('/suggestions', async (req, res) => {
       offset
     });
 
-    const mesLieuxSet = new Set(mesLieux);
     const suggestions = users.slice(0, limit).map((u) => {
       const vis = u.treeVisibility || 'name_photo_numeroH';
-      const raison = [u.lieu1, u.lieu2, u.lieu3].map(val).some((l) => l && mesLieuxSet.has(l)) ? 'Même quartier'
-        : val(u.nomFamille) && val(u.nomFamille) === val(me.nomFamille) ? 'Même famille'
+      const raison = val(u.nomFamille) && val(u.nomFamille) === val(me.nomFamille) ? 'Même nom de famille'
         : val(u.activite1) && val(u.activite1) === val(me.activite1) ? 'Même activité'
         : null;
       return {
@@ -592,7 +577,7 @@ router.get('/trouver-personne', async (req, res) => {
     if (u.numeroH === req.user.numeroH) {
       return res.status(400).json({ success: false, message: "C'est votre propre compte" });
     }
-    res.json({ success: true, user: { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo || null, genre: u.genre || null } });
+    res.json({ success: true, user: { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo || null, genre: u.genre || null, lien: await lienAvecPersonne(req.user, u.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/trouver-personne:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -618,7 +603,7 @@ router.get('/search-by-phone', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce numéro' });
     }
     const user = await User.findByNumeroH(trouve);
-    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, lien: await lienAvecPersonne(req.user, user.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/search-by-phone:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -648,6 +633,9 @@ router.post('/match-phones', async (req, res) => {
         FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' } })
       ]);
       existingFriends.forEach(f => excluded.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+      const { famille, voisin } = await liensDe(req.user);
+      famille.forEach(nh => excluded.add(nh));
+      voisin.forEach(nh => excluded.add(nh));
       pendingRequests.forEach(r => excluded.add(r.fromUser === numeroH ? r.toUser : r.fromUser));
     }
 
@@ -677,7 +665,7 @@ router.get('/search-by-email', async (req, res) => {
     if (user.numeroH === req.user.numeroH) {
       return res.status(400).json({ success: false, message: "C'est votre propre email" });
     }
-    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, lien: await lienAvecPersonne(req.user, user.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/search-by-email:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -832,6 +820,7 @@ router.post('/start-conversation', async (req, res) => {
         userNumeroH: numeroH,
         friendNumeroH: toUser,
         status: 'accepted',
+        origine: 'messagerie',
         acceptedAt: new Date()
       });
     }
@@ -999,6 +988,9 @@ router.post('/precieux', async (req, res) => {
     }
     const autreNumeroH = friend.userNumeroH === moi ? friend.friendNumeroH : friend.userNumeroH;
     const autre = await User.findByNumeroH(autreNumeroH);
+    if (actif && ['famille', 'voisin', 'activite'].includes(lienAvec(await liensDe(req.user), autreNumeroH, friend))) {
+      return res.status(400).json({ success: false, message: 'Précieux est réservé à vos amis.' });
+    }
     if (actif && !memeSexe(req.user, autre)) {
       return res.status(400).json({ success: false, message: 'Précieux est réservé aux amis du même sexe.' });
     }

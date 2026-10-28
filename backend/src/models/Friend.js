@@ -64,6 +64,13 @@ Friend.init({
     field: 'precieux_user',
     comment: 'Précieux activé par user_numero_h'
   },
+  // 'invitation' : vraie amitié (demande acceptée) ; 'messagerie' : simple
+  // conversation ouverte depuis la messagerie (même activité) — pas un ami.
+  origine: {
+    type: DataTypes.STRING,
+    defaultValue: 'invitation',
+    field: 'origine'
+  },
   precieuxFriend: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,

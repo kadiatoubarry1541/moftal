@@ -5,6 +5,7 @@ import { sequelize } from '../config/database.js';
 import User from '../models/User.js';
 import PublishedStory from '../models/PublishedStory.js';
 import Friend from '../models/Friend.js';
+import { liensDe, lienAvec } from '../utils/liens.js';
 import { authenticate } from '../middleware/auth.js';
 
 // Stockage en mémoire → conversion en base64 et stockage en DB
@@ -325,13 +326,15 @@ router.get('/mes-amours/feed', async (req, res) => {
       }
     });
 
-    const numeros = new Set([user.numeroH]);
+    // Amis, mais aussi famille et voisins : vous êtes déjà liés, leurs
+    // stories s'affichent ici avec l'étiquette de ce lien.
+    const liens = await liensDe(user);
+    const numeros = new Set([user.numeroH, ...liens.famille, ...liens.voisin]);
+    const amitieAvec = new Map();
     for (const f of friends) {
-      if (f.userNumeroH === user.numeroH) {
-        numeros.add(f.friendNumeroH);
-      } else {
-        numeros.add(f.userNumeroH);
-      }
+      const autre = f.userNumeroH === user.numeroH ? f.friendNumeroH : f.userNumeroH;
+      numeros.add(autre);
+      amitieAvec.set(autre, f);
     }
 
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -355,7 +358,11 @@ router.get('/mes-amours/feed', async (req, res) => {
 
     res.json({
       success: true,
-      stories: stories.map(s => ({ ...s.toJSON(), authorPhoto: photoAuteur.get(s.numeroH) || null }))
+      stories: stories.map(s => ({
+        ...s.toJSON(),
+        authorPhoto: photoAuteur.get(s.numeroH) || null,
+        lien: s.numeroH === user.numeroH ? null : lienAvec(liens, s.numeroH, amitieAvec.get(s.numeroH))
+      }))
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du feed Mes Amours:', error);
