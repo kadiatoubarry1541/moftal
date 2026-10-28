@@ -16,6 +16,7 @@ import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { estCompteAdmin, sansComptesAdmin } from '../utils/compteAdmin.js';
 import { normalizeLoc, getImmediateFamilyNumeroHs, findMyFamilyTree, findMyQuartierGroups, liensDe, lienAvec, LIEN_MESSAGE } from '../utils/liens.js';
 
 // Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
@@ -127,26 +128,6 @@ function estAdminOuRole(user) {
 }
 
 /**
- * Comptes de l'administration : secrets, jamais montrés ni trouvables par les
- * membres (suggestions, recherches par nom / téléphone / e-mail / NuméroH).
- * Rôle admin, NuméroH maîtres, ou NuméroH de génération réservée G0–G90
- * (aucun vivant ne peut l'avoir : les vivants sont en G96).
- */
-const ROLES_ADMIN = ['admin', 'super-admin', 'superadmin', 'administrator'];
-const RESERVE_RE = /^G([0-9]|[1-8][0-9]|90)C/i;
-function estCompteAdmin(u) {
-  if (!u) return false;
-  return ROLES_ADMIN.includes(String(u.role || '').toLowerCase())
-    || MASTER_ADMIN_NUMEROS.includes(u.numeroH)
-    || RESERVE_RE.test(String(u.numeroH || ''));
-}
-// Même règle en SQL (prefixe = alias de table, ex. '"User".')
-const sansComptesAdmin = (prefixe = '') => `NOT (
-  LOWER(COALESCE(${prefixe}role, 'user')) IN (${ROLES_ADMIN.map((x) => `'${x}'`).join(', ')})
-  OR ${prefixe}numero_h IN (${MASTER_ADMIN_NUMEROS.map((x) => `'${x}'`).join(', ')})
-  OR ${prefixe}numero_h ~* '^G([0-9]|[1-8][0-9]|90)C')`;
-
-/**
  * Comptes Moftal dont le numéro (tel1 ou tel2) correspond — on compare les chiffres
  * seulement, sur les 9 derniers (comme la connexion) : « +224 620 00 00 00 »,
  * « 620-00-00-00 » et « 620000000 » sont le même numéro.
@@ -254,6 +235,8 @@ router.get('/list', async (req, res) => {
           : friendship.userNumeroH;
 
         const friendUser = await User.findByNumeroH(friendNumeroH);
+        // Compte de l'administration : 100 % isolé, jamais montré à un membre
+        if (estCompteAdmin(friendUser) && !estCompteAdmin(req.user)) return null;
         const precieux = precieuxVuPar(friendship, numeroH);
         const sexeCommun = memeSexe(req.user, friendUser);
 
@@ -287,7 +270,7 @@ router.get('/list', async (req, res) => {
       })
     );
 
-    res.json({ success: true, friends: friendsWithInfo });
+    res.json({ success: true, friends: friendsWithInfo.filter(Boolean) });
   } catch (error) {
     console.error('Erreur /friends/list:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -307,16 +290,16 @@ router.get('/requests', async (req, res) => {
     // Enrichir avec les infos de l'expéditeur si fromUserName manquant
     const enriched = await Promise.all(requests.map(async (r) => {
       const data = r.toJSON();
-      if (!data.fromUserName) {
-        const sender = await User.findByNumeroH(data.fromUser);
-        if (sender) {
-          data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
-        }
+      const sender = await User.findByNumeroH(data.fromUser);
+      // Compte de l'administration : jamais montré à un membre
+      if (estCompteAdmin(sender) && !estCompteAdmin(req.user)) return null;
+      if (!data.fromUserName && sender) {
+        data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
       }
       return data;
     }));
 
-    res.json({ success: true, requests: enriched });
+    res.json({ success: true, requests: enriched.filter(Boolean) });
   } catch (error) {
     console.error('Erreur /friends/requests:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -715,7 +698,7 @@ router.get('/family-contacts', async (req, res) => {
     if (memberNumeroHs.length === 0) return res.json({ success: true, contacts: [] });
 
     const users = await User.findAll({
-      where: { numeroH: { [Op.in]: memberNumeroHs } },
+      where: { numeroH: { [Op.in]: memberNumeroHs }, [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))] },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
     });
     res.json({ success: true, contacts: users });

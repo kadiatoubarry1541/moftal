@@ -932,6 +932,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
             vitrinePhoto1={friend.vitrinePhoto1}
             vitrinePhoto2={friend.vitrinePhoto2}
             vitrineVideo={friend.vitrineVideo}
+            onOpen={() => handleViewFriendInfo(friend)}
           />
         </div>
       </div>
@@ -958,13 +959,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
             {friend.precieuxParMoi ? '💎' : '♢'}
           </button>
         )}
-        <button
-          onClick={(e) => { e.stopPropagation(); handleViewFriendInfo(friend); }}
-          aria-label={t('amitie.view_info_aria')}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm"
-        >
-          ℹ️
-        </button>
         <span className="text-emerald-600 text-xs font-medium hidden sm:inline">{t('amitie.message')}</span>
       </div>
     </div>
@@ -1649,6 +1643,11 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                       onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ))}
                 </div>
+              )}
+
+              {selectedFriend.vitrineVideo && (
+                <video src={getPhotoUrl(selectedFriend.vitrineVideo) || ''} controls playsInline preload="metadata"
+                  className="w-full rounded-xl bg-black" style={{ maxHeight: 240 }} />
               )}
 
               {isCurrentUser && (
