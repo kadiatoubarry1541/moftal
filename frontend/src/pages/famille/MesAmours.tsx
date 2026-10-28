@@ -8,6 +8,7 @@ import { isContactPickerSupported, pickContactPhones } from '../../utils/contact
 import ProfileBadge from '../../components/ProfileBadge';
 import PhotoProfil from '../../components/PhotoProfil';
 import SuggestionsAmis from '../../components/SuggestionsAmis';
+import GalerieSouvenirs from '../../components/GalerieSouvenirs';
 import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -42,6 +43,11 @@ interface Friend {
   vitrinePhoto1?: string | null;
   vitrinePhoto2?: string | null;
   vitrineVideo?: string | null;
+  // 💎 Précieux : activé de chaque côté ; précieux = les deux l'ont activé
+  memeSexe?: boolean;
+  precieuxParMoi?: boolean;
+  precieuxParLui?: boolean;
+  precieux?: boolean;
 }
 
 interface FriendRequest {
@@ -102,6 +108,8 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showEditInfo, setShowEditInfo] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [galerieAmi, setGalerieAmi] = useState<Friend | null>(null);
+  const [precieuxEnCours, setPrecieuxEnCours] = useState<string | null>(null);
 
   const [addFriendForm, setAddFriendForm] = useState({
     numeroH: '',
@@ -843,6 +851,110 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     }
   };
 
+  // 💎 Activer / retirer précieux de son côté (enregistré sur le serveur)
+  const changerPrecieux = async (friend: Friend, actif: boolean) => {
+    setPrecieuxEnCours(friend.id);
+    try {
+      const response = await fetch(`${API_BASE}/api/friends/precieux`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ linkId: friend.id, actif })
+      });
+      const data = await response.json();
+      if (!data.success) {
+        alert(data.message || t('amitie.precieux.erreur'));
+        return;
+      }
+      const maj = { precieuxParMoi: data.precieuxParMoi, precieuxParLui: data.precieuxParLui, precieux: data.precieux };
+      setFriends((liste) => liste.map((f) => (f.id === friend.id ? { ...f, ...maj } : f)));
+      setSelectedFriend((f) => (f && f.id === friend.id ? { ...f, ...maj } : f));
+    } catch {
+      alert(t('amitie.precieux.erreur'));
+    } finally {
+      setPrecieuxEnCours(null);
+    }
+  };
+
+  const amisPrecieux = friends.filter((f) => f.precieux);
+  const connaissances = friends.filter((f) => !f.precieux);
+  // Ceux qui m'ont choisi(e) sans que je l'aie encore fait : « Moi aussi » d'un geste
+  const choisiParEux = friends.filter((f) => f.memeSexe && f.precieuxParLui && !f.precieuxParMoi);
+
+  const carteAmi = (friend: Friend) => (
+    <div
+      key={friend.id}
+      onClick={() => handleViewFriendInfo(friend)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleViewFriendInfo(friend); }}
+      className={`border rounded-xl p-3 sm:p-4 flex items-center gap-3 cursor-pointer transition-colors ${
+        friend.precieux ? 'border-amber-200 bg-amber-50/60 hover:bg-amber-50' : 'border-gray-100 hover:bg-gray-50'
+      }`}
+    >
+      <div className="relative shrink-0">
+        <PhotoProfil photo={friend.profilePicture} prenom={friend.prenom} nomFamille={friend.nomFamille} className="w-12 h-12" />
+        {friend.isOnline && (
+          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-gray-900 text-sm truncate">
+          {friend.prenom} {friend.nomFamille}
+          {friend.precieux && <span className="ml-1" aria-label={t('amitie.precieux.titre')}>💎</span>}
+        </p>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <p className="text-xs text-gray-500">
+            {friend.isOnline ? <span className="text-green-600">{t('amitie.online')}</span> : t('amitie.friend_status')}
+          </p>
+          <ProfileBadge
+            numeroH={friend.numeroH}
+            prenom={friend.prenom}
+            nomFamille={friend.nomFamille}
+            activite1={friend.activite1}
+            vitrinePhoto1={friend.vitrinePhoto1}
+            vitrinePhoto2={friend.vitrinePhoto2}
+            vitrineVideo={friend.vitrineVideo}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {friend.precieux ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); setGalerieAmi(friend); }}
+            aria-label={t('amitie.souvenirs.ouvrir')}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-amber-100 hover:bg-amber-200 text-lg"
+          >
+            🖼️
+          </button>
+        ) : friend.memeSexe && (
+          // Sans texte : ♢ vide = pas choisi, 💎 pâle = choisi, en attente de l'autre
+          <button
+            onClick={(e) => { e.stopPropagation(); changerPrecieux(friend, !friend.precieuxParMoi); }}
+            disabled={precieuxEnCours === friend.id}
+            aria-label={friend.precieuxParMoi ? t('amitie.precieux.en_attente') : t('amitie.precieux.choisir')}
+            title={friend.precieuxParMoi ? t('amitie.precieux.en_attente') : t('amitie.precieux.choisir')}
+            className={`w-9 h-9 flex items-center justify-center rounded-full text-lg transition-colors disabled:opacity-50 ${
+              friend.precieuxParMoi ? 'bg-amber-50 opacity-60' : 'bg-gray-100 hover:bg-amber-50 text-gray-400'
+            }`}
+          >
+            {friend.precieuxParMoi ? '💎' : '♢'}
+          </button>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); handleViewFriendInfo(friend); }}
+          aria-label={t('amitie.view_info_aria')}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm"
+        >
+          ℹ️
+        </button>
+        <span className="text-emerald-600 text-xs font-medium hidden sm:inline">{t('amitie.message')}</span>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1016,50 +1128,35 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               </div>
             ))}
 
-            {friends.map((friend) => (
-              <div
-                key={friend.id}
-                onClick={() => handleViewFriendInfo(friend)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleViewFriendInfo(friend); }}
-                className="border border-gray-100 rounded-xl p-3 sm:p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <div className="relative shrink-0">
-                  <PhotoProfil photo={friend.profilePicture} prenom={friend.prenom} nomFamille={friend.nomFamille} className="w-12 h-12" />
-                  {friend.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-xs text-gray-500">
-                      {friend.isOnline ? <span className="text-green-600">{t('amitie.online')}</span> : t('amitie.friend_status')}
-                    </p>
-                    <ProfileBadge
-                      numeroH={friend.numeroH}
-                      prenom={friend.prenom}
-                      nomFamille={friend.nomFamille}
-                      activite1={friend.activite1}
-                      vitrinePhoto1={friend.vitrinePhoto1}
-                      vitrinePhoto2={friend.vitrinePhoto2}
-                      vitrineVideo={friend.vitrineVideo}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleViewFriendInfo(friend); }}
-                    aria-label={t('amitie.view_info_aria')}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm"
-                  >
-                    ℹ️
-                  </button>
-                  <span className="text-emerald-600 text-xs font-medium hidden sm:inline">{t('amitie.message')}</span>
-                </div>
+            {choisiParEux.map((friend) => (
+              <div key={`precieux-${friend.id}`} className="border border-amber-200 bg-amber-50 rounded-xl p-3 sm:p-4 flex items-center gap-3">
+                <PhotoProfil photo={friend.profilePicture} prenom={friend.prenom} nomFamille={friend.nomFamille} className="w-12 h-12 shrink-0" />
+                <p className="flex-1 min-w-0 text-sm text-gray-900">
+                  💎 <span className="font-semibold">{friend.prenom} {friend.nomFamille}</span> {t('amitie.precieux.t_a_choisi')}
+                </p>
+                <button
+                  onClick={() => changerPrecieux(friend, true)}
+                  disabled={precieuxEnCours === friend.id}
+                  className="shrink-0 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white py-2 px-3 rounded-lg font-bold text-xs sm:text-sm"
+                >
+                  💎 {t('amitie.precieux.moi_aussi')}
+                </button>
               </div>
             ))}
+
+            {amisPrecieux.length > 0 && (
+              <>
+                <h3 className="pt-2 text-sm font-bold text-amber-700">💎 {t('amitie.precieux.titre')} ({amisPrecieux.length})</h3>
+                {amisPrecieux.map(carteAmi)}
+              </>
+            )}
+
+            {connaissances.length > 0 && (
+              <>
+                <h3 className="pt-2 text-sm font-bold text-gray-600">👥 {t('amitie.connaissances')} ({connaissances.length})</h3>
+                {connaissances.map(carteAmi)}
+              </>
+            )}
 
             {friendRequests.length === 0 && friends.length === 0 && (
               <div className="text-center py-12">
@@ -1582,6 +1679,18 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 </>
               )}
             </div>
+            {selectedFriend.precieux && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(t('amitie.precieux.retirer_confirm'))) changerPrecieux(selectedFriend, false);
+                }}
+                disabled={precieuxEnCours === selectedFriend.id}
+                className="w-full mt-5 text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 py-2 rounded-lg disabled:opacity-50"
+              >
+                👥 {t('amitie.precieux.retirer')}
+              </button>
+            )}
             <div className="flex space-x-3 mt-6">
               <button
                 onClick={() => setShowInfoModal(false)}
@@ -1594,6 +1703,16 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
         </div>
         );
       })()}
+
+      {/* Galerie souvenirs 💎 — seulement entre les deux amis précieux */}
+      {galerieAmi && userData && (
+        <GalerieSouvenirs
+          linkId={galerieAmi.id}
+          moi={userData.numeroH}
+          nomAmi={`${galerieAmi.prenom} ${galerieAmi.nomFamille}`}
+          onClose={() => setGalerieAmi(null)}
+        />
+      )}
 
       {/* Modal d'édition des informations */}
       {showEditInfo && (

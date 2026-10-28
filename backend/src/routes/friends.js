@@ -56,6 +56,50 @@ function estDansLAmitie(friend, numeroH) {
   return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
 }
 
+// ─── 💎 Précieux ─────────────────────────────────────────────────────────────
+// Tout ami est une connaissance. Chacun peut activer « précieux » pour un ami
+// du même sexe ; l'amitié devient précieuse quand les deux l'ont activé.
+const MAX_PRECIEUX = 10;
+
+/** Même sexe, connu des deux côtés (HOMME/FEMME). */
+function memeSexe(a, b) {
+  const ga = String(a?.genre || '').toUpperCase();
+  return (ga === 'HOMME' || ga === 'FEMME') && ga === String(b?.genre || '').toUpperCase();
+}
+
+/** Qui a activé précieux dans cette amitié, vu par numeroH. */
+function precieuxVuPar(friend, numeroH) {
+  const moiCoteUser = friend.userNumeroH === numeroH;
+  const parMoi = !!(moiCoteUser ? friend.precieuxUser : friend.precieuxFriend);
+  const parLui = !!(moiCoteUser ? friend.precieuxFriend : friend.precieuxUser);
+  return { parMoi, parLui, mutuel: parMoi && parLui };
+}
+
+/** Amitié acceptée, précieuse des deux côtés et toujours entre même sexe. */
+async function estAmitiePrecieuse(friend) {
+  if (!friend || friend.status !== 'accepted' || !friend.precieuxUser || !friend.precieuxFriend) return false;
+  const [a, b] = await Promise.all([User.findByNumeroH(friend.userNumeroH), User.findByNumeroH(friend.friendNumeroH)]);
+  return memeSexe(a, b);
+}
+
+async function ensureFriendSouvenirsTable() {
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "friend_souvenirs" (
+        "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        "link_id"     UUID         NOT NULL,
+        "numero_h"    VARCHAR(255) NOT NULL,
+        "media_type"  VARCHAR(20)  NOT NULL DEFAULT 'image',
+        "media_url"   TEXT         NOT NULL,
+        "caption"     TEXT,
+        "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `);
+  } catch (err) {
+    console.warn('⚠️ ensureFriendSouvenirsTable:', err.message);
+  }
+}
+
 // Normalise un nom de lieu : minuscule + sans accents (même règle que résidences)
 function normalizeLoc(str) {
   if (!str) return '';
@@ -247,6 +291,8 @@ router.get('/list', async (req, res) => {
           : friendship.userNumeroH;
 
         const friendUser = await User.findByNumeroH(friendNumeroH);
+        const precieux = precieuxVuPar(friendship, numeroH);
+        const sexeCommun = memeSexe(req.user, friendUser);
 
         return {
           id: friendship.id,
@@ -262,7 +308,11 @@ router.get('/list', async (req, res) => {
           requestedAt: friendship.requestedAt,
           acceptedAt: friendship.acceptedAt,
           mutualFriends: friendship.mutualFriends || 0,
-          commonInterests: friendship.commonInterests || []
+          commonInterests: friendship.commonInterests || [],
+          memeSexe: sexeCommun,
+          precieuxParMoi: sexeCommun && precieux.parMoi,
+          precieuxParLui: sexeCommun && precieux.parLui,
+          precieux: sexeCommun && precieux.mutuel
         };
       })
     );
@@ -933,6 +983,150 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
   }
 });
 
+// ─── 💎 PRÉCIEUX + GALERIE SOUVENIRS (déclarées avant "/:numeroH") ───────────
+
+// POST /api/friends/precieux { linkId, actif } — activer / retirer précieux de son côté
+router.post('/precieux', async (req, res) => {
+  try {
+    const moi = req.user.numeroH;
+    const { linkId } = req.body;
+    const actif = !!req.body.actif;
+    const friend = await Friend.findByPk(linkId);
+    if (!estDansLAmitie(friend, moi) || friend.status !== 'accepted') {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const autreNumeroH = friend.userNumeroH === moi ? friend.friendNumeroH : friend.userNumeroH;
+    const autre = await User.findByNumeroH(autreNumeroH);
+    if (actif && !memeSexe(req.user, autre)) {
+      return res.status(400).json({ success: false, message: 'Précieux est réservé aux amis du même sexe.' });
+    }
+    const avant = precieuxVuPar(friend, moi);
+    if (actif && !avant.parMoi) {
+      const nb = await Friend.count({
+        where: {
+          status: 'accepted',
+          [Op.or]: [
+            { userNumeroH: moi, precieuxUser: true },
+            { friendNumeroH: moi, precieuxFriend: true }
+          ]
+        }
+      });
+      if (nb >= MAX_PRECIEUX) {
+        return res.status(400).json({ success: false, message: `Tu as déjà ${MAX_PRECIEUX} amis précieux. Ce qui est précieux reste rare 💎` });
+      }
+    }
+    // Retirer remet l'amitié en simple connaissance des deux côtés (la galerie
+    // est cachée, pas effacée) ; activer ne touche que son propre côté.
+    await friend.update(actif
+      ? (friend.userNumeroH === moi ? { precieuxUser: true } : { precieuxFriend: true })
+      : { precieuxUser: false, precieuxFriend: false });
+    const apres = precieuxVuPar(friend, moi);
+
+    // Retirer se fait en silence ; activer prévient l'autre (« Moi aussi » d'un geste)
+    if (actif && !avant.parMoi) {
+      const nom = [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || moi;
+      try {
+        await Notification.createNotification(apres.mutuel ? {
+          recipientNumeroH: autreNumeroH,
+          type: 'friend_precieux',
+          title: '💎 Amis précieux',
+          message: `${nom} et toi êtes maintenant amis précieux. Votre galerie souvenirs est ouverte 🖼️`,
+          relatedId: friend.id
+        } : {
+          recipientNumeroH: autreNumeroH,
+          type: 'friend_precieux',
+          title: '💎 Précieux',
+          message: `${nom} t'a choisi(e) comme ami(e) précieux(se).`,
+          relatedId: friend.id
+        });
+      } catch (e) { console.error('Notif friend_precieux:', e.message); }
+    }
+
+    res.json({ success: true, precieuxParMoi: apres.parMoi, precieuxParLui: apres.parLui, precieux: apres.mutuel });
+  } catch (error) {
+    console.error('Erreur /friends/precieux:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/friends/souvenirs?linkId= — galerie des deux amis précieux
+router.get('/souvenirs', async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const friend = await Friend.findByPk(req.query.linkId);
+    if (!estDansLAmitie(friend, req.user.numeroH) || !(await estAmitiePrecieuse(friend))) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const souvenirs = await sequelize.query(
+      `SELECT id, numero_h AS "numeroH", media_type AS "mediaType", media_url AS "mediaUrl", caption, created_at AS "createdAt"
+       FROM friend_souvenirs WHERE link_id = :linkId ORDER BY created_at DESC`,
+      { replacements: { linkId: friend.id }, type: 'SELECT' }
+    );
+    res.json({ success: true, souvenirs });
+  } catch (error) {
+    console.error('Erreur /friends/souvenirs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/friends/souvenirs — ajouter une photo / vidéo
+router.post('/souvenirs', uploadFriendMedia.single('media'), async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const friend = await Friend.findByPk(req.body.linkId);
+    if (!estDansLAmitie(friend, req.user.numeroH) || !(await estAmitiePrecieuse(friend))) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
+    const mime = req.file.mimetype || '';
+    if (!mime.startsWith('image/') && !mime.startsWith('video/')) {
+      return res.status(400).json({ success: false, message: 'Photo ou vidéo uniquement.' });
+    }
+    const mediaType = mime.startsWith('video/') ? 'video' : 'image';
+    const mediaUrl = mediaType === 'image'
+      ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'friend-souvenirs')
+      : await uploadToR2(req.file.buffer, req.file.originalname, mime, 'friend-souvenirs');
+    if (!mediaUrl) return res.status(500).json({ success: false, message: 'Envoi du fichier impossible.' });
+    uploadToIDrive(req.file.buffer, req.file.originalname, mime, 'friend-souvenirs').catch(() => {});
+
+    const [souvenir] = await sequelize.query(
+      `INSERT INTO friend_souvenirs (link_id, numero_h, media_type, media_url, caption)
+       VALUES (:linkId, :numeroH, :mediaType, :mediaUrl, :caption)
+       RETURNING id, numero_h AS "numeroH", media_type AS "mediaType", media_url AS "mediaUrl", caption, created_at AS "createdAt"`,
+      {
+        replacements: {
+          linkId: friend.id,
+          numeroH: req.user.numeroH,
+          mediaType,
+          mediaUrl,
+          caption: String(req.body.caption || '').trim().slice(0, 300) || null
+        },
+        type: 'SELECT'
+      }
+    );
+    res.status(201).json({ success: true, souvenir });
+  } catch (error) {
+    console.error('Erreur ajout souvenir:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/friends/souvenirs/:id — chacun ne retire que ses propres souvenirs
+router.delete('/souvenirs/:id', async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const supprimes = await sequelize.query(
+      `DELETE FROM friend_souvenirs WHERE id = :id AND numero_h = :numeroH RETURNING id`,
+      { replacements: { id: req.params.id, numeroH: req.user.numeroH }, type: 'SELECT' }
+    );
+    if (!supprimes.length) return res.status(404).json({ success: false, message: 'Souvenir introuvable.' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.get('/:numeroH', async (req, res) => {
   try {
     // Seul l'intéressé (ou l'admin) peut lire sa liste d'amis
@@ -970,6 +1164,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
     await friend.destroy();
+    await sequelize.query('DELETE FROM friend_souvenirs WHERE link_id = :id', { replacements: { id: friend.id } }).catch(() => {});
     res.json({ success: true, message: 'Ami supprimé' });
   } catch (error) {
     console.error('Erreur lors de la suppression de l\'ami:', error);

@@ -594,6 +594,28 @@ async function initAllTables() {
         `CREATE INDEX IF NOT EXISTS idx_fr_friend ON "friends" ("friend_numero_h");`,
         `CREATE INDEX IF NOT EXISTS idx_fr_status ON "friends" ("status");`
       ],
+      // 💎 Précieux : activé par chacun des deux amis
+      alters: [
+        `ALTER TABLE "friends" ADD COLUMN IF NOT EXISTS "precieux_user" BOOLEAN DEFAULT false;`,
+        `ALTER TABLE "friends" ADD COLUMN IF NOT EXISTS "precieux_friend" BOOLEAN DEFAULT false;`
+      ]
+    },
+    {
+      // Galerie souvenirs : n'appartient qu'aux deux amis précieux
+      name: 'friend_souvenirs',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "friend_souvenirs" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "link_id"     UUID         NOT NULL,
+          "numero_h"    VARCHAR(255) NOT NULL,
+          "media_type"  VARCHAR(20)  NOT NULL DEFAULT 'image',
+          "media_url"   TEXT         NOT NULL,
+          "caption"     TEXT,
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_fs_link ON "friend_souvenirs" ("link_id");`
+      ],
       alters: []
     },
     {
