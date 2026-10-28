@@ -670,6 +670,7 @@ const man: Record<string, string> = {
   'footer.tagline': "Bɛɛ faamu Adama denw ye",
   'footer.system': "Sisteemu ka sigi denbaya",
   'footer.conditions': "Sariyaw",
+  'footer.privacy': "Politique de Confidentialité",
   'footer.pro_space': 'Moftal · Kɛcogo Baara',
 
   // Boutons

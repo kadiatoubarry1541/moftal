@@ -669,6 +669,7 @@ const en: Record<string, string> = {
   'footer.tagline': "Together for Adam's children",
   'footer.system': "Genealogical registration system",
   'footer.conditions': "Terms of Use",
+  'footer.privacy': "Privacy Policy",
   'footer.pro_space': 'Moftal · Professional Space',
 
   // Common buttons
