@@ -668,6 +668,7 @@ const pul: Record<string, string> = {
   // Footer
   'footer.copy': '© {year} Moftal',
   'footer.tagline': "Tawi e iyiɗe Aadama",
+  'footer.system': "Galle & Golluuje",
   'footer.conditions': "Laawol huutoraade",
   'footer.privacy': "Politique de Confidentialité",
   'footer.pro_space': 'Moftal · Fanɗe Kawɗo',

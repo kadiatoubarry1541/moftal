@@ -37,7 +37,7 @@ export function Home() {
         {/* Slogan */}
         <div className="mt-3 mb-6 text-center max-w-xs mx-auto">
           <p className="text-gray-900 font-bold text-base leading-snug">
-            Connaître ses racines. Construire son avenir.
+            Connaître d'où tu viens. Construire où tu vas.
           </p>
           <p className="text-gray-500 font-medium text-xs mt-1 leading-relaxed">
             Moftal réunit votre famille, vos services et votre communauté — tout en un, partout dans le monde.

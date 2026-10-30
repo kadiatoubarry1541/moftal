@@ -667,6 +667,7 @@ const ar: Record<string, string> = {
   // تذييل الصفحة
   'footer.copy': '© {year} Moftal',
   'footer.tagline': "معاً من أجل أبناء آدم",
+  'footer.system': "العائلة والخدمات",
   'footer.conditions': "شروط الاستخدام",
   'footer.privacy': "سياسة الخصوصية",
   'footer.pro_space': 'Moftal · الفضاء المهني',

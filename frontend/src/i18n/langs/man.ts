@@ -668,6 +668,7 @@ const man: Record<string, string> = {
   // Footer
   'footer.copy': '© {year} Moftal',
   'footer.tagline': "Bɛɛ faamu Adama denw ye",
+  'footer.system': "Denbaya & Baaralu",
   'footer.conditions': "Sariyaw",
   'footer.privacy': "Politique de Confidentialité",
   'footer.pro_space': 'Moftal · Kɛcogo Baara',
