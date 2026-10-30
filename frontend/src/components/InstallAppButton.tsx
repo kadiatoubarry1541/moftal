@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { setProBrand } from "./proBrand";
 import { synchroniserIconeApp } from "../utils/appIcon";
-import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay } from "../utils/appMoftalInstallee";
+import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay, lienPlayStore } from "../utils/appMoftalInstallee";
 import { useTraduction } from "../i18n/traduction";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -558,6 +558,10 @@ export function InvitationInstallerMoftal() {
               </>
             )}
           </div>
+        ) : isAndroid() ? (
+          <a href={lienPlayStore()} onClick={() => setOuvert(false)} style={{ display: "block", boxSizing: "border-box", width: "100%", padding: 14, background: "#1a8f1a", color: "white", borderRadius: 14, fontSize: 15, fontWeight: 800, textAlign: "center", textDecoration: "none", marginBottom: 10 }}>
+            {tr("📲 Installer maintenant")}
+          </a>
         ) : (
           <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
             {etat === "installation" ? tr("⏳ Installation…") : tr("📲 Installer maintenant")}
@@ -657,6 +661,31 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
         <span style={{ fontSize: 18 }}>✅</span>
         <span style={{ fontSize: 13, fontWeight: 700 }}>{tr("Application installée — ouvrez-la depuis son icône (elle peut mettre une minute à apparaître).")}</span>
       </div>
+    );
+  }
+
+  // Android : Moftal s'installe par le Play Store (chaque installation y compte).
+  // iPhone et ordinateur gardent l'installation depuis le site.
+  if (isAndroid()) {
+    return (
+      <a
+        href={lienPlayStore()}
+        title={tr("Installer l'application")}
+        aria-label={tr("Installer l'application")}
+        style={isBanner
+          ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", borderBottom: "1px solid #f0f0f0", textDecoration: "none" }
+          : { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", borderRadius: "50%", fontSize: 20, textDecoration: "none", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+      >
+        {isBanner ? (
+          <>
+            <span style={{ fontSize: 22 }}>📲</span>
+            <span>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>{tr("Installer l'application")}</span>
+              <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>{tr("Application mobile gratuite")}</span>
+            </span>
+          </>
+        ) : "📲"}
+      </a>
     );
   }
 
