@@ -35,9 +35,10 @@ async function canManageSuppliers(user) {
 
 const router = express.Router();
 
-// Comptes pro de commerçants : une fois approuvés par l'admin, ils publient
-// directement dans Échange, dans tous les secteurs, sans créer de compte vendeur
-// en plus (leur abonnement pro suffit, avec le même délai de grâce que la gestion).
+// Commerçants et fournisseurs de Moftal = vendeurs d'Échange. Une fois approuvés
+// par l'admin (compte pro de commerçant, ou inscription fournisseur), ils publient
+// directement dans tous les secteurs, sans créer de compte vendeur en plus
+// (pour un compte pro : son abonnement suffit, avec le délai de grâce de la gestion).
 const TYPES_COMMERCANTS = ['commerce', 'vendor', 'supplier', 'producer'];
 const SECTEURS_ECHANGE = ['primaire', 'secondaire', 'tertiaire', 'quaternaire', 'nourriture'];
 
@@ -48,13 +49,21 @@ async function getCompteCommercantActif(numeroH) {
     order: [['approvedAt', 'DESC']],
   }).catch(() => []);
   const maintenant = new Date();
-  return comptes.find(c => {
+  const compte = comptes.find(c => {
     if (c.subscriptionStatus === 'blocked') return false;
     if (!c.subscriptionValidUntil) return true;
     const finGrace = new Date(c.subscriptionValidUntil);
     finGrace.setMonth(finGrace.getMonth() + GRACE_MOIS_VISIBILITE);
     return maintenant < finGrace;
-  }) || null;
+  });
+  if (compte) return compte;
+
+  // Fournisseur inscrit et approuvé dans Échange : publie aussi librement
+  const fournisseur = await Supplier.findOne({
+    where: { numeroH, isApproved: true, isActive: true },
+  }).catch(() => null);
+  if (fournisseur) return { id: fournisseur.id, name: fournisseur.businessName, subscriptionValidUntil: null };
+  return null;
 }
 
 /**
