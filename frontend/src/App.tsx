@@ -994,8 +994,6 @@ function App() {
               {t('footer.copy').replace('{year}', String(new Date().getFullYear())).replace('©', '').trim()}
             </span>
             {" · "}{t('footer.tagline')}
-            <br />
-            {t('footer.system')}
           </p>
           <p className="leading-tight">
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
