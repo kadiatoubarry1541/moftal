@@ -5,6 +5,7 @@ import { sequelize } from '../config/database.js';
 import ExchangeProduct from '../models/ExchangeProduct.js';
 import Supplier from '../models/Supplier.js';
 import User from '../models/User.js';
+import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import PageAdmin from '../models/PageAdmin.js';
 import { authenticate } from '../middleware/auth.js';
 import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js';
@@ -12,6 +13,7 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierUtilisateur } from '../utils/notificationsEtablissement.js';
+import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
 
 if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
 
@@ -33,12 +35,45 @@ async function canManageSuppliers(user) {
 
 const router = express.Router();
 
+// Commerçants et fournisseurs de Moftal = vendeurs d'Échange. Une fois approuvés
+// par l'admin (compte pro de commerçant, ou inscription fournisseur), ils publient
+// directement dans tous les secteurs, sans créer de compte vendeur en plus
+// (pour un compte pro : son abonnement suffit, avec le délai de grâce de la gestion).
+const TYPES_COMMERCANTS = ['commerce', 'vendor', 'supplier', 'producer'];
+const SECTEURS_ECHANGE = ['primaire', 'secondaire', 'tertiaire', 'quaternaire', 'nourriture'];
+
+async function getCompteCommercantActif(numeroH) {
+  if (!numeroH) return null;
+  const comptes = await ProfessionalAccount.findAll({
+    where: { ownerNumeroH: numeroH, type: TYPES_COMMERCANTS, status: 'approved', isActive: true },
+    order: [['approvedAt', 'DESC']],
+  }).catch(() => []);
+  const maintenant = new Date();
+  const compte = comptes.find(c => {
+    if (c.subscriptionStatus === 'blocked') return false;
+    if (!c.subscriptionValidUntil) return true;
+    const finGrace = new Date(c.subscriptionValidUntil);
+    finGrace.setMonth(finGrace.getMonth() + GRACE_MOIS_VISIBILITE);
+    return maintenant < finGrace;
+  });
+  if (compte) return compte;
+
+  // Fournisseur inscrit et approuvé dans Échange : publie aussi librement
+  const fournisseur = await Supplier.findOne({
+    where: { numeroH, isApproved: true, isActive: true },
+  }).catch(() => null);
+  if (fournisseur) return { id: fournisseur.id, name: fournisseur.businessName, subscriptionValidUntil: null };
+  return null;
+}
+
 /**
  * Vérifie qu'un vendeur Échange est approuvé ET à jour de paiement pour son secteur.
  * Aucun essai gratuit ni délai de grâce pour les vendeurs : dès que l'abonnement
  * mensuel n'est plus payé, la publication est bloquée.
  */
 async function getVendorSubscriptionStatus(numeroH, subSector) {
+  const commercant = await getCompteCommercantActif(numeroH);
+  if (commercant) return { approved: true, aAcces: true, accountId: commercant.id };
   const [acc] = await sequelize.query(
     `SELECT id, subscription_status, subscription_valid_until
      FROM professional_accounts
@@ -114,14 +149,23 @@ router.get('/vendor-status', async (req, res) => {
     );
 
     const maintenant = new Date();
-    const approvedAccounts = accounts.filter(a => a.status === 'approved').map(a => {
+    let approvedAccounts = accounts.filter(a => a.status === 'approved').map(a => {
       const validUntil = a.subscription_valid_until ? new Date(a.subscription_valid_until) : null;
       const aAcces = a.subscription_status === 'active' && !!validUntil && validUntil > maintenant;
       return { id: a.id, subSector: a.sub_sector, aAcces, subscriptionValidUntil: a.subscription_valid_until };
     });
-    const approvedSectors = approvedAccounts.map(a => a.subSector);
     const pendingSectors = accounts.filter(a => a.status === 'pending').map(a => a.sub_sector);
-    const accountName = accounts.find(a => a.status === 'approved')?.name;
+    let accountName = accounts.find(a => a.status === 'approved')?.name;
+
+    // Commerçant approuvé : publie partout, aucun compte vendeur à créer ni à payer en plus
+    const commercant = await getCompteCommercantActif(userNumeroH);
+    if (commercant) {
+      approvedAccounts = SECTEURS_ECHANGE.map(subSector => ({
+        id: commercant.id, subSector, aAcces: true, subscriptionValidUntil: commercant.subscriptionValidUntil,
+      }));
+      accountName = commercant.name;
+    }
+    const approvedSectors = approvedAccounts.map(a => a.subSector);
 
     return res.json({
       success: true,

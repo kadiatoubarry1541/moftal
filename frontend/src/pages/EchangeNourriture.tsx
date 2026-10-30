@@ -120,10 +120,10 @@ export default function EchangeNourriture() {
       if (res.ok) {
         const data = await res.json();
         // Peut publier ici seulement si secteur nourriture (Restaurants) approuvé (ou admin)
-        const canPublishHere = data.isAdmin || (data.isVendor && data.sector === 'nourriture');
+        const canPublishHere = !!(data.isAdmin || data.approvedSectors?.includes('nourriture'));
         setCanPublish(canPublishHere);
         if (data.accountName) setVendorName(data.accountName);
-        if (data.hasPendingRequest) setHasPendingRequest(true);
+        if (data.pendingSectors?.includes('nourriture')) setHasPendingRequest(true);
       }
     } catch {
       setCanPublish(false);
