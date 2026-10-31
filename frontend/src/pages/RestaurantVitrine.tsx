@@ -1,3 +1,4 @@
+import MediasPublics from "../components/MediasPublics";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
@@ -268,6 +269,7 @@ export default function RestaurantVitrine() {
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{d.nom}</div>
                   {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{tr(d.categorie)}</div>}
                   {d.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "0 0 10px" }}>{d.description}</p>}
+                  <div style={{ marginBottom: 10 }}><MediasPublics videoUrl={d.video_url} audioUrl={d.audio_url} /></div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(+d.prix)}</div>
                     {panier[d.id] ? (

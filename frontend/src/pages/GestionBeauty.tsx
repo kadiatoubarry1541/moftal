@@ -17,6 +17,7 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import MediasArticle from "../components/MediasArticle";
 import type { EtablissementGestion, ReponseServeur } from "../types/pro";
 import type { BeauteAnnouncement, BeauteBooking, BeauteClient, BeauteService, BeauteStaff, TableauBeaute } from "../types/gestion-beauty";
 
@@ -315,6 +316,10 @@ export default function GestionBeauty() {
                 </div>
                 <div style={{ marginTop: 8, fontWeight: 700, color: COLOR }}>{fmtMoney(s.prix)}</div>
                 {s.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{s.description}</div>}
+                {/* Vidéo et message vocal : montrés sur le site avec la photo */}
+                <div style={{ clear: "both", paddingTop: 10 }}>
+                  <MediasArticle tenantCode={tenantCode!} articleId={s.id} videoUrl={s.video_url} audioUrl={s.audio_url} couleur={COLOR} taille={56} />
+                </div>
               </div>
             ))}
           </div>

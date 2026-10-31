@@ -48,8 +48,9 @@ export interface AgentVitrine { nom: string; prenom?: string | null; grade?: str
 export interface BienVitrine {
   id: number; nom: string; type_bien?: string | null; superficie?: Montant | null; prix?: Montant | null; statut?: string | null;
   quartier?: string | null; ville?: string | null; description?: string | null; image_url?: string | null; video_url?: string | null; images?: string[] | null;
+  audio_url?: string | null;
 }
-export interface PlatVitrine { id: number; nom: string; categorie?: string | null; prix?: Montant | null; description?: string | null; disponible?: boolean; image_url?: string | null }
+export interface PlatVitrine { id: number; nom: string; categorie?: string | null; prix?: Montant | null; description?: string | null; disponible?: boolean; image_url?: string | null; video_url?: string | null; audio_url?: string | null }
 export interface TrajetVitrine { lieu_depart: string; lieu_arrivee: string; date_depart: string; heure_depart?: string | null; prix?: Montant | null; places_restantes?: number | null }
 /** Produit, service ou réalisation d'un site simple (fournisseur, vendeur, production, beauté, juridique, artisan) */
 export interface ArticleVitrine {
@@ -58,6 +59,8 @@ export interface ArticleVitrine {
   stock?: number | null; unite?: string | null; zone_intervention?: string | null;
   /** Ancien nom du champ « nom » sur certaines fiches */
   name?: string | null;
+  video_url?: string | null;
+  audio_url?: string | null;
 }
 
 /** Chiffres du mois affichés sur le site d'une mairie (/api/mairie-public/:code/stats) */

@@ -16,6 +16,7 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import MediasArticle from "../components/MediasArticle";
 import type { EtablissementGestion, ReponseServeur } from "../types/pro";
 import type { ArtisanAnnouncement, ArtisanClient, ArtisanIntervention, ArtisanService, TableauArtisan } from "../types/gestion-artisan";
 
@@ -421,6 +422,10 @@ export default function GestionArtisan() {
                     {s.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{s.description}</div>}
                   </div>
                   <button onClick={() => deleteService(s.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>🗑</button>
+                </div>
+                {/* Vidéo et message vocal : montrés sur le site avec la photo */}
+                <div style={{ clear: "both", paddingTop: 10 }}>
+                  <MediasArticle tenantCode={tenantCode!} articleId={s.id} videoUrl={s.video_url} audioUrl={s.audio_url} couleur={COLOR} taille={56} />
                 </div>
               </div>
             ))}

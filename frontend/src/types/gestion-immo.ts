@@ -20,6 +20,7 @@ export interface ImmoProperty {
   image_url?: string | null;
   video_url?: string | null;
   images?: unknown | null;
+  audio_url?: string | null;
 }
 
 export interface ImmoDemande {

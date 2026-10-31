@@ -16,6 +16,7 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import MediasArticle from "../components/MediasArticle";
 import type { EtablissementGestion, ReponseServeur } from "../types/pro";
 import type { FournisseurAnnouncement, FournisseurClient, FournisseurOrder, FournisseurProduct, TableauFournisseur } from "../types/gestion-supplier";
 
@@ -314,6 +315,9 @@ export default function GestionFournisseur() {
                         {/* Case photo : la photo apparaît sur le site */}
                         <CarreauPhoto tenantCode={tenantCode!} articleId={p.id} imageUrl={p.image_url} couleur={CYAN} taille={56}
                           onChange={url => setProducts(xs => xs.map(x => x.id === p.id ? { ...x, image_url: url } : x))} />
+                        <div style={{ marginTop: 6 }}>
+                          <MediasArticle tenantCode={tenantCode!} articleId={p.id} videoUrl={p.video_url} audioUrl={p.audio_url} couleur={CYAN} taille={44} />
+                        </div>
                       </td>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a" }}>{p.nom}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>

@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿import MediasPublics from "../components/MediasPublics";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
@@ -205,6 +206,8 @@ export default function ImmobilierVitrine() {
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{p.nom}</div>
                     {(p.quartier || p.ville) && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {[p.quartier, p.ville].filter(Boolean).join(", ")}</div>}
                     {p.superficie && <div style={{ fontSize: 12, color: "#64748b" }}>📐 {p.superficie} m²</div>}
+                    {/* La vidéo s'affiche ici quand la carte montre déjà les photos ; le vocal toujours */}
+                    <MediasPublics videoUrl={p.image_url ? p.video_url : null} audioUrl={p.audio_url} />
                     {p.description && <div style={{ fontSize: 12, color: "#475569", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.description}</div>}
                     <button onClick={() => basculerChoix(p.id)}
                       style={{ marginTop: "auto", background: choix.includes(p.id) ? "white" : ORANGE, color: choix.includes(p.id) ? ORANGE : "white", border: `1.5px solid ${ORANGE}`, borderRadius: 10, padding: "9px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>

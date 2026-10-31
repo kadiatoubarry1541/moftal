@@ -7,7 +7,8 @@ import { notifierMembreEtablissement } from '../utils/notificationsEtablissement
 import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
-import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { photoDepuisFormulaire, enregistrerEnBase } from '../services/fichiersBase.js';
+import { synchroniserProduit } from '../services/syncEchange.js';
 import { isGlobalAdmin } from '../utils/sectorAdmin.js';
 
 // Messages envoyés depuis le site d'un établissement (demande d'information,
@@ -197,6 +198,45 @@ const preparerPhotoArticle = (table) => (colonnesPhotoArticle[table] ||= sequeli
   `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS image_url TEXT`
 ).catch((e) => { delete colonnesPhotoArticle[table]; throw e; }));
 
+// Vidéo et message vocal d'un article (produit, plat, service, bien) : comme la
+// photo, enregistrés en base et montrés sur le site (et dans Échange pour les commerçants).
+const TABLE_MEDIAS = { ...TABLE_ARTICLES, commerce: 'commerce_products', restaurant: 'resto_dishes' };
+const COLONNE_MEDIA = { video: 'video_url', vocal: 'audio_url' };
+const colonnesMediasArticle = {};
+const preparerMediasArticle = (table) => (colonnesMediasArticle[table] ||= sequelize.query(
+  `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS video_url TEXT; ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS audio_url TEXT;`
+).catch((e) => { delete colonnesMediasArticle[table]; throw e; }));
+export { preparerMediasArticle, TABLE_MEDIAS };
+
+siteMgmtRouter.put('/:tenantCode/articles/:id/media', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const table = TABLE_MEDIAS[req.tenant?.type];
+    const colonne = COLONNE_MEDIA[req.body?.genre];
+    if (!table || !colonne) return res.status(400).json({ success: false, message: 'Média non prévu pour cet article.' });
+    await preparerMediasArticle(table);
+    let url = null;
+    if (req.body?.fichier) {
+      const attendu = req.body.genre === 'video' ? 'video' : 'audio';
+      const m = String(req.body.fichier).match(/^data:((video|audio)\/[\w.+-]+)(?:;[^,]*)?;base64,(.+)$/);
+      if (!m || m[2] !== attendu) return res.status(400).json({ success: false, message: 'Fichier illisible. Essayez un autre.' });
+      url = await enregistrerEnBase(
+        { buffer: Buffer.from(m[3], 'base64'), mimetype: m[1], originalname: `${req.body.genre}.${m[1].split('/')[1].split(';')[0]}` },
+        { proprietaire: req.params.tenantCode, usage: `${req.body.genre}-article`, tailleMax: 30 * 1024 * 1024 }
+      );
+    }
+    const [rows] = await sequelize.query(
+      `UPDATE ${table} SET ${colonne} = :url WHERE id = :id AND tenant_code = :code RETURNING id, ${colonne} AS url`,
+      { replacements: { url, id: req.params.id, code: req.params.tenantCode } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Article introuvable.' });
+    // Produit d'un commerçant : Échange suit (photo, vidéo, vocal)
+    synchroniserProduit(table, req.params.id, req.params.tenantCode);
+    res.json({ success: true, url: rows[0].url });
+  } catch (e) {
+    res.status(e.message?.startsWith('Fichier trop lourd') ? 400 : 500).json({ success: false, message: e.message?.startsWith('Fichier trop lourd') ? e.message : 'Erreur serveur' });
+  }
+});
+
 siteMgmtRouter.put('/:tenantCode/articles/:id/photo', authenticate, verifyTenant, async (req, res) => {
   try {
     const table = TABLE_ARTICLES[req.tenant?.type];
@@ -209,6 +249,7 @@ siteMgmtRouter.put('/:tenantCode/articles/:id/photo', authenticate, verifyTenant
       { replacements: { image, id: req.params.id, code: req.params.tenantCode } }
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Article introuvable.' });
+    synchroniserProduit(table, req.params.id, req.params.tenantCode);
     res.json({ success: true, article: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

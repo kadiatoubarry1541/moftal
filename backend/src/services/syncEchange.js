@@ -71,6 +71,8 @@ export async function synchroniserProduit(table, id, tenantCode) {
       souscat: produit.categorie || null,
       prix: Number(regle.prix(produit)) || 0,
       images: JSON.stringify(photo ? [photo] : []),
+      videos: JSON.stringify(produit.video_url ? [produit.video_url] : []),
+      audio: JSON.stringify(produit.audio_url ? [produit.audio_url] : []),
       numeroH: compte.owner_numero_h,
       quantite: Number.isFinite(Number(produit.stock)) ? Number(produit.stock) : null,
       dispo: !(Number(produit.stock) <= 0 && produit.stock !== null && produit.stock !== undefined),
@@ -80,11 +82,11 @@ export async function synchroniserProduit(table, id, tenantCode) {
       `INSERT INTO exchange_products (id, title, description, category, subcategory, price, currency, images, videos, audio,
                                       numero_h, is_active, is_available, quantity, location, tags, views, likes, created_by,
                                       is_moftal_exclusive, source_gestion, created_at, updated_at)
-       VALUES (gen_random_uuid(), :titre, :description, :secteur, :souscat, :prix, 'FG', CAST(:images AS JSON), '[]', '[]',
+       VALUES (gen_random_uuid(), :titre, :description, :secteur, :souscat, :prix, 'FG', CAST(:images AS JSON), CAST(:videos AS JSON), CAST(:audio AS JSON),
                :numeroH, true, :dispo, :quantite, :lieu, '[]', 0, '[]', :numeroH, false, :source, NOW(), NOW())
        ON CONFLICT (source_gestion) WHERE source_gestion IS NOT NULL DO UPDATE SET
          title = EXCLUDED.title, description = EXCLUDED.description, category = EXCLUDED.category,
-         subcategory = EXCLUDED.subcategory, price = EXCLUDED.price, images = EXCLUDED.images,
+         subcategory = EXCLUDED.subcategory, price = EXCLUDED.price, images = EXCLUDED.images, videos = EXCLUDED.videos, audio = EXCLUDED.audio,
          numero_h = EXCLUDED.numero_h, is_active = true, is_available = EXCLUDED.is_available,
          quantity = EXCLUDED.quantity, location = EXCLUDED.location, updated_at = NOW()`,
       { replacements: valeurs }

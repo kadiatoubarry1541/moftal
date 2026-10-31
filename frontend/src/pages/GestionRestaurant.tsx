@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿import MediasArticle from "../components/MediasArticle";
+import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSessionUser, getPhotoUrl } from "../utils/auth";
@@ -417,6 +418,10 @@ export default function GestionRestaurant() {
                         <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{d.nom}</div>
                         {d.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{d.description}</div>}
                         <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginTop: 4 }}>{fmtMoney(+d.prix)}</div>
+                        {/* Vidéo et message vocal du plat : montrés sur le site */}
+                        <div style={{ marginTop: 8 }}>
+                          <MediasArticle tenantCode={tenantCode!} articleId={d.id} videoUrl={d.video_url} audioUrl={d.audio_url} couleur={ORANGE} taille={44} />
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf0" : "#f1f5f9", color: d.disponible ? "#1a8f1a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}

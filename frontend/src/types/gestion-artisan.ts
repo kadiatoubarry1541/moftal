@@ -14,6 +14,8 @@ export interface ArtisanService {
   is_active?: boolean | null;
   created_at?: string | null;
   image_url?: string | null;
+  video_url?: string | null;
+  audio_url?: string | null;
 }
 
 export interface ArtisanIntervention {

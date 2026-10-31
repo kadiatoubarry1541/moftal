@@ -238,7 +238,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code AND statut='vacant'`, { code }),
           // Colonnes réelles : surface, loyer_mensuel, adresse — renommées pour le site client.
-          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,description,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'video_url' AS video_url,to_jsonb(immo_properties)->'images' AS images FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`, { code }),
+          q(`SELECT id,nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville,description,to_jsonb(immo_properties)->>'image_url' AS image_url,to_jsonb(immo_properties)->>'audio_url' AS audio_url,to_jsonb(immo_properties)->>'video_url' AS video_url,to_jsonb(immo_properties)->'images' AS images FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { total: +(propCnt.c||0), vacant: +(vacantCnt.c||0) }, properties });
       }
@@ -248,7 +248,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM resto_dishes WHERE tenant_code=:code AND disponible=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_tables WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_staff WHERE tenant_code=:code AND actif=true`, { code }),
-          q(`SELECT id,nom,categorie,prix,description,disponible,to_jsonb(resto_dishes)->>'image_url' AS image_url FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 200`, { code }),
+          q(`SELECT id,nom,categorie,prix,description,disponible,to_jsonb(resto_dishes)->>'image_url' AS image_url,to_jsonb(resto_dishes)->>'video_url' AS video_url,to_jsonb(resto_dishes)->>'audio_url' AS audio_url FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { dishes: +(dishCnt.c||0), tables: +(tableCnt.c||0), staff: +(staffCnt.c||0) }, dishes });
       }
@@ -267,7 +267,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
         const [prodCnt, clientCnt, products, announcements] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM supplier_products WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM supplier_clients WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT id,nom,categorie,prix_gros,prix_detail,stock,unite,to_jsonb(supplier_products)->>'image_url' AS image_url FROM supplier_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 20`, { code }),
+          q(`SELECT id,nom,categorie,prix_gros,prix_detail,stock,unite,to_jsonb(supplier_products)->>'image_url' AS image_url,to_jsonb(supplier_products)->>'video_url' AS video_url,to_jsonb(supplier_products)->>'audio_url' AS audio_url FROM supplier_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 20`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM supplier_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
         // + les publications faites depuis Échange par ce fournisseur
@@ -293,7 +293,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM retailer_products WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM retailer_clients WHERE tenant_code=:code AND is_active=true`, { code }),
           // Le prix d'achat reste privé : seul le prix de vente est public.
-          q(`SELECT id,nom,categorie,prix_vente AS prix_detail,stock,unite,to_jsonb(retailer_products)->>'image_url' AS image_url FROM retailer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT id,nom,categorie,prix_vente AS prix_detail,stock,unite,to_jsonb(retailer_products)->>'image_url' AS image_url,to_jsonb(retailer_products)->>'video_url' AS video_url,to_jsonb(retailer_products)->>'audio_url' AS audio_url FROM retailer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
         ]);
         const tousProduits = [...products, ...(await publicationsEchangeDuSite(code)).map((e) => ({ id: e.id, nom: e.nom, categorie: e.categorie, prix_detail: e.prix, stock: e.stock, unite: e.unite, image_url: e.photo, description: e.description }))];
         return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products: tousProduits, announcements: [] });
@@ -303,7 +303,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
         const [prodCnt, clientCnt, products, announcements] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM producer_products WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(DISTINCT LOWER(TRIM(client_nom))) as c FROM producer_orders WHERE tenant_code=:code AND statut NOT IN ('annule','annulee')`, { code }),
-          q(`SELECT id,nom,categorie,prix_unitaire AS prix_detail,stock,unite,description,to_jsonb(producer_products)->>'image_url' AS image_url FROM producer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT id,nom,categorie,prix_unitaire AS prix_detail,stock,unite,description,to_jsonb(producer_products)->>'image_url' AS image_url,to_jsonb(producer_products)->>'video_url' AS video_url,to_jsonb(producer_products)->>'audio_url' AS audio_url FROM producer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM producer_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
         const tousProduits = [...products, ...(await publicationsEchangeDuSite(code)).map((e) => ({ id: e.id, nom: e.nom, categorie: e.categorie, prix_detail: e.prix, stock: e.stock, unite: e.unite, image_url: e.photo, description: e.description }))];
@@ -315,7 +315,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM beauty_services WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM beauty_clients WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM beauty_bookings WHERE tenant_code=:code AND statut='termine'`, { code }),
-          q(`SELECT id,nom,categorie,prix,description,to_jsonb(beauty_services)->>'image_url' AS image_url,
+          q(`SELECT id,nom,categorie,prix,description,to_jsonb(beauty_services)->>'image_url' AS image_url,to_jsonb(beauty_services)->>'video_url' AS video_url,to_jsonb(beauty_services)->>'audio_url' AS audio_url,
                     CASE WHEN duree_min > 0 THEN duree_min || ' min' END AS duree
              FROM beauty_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM beauty_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
@@ -344,7 +344,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM artisan_services WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM artisan_clients WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM artisan_interventions WHERE tenant_code=:code AND statut IN ('termine','terminee')`, { code }),
-          q(`SELECT id,nom,categorie,prix_base AS prix,description,zone_intervention,to_jsonb(artisan_services)->>'image_url' AS image_url FROM artisan_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT id,nom,categorie,prix_base AS prix,description,zone_intervention,to_jsonb(artisan_services)->>'image_url' AS image_url,to_jsonb(artisan_services)->>'video_url' AS video_url,to_jsonb(artisan_services)->>'audio_url' AS audio_url FROM artisan_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM artisan_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
         return res.json({ success: true, stats: { works: +(worksCnt.c||0), services: +(servCnt.c||0), clients: +(clientCnt.c||0) }, works, announcements });

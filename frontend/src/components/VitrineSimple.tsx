@@ -1,3 +1,4 @@
+import MediasPublics from "./MediasPublics";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
@@ -203,6 +204,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
                       <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{nom}</div>
                       {a.description && <div className="vs-desc" style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{a.description}</div>}
                       {a.zone_intervention && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {a.zone_intervention}</div>}
+                      <MediasPublics videoUrl={a.video_url} audioUrl={a.audio_url} />
                       <div style={{ marginTop: "auto", paddingTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                         <div>
                           {prix > 0 && <div style={{ fontWeight: 800, fontSize: 17, color: m.couleur }}>{fmtMoney(prix)}{a.unite ? <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}> / {a.unite}</span> : null}</div>}

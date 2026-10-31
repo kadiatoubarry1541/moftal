@@ -36,7 +36,8 @@ router.get('/:tenantCode/products', async (req, res) => {
     await ensureCommerceExtras();
     const { tenantCode } = req.params;
     const products = await sequelize.query(
-      `SELECT id, nom, categorie, prix_vente, unite, stock, photo_url
+      `SELECT id, nom, categorie, prix_vente, unite, stock, photo_url,
+              to_jsonb(commerce_products)->>'video_url' AS video_url, to_jsonb(commerce_products)->>'audio_url' AS audio_url
        FROM commerce_products
        WHERE tenant_code = :code AND is_active = true AND stock > 0
        ORDER BY categorie, nom`,
