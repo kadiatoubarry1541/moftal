@@ -847,6 +847,25 @@ async function initAllTables() {
       );
     `);
     await sequelize.query(`ALTER TABLE "user_logos" ADD COLUMN IF NOT EXISTS "note" TEXT;`).catch(() => {});
+    // Une ancienne version créait ces tables avec des noms de colonnes en
+    // « camelCase » (isActive, logoId…). On les renomme une fois en
+    // « snake_case » (is_active, logo_id…), comme le modèle les lit : aucune
+    // donnée n'est perdue, et rien ne change si c'est déjà le cas.
+    const renommer = async (table, ancien, nouveau) => {
+      const [[r]] = await sequelize.query(
+        `SELECT
+           EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = :t AND column_name = :a) AS a,
+           EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = :t AND column_name = :n) AS n`,
+        { replacements: { t: table, a: ancien, n: nouveau } }
+      );
+      if (r.a && !r.n) await sequelize.query(`ALTER TABLE "${table}" RENAME COLUMN "${ancien}" TO "${nouveau}"`);
+    };
+    for (const [a, n] of [['isActive', 'is_active'], ['createdBy', 'created_by'], ['usageCount', 'usage_count'], ['createdAt', 'created_at'], ['updatedAt', 'updated_at']]) {
+      await renommer('logos', a, n);
+    }
+    for (const [a, n] of [['numeroH', 'numero_h'], ['logoId', 'logo_id'], ['assignedBy', 'assigned_by'], ['assignedAt', 'assigned_at'], ['createdAt', 'created_at'], ['updatedAt', 'updated_at']]) {
+      await renommer('user_logos', a, n);
+    }
     console.log('✅ Tables logos + user_logos prêtes');
   } catch (err) {
     console.warn('⚠️ initAllTables [logos]:', err.message);
@@ -2687,7 +2706,19 @@ async function initAllTables() {
   }
 }
 
+// Second accès à la base (src/config) : ses modèles n'étaient jamais créés en
+// production. On crée seulement les tables MANQUANTES (rien n'est modifié ni
+// supprimé), modèle par modèle pour qu'un échec n'empêche pas les autres.
+async function creerTablesManquantesSecondaires() {
+  const { sequelize: secondaire } = await import('./config/database.js');
+  for (const modele of Object.values(secondaire.models)) {
+    try { await modele.sync(); }
+    catch (e) { console.warn(`⚠️ Table ${modele.getTableName?.() || modele.name} :`, e.message); }
+  }
+}
+
 connectDB()
+  .then(() => creerTablesManquantesSecondaires())
   .then(() => initAllTables())
   .then(() => ensureAdmin())
   .then(() => {

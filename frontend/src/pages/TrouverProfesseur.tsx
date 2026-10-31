@@ -223,7 +223,7 @@ export default function TrouverProfesseur() {
           </div>
           <div className="bg-orange-50 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-orange-600 mb-1">
-              {Math.round(professeurs.reduce((sum, p) => sum + p.experience, 0) / professeurs.length)}
+              {professeurs.length ? Math.round(professeurs.reduce((sum, p) => sum + (Number(p.experience) || 0), 0) / professeurs.length) : 0}
             </div>
             <div className="text-sm text-orange-800">Années d'expérience moy.</div>
           </div>

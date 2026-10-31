@@ -8,9 +8,16 @@ class Course extends Model {
   }
 
   // Méthodes statiques
+  // Mes cours : ceux que j'ai créés et ceux où je suis inscrit
   static async getUserCourses(numeroH) {
+    const { Op, where, cast, col } = this.sequelize.Sequelize;
     return await this.findAll({
-      where: { numeroH },
+      where: {
+        [Op.or]: [
+          { createdBy: numeroH },
+          where(cast(col('students'), 'text'), { [Op.like]: `%${JSON.stringify(String(numeroH)).replace(/[%_\\]/g, '\\$&')}%` }),
+        ],
+      },
       order: [['created_at', 'DESC']]
     });
   }

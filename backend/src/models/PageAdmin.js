@@ -73,5 +73,13 @@ class PageAdmin extends Model {
   }
 }
 
+// Initialisation unique : plusieurs fichiers de routes l'appellent ; une
+// seconde initialisation effaçait le lien « admin » et faisait planter la liste.
+let pageAdminPret = false;
+export function preparerPageAdmin(sequelizeInstance, User) {
+  if (!pageAdminPret) { PageAdmin.init(sequelizeInstance); pageAdminPret = true; }
+  if (User && !PageAdmin.associations.admin) PageAdmin.associate({ User });
+}
+
 export default PageAdmin;
 

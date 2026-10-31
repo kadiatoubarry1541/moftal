@@ -56,8 +56,8 @@ export default function GuideEntrepreneur() {
       icon: '📚'
     },
     {
-      id: 5,
-      title: '5️⃣ Organisations Internationales (PNUD, Banque Mondiale)',
+      id: 6,
+      title: '6️⃣ Organisations Internationales (PNUD, Banque Mondiale)',
       description: 'Programmes d\'aide au développement pour les jeunes',
       contact: 'Bureaux PNUD et Banque Mondiale à Conakry',
       action: 'Consulter leurs programmes de soutien aux jeunes entrepreneurs',

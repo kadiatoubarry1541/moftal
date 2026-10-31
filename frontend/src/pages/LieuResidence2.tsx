@@ -145,7 +145,8 @@ export default function LieuResidence2() {
       });
       if (response.ok) {
         const data = await response.json();
-        setGroups(data.groups || []);
+        // Le serveur n'envoie pas toujours de publications : liste vide par défaut (évite un plantage)
+        setGroups((data.groups || []).map((g: Residence2Group) => ({ ...g, posts: g.posts || [] })));
       } else {
         setGroups([]);
       }

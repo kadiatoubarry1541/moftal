@@ -312,7 +312,7 @@ router.get('/pending-sent', async (req, res) => {
     const user = req.user;
     const links = await CoupleLink.findAll({
       where: { initiatedByNumeroH: user.numeroH, isActive: true },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     const withPartner = await Promise.all(
       links.map(async (link) => {

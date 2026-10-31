@@ -9,6 +9,10 @@ import { sequelize } from '../config/database.js';
 Government.init(sequelize);
 GovernmentMember.init(sequelize);
 
+// Liens président / membres : sans eux, la liste des gouvernements plantait
+if (!Government.associations.president) Government.associate({ User, GovernmentMember });
+if (!GovernmentMember.associations.member) GovernmentMember.associate({ Government, User });
+
 const router = express.Router();
 
 // Route publique pour récupérer les gouvernements actifs (avant requireAdmin)

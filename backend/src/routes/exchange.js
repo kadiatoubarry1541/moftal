@@ -6,7 +6,7 @@ import ExchangeProduct from '../models/ExchangeProduct.js';
 import Supplier from '../models/Supplier.js';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
-import PageAdmin from '../models/PageAdmin.js';
+import PageAdmin, { preparerPageAdmin } from '../models/PageAdmin.js';
 import { authenticate } from '../middleware/auth.js';
 import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
@@ -15,7 +15,7 @@ import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierUtilisateur } from '../utils/notificationsEtablissement.js';
 import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
 
-if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
+preparerPageAdmin(sequelize);
 
 /** Vérifie que l'utilisateur peut gérer les fournisseurs (admin ou admin secteur Échanges). */
 async function canManageSuppliers(user) {

@@ -5,7 +5,7 @@ import { config } from '../../config.js';
 import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
-import PageAdmin from '../models/PageAdmin.js';
+import PageAdmin, { preparerPageAdmin } from '../models/PageAdmin.js';
 import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
 import { sequelize } from '../config/database.js';
 import {
@@ -21,7 +21,7 @@ import { mesAccesEmploye } from '../utils/accesEmployes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
+preparerPageAdmin(sequelize);
 
 const router = express.Router();
 
@@ -326,6 +326,10 @@ router.get('/search', async (req, res) => {
 // GET /api/professionals/:id - Détails d'un compte
 router.get('/detail/:id', async (req, res) => {
   try {
+    // Adresse mal formée (lien coupé, copié de travers) : « non trouvé », pas une erreur serveur
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    }
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account || !account.isActive) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
