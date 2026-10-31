@@ -435,7 +435,6 @@ export default function GestionClinique() {
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
   const isMobile = window.innerWidth < 768;
-  const sideW = collapsed ? (isMobile ? 0 : 64) : 240;
   const filteredPatients = patients
     .filter(p => !search || `${p.nom} ${p.prenom} ${p.numero_matricule}`.toLowerCase().includes(search.toLowerCase()))
     .filter(p => !bloodFilter || p.groupe_sanguin === bloodFilter);

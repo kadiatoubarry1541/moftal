@@ -54,7 +54,7 @@ export default function GestionInterne() {
   const [erreurComptes, setErreurComptes] = useState(false);
   const [search, setSearch]             = useState("");
   const [accesGI, setAccesGI]           = useState<any>(null);
-  const [payGILoading, setPayGILoading] = useState(false);
+  const [payGILoading] = useState(false);
   const [showGIPayment, setShowGIPayment] = useState(false);
   const [periodeGI, setPeriodeGI] = useState<"mois" | "troisMois" | "an" | "vie">("mois");
   const [regul, setRegul] = useState<{ moisDus: number; montant: number } | null>(null);

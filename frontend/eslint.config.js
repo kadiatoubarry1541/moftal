@@ -19,5 +19,18 @@ export default tseslint.config([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Un nom qui commence par « _ » est volontairement ignoré
+      // (ex. retirer le mot de passe d'un objet : const { password: _pw, ...reste } = …)
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      }],
+      // Un chargement qui échoue peut laisser la liste vide sans message ;
+      // une action de l'utilisateur, elle, doit toujours afficher l'erreur.
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
   },
 ])

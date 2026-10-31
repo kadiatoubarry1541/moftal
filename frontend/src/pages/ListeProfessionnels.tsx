@@ -45,9 +45,6 @@ const TYPES = [
   { id: "mairie",  label: "Mairie",    icon: "🏛️" },
 ];
 
-function getTypeIcon(type: string) {
-  return TYPES.find(t => t.id === type)?.icon || "🏢";
-}
 
 export default function ListeProfessionnels() {
   const navigate = useNavigate();

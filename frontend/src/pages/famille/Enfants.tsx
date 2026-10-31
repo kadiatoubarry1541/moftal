@@ -73,7 +73,7 @@ function getToken() {
 type SessionKey = 'avant' | 'paradis' | 'objectif'
 
 // focusNumeroH : ouvre directement la galerie avec cet enfant (clic depuis le Noyau)
-export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
+export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [children, setChildren] = useState<ChildLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -165,7 +165,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
         loadMyChildren()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -300,7 +300,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       } else {
         alert(data.message || 'Erreur lors de l\'ajout du lien')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -333,7 +333,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -425,7 +425,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
           : (data.message || 'Erreur')
         alert(msg)
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau. Vérifiez que le backend tourne sur le port configuré (ex. 5002).')
     } finally {
       setSubmitting(false)

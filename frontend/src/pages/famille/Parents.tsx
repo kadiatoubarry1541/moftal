@@ -69,7 +69,7 @@ interface PendingInvitation {
 }
 
 // focusNumeroH : ouvre directement la galerie avec ce parent (clic depuis le Noyau)
-export default function Parents({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
+export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [parents, setParents] = useState<ParentLink[]>([])
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
@@ -147,7 +147,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
         loadPendingInvitations()
         loadMyParents()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -168,7 +168,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
       if (data.success) {
         loadPendingInvitations()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -189,7 +189,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
         setSelectedParent(null)
         loadMyParents()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)

@@ -83,7 +83,7 @@ export default function Inspir() {
   const [livreDescription, setLivreDescription] = useState('');
   const [livreAuteur, setLivreAuteur] = useState('');
   const [sendingLivre, setSendingLivre] = useState(false);
-  const [achatLivresLoading, setAchatLivresLoading] = useState(false);
+  const [achatLivresLoading] = useState(false);
   const [showLivresPayment, setShowLivresPayment] = useState(false);
 
   // Form state

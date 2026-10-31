@@ -140,10 +140,6 @@ export default function MesCours() {
     }
   };
 
-  const canCreateCourse = (courseType: string): boolean => {
-    if (isAdmin) return true;
-    return coursePermissions.some(p => p.courseType === courseType && p.isActive);
-  };
 
   const loadData = async () => {
     try {

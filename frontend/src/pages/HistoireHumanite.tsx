@@ -663,7 +663,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const toggleBookSection = (key: string) => {
     setExpandedBookSections(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
@@ -671,7 +671,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const toggleWitnesses = (key: string) => {
     setWitnessesVisible(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
@@ -680,7 +680,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     e.stopPropagation();
     setExpandedGens(prev => {
       const next = new Set(prev);
-      next.has(gen) ? next.delete(gen) : next.add(gen);
+      if (next.has(gen)) next.delete(gen); else next.add(gen);
       return next;
     });
   };

@@ -32,16 +32,6 @@ interface Formation {
   skills?: string[];
 }
 
-interface RegistrationRequest {
-  id: string;
-  formationId: string;
-  numeroH: string;
-  message: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-}
 
 export default function InscriptionFormation() {
   const [userData, setUserData] = useState<UserData | null>(null);

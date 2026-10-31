@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { getNumeroHForDisplay } from '../utils/auth'
 import './ArbreGenealogique.css'
-import { buildFamilyTree, getTreeCompletionRecommendations, FamilyMember as FamilyMemberType, CercleDesRacinesCounts } from '../services/FamilyTreeBuilder'
+import { buildFamilyTree, getTreeCompletionRecommendations, CercleDesRacinesCounts } from '../services/FamilyTreeBuilder'
 import { InvitationManager } from '../utils/invitationManager'
 import type { Invitation } from '../types/invitation.ts'
 import { useI18n } from '../i18n/useI18n'
@@ -58,7 +58,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   })
 
   const [recommendations, setRecommendations] = useState<string[]>([])
-  const [pendingInvitationCount, setPendingInvitationCount] = useState(0)
+  const [, setPendingInvitationCount] = useState(0)
   const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: any | null; loading: boolean }>({ open: false, data: null, loading: false })
   const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{id: string; type: string; description: string; annee?: string}>>>({})
   const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
@@ -536,23 +536,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     }
   }
 
-  const calculateGeneration = (relation: string): string => {
-    const generationMap: { [key: string]: string } = {
-      'grand-pere': 'G-1',
-      'grand-mere': 'G-1',
-      'pere': 'G0',
-      'mere': 'G0',
-      'enfant': 'G2',
-      'frere': 'G1',
-      'soeur': 'G1',
-      'conjoint': 'G1',
-      'oncle': 'G0',
-      'tante': 'G0',
-      'cousin': 'G1',
-      'cousine': 'G1'
-    }
-    return generationMap[relation] || 'G1'
-  }
 
   // Helper : forme du carreau selon le genre (Femme = hexagone léger, Homme = rectangle)
   // Hexagone subtil : haut et bas horizontaux, côtés gauche/droit légèrement rentrés (comme sur la maquette)
@@ -725,25 +708,17 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   // Variables pour le rendu SVG (MyHeritage-style)
   const pereMember = familyMembers.find(m => m.relation === 'pere')
   const mereMember = familyMembers.find(m => m.relation === 'mere')
-  const hasPere = !!(pereMember?.isVisible)
-  const hasMere = !!(mereMember?.isVisible)
   // Conjoint réel confirmé prioritaire sur les champs de profil (jamais validés par l'autre personne)
   const conjointAffiche = realConjoint || (userData.conjointNumeroH && userData.conjointPrenom ? {
     numeroH: userData.conjointNumeroH, prenom: userData.conjointPrenom, nomFamille: userData.conjointNomFamille,
     genre: userData.conjointGenre, photo: userData.conjointPhoto
   } : null)
   const hasConjoint = !!conjointAffiche
-  const frereLinked = familyMembers.find(m => m.relation === 'frere' && m.isVisible)
-  const soeurLinked = familyMembers.find(m => m.relation === 'soeur' && m.isVisible)
   const g1Mbrs = familyMembers.filter(m => m.generation === 'G-1')
   const gpp = g1Mbrs.filter(m => m.relation === 'grand-pere')[0]
   const gmp = g1Mbrs.filter(m => m.relation === 'grand-mere')[0]
   const gpm = g1Mbrs.filter(m => m.relation === 'grand-pere')[1]
   const gmm = g1Mbrs.filter(m => m.relation === 'grand-mere')[1]
-  const hasRealGPP = !!(gpp?.isVisible && gpp?.numeroH !== 'N/A')
-  const hasRealGMP = !!(gmp?.isVisible && gmp?.numeroH !== 'N/A')
-  const hasRealGPM = !!(gpm?.isVisible && gpm?.numeroH !== 'N/A')
-  const hasRealGMM = !!(gmm?.isVisible && gmm?.numeroH !== 'N/A')
 
   return (
     <div className="arbre-genealogique">

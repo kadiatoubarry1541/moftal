@@ -162,7 +162,7 @@ export default function Probleme() {
       }
       setDescription("");
       setFamilyMedia((prev) => [data.item, ...prev]);
-    } catch (e) {
+    } catch {
       setUploadError("Erreur réseau. Réessayez plus tard.");
     } finally {
       setUploading(false);

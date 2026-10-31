@@ -49,7 +49,7 @@ export default function CliniqueVitrine() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPatient, setIsPatient] = useState<boolean | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [, setMobileMenuOpen] = useState(false);
   const [quickForm, setQuickForm] = useState({ nom: "", telephone: "", service: "", date_souhaitee: "", motif: "" });
   const [quickSending, setQuickSending] = useState(false);
   const [quickSent, setQuickSent] = useState(false);
@@ -132,7 +132,6 @@ export default function CliniqueVitrine() {
   );
 
   const doctors = staff.filter(s => s.role === "Médecin" || s.role === "Spécialiste");
-  const otherStaff = staff.filter(s => s.role !== "Médecin" && s.role !== "Spécialiste");
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>

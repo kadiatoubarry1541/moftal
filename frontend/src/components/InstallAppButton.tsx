@@ -45,12 +45,6 @@ function getTenantStorageKey() {
   return null;
 }
 
-function getShownKey() {
-  const p = window.location.pathname;
-  if (p.startsWith("/espace-pro/")) return `proCardShown_${p.split("/")[2]}`;
-  if (p.startsWith("/gestion-"))   return `gestionCardShown_${p.split("/")[2]}`;
-  return null;
-}
 
 function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -818,7 +812,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
 
 // ─── Bouton installation gestion interne (espace professionnel) ─────────────
 
-function GestionInstallButton({ name, logoUrl, themeColor, label }: {
+function GestionInstallButton({ themeColor, label }: {
   name?: string; logoUrl?: string; themeColor: string; label?: string;
 }) {
   const { tr } = useTraduction();

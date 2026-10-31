@@ -98,7 +98,7 @@ export default function Famille() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'parents' | 'enfants' | 'epoux' | 'freres' | 'soeurs' | 'oncles' | 'tantes' | 'cousins' | 'cousines' | 'neveux' | 'nieces' | 'grandparents' | 'arbre' | 'gestion'>('parents');
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [familyTree, setFamilyTree] = useState<FamilyTree | null>(null);
+  const [, setFamilyTree] = useState<FamilyTree | null>(null);
   const [familyTreeData, setFamilyTreeData] = useState<FamilyTreeData | null>(null);
   const [pendingConfirmations, setPendingConfirmations] = useState<FamilyTreeConfirmation[]>([]);
   const [showSetHeadsForm, setShowSetHeadsForm] = useState(false);
@@ -111,7 +111,6 @@ export default function Famille() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTreeChat, setShowTreeChat] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const navigate = useNavigate();
 
   // État pour les photos de famille
@@ -121,12 +120,10 @@ export default function Famille() {
     wifePhoto: null as string | null,
     childrenPhotos: [] as Array<{ name: string; photoUrl: string; uploadedAt: string }>
   });
-  const [uploading, setUploading] = useState<string | null>(null);
 
   // Galerie albums
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbums>({ rencontre: [], bapteme: [], mariage: [], deces: [] });
   const [activeAlbum, setActiveAlbum] = useState<AlbumKey | null>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadingAlbum, setUploadingAlbum] = useState<string | null>(null);
   const [gallerySection, setGallerySection] = useState<'photos' | 'albums'>('photos');
   const [viewerMedia, setViewerMedia] = useState<AlbumMedia | null>(null);
@@ -218,77 +215,7 @@ export default function Famille() {
     }
   };
 
-  const uploadPhoto = async (type: 'family' | 'man' | 'wife' | 'children', file: File, childName?: string) => {
-    try {
-      setUploading(type);
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append('photo', file);
-      if (childName) {
-        formData.append('childName', childName);
-      }
 
-      const endpoint = type === 'children' ? `${API_BASE}/api/family/photos/children` : `${API_BASE}/api/family/photos/${type}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (type === 'children') {
-          setFamilyPhotos(prev => ({
-            ...prev,
-            childrenPhotos: data.childrenPhotos || prev.childrenPhotos
-          }));
-        } else {
-          const photoKey = type === 'family' ? 'familyPhoto' : type === 'man' ? 'manPhoto' : 'wifePhoto';
-          setFamilyPhotos(prev => ({
-            ...prev,
-            [photoKey]: data.photoUrl
-          }));
-        }
-        alert('Photo uploadée avec succès !');
-      } else {
-        alert('Erreur lors de l\'upload de la photo');
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      alert('Erreur lors de l\'upload de la photo');
-    } finally {
-      setUploading(null);
-    }
-  };
-
-  const deleteChildPhoto = async (index: number) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/family/photos/children/${index}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFamilyPhotos(prev => ({
-          ...prev,
-          childrenPhotos: data.childrenPhotos || prev.childrenPhotos
-        }));
-        alert('Photo supprimée avec succès !');
-      } else {
-        alert('Erreur lors de la suppression de la photo');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression de la photo');
-    }
-  };
 
   // ── Galerie albums ────────────────────────────────────────────────────────
   const loadGalleryAlbums = async () => {

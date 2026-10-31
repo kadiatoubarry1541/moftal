@@ -150,43 +150,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
     }
   }
 
-  const handleRemoveChild = async (parentNumeroH: string, childNumeroH: string) => {
-    const parent = users.find(u => u.numeroH === parentNumeroH)
-    const child = users.find(u => u.numeroH === childNumeroH)
-    
-    if (!parent || !child) return
-    
-    const confirmMessage = `Êtes-vous sûr de vouloir retirer ${child.prenom} ${child.nomFamille} (${child.numeroH}) de la famille de ${parent.prenom} ${parent.nomFamille} ?\n\nCette action supprimera le lien familial mais gardera le compte de l'enfant.`
-    
-    if (!confirm(confirmMessage)) return
-    
-    try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_URL}/api/parent-child/link-by-users`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ parentNumeroH, childNumeroH })
-      })
-      const data = await res.json()
-      if (data.success) {
-        await loadUsers()
-        alert(`Lien familial supprimé entre ${parent.prenom} et ${child.prenom}`)
-      } else {
-        alert(`Erreur: ${data.message || 'Impossible de supprimer le lien'}`)
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression du lien:', error)
-      alert('Erreur réseau lors de la suppression du lien')
-    }
-  }
 
-  const handleDeleteChild = async (parentNumeroH: string, childNumeroH: string) => {
-    await handleDeleteUser(childNumeroH)
-  }
 
   const getRoleBadge = (role: string) => {
     const map: Record<string, { text: string; cls: string }> = {
@@ -459,7 +423,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
         )}
 
         {activeTab === 'badges' && (
-          <BadgeManager userData={_userData} />
+          <BadgeManager />
         )}
 
         {activeTab === 'logos' && (

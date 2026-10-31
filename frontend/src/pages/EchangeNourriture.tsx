@@ -37,22 +37,6 @@ interface ExchangeProduct {
   createdAt: string;
 }
 
-interface Supplier {
-  id: string;
-  numeroH: string;
-  businessName: string;
-  businessType: string;
-  description: string;
-  categories: string[];
-  contactInfo: any;
-  address: any;
-  documents: any[];
-  isActive: boolean;
-  isApproved: boolean;
-  rating: number;
-  totalSales: number;
-  createdAt: string;
-}
 
 export default function EchangeNourriture() {
   const { t } = useI18n();

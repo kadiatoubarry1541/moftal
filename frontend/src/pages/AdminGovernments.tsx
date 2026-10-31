@@ -59,7 +59,7 @@ const ROLES = [
 ];
 
 export default function AdminGovernments() {
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [, setUserData] = useState<UserData | null>(null);
   const [governments, setGovernments] = useState<Government[]>([]);
   const [selectedGovernment, setSelectedGovernment] = useState<Government | null>(null);
   const [users, setUsers] = useState<any[]>([]);

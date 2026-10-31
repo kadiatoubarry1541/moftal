@@ -69,7 +69,7 @@ export default function TerreAdam() {
     </button>
   );
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
-  const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
+  const [, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
   // États pour les groupes de quartier (infos + outils — la messagerie
   // elle-même vit désormais dans le bouton flottant).
@@ -104,7 +104,6 @@ export default function TerreAdam() {
   const userRegion = userData?.regionCode ? findLocationByCode(userData.regionCode) : null;
   const userPrefecture = userData?.prefectureCode ? findLocationByCode(userData.prefectureCode) : null;
   const userSousPrefecture = userData?.sousPrefectureCode ? findLocationByCode(userData.sousPrefectureCode) : null;
-  const userQuartier = userData?.quartierCode ? findLocationByCode(userData.quartierCode) : null;
 
   // 🔎 Si les codes ne sont pas enregistrés (anciens comptes), essayer de déduire
   // le pays et le continent à partir du nom de pays (`userData.pays`)

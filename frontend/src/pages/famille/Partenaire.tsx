@@ -289,7 +289,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         loadActivities()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -311,7 +311,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         loadPendingInvitations()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -356,7 +356,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         setPartner(null); setLinkInfo(null)
         reloadAll()
       } else alert(data.message || 'Erreur')
-    } catch (e) { alert('Erreur réseau') }
+    } catch { alert('Erreur réseau') }
     finally { setSubmitting(false) }
   }
 
@@ -382,7 +382,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       const data = await res.json()
       if (data.success) { reloadAll(); alert(data.message) }
       else alert(data.message || 'Erreur')
-    } catch (e) { alert('Erreur réseau') }
+    } catch { alert('Erreur réseau') }
     finally { setSubmitting(false) }
   }
 
@@ -459,7 +459,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur lors de la liaison')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -489,7 +489,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -564,7 +564,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -612,7 +612,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
               </p>
               <p className="text-xs text-rose-600 mt-1">Ce lien est définitivement rompu. Vous pouvez supprimer cet historique de votre côté.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {brokenByOther.map(({ link, partner: p }) => (
+                {brokenByOther.map(({ link }) => (
                   <div key={link.id} className="flex gap-2">
                     <button
                       onClick={() => handleSeparate(link.id)}

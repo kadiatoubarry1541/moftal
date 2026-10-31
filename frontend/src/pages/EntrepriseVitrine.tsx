@@ -62,7 +62,6 @@ export default function EntrepriseVitrine() {
 
   const stats     = data?.stats || {};
   const employees = data?.employees || [];
-  const announces = data?.announcements || [];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>

@@ -306,70 +306,7 @@ export default function HauteGuinee() {
     }
   };
 
-  const getDefaultGroups = (): RegionGroup[] => [
-    {
-      id: '1',
-      name: 'Conakry Connect',
-      description: 'Communauté des habitants de Conakry pour échanger et s\'entraider',
-      region: 'Haute-Guinée',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Conakry',
-      district: 'Kaloum'
-    },
-    {
-      id: '2',
-      name: 'Kindia United',
-      description: 'Organisation de la région de Kindia pour partager nos traditions et cultures',
-      region: 'Haute-Guinée',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Kindia',
-      district: 'Kindia'
-    },
-    {
-      id: '3',
-      name: 'Boké Solidarité',
-      description: 'Communauté de Boké pour le développement et l\'entraide',
-      region: 'Haute-Guinée',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Boké',
-      district: 'Boké'
-    }
-  ];
 
-  const joinGroup = async (groupId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/groups/${groupId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ numeroH: userData?.numeroH })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Erreur lors de l\'adhésion au Organisation');
-      }
-      alert(data.message || 'Vous avez rejoint le Organisation !');
-      loadGroups();
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de l\'adhésion au Organisation');
-    }
-  };
 
 
   const createEvent = async () => {

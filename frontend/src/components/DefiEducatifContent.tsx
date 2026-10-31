@@ -103,10 +103,9 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
   const [game, setGame] = useState<Game | null>(null);
   const [currentView, setCurrentView] = useState<'menu' | 'player' | 'jury'>('menu');
   const [loading, setLoading] = useState(false);
-  const [transactions, setTransactions] = useState<GameTransaction[]>([]);
+  const [, setTransactions] = useState<GameTransaction[]>([]);
   const [newQuestion, setNewQuestion] = useState({ content: '', type: 'text' as 'text' | 'audio' | 'video' });
   const [newAnswer, setNewAnswer] = useState({ content: '', type: 'text' as 'text' | 'audio' | 'video' });
-  const [juryNumeroH, setJuryNumeroH] = useState('');
   const [rechargeAmount, setRechargeAmount] = useState('');
   const [gameIdInput, setGameIdInput] = useState('');
   const [questionMode, setQuestionMode] = useState<'text' | 'audio' | 'video'>('text');
@@ -117,7 +116,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
   
   // États pour l'enregistrement audio/vidéo
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
+  const [, setRecordingStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordedUrl, setRecordedUrl] = useState<string>('');
@@ -134,7 +133,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           if (user && user.numeroH) {
             // Le composant recevra userData via props, sinon on l'utilise depuis session
           }
-        } catch (e) {
+        } catch {
           // Ignorer
         }
       }
@@ -178,7 +177,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           setTransactions(txData.transactions || []);
         }
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     }
   };
@@ -196,7 +195,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         try {
           const parsed = JSON.parse(session);
           userNumeroH = parsed.numeroH || parsed.userData?.numeroH || 'G0C0P0R0E0F0 0';
-        } catch (e) {
+        } catch {
           // Utiliser la valeur par défaut
         }
       }
@@ -239,7 +238,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
             return;
           }
         }
-      } catch (fetchError) {
+      } catch {
         clearTimeout(timeoutId);
         // Si le backend n'est pas accessible, créer un jeu en mode simulation
         console.log('Mode simulation activé - backend non accessible');
@@ -277,7 +276,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       setCurrentView('player');
       addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
       
-    } catch (error: any) {
+    } catch {
       // En cas d'erreur totale, créer quand même un jeu en simulation
       const userNumeroH = 'G0C0P0R0E0F0 0';
       const simulatedGame: Game = {
@@ -371,7 +370,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           setGuestNumeroH('');
         }
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
@@ -403,44 +402,13 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         await loadGame(gameId);
         setCurrentView('player');
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
     }
   };
 
-  // Démarrer le jeu
-  const startGame = async () => {
-    if (!game) return;
-    try {
-      setLoading(true);
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
-      const token = getToken();
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
-
-      const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/start`, {
-        method: 'POST',
-        headers
-      });
-
-      if (response.ok) {
-        await loadGame(game.id);
-      }
-    } catch (error) {
-      // Erreur silencieuse
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Démarrer l'enregistrement audio/vidéo
   const startRecording = async (type: 'audio' | 'video', context: 'question' | 'response') => {
@@ -585,7 +553,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         setRecordedUrl('');
         addLog(userNumeroH || 'Joueur', 'A posé une question');
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
@@ -651,7 +619,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         setRecordedUrl('');
         addLog(userNumeroH || 'Joueur', isRefusal ? 'A refusé de répondre' : 'A répondu à la question');
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
@@ -693,7 +661,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         };
         addLog('system', messages[validation]);
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
@@ -729,7 +697,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         await loadGame(game.id);
         setRechargeAmount('');
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     } finally {
       setLoading(false);
@@ -847,7 +815,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
 
   // Vue Joueur - Interface réorganisée selon l'exemple
   if (currentView === 'player' && game) {
-    const player = getCurrentPlayer();
     const currentQuestion = getCurrentQuestion();
     const allPlayers = getAllPlayers();
     const depositAmount = game.deposit?.currentAmount || game.depositAmount || 0;

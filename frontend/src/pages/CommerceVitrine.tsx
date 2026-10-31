@@ -55,7 +55,7 @@ export default function CommerceVitrine() {
   const [error, setError]         = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("Tous");
   const [search, setSearch]       = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [, setMobileMenuOpen] = useState(false);
   const [cartItems, setCartItems] = useState<{ product: any; qty: number }[]>([]);
   const [showCart, setShowCart]   = useState(false);
   const [reviews, setReviews]     = useState<any[]>([]);
@@ -63,7 +63,6 @@ export default function CommerceVitrine() {
   const [reviewForm, setReviewForm] = useState({ nom_auteur: "", note: 5, commentaire: "" });
   const [reviewSent, setReviewSent] = useState(false);
 
-  const isLoggedIn = !!localStorage.getItem("token");
 
   useEffect(() => {
     const code = tenantCode!;

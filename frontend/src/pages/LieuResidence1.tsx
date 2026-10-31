@@ -166,34 +166,6 @@ export default function LieuResidence1() {
     }
   };
 
-  const getDefaultGroups = (): Residence1Group[] => [
-    {
-      id: '1',
-      name: 'Résidents de Conakry Centre',
-      description: 'Communauté des résidents du centre de Conakry pour échanger et s\'entraider',
-      location: 'Conakry Centre',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Kaloum',
-      district: 'Centre'
-    },
-    {
-      id: '2',
-      name: 'Voisins de Dixinn',
-      description: 'Organisation de voisinage pour les habitants de Dixinn',
-      location: 'Dixinn',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Dixinn',
-      district: 'Est'
-    }
-  ];
 
   const joinGroup = async (groupId: string) => {
     try {

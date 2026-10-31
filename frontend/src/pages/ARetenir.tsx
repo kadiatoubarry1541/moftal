@@ -127,27 +127,7 @@ export default function ARetenir() {
   const [publishedSections, setPublishedSections] = useState<PublishedSectionInfo[]>([]);
   const navigate = useNavigate();
 
-  // Calculer l'âge de l'utilisateur
-  const getUserAge = (): number => {
-    if (!userData) return 0;
-    if (userData.age && typeof userData.age === 'number') return userData.age;
-    if (userData.dateNaissance) {
-      const birth = new Date(userData.dateNaissance);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-      return age;
-    }
-    return 0;
-  };
 
-  const isAdminUser = (): boolean => {
-    if (!userData) return false;
-    return userData.role === 'admin' || userData.role === 'super-admin' ||
-      userData.isAdmin === true || userData.isMasterAdmin === true ||
-      (typeof userData.role === 'string' && userData.role.includes('admin'));
-  };
 
   const canPublishSection = (_sectionId: string): boolean => true;
 

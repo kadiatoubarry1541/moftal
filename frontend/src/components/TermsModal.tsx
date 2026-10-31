@@ -10,7 +10,7 @@ export function hasAcceptedTerms(): boolean {
 }
 
 export function acceptTerms(): void {
-  try { localStorage.setItem(TERMS_KEY, 'true') } catch (_) {}
+  try { localStorage.setItem(TERMS_KEY, 'true') } catch {}
   sessionStorage.setItem(TERMS_KEY, 'true');
 }
 

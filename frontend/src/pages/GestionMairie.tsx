@@ -34,7 +34,6 @@ async function appeler(url: string, init?: RequestInit): Promise<{ status: numbe
 }
 
 type Section = "dashboard" | "mariages" | "naissances" | "deces" | "residences" | "chefs_quartier" | "agents" | "settings";
-type Statut = "en_attente" | "en_traitement" | "valide_chef" | "valide" | "rejete";
 
 const ROLES_AGENT = ["Directeur", "Chef de service", "Agent d'état civil", "Secrétaire", "Archiviste", "Comptable", "Autre"];
 const STATUT_LABELS: Record<string, string> = { en_attente: "En attente", en_traitement: "En traitement", valide_chef: "Validé chef quartier", valide: "Validé", rejete: "Rejeté" };
@@ -47,7 +46,6 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const BLUE = "#1d4ed8";
-const BLUE_LIGHT = "#3b82f6";
 const BLUE_DARK = "#1e3a8a";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }

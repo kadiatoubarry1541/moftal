@@ -170,9 +170,10 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
 
   const removePublisher = async (id: string) => {
     try {
-      await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+      const res = await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.message || 'Erreur.'); return; }
       loadPublishers();
-    } catch {}
+    } catch { alert('Erreur.'); }
   };
 
   const loadLogo = async () => {

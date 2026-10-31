@@ -141,7 +141,6 @@ export default function AdminDashboard() {
     | "/juridique"
     | "/journalisme"
   >("/sante");
-  const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
   const [publications, setPublications] = useState<any[]>([]);
   const [publicationsLoading, setPublicationsLoading] = useState(false);
   const [exchangeProducts, setExchangeProducts] = useState<any[]>([]);
@@ -661,24 +660,7 @@ export default function AdminDashboard() {
     ? allAdminTabs.filter((t) => G0_TABS.includes(t.id))
     : allAdminTabs;
 
-  const SERVICE_GROUPS = [
-    { id: "all",        label: "Tous",       icon: "🌐", types: [] as string[], from: "from-gray-600",   to: "to-gray-700"   },
-    { id: "sante",      label: "Santé",      icon: "🏥", types: ["clinic"],                              from: "from-emerald-600", to: "to-teal-600"  },
-    { id: "securite",   label: "Sécurité",   icon: "🛡️", types: ["security_agency"],                    from: "from-slate-600",   to: "to-gray-700"  },
-    { id: "juridique",  label: "Juridique",  icon: "⚖️", types: ["lawyer", "legal_advisor"],             from: "from-red-900",     to: "to-amber-700" },
-    { id: "education",  label: "Éducation",  icon: "🎓", types: ["school", "enterprise"],               from: "from-amber-500",   to: "to-orange-500"},
-    { id: "science",    label: "Science",    icon: "🔬", types: ["scientist"],                           from: "from-indigo-600",  to: "to-violet-600"},
-    { id: "solidarite", label: "Solidarité", icon: "🤝", types: ["ngo"],                                from: "from-rose-500",    to: "to-pink-600"  },
-    { id: "echanges",   label: "Échanges",   icon: "🔄", types: ["supplier","vendor","producer","broker","journalist"], from: "from-cyan-600", to: "to-blue-600" },
-  ];
 
-  const approvedPros = allPros.filter(p => p.status === "approved");
-  const servicesFiltered = servicesTypeFilter === "all"
-    ? approvedPros
-    : approvedPros.filter(p => {
-        const group = SERVICE_GROUPS.find(g => g.id === servicesTypeFilter);
-        return group ? group.types.includes(p.type) : true;
-      });
 
   const filteredFamilies = families.filter(f =>
     !searchFamily || f.nomFamille.toLowerCase().includes(searchFamily.toLowerCase()) ||

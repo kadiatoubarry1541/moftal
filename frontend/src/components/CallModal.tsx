@@ -24,7 +24,7 @@ export default function CallModal({ socket, currentUser, outgoingCall, incomingC
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [duration, setDuration] = useState(0)
-  const [callType, setCallType] = useState<'audio' | 'video'>(
+  const [callType] = useState<'audio' | 'video'>(
     outgoingCall?.callType || incomingCall?.callType || 'audio'
   )
 
@@ -170,7 +170,7 @@ export default function CallModal({ socket, currentUser, outgoingCall, incomingC
   // Nettoyage à la fermeture
   useEffect(() => {
     return () => {
-      durationRef.current && clearInterval(durationRef.current)
+      if (durationRef.current) clearInterval(durationRef.current)
       localStreamRef.current?.getTracks().forEach(t => t.stop())
     }
   }, [])

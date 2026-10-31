@@ -28,14 +28,6 @@ interface ReflectionContent {
   tags?: string[];
 }
 
-interface ReflectionComment {
-  id: string;
-  author: string;
-  authorName: string;
-  content: string;
-  createdAt: string;
-  likes: string[];
-}
 
 export default function Reflechissons() {
   const [userData, setUserData] = useState<UserData | null>(null);

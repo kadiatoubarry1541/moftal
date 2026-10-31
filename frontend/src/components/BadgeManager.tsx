@@ -30,17 +30,11 @@ interface UserBadge {
   badge: Badge;
 }
 
-interface BadgeManagerProps {
-  userData: any;
-}
-
-export default function BadgeManager({ userData }: BadgeManagerProps) {
+export default function BadgeManager() {
   const [badges, setBadges] = useState<Badge[]>([]);
-  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setUserBadges] = useState<UserBadge[]>([]);
   const [activeTab, setActiveTab] = useState<'create' | 'award' | 'manage' | 'stats'>('create');
-  const [selectedUser, setSelectedUser] = useState('');
-  const [selectedBadge, setSelectedBadge] = useState<number | null>(null);
+  const [selectedUser] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const { tr } = useTraduction();
 

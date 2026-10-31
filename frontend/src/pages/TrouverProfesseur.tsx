@@ -35,16 +35,6 @@ interface Professor {
   subjects?: string[];
 }
 
-interface ProfessorRequest {
-  id: string;
-  professorId: string;
-  numeroH: string;
-  message: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-}
 
 export default function TrouverProfesseur() {
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -276,10 +266,6 @@ export default function TrouverProfesseur() {
     return Array.from(cities);
   };
 
-  const getAverageRating = (professor: Professor) => {
-    if (professor.ratings.length === 0) return 0;
-    return professor.ratings.reduce((sum, rating) => sum + rating.score, 0) / professor.ratings.length;
-  };
 
   if (loading) {
     return (

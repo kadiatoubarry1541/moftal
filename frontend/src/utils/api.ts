@@ -237,7 +237,7 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/health`)
       return response.ok
-    } catch (error) {
+    } catch {
       return false
     }
   },

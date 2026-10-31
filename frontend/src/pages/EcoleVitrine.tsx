@@ -16,9 +16,6 @@ const GREEN_DARK  = "#156315";
 const GREEN_LIGHT = "#22c55e";
 const GREEN_BG    = "#f0fdf0";
 
-function fmtDate(d: string) {
-  return d ? new Date(d).toLocaleDateString("fr-FR") : "";
-}
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });

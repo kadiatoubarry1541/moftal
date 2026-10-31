@@ -65,9 +65,7 @@ const ROLE_PERMISSIONS: Record<string, Tab[]> = {
   "Caissier":     ["dashboard", "products", "sales", "clients"],
 };
 
-interface Props { mode?: "commerce" | "vendeur" }
-
-export default function GestionCommerce({ mode = "commerce" }: Props) {
+export default function GestionCommerce() {
   const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();

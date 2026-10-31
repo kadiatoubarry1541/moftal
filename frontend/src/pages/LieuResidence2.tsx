@@ -154,34 +154,6 @@ export default function LieuResidence2() {
     }
   };
 
-  const getDefaultGroups = (): Residence2Group[] => [
-    {
-      id: '1',
-      name: 'Résidents de Conakry Est',
-      description: 'Communauté des résidents de l\'est de Conakry pour échanger et s\'entraider',
-      location: 'Conakry Est',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Dixinn',
-      district: 'Est'
-    },
-    {
-      id: '2',
-      name: 'Voisins de Ratoma',
-      description: 'Organisation de voisinage pour les habitants de Ratoma',
-      location: 'Ratoma',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Ratoma',
-      district: 'Nord'
-    }
-  ];
 
   const joinGroup = async (groupId: string) => {
     try {

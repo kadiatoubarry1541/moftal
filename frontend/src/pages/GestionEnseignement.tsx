@@ -382,7 +382,6 @@ export default function GestionEnseignement({ mode }: Props) {
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
   const isMobile = window.innerWidth < 768;
-  const sideW = collapsed ? (isMobile ? 0 : 64) : 244;
   const currentNav = NAV.find(n => n.id === section)!;
 
   const filteredStudents = students.filter(s => {

@@ -21,7 +21,7 @@ export function QuickMediaCapture({
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedMedia, setCapturedMedia] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [, setRecordingSeconds] = useState(0);
   const countdownRef = useRef<number | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);

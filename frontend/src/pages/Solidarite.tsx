@@ -75,7 +75,6 @@ export default function Solidarite() {
   const [rawPoorPeople, setRawPoorPeople] = useState<PoorPerson[]>([]);
   const [poorLoadError, setPoorLoadError] = useState('');
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
-  const [gpsActive, setGpsActive] = useState(false);
   const poorPeople = useMemo(() => sortAnyByProximity(rawPoorPeople, userGeo), [rawPoorPeople, userGeo]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [holyBooks, setHolyBooks] = useState<HolyBook[]>([]);
@@ -111,54 +110,6 @@ export default function Solidarite() {
     recipient: ''
   });
 
-  const getDefaultPoorPeople = (): PoorPerson[] => [
-    {
-      id: '1',
-      numeroH: 'POOR001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      age: 65,
-      location: 'Conakry',
-      situation: 'Veuve avec 5 enfants orphelins',
-      needs: ['Nourriture', 'Vêtements', 'Médicaments'],
-      urgency: 'critical',
-      contactInfo: {
-        phone: '+224 123 456 789',
-        address: 'Kaloum, Conakry'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-15T10:00:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 6,
-      occupation: 'Sans emploi',
-      healthCondition: 'Maladie chronique'
-    },
-    {
-      id: '2',
-      numeroH: 'POOR002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      age: 45,
-      location: 'Kindia',
-      situation: 'Handicapé, père de 3 enfants',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation enfants'],
-      urgency: 'high',
-      contactInfo: {
-        phone: '+224 987 654 321',
-        address: 'Centre-ville, Kindia'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-10T14:30:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 4,
-      occupation: 'Vendeur ambulant',
-      healthCondition: 'Handicap physique'
-    }
-  ];
 
   const getDefaultHolyBooks = (): HolyBook[] => [
     {
@@ -418,7 +369,7 @@ export default function Solidarite() {
         const err = await response.json().catch(() => ({}));
         alert(err.message || 'Erreur lors de la publication');
       }
-    } catch (e) {
+    } catch {
       alert('Erreur de connexion');
     } finally {
       setUploadingBook(false);

@@ -174,7 +174,6 @@ export default function EchangePrimaire() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        const geo = getUserGeoContext();
         setRawProducts(productsData.products || []);
       } else {
         setRawProducts(getDefaultProducts());

@@ -76,7 +76,7 @@ export interface ProfilModal {
 
 // ─── COMPOSANT MODAL PUBLICATION ──────────────────────────────────────────────
 
-export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClose }: {
+export function PublierModal({ modal, onChange, onSubmit, onDelete, onClose }: {
   modal: PublishModal;
   token: string;
   onChange: (form: typeof DEFAULT_PUB_FORM) => void;

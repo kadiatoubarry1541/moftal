@@ -71,29 +71,7 @@ export function DeceasedWrittenForm() {
     return `G${generationNumber}`
   }
 
-  const calculateAge = (dateNaissance: string, dateDeces: string): number => {
-    if (!dateNaissance || !dateDeces) return 0
-    const birth = new Date(dateNaissance)
-    const death = new Date(dateDeces)
-    let age = death.getFullYear() - birth.getFullYear()
-    const monthDiff = death.getMonth() - birth.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && death.getDate() < birth.getDate())) {
-      age--
-    }
-    return age
-  }
 
-  const calculateYearsSinceDeath = (dateDeces: string): number => {
-    if (!dateDeces) return 0
-    const death = new Date(dateDeces)
-    const now = new Date()
-    let years = now.getFullYear() - death.getFullYear()
-    const monthDiff = now.getMonth() - death.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < death.getDate())) {
-      years--
-    }
-    return years
-  }
 
   const handleVideoRecorded = (videoBlob: Blob) => {
     setData(prev => ({ ...prev, video: videoBlob }))

@@ -461,7 +461,7 @@ export default function GestionRestaurant() {
                     <div style={{ fontSize: 28, marginBottom: 4 }}>🪑</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>Table {t.numero}</div>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{t.zone} · {t.capacite} pers.</div>
-                    <select value={t.statut} onChange={async e => { const r = await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }).catch(() => null); reloadTables(); }}
+                    <select value={t.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }).catch(() => null); reloadTables(); }}
                       style={{ fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color, border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", width: "100%" }}>
                       {Object.entries(TABLE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
@@ -562,7 +562,7 @@ export default function GestionRestaurant() {
                           lignes: items.map((i: any) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
                           total: o.total, modePaiement: o.type_paiement,
                         })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
-                        <select value={o.statut} onChange={async e => { const r = await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch(() => null); reloadOrders(); reloadTables(); reloadDash(); }}
+                        <select value={o.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch(() => null); reloadOrders(); reloadTables(); reloadDash(); }}
                           style={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
                           {Object.entries(ORDER_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>

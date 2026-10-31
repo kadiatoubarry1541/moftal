@@ -353,19 +353,6 @@ export default function Zaka() {
     }
   };
   
-  const getDefaultCommunities = (): ReligiousCommunity[] => [
-    {
-      id: '1',
-      name: 'Communauté Musulmane de Conakry',
-      religion: 'Islam',
-      description: 'Communauté musulmane pour partager la foi et les enseignements',
-      members: ['USER001', 'USER002', 'USER003'],
-      posts: [],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-15T10:00:00Z'
-    }
-  ];
   
   const loadFormationReligieuxData = async () => {
     try {
@@ -677,80 +664,6 @@ export default function Zaka() {
     }
   };
 
-  const getDefaultPoorPeople = (): PoorPerson[] => [
-    {
-      id: '1',
-      numeroH: 'POOR001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      age: 65,
-      location: 'Conakry',
-      situation: 'Veuve avec 5 enfants orphelins',
-      needs: ['Nourriture', 'Vêtements', 'Médicaments'],
-      urgency: 'critical',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 123 456 789',
-        address: 'Kaloum, Conakry'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-15T10:00:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 6,
-      occupation: 'Sans emploi',
-      healthCondition: 'Maladie chronique'
-    },
-    {
-      id: '2',
-      numeroH: 'POOR002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      age: 45,
-      location: 'Kindia',
-      situation: 'Handicapé, père de 3 enfants',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation enfants'],
-      urgency: 'high',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 987 654 321',
-        address: 'Centre-ville, Kindia'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-10T14:30:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 4,
-      occupation: 'Vendeur ambulant',
-      healthCondition: 'Handicap physique'
-    },
-    {
-      id: '3',
-      numeroH: 'POOR003',
-      prenom: 'Mariama',
-      nomFamille: 'Bah',
-      age: 35,
-      location: 'Kankan',
-      situation: 'Mère célibataire avec 4 enfants',
-      needs: ['Nourriture', 'Vêtements enfants', 'Loyer'],
-      urgency: 'medium',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 555 123 456',
-        address: 'Quartier populaire, Kankan'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-05T09:15:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 5,
-      occupation: 'Femme de ménage',
-      healthCondition: 'Bon'
-    }
-  ];
 
   const handleDonation = (poorPerson: PoorPerson) => {
     setSelectedPoorPerson(poorPerson);

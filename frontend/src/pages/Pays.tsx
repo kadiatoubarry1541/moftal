@@ -421,7 +421,7 @@ export default function Pays() {
         try {
         const data = await response.json();
           groups = data.groups || [];
-        } catch (jsonError) {
+        } catch {
           groups = getDefaultRegionGroups();
         }
       } else {
@@ -473,7 +473,7 @@ export default function Pays() {
             } else {
               setSelectedGroup(firstGroup);
       }
-    } catch (error) {
+    } catch {
             // Si erreur, sélectionner quand même le groupe
             setSelectedGroup(firstGroup);
           }
@@ -487,7 +487,7 @@ export default function Pays() {
           setSelectedGroup(updatedGroup);
         }
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse - utiliser les groupes par défaut
       const defaultGroups = getDefaultRegionGroups();
       const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
@@ -687,7 +687,7 @@ export default function Pays() {
         try {
         const data = await response.json();
           groups = data.groups || [];
-        } catch (jsonError) {
+        } catch {
           groups = getDefaultResidenceGroups();
         }
       } else {
@@ -728,7 +728,7 @@ export default function Pays() {
             } else {
               setSelectedResidenceGroup(firstGroup);
             }
-          } catch (error) {
+          } catch {
             // Si erreur, sélectionner quand même le groupe
             setSelectedResidenceGroup(firstGroup);
           }
@@ -742,7 +742,7 @@ export default function Pays() {
           setSelectedResidenceGroup(updatedGroup);
         }
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse - utiliser les groupes par défaut
       const defaultGroups = getDefaultResidenceGroups();
       setResidenceGroups(defaultGroups);
@@ -810,7 +810,7 @@ export default function Pays() {
       if (response.ok) {
         loadResidenceGroups();
       }
-    } catch (error) {
+    } catch {
       // Erreur silencieuse
     }
   };

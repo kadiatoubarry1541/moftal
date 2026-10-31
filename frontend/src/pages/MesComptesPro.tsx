@@ -113,7 +113,7 @@ export default function MesComptesPro() {
   const { tr, locale } = useTraduction();
   const [accounts, setAccounts]   = useState<ProAccount[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [paying, setPaying]       = useState<string | null>(null); // id du compte en cours de paiement
+  const [paying]       = useState<string | null>(null); // id du compte en cours de paiement
   const [payError, setPayError]   = useState<string | null>(null);
   const [payModal, setPayModal] = useState<{
     accountId: string; amount: number; purpose: string; description: string;
@@ -122,8 +122,6 @@ export default function MesComptesPro() {
   // Prix par compte (chargés dynamiquement depuis le backend)
   const [prix, setPrix] = useState<Record<string, any>>({});
   const [regul, setRegul] = useState<Record<string, { moisDus: number; montant: number }>>({});
-  const [paiementModal, setPaiementModal] = useState<{ acc: ProAccount; mode: 'visibilite' | 'gestion' } | null>(null);
-  const [periodeChoisie, setPeriodeChoisie] = useState<'mois' | 'an'>('mois');
 
   const token = localStorage.getItem("token");
 

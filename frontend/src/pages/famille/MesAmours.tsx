@@ -96,7 +96,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   const [userData, setUserData] = useState<UserData | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -367,69 +367,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     await uploadStoryFile(file);
   };
 
-  const getDefaultFriends = (): Friend[] => [
-    {
-      id: '1',
-      numeroH: 'FRIEND001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      email: 'fatou.camara@email.com',
-      phone: '+224 123 456 789',
-      status: 'accepted',
-      requestedAt: '2024-01-15T10:00:00Z',
-      acceptedAt: '2024-01-15T10:30:00Z',
-      mutualFriends: 5,
-      commonInterests: ['Musique', 'Voyage'],
-      bio: 'Passionnée de musique et de voyage',
-      location: 'Conakry',
-      occupation: 'Enseignante',
-      hobbies: ['Chant', 'Danse', 'Lecture'],
-      lastSeen: '2024-01-20T15:30:00Z',
-      isOnline: true,
-      profilePicture: '/api/placeholder/100/100'
-    },
-    {
-      id: '2',
-      numeroH: 'FRIEND002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      email: 'alpha.diallo@email.com',
-      phone: '+224 987 654 321',
-      status: 'accepted',
-      requestedAt: '2024-01-10T09:00:00Z',
-      acceptedAt: '2024-01-10T09:15:00Z',
-      mutualFriends: 3,
-      commonInterests: ['Sport', 'Cinéma'],
-      bio: 'Sportif et cinéphile',
-      location: 'Kindia',
-      occupation: 'Ingénieur',
-      hobbies: ['Football', 'Cinéma', 'Gaming'],
-      lastSeen: '2024-01-20T12:00:00Z',
-      isOnline: false,
-      profilePicture: '/api/placeholder/100/100'
-    }
-  ];
 
-  const getDefaultFriendRequests = (): FriendRequest[] => [
-    {
-      id: '1',
-      fromUser: 'REQUEST001',
-      fromUserName: 'Mariama Bah',
-      toUser: userData?.numeroH || '',
-      message: 'Salut ! J\'aimerais être ton amie',
-      status: 'pending',
-      createdAt: '2024-01-20T14:00:00Z'
-    },
-    {
-      id: '2',
-      fromUser: 'REQUEST002',
-      fromUserName: 'Ousmane Barry',
-      toUser: userData?.numeroH || '',
-      message: 'Bonjour, nous avons des amis en commun',
-      status: 'pending',
-      createdAt: '2024-01-19T16:30:00Z'
-    }
-  ];
 
   const getDefaultUserInfo = (): UserInfo => ({
     numeroH: userData?.numeroH || '',
@@ -787,24 +725,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     setShowInfoModal(true);
   };
 
-  const handleEditInfo = () => {
-    if (userInfo) {
-      setEditInfoForm({
-        bio: userInfo.bio || '',
-        location: userInfo.location || '',
-        occupation: userInfo.occupation || '',
-        hobbies: userInfo.hobbies?.join(', ') || '',
-        interests: userInfo.interests?.join(', ') || '',
-        education: userInfo.education || '',
-        birthDate: userInfo.birthDate || '',
-        maritalStatus: userInfo.maritalStatus || '',
-        children: userInfo.children?.toString() || '',
-        languages: userInfo.languages?.join(', ') || '',
-        isPublic: userInfo.isPublic
-      });
-      setShowEditInfo(true);
-    }
-  };
 
   const submitEditInfo = async () => {
     try {

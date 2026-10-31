@@ -65,14 +65,6 @@ interface ActivityComment {
 }
 
 
-// Liste de pays pour le sélecteur — les plus utilisés d'abord
-const PAYS_LISTE = [
-  'Guinée', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Burkina Faso',
-  'Niger', 'Mauritanie', 'Guinée-Bissau', 'Sierra Leone', 'Liberia',
-  'Ghana', 'Bénin', 'Togo', 'Cameroun', 'Congo', 'Gabon',
-  'France', 'Belgique', 'Canada', 'États-Unis', 'Maroc', 'Algérie',
-  'Tunisie', 'Égypte', 'Afrique du Sud', 'Autre'
-];
 
 export default function Activite({ embedded = false }: { embedded?: boolean } = {}) {
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -81,7 +73,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   // Pays sélectionné — par défaut = pays de l'utilisateur connecté
   const [selectedPays, setSelectedPays] = useState<string>('');
 
-  const [groups, setGroups] = useState<ActivityGroup[]>([]);
+  const [, setGroups] = useState<ActivityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(false);
   const [blockedActivity, setBlockedActivity] = useState(false);
@@ -129,7 +121,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
 
   // Garde paiement Info Moftal
   const [outilsAcces, setOutilsAcces] = useState<boolean | null>(null);
-  const [outilsPayLoading, setOutilsPayLoading] = useState(false);
+  const [outilsPayLoading] = useState(false);
   const [showOutilsModal, setShowOutilsModal] = useState(false);
   const [prixInfoMoftal, setPrixInfoMoftal] = useState<{ mois: number; an: number } | null>(null);
   const [showPaymentOutils, setShowPaymentOutils] = useState(false);
@@ -392,27 +384,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     }
   ];
 
-  const joinActivityGroup = async (groupId: string) => {
-    try {
-      const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/activities/groups/${groupId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          numeroH: userData?.numeroH
-        })
-      });
-
-      if (response.ok) {
-        loadActivityGroups();
-      }
-    } catch (error) {
-      // Erreur silencieuse
-    }
-  };
 
   const loadActivityMessages = async () => {
     if (!selectedGroup) return;
@@ -515,9 +486,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     loadActivityGroups();
   }, [activeTab, selectedPays, loadActivityGroups]);
 
-  const activeActivityName = getActivityName(activeTab)
-    || (activeTab === 'Activité1' ? 'Activité 1' : activeTab === 'Activité2' ? 'Activité 2' : 'Activité 3');
-  const filteredGroups = groups.filter(group => group.activity === activeActivityName);
 
   return (
     <>

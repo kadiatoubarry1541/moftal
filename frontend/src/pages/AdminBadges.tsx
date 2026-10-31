@@ -259,7 +259,7 @@ interface PageAdmin {
 
 export default function AdminBadges() {
   const [searchParams] = useSearchParams();
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [, setUserData] = useState<UserData | null>(null);
   const tabParam = searchParams.get('tab');
   const initialTab = (tabParam === 'logos' ? 'logos' : tabParam === 'page-admins' ? 'page-admins' : 'badges') as 'badges' | 'logos' | 'page-admins';
   const [activeTab, setActiveTab] = useState<'badges' | 'logos' | 'page-admins'>(initialTab);
@@ -272,8 +272,6 @@ export default function AdminBadges() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
-  const [editingLogo, setEditingLogo] = useState<Logo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [importing, setImporting] = useState(false);
