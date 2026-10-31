@@ -7,6 +7,8 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic } from "../types/vitrine";
+import type { AvisCommerce, Produit } from "../types/commerce";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -48,17 +50,17 @@ export default function CommerceVitrine() {
   const navigate = useNavigate();
   const { tr } = useTraduction();
 
-  const [store, setStore]         = useState<any>(null);
-  const [products, setProducts]   = useState<any[]>([]);
+  const [store, setStore]         = useState<EtablissementPublic | null>(null);
+  const [products, setProducts]   = useState<Produit[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("Tous");
   const [search, setSearch]       = useState("");
   const [, setMobileMenuOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<{ product: any; qty: number }[]>([]);
+  const [cartItems, setCartItems] = useState<{ product: Produit; qty: number }[]>([]);
   const [showCart, setShowCart]   = useState(false);
-  const [reviews, setReviews]     = useState<any[]>([]);
+  const [reviews, setReviews]     = useState<AvisCommerce[]>([]);
   const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
   const [reviewForm, setReviewForm] = useState({ nom_auteur: "", note: 5, commentaire: "" });
   const [reviewSent, setReviewSent] = useState(false);
@@ -97,10 +99,10 @@ export default function CommerceVitrine() {
     return list;
   }, [products, activeCategory, search]);
 
-  const cartTotal = cartItems.reduce((s, i) => s + i.product.prix_vente * i.qty, 0);
+  const cartTotal = cartItems.reduce((s, i) => s + +i.product.prix_vente * i.qty, 0);
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
 
-  function addToCart(product: any) {
+  function addToCart(product: Produit) {
     setCartItems(prev => {
       const existing = prev.find(i => i.product.id === product.id);
       if (existing) return prev.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i);
@@ -125,7 +127,7 @@ export default function CommerceVitrine() {
 
   // Commande ou question envoyée directement à la boutique (sa gestion)
   const messageBoutique = cartItems.length > 0
-    ? `Bonjour ! Je souhaite commander :\n${cartItems.map(i => `- ${i.product.nom} x${i.qty} = ${fmtMoney(i.product.prix_vente * i.qty)}`).join("\n")}\n\nTotal : ${fmtMoney(cartTotal)}\n\nMerci !`
+    ? `Bonjour ! Je souhaite commander :\n${cartItems.map(i => `- ${i.product.nom} x${i.qty} = ${fmtMoney(+i.product.prix_vente * i.qty)}`).join("\n")}\n\nTotal : ${fmtMoney(cartTotal)}\n\nMerci !`
     : "Bonjour ! Je suis intéressé(e) par vos produits.";
 
   if (loading) return (
@@ -344,7 +346,7 @@ export default function CommerceVitrine() {
 
                   {/* Prix + unité */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: AMBER }}>{fmtMoney(p.prix_vente)}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: AMBER }}>{fmtMoney(+p.prix_vente)}</span>
                     {p.unite && p.unite !== "pièce" && (
                       <span style={{ fontSize: 12, color: "#94a3b8" }}>/ {p.unite}</span>
                     )}
@@ -515,7 +517,7 @@ export default function CommerceVitrine() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product.nom}</div>
-                      <div style={{ fontSize: 13, color: AMBER, fontWeight: 700 }}>{fmtMoney(item.product.prix_vente)}</div>
+                      <div style={{ fontSize: 13, color: AMBER, fontWeight: 700 }}>{fmtMoney(+item.product.prix_vente)}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => changeQty(item.product.id, -1)} style={{ width: 26, height: 26, borderRadius: 6, border: "1px solid #e2e8f0", background: "white", cursor: "pointer", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>

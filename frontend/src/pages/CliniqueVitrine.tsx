@@ -6,6 +6,8 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic } from "../types/vitrine";
+import type { AvisPatient, Personnel } from "../types/clinique";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -42,8 +44,8 @@ export default function CliniqueVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [clinic, setClinic] = useState<any>(null);
-  const [staff, setStaff] = useState<any[]>([]);
+  const [clinic, setClinic] = useState<EtablissementPublic | null>(null);
+  const [staff, setStaff] = useState<Personnel[]>([]);
   const [services, setServices] = useState<string[]>([]);
   const [hasPharmacy, setHasPharmacy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +56,7 @@ export default function CliniqueVitrine() {
   const [quickSending, setQuickSending] = useState(false);
   const [quickSent, setQuickSent] = useState(false);
   const [quickError, setQuickError] = useState("");
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<AvisPatient[]>([]);
   const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
 
   const isLoggedIn = !!localStorage.getItem("token");
@@ -482,7 +484,7 @@ export default function CliniqueVitrine() {
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{tr(item.label)}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
-                {(item as any).extra}
+                {"extra" in item && item.extra}
               </div>
             ))}
           </div>

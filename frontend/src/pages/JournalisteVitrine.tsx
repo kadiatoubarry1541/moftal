@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, ArticlePresseVitrine, JournalisteVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -26,8 +27,8 @@ export default function JournalisteVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [media, setMedia]     = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [media, setMedia]     = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ articles: ArticlePresseVitrine[]; reporters: JournalisteVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("Tous");
@@ -70,8 +71,8 @@ export default function JournalisteVitrine() {
   const articles  = data?.articles || [];
   const reporters = data?.reporters || [];
 
-  const categories = ["Tous", ...Array.from(new Set(articles.map((a: any) => a.categorie).filter(Boolean))) as string[]];
-  const filtered   = activeCategory === "Tous" ? articles : articles.filter((a: any) => a.categorie === activeCategory);
+  const categories = ["Tous", ...Array.from(new Set(articles.map((a) => a.categorie).filter(Boolean))) as string[]];
+  const filtered   = activeCategory === "Tous" ? articles : articles.filter((a) => a.categorie === activeCategory);
 
   return (
     <div style={{ fontFamily: "'Georgia', serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -183,7 +184,7 @@ export default function JournalisteVitrine() {
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0", fontSize: 15 }}>{tr("Aucun article disponible pour l'instant.")}</div>
           ) : (
             <div className="art-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {filtered.map((art: any, i: number) => (
+              {filtered.map((art, i) => (
                 <div key={i} className="art-card" style={{ background: "white", borderRadius: 14, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   {art.categorie && (
                     <div style={{ height: 4, background: CAT_COLORS[art.categorie] || SLATE_DARK }} />
@@ -216,7 +217,7 @@ export default function JournalisteVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", fontFamily: "'Georgia', serif" }}>{tr("Nos Journalistes")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {reporters.map((r: any, i: number) => (
+              {reporters.map((r, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 14, padding: "20px", textAlign: "center", border: "1px solid #e2e8f0" }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: SLATE_DARK, margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 18, fontWeight: 700 }}>
                     {(r.prenom || "?").charAt(0)}{(r.nom || "?").charAt(0)}

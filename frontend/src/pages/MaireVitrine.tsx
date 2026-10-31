@@ -6,6 +6,8 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, StatsMairieVitrine } from "../types/vitrine";
+import type { AgentMairie } from "../types/mairie";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -31,9 +33,9 @@ export default function MaireVitrine() {
   const navigate = useNavigate();
   const { tr } = useTraduction();
 
-  const [mairie, setMairie]   = useState<any>(null);
-  const [agents, setAgents]   = useState<any[]>([]);
-  const [stats, setStats]     = useState<any>({});
+  const [mairie, setMairie]   = useState<EtablissementPublic | null>(null);
+  const [agents, setAgents]   = useState<AgentMairie[]>([]);
+  const [stats, setStats]     = useState<StatsMairieVitrine>({});
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);

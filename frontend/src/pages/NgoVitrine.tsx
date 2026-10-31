@@ -7,6 +7,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, ProjetOngVitrine, AnnonceVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -21,8 +22,8 @@ export default function NgoVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [ngo, setNgo]         = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [ngo, setNgo]         = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ projects: ProjetOngVitrine[]; announcements: AnnonceVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -165,7 +166,7 @@ export default function NgoVitrine() {
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>{tr("Aucun projet publié pour l'instant.")}</div>
           ) : (
             <div className="proj-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {projects.map((p: any, i: number) => (
+              {projects.map((p, i) => (
                 <div key={i} className="proj-card" style={{ background: "white", borderRadius: 16, padding: "24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "inline-block", background: p.statut === "en_cours" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "en_cours" ? "#1a8f1a" : "#64748b", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {p.statut || tr("En cours")}
@@ -188,7 +189,7 @@ export default function NgoVitrine() {
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", marginBottom: 24, textAlign: "center" }}>{tr("Actualités")}</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {announces.map((ann: any, i: number) => (
+              {announces.map((ann, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 12, padding: "18px 24px", border: "1px solid #e2e8f0" }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{ann.titre}</div>
                   {ann.contenu && <div style={{ fontSize: 13, color: "#475569" }}>{ann.contenu}</div>}

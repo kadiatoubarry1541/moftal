@@ -7,6 +7,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, PlatVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -27,8 +28,8 @@ export default function RestaurantVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [resto, setResto]      = useState<any>(null);
-  const [data, setData]        = useState<any>(null);
+  const [resto, setResto]      = useState<EtablissementPublic | null>(null);
+  const [data, setData]        = useState<DonneesVitrine<{ dishes: PlatVitrine[] }> | null>(null);
   const [loading, setLoading]  = useState(true);
   const [error, setError]      = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState("Tous");
@@ -58,9 +59,9 @@ export default function RestaurantVitrine() {
   const dishes = data?.dishes || [];
   const stats  = data?.stats || {};
 
-  const lignesPanier = dishes.filter((d: any) => panier[d.id]).map((d: any) => ({ ...d, quantite: panier[d.id] }));
-  const nbArticles = lignesPanier.reduce((n: number, l: any) => n + l.quantite, 0);
-  const totalPanier = lignesPanier.reduce((t: number, l: any) => t + (+l.prix || 0) * l.quantite, 0);
+  const lignesPanier = dishes.filter((d) => panier[d.id]).map((d) => ({ ...d, quantite: panier[d.id] }));
+  const nbArticles = lignesPanier.reduce((n: number, l) => n + l.quantite, 0);
+  const totalPanier = lignesPanier.reduce((t: number, l) => t + (+l.prix || 0) * l.quantite, 0);
   const changerQuantite = (id: number, delta: number) => setPanier(p => {
     const q = Math.max(0, Math.min(50, (p[id] || 0) + delta));
     const suite = { ...p };
@@ -80,7 +81,7 @@ export default function RestaurantVitrine() {
       const r = await fetch(`${API}/api/pro-public/restaurant/${tenantCode}/commande`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: lignesPanier.map((l: any) => ({ id: l.id, quantite: l.quantite })),
+          items: lignesPanier.map((l) => ({ id: l.id, quantite: l.quantite })),
           client_nom: client.nom, client_telephone: client.telephone, type_service: client.type_service,
           adresse_livraison: client.adresse, notes: client.notes,
         }),
@@ -94,12 +95,12 @@ export default function RestaurantVitrine() {
     } finally { setEnvoi(false); }
   };
 
-  const categories = useMemo(() => ["Tous", ...Array.from(new Set(dishes.map((d: any) => d.categorie).filter(Boolean))) as string[]], [dishes]);
+  const categories = useMemo(() => ["Tous", ...Array.from(new Set(dishes.map((d) => d.categorie).filter(Boolean))) as string[]], [dishes]);
 
   const filtered = useMemo(() => {
     let list = dishes;
-    if (activeCat !== "Tous") list = list.filter((d: any) => d.categorie === activeCat);
-    if (search.trim()) { const q = search.toLowerCase(); list = list.filter((d: any) => d.nom.toLowerCase().includes(q)); }
+    if (activeCat !== "Tous") list = list.filter((d) => d.categorie === activeCat);
+    if (search.trim()) { const q = search.toLowerCase(); list = list.filter((d) => d.nom.toLowerCase().includes(q)); }
     return list;
   }, [dishes, activeCat, search]);
 
@@ -253,7 +254,7 @@ export default function RestaurantVitrine() {
             </div>
           ) : (
             <div className="dish-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {filtered.map((d: any, i: number) => (
+              {filtered.map((d, i) => (
                 <div key={i} className="dish-card" style={{ background: "white", borderRadius: 16, padding: "20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
                   {d.image_url ? (
                     <div style={{ margin: "-20px -20px 14px", width: "calc(100% + 40px)", maxWidth: "none", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: "16px 16px 0 0", background: "#f1f5f9" }}>
@@ -268,7 +269,7 @@ export default function RestaurantVitrine() {
                   {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{tr(d.categorie)}</div>}
                   {d.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "0 0 10px" }}>{d.description}</p>}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(d.prix)}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(+d.prix)}</div>
                     {panier[d.id] ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <button onClick={() => changerQuantite(d.id, -1)} aria-label={tr("Retirer")} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>−</button>
@@ -350,7 +351,7 @@ export default function RestaurantVitrine() {
               </div>
             ) : (<>
               <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
-                {lignesPanier.map((l: any) => (
+                {lignesPanier.map((l) => (
                   <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", border: "1px solid #f1f5f9", borderRadius: 10 }}>
                     {l.image_url && <img src={getPhotoUrl(l.image_url) || ""} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />}
                     <div style={{ minWidth: 0, flex: 1 }}>

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
@@ -7,6 +7,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction, trHors } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, TrajetVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -22,8 +23,8 @@ export default function TransportVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [co, setCo]           = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [co, setCo]           = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ trips: TrajetVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -168,7 +169,7 @@ export default function TransportVitrine() {
             </div>
           ) : (
             <div className="trip-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {trips.map((t: any, i: number) => (
+              {trips.map((t, i) => (
                 <div key={i} className="trip-card" style={{ background: "white", borderRadius: 16, padding: "22px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                     <div style={{ flex: 1 }}>
@@ -187,10 +188,10 @@ export default function TransportVitrine() {
                       {t.heure_depart && <span style={{ fontSize: 13, color: "#64748b" }}>⏰ {t.heure_depart}</span>}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: SKY }}>{fmtMoney(t.prix)}</span>
-                      {t.places_disponibles !== null && t.places_disponibles !== undefined && (
-                        <span style={{ fontSize: 11, color: t.places_disponibles > 0 ? "#1a8f1a" : "#dc2626", fontWeight: 700 }}>
-                          {t.places_disponibles > 0 ? tr("{n} places", { n: t.places_disponibles }) : tr("Complet")}
+                      <span style={{ fontSize: 16, fontWeight: 800, color: SKY }}>{fmtMoney(+t.prix)}</span>
+                      {t.places_restantes !== null && t.places_restantes !== undefined && (
+                        <span style={{ fontSize: 11, color: t.places_restantes > 0 ? "#1a8f1a" : "#dc2626", fontWeight: 700 }}>
+                          {t.places_restantes > 0 ? tr("{n} places", { n: t.places_restantes }) : tr("Complet")}
                         </span>
                       )}
                     </div>

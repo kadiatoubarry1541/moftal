@@ -7,6 +7,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, MembreVitrine, AnnonceVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -22,8 +23,8 @@ export default function ReseauVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [reseau, setReseau]   = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [reseau, setReseau]   = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ members: MembreVitrine[]; announcements: AnnonceVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -164,14 +165,13 @@ export default function ReseauVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Membres")}</h2>
             </div>
             <div className="mem-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {members.map((m: any, i: number) => (
+              {members.map((m, i) => (
                 <div key={i} className="mem-card" style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${VIOLET},${VIOLET_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700 }}>
                     {(m.prenom || "?").charAt(0)}{(m.nom || "?").charAt(0)}
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>{m.prenom} {m.nom}</div>
                   {m.poste && <div style={{ fontSize: 12, color: VIOLET, fontWeight: 600, marginBottom: 2 }}>{m.poste}</div>}
-                  {m.secteur && <div style={{ fontSize: 11, color: "#94a3b8" }}>{m.secteur}</div>}
                 </div>
               ))}
             </div>
@@ -187,7 +187,7 @@ export default function ReseauVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Actualités du réseau")}</h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {announces.map((ann: any, i: number) => (
+              {announces.map((ann, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 12, padding: "18px 24px", border: "1px solid #e2e8f0" }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4 }}>{ann.titre}</div>
                   {ann.contenu && <div style={{ fontSize: 13, color: "#475569" }}>{ann.contenu}</div>}

@@ -8,6 +8,8 @@ import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, TarifEcole, EnseignantVitrine, ClasseVitrine } from "../types/vitrine";
+import type { AvisEnseignement } from "../types/enseignement";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -36,11 +38,11 @@ export default function EcoleVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const { tr, locale } = useTraduction();
-  const [school, setSchool] = useState<any>(null);
-  const [data, setData]     = useState<any>(null);
+  const [school, setSchool] = useState<EtablissementPublic | null>(null);
+  const [data, setData]     = useState<DonneesVitrine<{ staff: EnseignantVitrine[]; classrooms: ClasseVitrine[]; feeTypes: TarifEcole[]; matieres: string[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<AvisEnseignement[]>([]);
   const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
   const [enrollForm, setEnrollForm] = useState({ nom_enfant: "", date_naissance: "", niveau_souhaite: "", nom_parent: "", telephone_parent: "" });
   const [enrollSending, setEnrollSending] = useState(false);
@@ -223,7 +225,7 @@ export default function EcoleVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des éducateurs passionnés dédiés à la réussite de vos enfants.")}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 20 }}>
-              {staff.map((s: any, i: number) => {
+              {staff.map((s, i) => {
                 const matieresProf = Array.from(new Set([s.matiere, s.specialite, ...(Array.isArray(s.matieres) ? s.matieres : [])].filter(Boolean))) as string[];
                 return (
                   <div key={i} className="staff-card" style={{ background: "white", borderRadius: 18, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
@@ -277,7 +279,7 @@ export default function EcoleVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("{n} classe(s) proposée(s) par notre école.", { n: classrooms.length })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
-              {classrooms.map((c: any, i: number) => (
+              {classrooms.map((c, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0" }}>
                   {c.photo_url
                     ? <img src={getPhotoUrl(c.photo_url) || ""} alt={c.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block" }} />
@@ -302,7 +304,7 @@ export default function EcoleVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Indicatifs — contactez-nous pour le détail complet.")}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
-              {feeTypes.map((f: any, i: number) => (
+              {feeTypes.map((f, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "18px 20px", textAlign: "center" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr(f.type_frais)}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: GREEN }}>
@@ -324,7 +326,7 @@ export default function EcoleVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Note moyenne : {moyenne}/5 sur {total} avis", { moyenne: reviewStats.moyenne, total: reviewStats.total })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }} className="staff-g">
-              {reviews.slice(0, 6).map((r: any, i: number) => (
+              {reviews.slice(0, 6).map((r, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 16, padding: "22px 20px", border: "1px solid #e2e8f0" }}>
                   <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 8 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
                   {r.commentaire && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 10px" }}>{r.commentaire}</p>}

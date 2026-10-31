@@ -7,6 +7,7 @@ import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, EnseignantVitrine, ClasseVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -31,8 +32,8 @@ export default function MadrasaVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [madrasa, setMadrasa] = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [madrasa, setMadrasa] = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ staff: EnseignantVitrine[]; halaqas: ClasseVitrine[]; matieres: string[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const photos = usePhotosSite(tenantCode);
@@ -210,7 +211,7 @@ export default function MadrasaVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des enseignants qualifiés pour transmettre la science islamique.")}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 230px), 1fr))", gap: 20 }}>
-              {staff.map((s: any, i: number) => (
+              {staff.map((s, i) => (
                 <div key={i} className="staff-card" style={{ background: "white", borderRadius: 18, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 48, fontWeight: 800 }}>
                     {s.photo_url
@@ -238,7 +239,7 @@ export default function MadrasaVitrine() {
               <p style={{ color: "#64748b", fontSize: 15 }}>{tr("{n} halaqa(s) proposée(s).", { n: halaqas.length })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 220px), 1fr))", gap: 16 }}>
-              {halaqas.map((h: any, i: number) => (
+              {halaqas.map((h, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0" }}>
                   {h.photo_url
                     ? <img src={getPhotoUrl(h.photo_url) || ""} alt={h.nom} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block" }} />

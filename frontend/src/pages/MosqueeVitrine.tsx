@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, ImamVitrine, AnnonceVitrine, PredicationVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -22,8 +23,8 @@ export default function MosqueeVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [mosque, setMosque]   = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [mosque, setMosque]   = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ imams: ImamVitrine[]; announcements: AnnonceVitrine[]; predications: PredicationVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -67,7 +68,8 @@ export default function MosqueeVitrine() {
 
   const stats   = data?.stats || {};
   const imams   = data?.imams || [];
-  const annList = data?.announcements || data?.predications || [];
+  // Mosquée : annonces ; réseau d'imams : prédications (mêmes cartes)
+  const annList: (Partial<AnnonceVitrine> & Partial<PredicationVitrine>)[] = data?.announcements || data?.predications || [];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -187,7 +189,7 @@ export default function MosqueeVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos Imams")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {imams.map((imam: any, i: number) => (
+              {imams.map((imam, i) => (
                 <div key={i} style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${EMERALD},${EMERALD_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700 }}>
                     {(imam.prenom || "?").charAt(0)}{(imam.nom || "?").charAt(0)}
@@ -209,7 +211,7 @@ export default function MosqueeVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Annonces & Actualités")}</h2>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {annList.map((ann: any, i: number) => (
+              {annList.map((ann, i) => (
                 <div key={i} className="ann-card" style={{ background: "white", borderRadius: 14, padding: "20px 24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 6 }}>{ann.titre || ann.theme}</div>
                   {ann.contenu && <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.6 }}>{ann.contenu}</div>}
