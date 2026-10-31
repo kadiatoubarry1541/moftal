@@ -115,6 +115,9 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   // Contacts du téléphone déjà sur Moftal, proposés en ajout direct
   const [contactMatches, setContactMatches] = useState<{ numeroH: string; prenom: string; nomFamille: string; photo?: string }[] | null>(null);
   const [contactMatchesLoading, setContactMatchesLoading] = useState(false);
+  // Contacts cochés dans la liste du téléphone, et échec éventuel de la recherche
+  const [contactsChoisis, setContactsChoisis] = useState(0);
+  const [contactsErreur, setContactsErreur] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
@@ -626,6 +629,8 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     if (phones.length === 0) return;
     setContactMatchesLoading(true);
     setContactMatches(null);
+    setContactsErreur(false);
+    setContactsChoisis(phones.length ? new Set(phones.map((t) => t.replace(/[^0-9]/g, '').slice(-9))).size : 0);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/api/friends/match-phones`, {
@@ -634,8 +639,10 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
         body: JSON.stringify({ phones }),
       });
       const data = await res.json();
-      setContactMatches(data.success ? (data.matches || []) : []);
+      if (!res.ok || !data.success) { setContactsErreur(true); setContactMatches([]); return; }
+      setContactMatches(data.matches || []);
     } catch {
+      setContactsErreur(true);
       setContactMatches([]);
     } finally {
       setContactMatchesLoading(false);
@@ -1076,7 +1083,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 </button>
                 {contactMatches && (
                   contactMatches.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center mt-2">Aucun de vos contacts n'est encore sur Moftal.</p>
+                    <p className="text-sm text-gray-500 text-center mt-2">{contactsErreur ? "Connexion impossible : la recherche n'a pas pu se faire. Réessayez." : `Parmi les ${contactsChoisis} numéro(s) choisi(s), aucun nouveau contact à ajouter (déjà amis ou pas encore sur Moftal). Pour en vérifier d'autres, rouvrez la liste et cochez-les tous.`}</p>
                   ) : (
                     <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
                       {contactMatches.map(c => (
