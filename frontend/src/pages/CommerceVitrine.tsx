@@ -356,7 +356,7 @@ export default function CommerceVitrine() {
                   </div>
 
                   {/* Stock faible */}
-                  {p.stock <= 5 && (
+                  {p.stock != null && Number(p.stock) <= 5 && (
                     <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 600, marginBottom: 8 }}>{tr("⚠️ Plus que {n} en stock", { n: p.stock })}</div>
                   )}
 
