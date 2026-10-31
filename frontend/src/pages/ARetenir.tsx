@@ -195,7 +195,7 @@ export default function ARetenir() {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/published?numeroH=${encodeURIComponent(numeroH)}&limit=100`);
       if (response.ok) {
         const data = await response.json();
-        setPublishedSections((data.stories || []).map((s: any) => ({
+        setPublishedSections((data.stories || []).map((s: { sectionId: string; publishedAt: string; authorName: string }) => ({
           sectionId: s.sectionId,
           publishedAt: s.publishedAt,
           authorName: s.authorName
@@ -414,7 +414,7 @@ export default function ARetenir() {
 
     setSaving(true);
     try {
-      const stories: Record<string, any> = {};
+      const stories: Record<string, { content: string; photos: string[]; videos: string[] }> = {};
       storySections.forEach(section => {
         stories[section.id] = {
           content: section.content,

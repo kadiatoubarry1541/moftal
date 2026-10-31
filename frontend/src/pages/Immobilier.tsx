@@ -51,7 +51,7 @@ export default function Immobilier() {
         if (res.ok) {
           const data = await res.json();
           const maisons = (data.products || []).filter(
-            (p: any) => p.category === 'Maison à louer'
+            (p: Annonce & { category?: string }) => p.category === 'Maison à louer'
           );
           setAnnonces(maisons);
         }

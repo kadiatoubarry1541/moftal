@@ -293,7 +293,8 @@ export default function InscriptionPro() {
     try {
       const token = localStorage.getItem("token");
 
-      let services: any[] = [];
+      /** Liste de services ; pour un restaurant, les plats du menu */
+      let services: (string | { name: string; price: string; description: string; category: string; available: boolean })[] = [];
       let specialties: string[] = [];
 
       if (selectedType === "restaurant") {

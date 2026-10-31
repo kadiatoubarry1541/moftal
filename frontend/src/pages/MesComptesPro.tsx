@@ -120,7 +120,9 @@ export default function MesComptesPro() {
   } | null>(null);
 
   // Prix par compte (chargés dynamiquement depuis le backend)
-  const [prix, setPrix] = useState<Record<string, any>>({});
+  // Prix par période, pour chaque formule (/api/payment/prix-compte-pro)
+  type PrixPeriodes = Record<"mois" | "troisMois" | "an", number>;
+  const [prix, setPrix] = useState<Record<string, { visibilite: PrixPeriodes; gestionInterne: PrixPeriodes }>>({});
   const [regul, setRegul] = useState<Record<string, { moisDus: number; montant: number }>>({});
 
   const token = localStorage.getItem("token");
