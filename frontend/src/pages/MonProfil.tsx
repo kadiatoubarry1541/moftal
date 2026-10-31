@@ -36,6 +36,13 @@ interface UserLogo {
   };
 }
 
+
+interface EtablissementMembre {
+  id?: number | string;
+  name?: string | null;
+  photo?: string | null;
+  role?: string | null;
+}
 export default function MonProfil() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<{
@@ -53,7 +60,7 @@ export default function MonProfil() {
     [key: string]: unknown;
   } | null>(null);
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
-  const [memberships, setMemberships] = useState<any[]>([]);
+  const [memberships, setMemberships] = useState<EtablissementMembre[]>([]);
   const [open, setOpen] = useState(false);
   // ?modifier=1 : page unique « Mettre à jour mon profil » (bannière, espaces pro…)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -150,7 +157,7 @@ export default function MonProfil() {
     }
   };
 
-  const quitterEtablissement = async (membership: any) => {
+  const quitterEtablissement = async (membership) => {
     if (!window.confirm(`${t('toast.leave_confirm')} "${membership.name}" ?`)) return;
     try {
       const token = localStorage.getItem("token");

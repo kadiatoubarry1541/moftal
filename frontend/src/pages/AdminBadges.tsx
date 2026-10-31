@@ -257,6 +257,13 @@ interface PageAdmin {
   };
 }
 
+
+interface UtilisateurListe {
+  activite1?: string | null;
+  nomFamille?: string | null;
+  numeroH?: string | null;
+  prenom?: string | null;
+}
 export default function AdminBadges() {
   const [searchParams] = useSearchParams();
   const [, setUserData] = useState<UserData | null>(null);
@@ -264,7 +271,7 @@ export default function AdminBadges() {
   const initialTab = (tabParam === 'logos' ? 'logos' : tabParam === 'page-admins' ? 'page-admins' : 'badges') as 'badges' | 'logos' | 'page-admins';
   const [activeTab, setActiveTab] = useState<'badges' | 'logos' | 'page-admins'>(initialTab);
   const [pageAdmins, setPageAdmins] = useState<PageAdmin[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UtilisateurListe[]>([]);
   const [showPageAdminForm, setShowPageAdminForm] = useState(false);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [logos, setLogos] = useState<Logo[]>([]);

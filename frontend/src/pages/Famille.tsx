@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getNumeroHForDisplay } from '../utils/auth';
 import { calculerAge } from '../utils/calculs';
 import ErreurChargement from "../components/ErreurChargement";
+import type { DefuntServeur } from '../types/arbre';
+import type { MessageGroupe } from '../types/groupes';
 
 const API_BASE = import.meta.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
 const getImageUrl = (url: string | null | undefined): string | null => {
@@ -91,8 +93,8 @@ interface FamilyTreeData {
   rootMember: string;
   chefFamille1?: string;
   chefFamille2?: string;
-  members: any[];
-  deceasedMembers: any[];
+  members: FamilyMember[];
+  deceasedMembers: DefuntServeur[];
 }
 
 export default function Famille() {
@@ -476,7 +478,7 @@ export default function Famille() {
 
       if (response.ok) {
         const data = await response.json();
-        const msgs = (data.messages || []).map((m: any) => ({
+        const msgs = (data.messages || []).map((m: MessageGroupe & { created_at?: string }) => ({
           id: m.id,
           author: m.numeroH,
           authorName: m.authorName,

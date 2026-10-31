@@ -17,7 +17,8 @@ interface ReflectionContent {
   title: string;
   description: string;
   type: 'video' | 'audio' | 'message';
-  content: any;
+  /** Texte d'un message, ou adresse d'une vidéo / d'un audio */
+  content: { text?: string; videoUrl?: string; audioUrl?: string; transcript?: string };
   religion: string;
   category: string;
   isActive: boolean;

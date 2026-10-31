@@ -514,12 +514,16 @@ const sectionIcons: Record<string, string> = {
   revelation: '✨', persecution: '🛡️', unification: '🏆', heritage: '📜'
 };
 
+
+interface StatsRecits {
+  totalStories?: number;
+}
 export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boolean }) {
   const { t } = useI18n();
   const [stories, setStories] = useState<PublishedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsRecits | null>(null);
   const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
   const [testifyingId, setTestifyingId] = useState<number | null>(null);
   const [selectedStory, setSelectedStory] = useState<PublishedStory | null>(null);

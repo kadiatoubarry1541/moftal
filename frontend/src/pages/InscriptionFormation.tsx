@@ -18,8 +18,10 @@ interface Formation {
   category: string;
   duration: number;
   level: string;
-  requirements: any;
-  curriculum: any[];
+  /** Conditions d'inscription (texte ou liste, selon la formation) */
+  requirements: unknown;
+  /** Modules du programme */
+  curriculum: string[];
   isActive: boolean;
   createdBy: string;
   maxStudents: number;

@@ -58,11 +58,17 @@ const ROLES = [
   { value: 'Préfet', label: 'Préfet', rank: 7 },
 ];
 
+
+interface UtilisateurListe {
+  nomFamille?: string | null;
+  numeroH?: string | null;
+  prenom?: string | null;
+}
 export default function AdminGovernments() {
   const [, setUserData] = useState<UserData | null>(null);
   const [governments, setGovernments] = useState<Government[]>([]);
   const [selectedGovernment, setSelectedGovernment] = useState<Government | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UtilisateurListe[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showAddMemberForm, setShowAddMemberForm] = useState(false);

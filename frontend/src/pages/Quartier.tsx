@@ -13,6 +13,13 @@ const SECTIONS = [
   { id: "travaux",     label: "Travaux & Infra", emoji: "🔧", color: "#64748b", bg: "#f8fafc",  desc: "Routes, eau, électricité, déchets — signalements" },
 ];
 
+
+interface ResponsablesQuartier {
+  chef_nom?: string | null;
+  chef_numero_h?: string | null;
+  gestionnaire_nom?: string | null;
+  gestionnaire_numero_h?: string | null;
+}
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
 export default function Quartier() {
@@ -23,7 +30,7 @@ export default function Quartier() {
   const userNumeroH = user?.numeroH || user?.numero_h || "";
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [manager, setManager] = useState<any>(null);
+  const [manager, setManager] = useState<ResponsablesQuartier | null>(null);
   const [showGestion, setShowGestion] = useState(false);
   const [mgrLoading, setMgrLoading] = useState(false);
   const [mgrForm, setMgrForm] = useState({

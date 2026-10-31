@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReçuTransaction } from "../components/ReçuTransaction";
+import type { CompteFamille } from '../types/compteFamille';
+import type { DonneesReçu } from '../components/ReçuTransaction';
 
 interface UserData {
   numeroH: string;
@@ -27,14 +29,14 @@ export default function Probleme() {
 
   // Moftal Pay — paiement santé depuis problème familial
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
-  const [fundCompte, setFundCompte] = useState<any>(null);
+  const [fundCompte, setFundCompte] = useState<CompteFamille | null>(null);
   const [showMoftalPay, setShowMoftalPay] = useState(false);
   const [moftalMontant, setMoftalMontant] = useState('');
   const [moftalBenef, setMoftalBenef] = useState('');
   const [moftalContact, setMoftalContact] = useState('');
   const [moftalRaison, setMoftalRaison] = useState('');
   const [moftalLoading, setMoftalLoading] = useState(false);
-  const [moftalReçu, setMoftalReçu] = useState<any>(null);
+  const [moftalReçu, setMoftalReçu] = useState<DonneesReçu | null>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");

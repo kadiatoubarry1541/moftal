@@ -2,6 +2,16 @@
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
+
+interface MonDon {
+  amount?: number | string;
+  createdAt?: string | null;
+  currency?: string | null;
+  description?: string | null;
+  id?: number | string;
+  recipient?: string | null;
+  recipientName?: string | null;
+}
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
 const DOMAINES = [
@@ -40,7 +50,7 @@ export default function Developpement() {
   const [nbDonneurs, setNbDonneurs] = useState(0);
   const [showDon, setShowDon] = useState(false);
   const [showMesDons, setShowMesDons] = useState(false);
-  const [mesDons, setMesDons] = useState<any[]>([]);
+  const [mesDons, setMesDons] = useState<MonDon[]>([]);
   const [donLoading, setDonLoading] = useState(false);
   const [donForm, setDonForm] = useState({
     amount: "",
@@ -456,7 +466,7 @@ export default function Developpement() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {mesDons.map((don: any) => {
+                  {mesDons.map((don) => {
                     const dom = DOMAINES.find(d => d.id === don.recipient);
                     return (
                       <div key={don.id} className="border rounded-xl p-4">
@@ -469,7 +479,7 @@ export default function Developpement() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-green-700">{parseFloat(don.amount).toLocaleString()} {don.currency}</div>
+                            <div className="font-bold text-green-700">{parseFloat(String(don.amount)).toLocaleString()} {don.currency}</div>
                             <div className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Effectué</div>
                           </div>
                         </div>
