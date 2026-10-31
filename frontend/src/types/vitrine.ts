@@ -62,3 +62,15 @@ export interface ArticleVitrine {
 
 /** Chiffres du mois affichés sur le site d'une mairie (/api/mairie-public/:code/stats) */
 export interface StatsMairieVitrine { mariages?: number; naissances?: number; deces?: number; residences?: number; agents?: number }
+
+/** Message envoyé depuis le site d'un établissement (table site_demandes) */
+export interface MessageDuSite {
+  id: number;
+  objet?: string | null;
+  nom: string;
+  telephone: string;
+  email?: string | null;
+  message: string;
+  statut: string;
+  created_at?: string;
+}

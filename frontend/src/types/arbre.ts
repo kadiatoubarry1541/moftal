@@ -93,3 +93,19 @@ export interface ChefsArbre {
   conseillerNom?: string | null
   conseillerPhoto?: string | null
 }
+
+/** Message d'un espace de la famille (Inspir, livres) : /api/organizations/posts */
+export interface MessageOrganisation {
+  id: string
+  author: string
+  authorName: string
+  numeroH: string
+  content: string
+  /** « text », « image », « video », « audio », « pdf »… */
+  messageType: string
+  category?: string
+  postCategory?: string
+  mediaUrl?: string | null
+  section?: string
+  createdAt: string
+}

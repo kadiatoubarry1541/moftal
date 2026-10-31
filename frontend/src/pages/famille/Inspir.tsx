@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config/api';
 import PaymentModal from '../../components/PaymentModal';
+import type { MessageOrganisation } from '../../types/arbre';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
 
@@ -18,7 +19,7 @@ interface UserData {
   date_naissance?: string;
   role?: string;
   photo?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Sections d'Inspir : « ce qu'on doit faire POUR l'autre ».
@@ -70,14 +71,14 @@ export default function Inspir() {
   const [publishSection, setPublishSection] = useState<Section>('parents');
   const [view, setView] = useState<View>('fil');
   const [biblioTab, setBiblioTab] = useState<BiblioTab>('livres');
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<MessageOrganisation[]>([]);
   const [sending, setSending] = useState(false);
   const [composer, setComposer] = useState(false);
 
   // États Bibliothèque (livres)
   const [aAccesLivres, setAAccesLivres] = useState(false);
   const [prixLivres, setPrixLivres] = useState(5000);
-  const [livres, setLivres] = useState<any[]>([]);
+  const [livres, setLivres] = useState<MessageOrganisation[]>([]);
   const [livreFile, setLivreFile] = useState<File | null>(null);
   const [livreTitre, setLivreTitre] = useState('');
   const [livreDescription, setLivreDescription] = useState('');
@@ -245,9 +246,9 @@ export default function Inspir() {
         );
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.posts || []).map((p: any) => ({ ...p, section: p.section || section }));
+        return (data.posts || []).map((p: MessageOrganisation) => ({ ...p, section: p.section || section }));
       }));
-      setPosts(lists.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setPosts(lists.flat().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch { /* silencieux */ }
   };
 
