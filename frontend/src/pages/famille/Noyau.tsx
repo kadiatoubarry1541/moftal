@@ -3,6 +3,7 @@ import { getPhotoUrl, getSessionUser, isAdmin } from '../../utils/auth'
 import { AudioRecorder } from '../../components/AudioRecorder'
 import { VideoRecorder } from '../../components/VideoRecorder'
 import AjouterEnfantModal from '../../components/AjouterEnfantModal'
+import type { LienEnfant, LienParent } from '../../types/arbre'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -183,7 +184,15 @@ interface LinkedPerson { numeroH: string; prenom: string; nomFamille: string; ph
 const toMember = (p: LinkedPerson | null | undefined): Member | null =>
   p?.numeroH ? { numeroH: p.numeroH, prenom: p.prenom, nomFamille: p.nomFamille, photo: p.photo ?? null, genre: p.genre } : null
 
-async function fetchJson(path: string): Promise<any> {
+// Réponse lue champ par champ ; {} si le serveur ne répond pas
+interface ReponseLiens {
+  parents?: LienParent[]
+  children?: LienEnfant[]
+  wives?: { wife: LinkedPerson | null; link?: { status?: string } }[]
+  partner?: LinkedPerson | null
+}
+
+async function fetchJson(path: string): Promise<ReponseLiens> {
   try {
     const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } })
     return await res.json()
@@ -438,13 +447,13 @@ export default function Noyau() {
       fetchJson(isMan ? '/api/couple/my-wives' : '/api/couple/my-partner')
     ])
     setMyParents((parentsRes.parents || [])
-      .map((l: any) => ({ member: toMember(l.parent), parentType: l.parentType, status: l.status }))
-      .filter((x: any) => x.member))
+      .map((l) => ({ member: toMember(l.parent), parentType: l.parentType, status: l.status }))
+      .filter((x) => x.member))
     setMyChildren((childrenRes.children || [])
-      .map((l: any) => ({ member: toMember(l.child), status: l.status }))
-      .filter((x: any) => x.member))
+      .map((l) => ({ member: toMember(l.child), status: l.status }))
+      .filter((x) => x.member))
     setMySpouses(isMan
-      ? (spouseRes.wives || []).map((w: any) => ({ member: toMember(w.wife), status: w.link?.status })).filter((x: any) => x.member)
+      ? (spouseRes.wives || []).map((w) => ({ member: toMember(w.wife), status: w.link?.status })).filter((x) => x.member)
       : (spouseRes.partner ? [{ member: toMember(spouseRes.partner) as Member }] : []))
     const next: Record<TabKey, NoyauData> = { mine, pere, mere }
     setData(next)

@@ -347,7 +347,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           'Authorization': `Bearer ${token}`
         },
         body: formData
-      } as any);
+      });
 
       const data = await response.json();
       if (response.ok && data.success) {

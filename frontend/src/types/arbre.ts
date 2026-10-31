@@ -119,3 +119,12 @@ export interface LienParent {
   status: string
   parent: PersonneLiee | null
 }
+
+/** Lien parent-enfant vu du parent (/api/parent-child/my-children) */
+export interface LienEnfant {
+  id: string
+  parentNumeroH: string
+  childNumeroH: string
+  status: string
+  child: PersonneLiee | null
+}

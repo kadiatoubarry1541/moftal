@@ -62,6 +62,8 @@ interface PendingInvitation {
   parentType: string
   codeLiaison?: string
   parent?: { numeroH: string; prenom: string; nomFamille: string }
+  /** Demande faite par l'enfant (« je suis votre enfant ») */
+  demandeDeLEnfant?: boolean
 }
 
 // focusNumeroH : ouvre directement la galerie avec ce parent (clic depuis le Noyau)
@@ -405,8 +407,8 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
                       {inv.parent ? `${inv.parent.prenom} ${inv.parent.nomFamille}` : inv.parentNumeroH}
                     </p>
                     <p className="text-sm text-slate-500">
-                      {(inv as any).demandeDeLEnfant
-                        ? `Dit être votre enfant · ${getNumeroHForDisplay((inv as any).childNumeroH || '', false)}`
+                      {inv.demandeDeLEnfant
+                        ? `Dit être votre enfant · ${getNumeroHForDisplay(inv.childNumeroH || '', false)}`
                         : getNumeroHForDisplay(inv.parentNumeroH, false)}
                     </p>
                   </div>

@@ -10,6 +10,15 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
 
 
+/** Lien de couple rompu ou archivé */
+interface LienRompu {
+  id: string
+  status: string
+  brokenAt?: string | null
+  brokenByNumeroH?: string | null
+  archivedAt?: string | null
+}
+
 interface PartnerInfo {
   numeroH: string
   prenom: string
@@ -21,6 +30,8 @@ interface PartnerInfo {
 interface LinkInfo {
   id: string
   numeroMariageMairie: string
+  /** « pending », « active »… */
+  status?: string
 }
 
 interface PendingInvitation {
@@ -67,10 +78,10 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const [wives, setWives] = useState<Array<{ link: { id: string; status: string; numeroMariageMairie?: string; confirmedAt?: string }; wife: PartnerInfo | null }>>([])
   const [selectedWifeIndex, setSelectedWifeIndex] = useState(0)
   // Liens rompus (récupérables — se remettre ensemble possible)
-  const [brokenLinks, setBrokenLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
+  const [brokenLinks, setBrokenLinks] = useState<Array<{ link: LienRompu; partner: PartnerInfo | null }>>([])
   const [showBroken, setShowBroken] = useState(false)
   // Historique archivé (séparation définitive — contenu supprimé côté demandeur)
-  const [archivedLinks, setArchivedLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
+  const [archivedLinks, setArchivedLinks] = useState<Array<{ link: LienRompu; partner: PartnerInfo | null }>>([])
   const [linkForm, setLinkForm] = useState({
     partnerNumeroH: '',
     numeroMariageMairie: ''
@@ -580,7 +591,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const focusedOnPartner = !!focusNumeroH && partner?.numeroH === focusNumeroH
 
   // Pour les femmes : un seul mari possible — on dérive husbands depuis partner + linkInfo
-  const husbands: Array<{ link: any; husband: PartnerInfo | null }> =
+  const husbands: Array<{ link: LinkInfo; husband: PartnerInfo | null }> =
     !isHomme && partner && linkInfo
       ? [{ link: linkInfo, husband: partner }]
       : []
