@@ -261,6 +261,7 @@ router.get('/:tenantCode/payments', authenticate, verifyTenant, async (req, res)
 router.post('/:tenantCode/payments', authenticate, verifyTenant, async (req, res) => {
   try {
     const { tenant_id, property_id, montant, mois_concerne, type_paiement, statut, notes } = req.body;
+    if (!(Number(montant) > 0)) return res.status(400).json({ success: false, message: 'Indiquez le montant du paiement.' });
     const code = req.params.tenantCode;
     const erreur = await verifierAppartenance(code, { property_id, tenant_id });
     if (erreur) return res.status(400).json({ success: false, message: erreur });

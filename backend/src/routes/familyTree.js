@@ -549,6 +549,12 @@ router.post('/add-deceased', async (req, res) => {
   try {
     const user = req.user;
     const { numeroHD: _ignored, ...deceasedData } = req.body; // ignorer le numeroHD client
+    if (!String(deceasedData.prenom || '').trim() || !String(deceasedData.nomFamille || '').trim()) {
+      return res.status(400).json({ success: false, message: 'Le prénom et le nom de famille du défunt sont obligatoires.' });
+    }
+    if (!String(deceasedData.genre || '').trim()) {
+      return res.status(400).json({ success: false, message: 'Le genre du défunt est obligatoire.' });
+    }
 
     // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
     const numeroHD = await genererNumeroHD();

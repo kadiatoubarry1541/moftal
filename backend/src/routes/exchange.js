@@ -308,6 +308,7 @@ router.get('/tertiaire/products', async (req, res) => {
 router.post('/primaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);
     const userNumeroH = user?.numeroH || req.userId;
@@ -372,6 +373,7 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
 router.post('/secondaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
 
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);
@@ -427,6 +429,7 @@ router.post('/secondaire/products', upload.any(), async (req, res) => {
 router.post('/tertiaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
 
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);

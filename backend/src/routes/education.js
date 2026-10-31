@@ -101,6 +101,7 @@ router.get('/formations', async (req, res) => {
 router.post('/formations', requireAdmin, async (req, res) => {
   try {
     const { title, description, category, duration, level, requirements, curriculum, maxStudents, price } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre de la formation est obligatoire.' });
     
     const formation = await Formation.create({
       title,
@@ -413,6 +414,8 @@ router.get('/professors', async (req, res) => {
 router.post('/professors', requireAdmin, async (req, res) => {
   try {
     const { name, specialty, experience, qualifications, bio, contactInfo, hourlyRate, availability } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du professeur est obligatoire.' });
+    if (!String(specialty || '').trim()) return res.status(400).json({ success: false, message: 'La spécialité est obligatoire.' });
     
     const professor = await Professor.create({
       name,
@@ -595,6 +598,7 @@ const canCreateCourse = async (req, res, next) => {
 router.post('/courses', canCreateCourse, upload.single('media'), async (req, res) => {
   try {
     const { title, description, type, duration, level, category, prerequisites } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre du cours est obligatoire.' });
     
     const courseData = {
       title,

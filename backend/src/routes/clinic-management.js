@@ -313,6 +313,8 @@ router.get('/:tenantCode/prescriptions', authenticate, verifyTenant, async (req,
 router.post('/:tenantCode/prescriptions', authenticate, verifyTenant, async (req, res) => {
   try {
     const { patient_id, staff_id, medicaments, diagnostic, notes } = req.body;
+    if (!patient_id) return res.status(400).json({ success: false, message: 'Choisissez le patient.' });
+    if (!(Array.isArray(medicaments) && medicaments.length) && !String(diagnostic || '').trim()) return res.status(400).json({ success: false, message: 'Ajoutez au moins un médicament ou un diagnostic.' });
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_prescriptions WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const num = `ORD-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
@@ -341,6 +343,7 @@ router.get('/:tenantCode/records', authenticate, verifyTenant, async (req, res) 
 router.post('/:tenantCode/records', authenticate, verifyTenant, async (req, res) => {
   try {
     const { patient_id, staff_id, type_consultation, diagnostic, traitement, poids, tension, temperature } = req.body;
+    if (!patient_id) return res.status(400).json({ success: false, message: 'Choisissez le patient.' });
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_medical_records (tenant_code,patient_id,staff_id,type_consultation,diagnostic,traitement,poids,tension,temperature) VALUES(:code,:pid,:sid,:type,:diag,:trait,:poids,:tension,:temp) RETURNING *`,
       { replacements: { code: req.params.tenantCode, pid: patient_id, sid: staff_id || null, type: type_consultation, diag: diagnostic, trait: traitement, poids: poids || null, tension, temp: temperature || null }, type: sequelize.QueryTypes.INSERT }
@@ -535,6 +538,7 @@ router.post('/:tenantCode/invoices', authenticate, verifyTenant, async (req, res
   try {
     await ensureInvoicesTable();
     const { patient_id, staff_id, lignes, sous_total, remise, total, statut, mode_paiement, notes, date_facture } = req.body;
+    if (!(Array.isArray(lignes) && lignes.length) && !(Number(total) > 0)) return res.status(400).json({ success: false, message: 'Ajoutez au moins une ligne à la facture.' });
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_invoices WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const num = `FAC-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;

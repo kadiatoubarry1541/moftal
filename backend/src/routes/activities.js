@@ -115,6 +115,7 @@ router.get('/groups', async (req, res) => {
 router.post('/groups', async (req, res) => {
   try {
     const { name, description, activity, pays } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du groupe est obligatoire.' });
 
     // Récupère le pays depuis : body > profil utilisateur connecté
     let groupPays = pays || '';

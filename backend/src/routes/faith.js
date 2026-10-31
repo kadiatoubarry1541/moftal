@@ -121,6 +121,10 @@ router.get('/content', async (req, res) => {
 router.post('/content', async (req, res) => {
   try {
     const { title, description, type, content, category, religion } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre est obligatoire.' });
+    if (!String(type || '').trim()) return res.status(400).json({ success: false, message: 'Le type est obligatoire.' });
+    if (!String(category || '').trim()) return res.status(400).json({ success: false, message: 'La catégorie est obligatoire.' });
+    if (!String(religion || '').trim()) return res.status(400).json({ success: false, message: 'La religion est obligatoire.' });
     
     const faithContent = await FaithContent.create({
       title,
@@ -184,6 +188,8 @@ router.get('/communities', async (req, res) => {
 router.post('/communities', async (req, res) => {
   try {
     const { name, description, religion } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom de la communauté est obligatoire.' });
+    if (!String(religion || '').trim()) return res.status(400).json({ success: false, message: 'La religion est obligatoire.' });
     
     const community = await FaithCommunity.create({
       name,
