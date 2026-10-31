@@ -16,6 +16,8 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementGestion } from "../types/pro";
+import type { ReseauCotisation, ReseauProjet, TableauReseau, ReseauAnnouncement, ReseauMember } from "../types/gestion-reseau";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -44,12 +46,12 @@ export default function GestionReseau() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [membres, setMembres] = useState<any[]>([]);
-  const [projets, setProjets] = useState<any[]>([]);
-  const [cotisations, setCotisations] = useState<any[]>([]);
-  const [annonces, setAnnonces] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauReseau | null>(null);
+  const [membres, setMembres] = useState<ReseauMember[]>([]);
+  const [projets, setProjets] = useState<ReseauProjet[]>([]);
+  const [cotisations, setCotisations] = useState<ReseauCotisation[]>([]);
+  const [annonces, setAnnonces] = useState<ReseauAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -248,7 +250,7 @@ export default function GestionReseau() {
           {dash.recentAnnouncements?.length > 0 && (
             <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #f1f5f9" }}>
               <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>{tr("Dernières annonces")}</div>
-              {dash.recentAnnouncements.map((a: any) => (
+              {dash.recentAnnouncements.map((a) => (
                 <div key={a.id} style={{ padding: "10px 0", borderBottom: "1px solid #f8fafc" }}>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{a.titre}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, lineHeight: 1.5 }}>{a.contenu}</div>
@@ -272,10 +274,10 @@ export default function GestionReseau() {
             <div style={{ background: BLUE_BG, border: "1px solid #bfdbfe", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouveau membre")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["Email", "email"], ["NuméroH", "numero_h"]].map(([label, key]) => (
+                {([["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["Email", "email"], ["NuméroH", "numero_h"]] as [string, keyof typeof mForm][]).map(([label, key]) => (
                   <div key={key}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a8a", marginBottom: 4 }}>{tr(label)}</div>
-                    <input value={(mForm as any)[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={inp} />
+                    <input value={mForm[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={inp} />
                   </div>
                 ))}
                 <div>
@@ -439,7 +441,7 @@ export default function GestionReseau() {
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || tr("Anonyme")}</div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr(c.type_cot)}{c.periode ? ` · ${c.periode}` : ""} · {fmtDate(c.date_paiement)}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 15 }}>{fmtMoney(c.montant)}</div>
+                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 15 }}>{fmtMoney(+c.montant)}</div>
               </div>
             ))}
             {cotisations.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucune cotisation enregistrée.")}</div>}

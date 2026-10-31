@@ -3,14 +3,7 @@
 
 export type Montant = number | string;
 
-/** Établissement vu depuis sa gestion interne (/info) */
-export interface EtablissementGestion {
-  tenant_code: string;
-  name: string;
-  owner_numero_h?: string;
-  is_active?: boolean;
-  logo_url?: string | null;
-}
+export type { EtablissementGestion } from "./pro";
 
 export interface Employe {
   id: number;

@@ -15,6 +15,8 @@ import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { OngAnnouncement, OngDonation, OngMember, OngProject, TableauOng } from "../types/gestion-ngo";
 
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -47,12 +49,12 @@ export default function GestionNgo() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [donations, setDonations] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauOng | null>(null);
+  const [members, setMembers] = useState<OngMember[]>([]);
+  const [projects, setProjects] = useState<OngProject[]>([]);
+  const [donations, setDonations] = useState<OngDonation[]>([]);
+  const [announcements, setAnnouncements] = useState<OngAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -155,7 +157,7 @@ export default function GestionNgo() {
   async function addDonation() {
     if (!dForm.montant) return;
     setSaving(true);
-    const sel = projects.find((p: any) => String(p.id) === dForm.projet_id);
+    const sel = projects.find((p) => String(p.id) === dForm.projet_id);
     const payload = { ...dForm, projet_titre: sel ? sel.titre : dForm.projet_titre };
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify(payload) }))) { setSaving(false); return; }
     setSaving(false); setShowAddDon(false);
@@ -304,7 +306,7 @@ export default function GestionNgo() {
                   <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Projets récents</span>
                   <button onClick={() => setTab("projects")} style={{ fontSize: 12, color: ROSE, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir tous →</button>
                 </div>
-                {dash.recentProjects.map((p: any) => {
+                {dash.recentProjects.map((p) => {
                   const sc = STATUT_COLORS[p.statut] || STATUT_COLORS.en_cours;
                   return (
                     <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #f8fafc" }}>
@@ -313,7 +315,7 @@ export default function GestionNgo() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{p.titre}</div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>Début : {fmtDate(p.date_debut)}{p.budget > 0 ? ` · Budget : ${fmtMoney(p.budget)}` : ""}</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>Début : {fmtDate(p.date_debut)}{+p.budget > 0 ? ` · Budget : ${fmtMoney(+p.budget)}` : ""}</div>
                       </div>
                       <span style={{ padding: "3px 10px", background: sc.bg, color: sc.color, borderRadius: 20, fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{sc.label}</span>
                     </div>
@@ -361,7 +363,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {members.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun membre enregistré</div>}
-              {filtrer(members, recherche).map((m: any) => (
+              {filtrer(members, recherche).map((m) => (
                 <div key={m.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: ROSE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤝</div>
                   <div style={{ flex: 1 }}>
@@ -412,7 +414,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun projet enregistré</div>}
-              {filtrer(projects, recherche).map((p: any) => {
+              {filtrer(projects, recherche).map((p) => {
                 const sc = STATUT_COLORS[p.statut] || STATUT_COLORS.en_cours;
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
@@ -430,7 +432,7 @@ export default function GestionNgo() {
                     <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#64748b" }}>
                       <span>📅 Début : {fmtDate(p.date_debut)}</span>
                       {p.date_fin && <span>🏁 Fin : {fmtDate(p.date_fin)}</span>}
-                      {p.budget > 0 && <span>💰 Budget : {fmtMoney(p.budget)}</span>}
+                      {+p.budget > 0 && <span>💰 Budget : {fmtMoney(+p.budget)}</span>}
                     </div>
                   </div>
                 );
@@ -464,7 +466,7 @@ export default function GestionNgo() {
                     <label style={labelStyle}>Projet concerné</label>
                     <select value={dForm.projet_id} onChange={e => setDForm({...dForm, projet_id: e.target.value})} style={inputStyle}>
                       <option value="">— Aucun projet spécifique —</option>
-                      {projects.map((p: any) => <option key={p.id} value={p.id}>{p.titre}</option>)}
+                      {projects.map((p) => <option key={p.id} value={p.id}>{p.titre}</option>)}
                     </select>
                   </div>
                 </div>
@@ -476,11 +478,11 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {donations.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun don enregistré</div>}
-              {filtrer(donations, recherche).map((d: any) => (
+              {filtrer(donations, recherche).map((d) => (
                 <div key={d.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: ROSE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{fmtMoney(d.montant)}</div>
+                    <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{fmtMoney(+d.montant)}</div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
                       {d.donateur_nom || "Anonyme"} · {fmtDate(d.date_don)} {d.projet_titre ? `· ${d.projet_titre}` : ""}
                     </div>
@@ -523,7 +525,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {filtrer(announcements, recherche).map((a: any) => (
+              {filtrer(announcements, recherche).map((a) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>

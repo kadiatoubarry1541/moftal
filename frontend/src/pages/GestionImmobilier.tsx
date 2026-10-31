@@ -18,6 +18,8 @@ import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
 import { compressImage } from "../utils/compressImage";
 import { uploadMedia } from "../utils/uploadMedia";
+import type { EtablissementGestion } from "../types/pro";
+import type { ImmoAnnouncement, ImmoDemande, ImmoMaintenance, ImmoPayment, ImmoProperty, ImmoTenant, TableauImmo, BienDemande } from "../types/gestion-immo";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -70,14 +72,14 @@ export default function GestionImmobilier() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [properties, setProperties] = useState<any[]>([]);
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [maintenance, setMaintenance] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [demandes, setDemandes] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauImmo | null>(null);
+  const [properties, setProperties] = useState<ImmoProperty[]>([]);
+  const [tenants, setTenants] = useState<ImmoTenant[]>([]);
+  const [payments, setPayments] = useState<ImmoPayment[]>([]);
+  const [maintenance, setMaintenance] = useState<ImmoMaintenance[]>([]);
+  const [announcements, setAnnouncements] = useState<ImmoAnnouncement[]>([]);
+  const [demandes, setDemandes] = useState<ImmoDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -163,8 +165,8 @@ export default function GestionImmobilier() {
       setSaving(false);
     }
   };
-  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
-  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadTab = (t: Tab) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -296,7 +298,7 @@ export default function GestionImmobilier() {
             </div>
             {(dash.recentPayments?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8" }}>Aucun paiement récent</div>
-            ) : dash.recentPayments.map((p: any) => (
+            ) : dash.recentPayments.map((p) => (
               <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 8, background: AMBER_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>💰</div>
@@ -305,7 +307,7 @@ export default function GestionImmobilier() {
                     <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(p.date_paiement)}</div>
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 13 }}>{fmtMoney(p.montant)}</div>
+                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 13 }}>{fmtMoney(+p.montant)}</div>
               </div>
             ))}
           </div>
@@ -387,7 +389,7 @@ export default function GestionImmobilier() {
                         <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{p.nom}</div>
                         <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{p.type_bien} · {p.adresse}{p.ville ? ` · ${p.ville}` : ""}</div>
                         {(p.surface || p.nb_pieces) && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{p.surface ? `${p.surface} m²` : ""}{p.surface && p.nb_pieces ? " · " : ""}{p.nb_pieces ? `${p.nb_pieces} pièces` : ""}</div>}
-                        {p.loyer_mensuel > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 6 }}>{fmtMoney(p.loyer_mensuel)}</div>}
+                        {+p.loyer_mensuel > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 6 }}>{fmtMoney(+p.loyer_mensuel)}</div>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <select value={p.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/properties/${p.id}`, { statut: e.target.value }); reloadTab("properties"); }}
@@ -415,7 +417,7 @@ export default function GestionImmobilier() {
             {demandes.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune demande pour l'instant</div> :
               filtrer(demandes, recherche).map(dm => {
                 const sc = STATUT_DEMANDE[dm.statut] || STATUT_DEMANDE.nouvelle;
-                const biens: any[] = Array.isArray(dm.biens) ? dm.biens : [];
+                const biens: BienDemande[] = Array.isArray(dm.biens) ? dm.biens : [];
                 return (
                   <div key={dm.id} style={{ background: "white", border: `1px solid ${dm.statut === "nouvelle" ? "#fecaca" : AMBER_BORDER}`, borderRadius: 12, padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
@@ -428,7 +430,7 @@ export default function GestionImmobilier() {
                     </div>
                     <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
                       {biens.map((bn, k) => (
-                        <div key={k} style={{ fontSize: 13, color: "#334155" }}>🏠 <b>{bn.nom}</b>{bn.prix ? ` — ${fmtMoney(bn.prix)}` : ""}</div>
+                        <div key={k} style={{ fontSize: 13, color: "#334155" }}>🏠 <b>{bn.nom}</b>{bn.prix ? ` — ${fmtMoney(+bn.prix)}` : ""}</div>
                       ))}
                     </div>
                     {dm.message && <div style={{ marginTop: 8, fontSize: 13, color: "#475569", background: "#f8fafc", borderRadius: 8, padding: "8px 10px" }}>{dm.message}</div>}
@@ -489,7 +491,7 @@ export default function GestionImmobilier() {
                       <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{t.prenom ? `${t.prenom} ${t.nom}` : t.nom}</div>
                       {t.telephone && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>📞 {t.telephone}</div>}
                       {t.property_nom && <div style={{ fontSize: 12, color: "#64748b" }}>🏠 {t.property_nom}</div>}
-                      {t.loyer > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 4 }}>{fmtMoney(t.loyer)}/mois</div>}
+                      {+t.loyer > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: AMBER, marginTop: 4 }}>{fmtMoney(+t.loyer)}/mois</div>}
                     </div>
                     <button onClick={async () => { if (confirm("Retirer ce locataire ?")) { await del(`${BASE(tenantCode!)}/tenants/${t.id}`); reloadTab("tenants"); } }}
                       style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
@@ -546,7 +548,7 @@ export default function GestionImmobilier() {
                     <div style={{ fontSize: 12, color: "#64748b" }}>{p.property_nom || ""} · {p.mois_concerne || fmtDate(p.date_paiement)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(p.montant)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(+p.montant)}</div>
                     {p.statut !== "paye" && <button onClick={() => envoyerRappel(p.locataire_tel, `Bonjour ${[p.locataire_prenom, p.locataire_nom].filter(Boolean).join(" ")}, ${tenant?.name || "votre agence"} vous rappelle le loyer de ${p.mois_concerne || "ce mois"}${p.property_nom ? ` (${p.property_nom})` : ""} : ${gnfTexte(p.montant)}. Merci de régulariser dès que possible.`)} style={{ display: "block", marginLeft: "auto", marginBottom: 4, fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
                     <button onClick={() => imprimerRecu({
                       titre: p.statut === "paye" ? "Quittance de loyer" : "Reçu de paiement", numero: p.id, date: p.date_paiement, etablissement: tenant || {}, couleur: AMBER,
@@ -612,7 +614,7 @@ export default function GestionImmobilier() {
                         </div>
                         {m.property_nom && <div style={{ fontSize: 12, color: "#64748b" }}>🏠 {m.property_nom}</div>}
                         {m.description && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{m.description}</div>}
-                        {m.cout_estime > 0 && <div style={{ fontSize: 12, color: AMBER, marginTop: 4, fontWeight: 600 }}>Coût estimé : {fmtMoney(m.cout_estime)}</div>}
+                        {+m.cout_estime > 0 && <div style={{ fontSize: 12, color: AMBER, marginTop: 4, fontWeight: 600 }}>Coût estimé : {fmtMoney(+m.cout_estime)}</div>}
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <select value={m.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/maintenance/${m.id}`, { statut: e.target.value }); reloadTab("maintenance"); }}

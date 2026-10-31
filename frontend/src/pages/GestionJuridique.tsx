@@ -17,6 +17,8 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { JuridiqueAnnouncement, JuridiqueBooking, JuridiqueClient, JuridiqueDossier, JuridiqueService, JuridiqueStaff, TableauJuridique } from "../types/gestion-juridique";
 
 const BASE = (code: string) => `/api/juridique-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -54,14 +56,14 @@ export default function GestionJuridique() {
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant]                 = useState<any>(null);
-  const [dash, setDash]                     = useState<any>(null);
-  const [services, setServices]             = useState<any[]>([]);
-  const [bookings, setBookings]             = useState<any[]>([]);
-  const [staff, setStaff]                   = useState<any[]>([]);
-  const [clients, setClients]               = useState<any[]>([]);
-  const [announcements, setAnnouncements]   = useState<any[]>([]);
-  const [dossiers, setDossiers]             = useState<any[]>([]);
+  const [tenant, setTenant]                 = useState<EtablissementGestion | null>(null);
+  const [dash, setDash]                     = useState<TableauJuridique | null>(null);
+  const [services, setServices]             = useState<JuridiqueService[]>([]);
+  const [bookings, setBookings]             = useState<JuridiqueBooking[]>([]);
+  const [staff, setStaff]                   = useState<JuridiqueStaff[]>([]);
+  const [clients, setClients]               = useState<JuridiqueClient[]>([]);
+  const [announcements, setAnnouncements]   = useState<JuridiqueAnnouncement[]>([]);
+  const [dossiers, setDossiers]             = useState<JuridiqueDossier[]>([]);
   const [showAddDossier, setShowAddDossier] = useState(false);
   const [dosForm, setDosForm] = useState({ ...DOSSIER_VIDE });
   const [loading, setLoading]               = useState(true);
@@ -125,7 +127,7 @@ export default function GestionJuridique() {
 
   // Envoi d'un formulaire : en cas de coupure ou de réponse illisible, on renvoie
   // une erreur (jamais de faux succès) et le bouton est toujours débloqué.
-  async function poster(url: string, body: object): Promise<any> {
+  async function poster(url: string, body: object): Promise<ReponseServeur> {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
@@ -192,7 +194,7 @@ export default function GestionJuridique() {
     else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
-  async function patchDossier(id: number, champs: Record<string, any>) {
+  async function patchDossier(id: number, champs: Record<string, unknown>) {
     if (!(await envoyerGestion(`${b(tenantCode!)}/dossiers/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify(champs) }))) { return; }
     loadDossiers(); loadAll();
   }
@@ -283,7 +285,7 @@ export default function GestionJuridique() {
           {(dash?.recentBookings?.length > 0) && (
             <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Derniers rendez-vous</h3>
-              {dash.recentBookings.map((b: any) => (
+              {dash.recentBookings.map((b) => (
                 <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>
                   <span style={{ fontWeight: 600 }}>{b.client_nom}</span>
                   <span style={{ color: "#64748b" }}>{b.service_nom || "Consultation"} · {fmtDate(b.date_rdv)} {b.heure_rdv}</span>
@@ -349,7 +351,7 @@ export default function GestionJuridique() {
                         <div style={{ fontSize: 13, color: COLOR, marginTop: 4, fontWeight: 600 }}>⏰ {d.prochaine_etape || "Échéance"}{d.date_echeance ? ` — ${fmtDate(d.date_echeance)}` : ""}</div>
                       )}
                       {Number(d.honoraires) > 0 && (
-                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Honoraires : {fmtMoney(d.honoraires)} · Payé : {fmtMoney(d.montant_paye)}{reste > 0 ? ` · Reste : ${fmtMoney(reste)}` : " ✓"}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Honoraires : {fmtMoney(+d.honoraires)} · Payé : {fmtMoney(+d.montant_paye)}{reste > 0 ? ` · Reste : ${fmtMoney(reste)}` : " ✓"}</div>
                       )}
                       {d.notes && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontStyle: "italic", whiteSpace: "pre-wrap" }}>{d.notes}</div>}
                     </div>
@@ -422,7 +424,7 @@ export default function GestionJuridique() {
                   </div>
                   <button onClick={() => deleteService(s.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>🗑</button>
                 </div>
-                <div style={{ marginTop: 8, fontWeight: 700, color: COLOR }}>{Number(s.prix) > 0 ? fmtMoney(s.prix) : "Sur devis"}</div>
+                <div style={{ marginTop: 8, fontWeight: 700, color: COLOR }}>{Number(s.prix) > 0 ? fmtMoney(+s.prix) : "Sur devis"}</div>
                 {s.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{s.description}</div>}
               </div>
             ))}
@@ -446,7 +448,7 @@ export default function GestionJuridique() {
                 <div><label style={{ fontSize: 12, color: "#64748b" }}>Prestation</label>
                   <select style={inp} value={bkForm.service_id} onChange={e => setBkForm(f => ({ ...f, service_id: e.target.value }))}>
                     <option value="">Choisir une prestation</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.nom}{Number(s.prix) > 0 ? ` — ${fmtMoney(s.prix)}` : ""}</option>)}
+                    {services.map(s => <option key={s.id} value={s.id}>{s.nom}{Number(s.prix) > 0 ? ` — ${fmtMoney(+s.prix)}` : ""}</option>)}
                   </select>
                 </div>
                 <div><label style={{ fontSize: 12, color: "#64748b" }}>Avocat / juriste</label>
@@ -546,7 +548,7 @@ export default function GestionJuridique() {
                     <div style={{ fontSize: 13, color: COLOR }}>{s.poste}</div>
                     {s.specialite && <div style={{ fontSize: 12, color: "#64748b" }}>{s.specialite}</div>}
                     {s.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>📞 {s.telephone}</div>}
-                    {s.salaire > 0 && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Salaire: {fmtMoney(s.salaire)}</div>}
+                    {+s.salaire > 0 && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Salaire: {fmtMoney(+s.salaire)}</div>}
                   </div>
                   <button onClick={() => deleteStaff(s.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>🗑</button>
                 </div>

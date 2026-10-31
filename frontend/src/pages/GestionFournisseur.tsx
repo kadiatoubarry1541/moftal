@@ -16,6 +16,8 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { FournisseurAnnouncement, FournisseurClient, FournisseurOrder, FournisseurProduct, TableauFournisseur } from "../types/gestion-supplier";
 
 const BASE = (code: string) => `/api/supplier-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -43,12 +45,12 @@ export default function GestionFournisseur() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauFournisseur | null>(null);
+  const [products, setProducts] = useState<FournisseurProduct[]>([]);
+  const [clients, setClients] = useState<FournisseurClient[]>([]);
+  const [orders, setOrders] = useState<FournisseurOrder[]>([]);
+  const [announcements, setAnnouncements] = useState<FournisseurAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -91,7 +93,7 @@ export default function GestionFournisseur() {
 
   // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
   // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
-  const post = async (url: string, body: object): Promise<any> => {
+  const post = async (url: string, body: object): Promise<ReponseServeur> => {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
@@ -250,7 +252,7 @@ export default function GestionFournisseur() {
             </div>
             {(dash.recentOrders?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>Aucune commande récente</div>
-            ) : dash.recentOrders.map((o: any) => {
+            ) : dash.recentOrders.map((o) => {
               const sc = STATUT_COLORS[o.statut] || { bg: "#f1f5f9", color: "#64748b", label: o.statut };
               return (
                 <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>

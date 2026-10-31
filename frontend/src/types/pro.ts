@@ -95,3 +95,26 @@ export interface ProfilAffiche {
   email?: string | null;
   photo?: string | null;
 }
+
+/** Établissement vu depuis sa gestion interne (/info) */
+export interface EtablissementGestion {
+  tenant_code: string;
+  name: string;
+  type?: string;
+  owner_numero_h?: string;
+  is_active?: boolean;
+  logo_url?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  description?: string | null;
+  horaires?: string | null;
+  phone_urgence?: string | null;
+}
+
+/** Réponse du serveur à un envoi : succès ou message d'erreur, et la fiche créée sous sa clé */
+export interface ReponseServeur {
+  success?: boolean;
+  message?: string;
+  [cle: string]: unknown;
+}

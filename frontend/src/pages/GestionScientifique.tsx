@@ -14,6 +14,8 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { ScienceAnnouncement, ScienceMember, ScienceProject, SciencePublication, TableauScience } from "../types/gestion-scientist";
 
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -45,12 +47,12 @@ export default function GestionScientifique() {
   const peutGerer = !!user;
 
   const [tab, setTab] = useState<Tab>("dashboard");
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [publications, setPublications] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauScience | null>(null);
+  const [members, setMembers] = useState<ScienceMember[]>([]);
+  const [publications, setPublications] = useState<SciencePublication[]>([]);
+  const [projects, setProjects] = useState<ScienceProject[]>([]);
+  const [announcements, setAnnouncements] = useState<ScienceAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -104,7 +106,7 @@ export default function GestionScientifique() {
 
   async function addPublication() {
     if (!pForm.titre.trim()) return; setSaving(true);
-    const sel = members.find((m: any) => String(m.id) === pForm.auteur_id);
+    const sel = members.find((m) => String(m.id) === pForm.auteur_id);
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/publications`, { method: "POST", headers: auth(), body: JSON.stringify({ ...pForm, auteur_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : pForm.auteur_nom }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddPub(false); setPForm({ auteur_id: "", auteur_nom: "", titre: "", type_pub: "article", domaine: "", statut: "en_cours", date_pub: new Date().toISOString().split("T")[0], resume: "" });
     loadPublications(); loadAll();
@@ -240,7 +242,7 @@ export default function GestionScientifique() {
                   <span style={{ fontWeight:700, fontSize:14, color:"#0f172a" }}>Publications récentes</span>
                   <button onClick={()=>setTab("publications")} style={{ fontSize:12, color:INDIGO, background:"none", border:"none", cursor:"pointer", fontWeight:600 }}>Voir toutes →</button>
                 </div>
-                {dash.recentPublications.map((p:any)=>{
+                {dash.recentPublications.map((p) =>{
                   const sc=STATUT_COLORS[p.statut]||STATUT_COLORS.en_cours;
                   return (
                     <div key={p.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 20px", borderBottom:"1px solid #f8fafc" }}>
@@ -291,7 +293,7 @@ export default function GestionScientifique() {
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {members.length === 0 && <div style={{ textAlign:"center", padding:"40px", color:"#94a3b8" }}>Aucun chercheur enregistré</div>}
-              {members.map((m: any) => (
+              {members.map((m) => (
                 <div key={m.id} style={{ background:"white", border:`1px solid ${INDIGO_BORDER}`, borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
                   <div style={{ width:42, height:42, borderRadius:10, background:INDIGO_BG, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🔬</div>
                   <div style={{ flex:1 }}>
@@ -318,7 +320,7 @@ export default function GestionScientifique() {
                 <h3 style={{ margin:"0 0 16px", fontSize:15, fontWeight:700, color:"#3730a3" }}>Nouvelle publication</h3>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                   <div style={{ gridColumn:"1/-1" }}><label style={lbl}>Titre *</label><input value={pForm.titre} onChange={e => setPForm({...pForm, titre:e.target.value})} placeholder="Titre de la publication" style={inp} /></div>
-                  <div><label style={lbl}>Auteur</label><select value={pForm.auteur_id} onChange={e => setPForm({...pForm, auteur_id:e.target.value})} style={inp}><option value="">— Non précisé —</option>{members.map((m:any) => <option key={m.id} value={m.id}>{m.nom} {m.prenom}</option>)}</select></div>
+                  <div><label style={lbl}>Auteur</label><select value={pForm.auteur_id} onChange={e => setPForm({...pForm, auteur_id:e.target.value})} style={inp}><option value="">— Non précisé —</option>{members.map((m) => <option key={m.id} value={m.id}>{m.nom} {m.prenom}</option>)}</select></div>
                   <div><label style={lbl}>Type</label><select value={pForm.type_pub} onChange={e => setPForm({...pForm, type_pub:e.target.value})} style={inp}><option value="article">Article</option><option value="these">Thèse</option><option value="rapport">Rapport</option><option value="brevet">Brevet</option><option value="communication">Communication</option></select></div>
                   <div><label style={lbl}>Domaine</label><input value={pForm.domaine} onChange={e => setPForm({...pForm, domaine:e.target.value})} placeholder="Médecine, Physique..." style={inp} /></div>
                   <div><label style={lbl}>Statut</label><select value={pForm.statut} onChange={e => setPForm({...pForm, statut:e.target.value})} style={inp}><option value="en_cours">En cours</option><option value="soumis">Soumis</option><option value="publie">Publié</option></select></div>
@@ -333,7 +335,7 @@ export default function GestionScientifique() {
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {publications.length === 0 && <div style={{ textAlign:"center", padding:"40px", color:"#94a3b8" }}>Aucune publication enregistrée</div>}
-              {publications.map((p: any) => {
+              {publications.map((p) => {
                 const sc = STATUT_COLORS[p.statut] || STATUT_COLORS.en_cours;
                 return (
                   <div key={p.id} style={{ background:"white", border:`1px solid ${INDIGO_BORDER}`, borderRadius:12, padding:"16px 20px" }}>
@@ -385,7 +387,7 @@ export default function GestionScientifique() {
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {projects.length === 0 && <div style={{ textAlign:"center", padding:"40px", color:"#94a3b8" }}>Aucun projet enregistré</div>}
-              {projects.map((p: any) => {
+              {projects.map((p) => {
                 const sc = STATUT_COLORS[p.statut] || STATUT_COLORS.en_cours;
                 return (
                   <div key={p.id} style={{ background:"white", border:`1px solid ${INDIGO_BORDER}`, borderRadius:12, padding:"16px 20px" }}>
@@ -400,7 +402,7 @@ export default function GestionScientifique() {
                       </div>
                     </div>
                     {p.description && <div style={{ fontSize:13, color:"#374151", marginBottom:6 }}>{p.description}</div>}
-                    <div style={{ fontSize:12, color:"#64748b" }}>{p.responsable ? `👤 ${p.responsable} · ` : ""}📅 {fmtDate(p.date_debut)} {p.date_fin ? `→ ${fmtDate(p.date_fin)}` : ""} {p.budget > 0 ? `· 💰 ${(+p.budget).toLocaleString("fr-FR")} GNF` : ""}</div>
+                    <div style={{ fontSize:12, color:"#64748b" }}>{p.responsable ? `👤 ${p.responsable} · ` : ""}📅 {fmtDate(p.date_debut)} {p.date_fin ? `→ ${fmtDate(p.date_fin)}` : ""} {+p.budget > 0 ? `· 💰 ${(+p.budget).toLocaleString("fr-FR")} GNF` : ""}</div>
                   </div>
                 );
               })}
@@ -430,7 +432,7 @@ export default function GestionScientifique() {
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {announcements.length === 0 && <div style={{ textAlign:"center", padding:"40px", color:"#94a3b8" }}>Aucune annonce publiée</div>}
-              {announcements.map((a: any) => (
+              {announcements.map((a) => (
                 <div key={a.id} style={{ background:"white", border:`1px solid ${INDIGO_BORDER}`, borderRadius:12, padding:"16px 20px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                     <div><div style={{ fontWeight:700, color:"#0f172a", fontSize:15 }}>{a.titre}</div><div style={{ fontSize:11, color:"#94a3b8" }}>{fmtDate(a.created_at)}</div></div>

@@ -16,6 +16,8 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { cheminConnexion } from "../utils/connexionRetour";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
+import type { EtablissementGestion } from "../types/pro";
+import type { RestaurantAnnouncement, RestaurantDish, RestaurantOrder, RestaurantStaff, RestaurantTable, TableauRestaurant, ArticleCommande } from "../types/gestion-restaurant";
 
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -49,7 +51,7 @@ const lirePhoto = async (f: File) => {
 };
 
 const SERVICES: Record<string, string> = { sur_place: "Sur place", emporter: "À emporter", livraison: "Livraison" };
-const enteteCommande = (o: any) => o.source === "site" ? `🌐 ${o.client_nom || "Commande du site"}` : `Table ${o.table_num || "—"}`;
+const enteteCommande = (o: RestaurantOrder) => o.source === "site" ? `🌐 ${o.client_nom || "Commande du site"}` : `Table ${o.table_num || "—"}`;
 
 const TABLE_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   libre:    { bg: "#f0fdf0", color: "#1a8f1a", label: "Libre" },
@@ -65,13 +67,13 @@ export default function GestionRestaurant() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [dishes, setDishes] = useState<any[]>([]);
-  const [tables, setTables] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauRestaurant | null>(null);
+  const [dishes, setDishes] = useState<RestaurantDish[]>([]);
+  const [tables, setTables] = useState<RestaurantTable[]>([]);
+  const [orders, setOrders] = useState<RestaurantOrder[]>([]);
+  const [staff, setStaff] = useState<RestaurantStaff[]>([]);
+  const [announcements, setAnnouncements] = useState<RestaurantAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -128,7 +130,7 @@ export default function GestionRestaurant() {
       return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
     } finally { setSaving(false); }
   };
-  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadDash = () => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -265,7 +267,7 @@ export default function GestionRestaurant() {
             </div>
             {(dash.recentOrders?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8" }}>Aucune commande aujourd'hui</div>
-            ) : dash.recentOrders.map((o: any) => {
+            ) : dash.recentOrders.map((o) => {
               const sc = ORDER_STATUS[o.statut] || { bg: "#f8fafc", color: "#64748b", label: o.statut };
               return (
                 <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
@@ -277,7 +279,7 @@ export default function GestionRestaurant() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, color: ORANGE, fontSize: 13 }}>{fmtMoney(o.total)}</div>
+                    <div style={{ fontWeight: 700, color: ORANGE, fontSize: 13 }}>{fmtMoney(+o.total)}</div>
                     <span style={{ fontSize: 10, fontWeight: 600, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 6 }}>{sc.label}</span>
                   </div>
                 </div>
@@ -406,7 +408,7 @@ export default function GestionRestaurant() {
                               setDishes(dd.dishes || []);
                               // Relu en base (pas la copie gardée sur l'appareil) : la photo doit y être, sinon on le dit
                               const relueEnBase = navigator.onLine && !r.headers.get("X-Moftal-Offline");
-                              if (relueEnBase && !(dd.dishes || []).find((x: any) => x.id === d.id)?.image_url) alert("Le serveur n'a pas enregistré la photo. Réessayez ; si cela recommence, le serveur doit être mis à jour.");
+                              if (relueEnBase && !(dd.dishes || []).find((x: RestaurantDish) => x.id === d.id)?.image_url) alert("Le serveur n'a pas enregistré la photo. Réessayez ; si cela recommence, le serveur doit être mis à jour.");
                             });
                           }
                         }} />
@@ -414,7 +416,7 @@ export default function GestionRestaurant() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{d.nom}</div>
                         {d.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{d.description}</div>}
-                        <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginTop: 4 }}>{fmtMoney(d.prix)}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginTop: 4 }}>{fmtMoney(+d.prix)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf0" : "#f1f5f9", color: d.disponible ? "#1a8f1a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}
@@ -511,7 +513,7 @@ export default function GestionRestaurant() {
                     setOForm(f => { const items = [...f.items]; items[i] = { ...items[i], dish_id: e.target.value, nom: dish?.nom || "", prix: dish?.prix?.toString() || "" }; return { ...f, items }; });
                   }}>
                     <option value="">-- Plat --</option>
-                    {dishes.filter(d => d.disponible).map(d => <option key={d.id} value={d.id}>{d.nom} ({fmtMoney(d.prix)})</option>)}
+                    {dishes.filter(d => d.disponible).map(d => <option key={d.id} value={d.id}>{d.nom} ({fmtMoney(+d.prix)})</option>)}
                   </select>
                   <input placeholder="Prix" value={item.prix} onChange={e => setOForm(f => { const items = [...f.items]; items[i] = { ...items[i], prix: e.target.value }; return { ...f, items }; })} style={{ ...inp, padding: "7px 8px" }} />
                   <input placeholder="Qté" type="number" value={item.quantite} onChange={e => setOForm(f => { const items = [...f.items]; items[i] = { ...items[i], quantite: e.target.value }; return { ...f, items }; })} style={{ ...inp, padding: "7px 8px" }} />
@@ -535,7 +537,7 @@ export default function GestionRestaurant() {
             {orders.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune commande enregistrée</div> :
               filtrer(orders, recherche).map(o => {
                 const sc = ORDER_STATUS[o.statut] || { bg: "#f8fafc", color: "#64748b", label: o.statut };
-                const items: any[] = typeof o.items === "string" ? JSON.parse(o.items) : (o.items || []);
+                const items: ArticleCommande[] = typeof o.items === "string" ? JSON.parse(o.items) : (o.items || []);
                 return (
                   <div key={o.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -545,7 +547,7 @@ export default function GestionRestaurant() {
                           <span style={{ fontSize: 11, fontWeight: 700, background: "#fff7ed", color: ORANGE, padding: "2px 8px", borderRadius: 6 }}>{SERVICES[o.type_service] || o.type_service}</span>
                           <span style={{ fontSize: 10, fontWeight: 700, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 6 }}>{sc.label}</span>
                         </div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{items.map((i: any) => `${i.nom} ×${i.quantite || 1}`).join(" · ")}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{items.map((i) => `${i.nom} ×${i.quantite || 1}`).join(" · ")}</div>
                         {o.client_telephone && (
                           <div style={{ fontSize: 12, color: "#334155", marginTop: 2 }}>
                             📞 <a href={`tel:${o.client_telephone}`} style={{ color: "#334155", fontWeight: 700 }}>{o.client_telephone}</a>
@@ -556,14 +558,14 @@ export default function GestionRestaurant() {
                         <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{fmtDate(o.created_at)} {fmtTime(o.created_at)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <div style={{ fontWeight: 800, color: ORANGE, fontSize: 15 }}>{fmtMoney(o.total)}</div>
+                        <div style={{ fontWeight: 800, color: ORANGE, fontSize: 15 }}>{fmtMoney(+o.total)}</div>
                         <button onClick={() => imprimerRecu({
                           titre: "Reçu de commande", numero: o.id, date: o.created_at, etablissement: tenant || {}, couleur: ORANGE,
                           details: [
                             o.source === "site" ? { label: "Client", valeur: `${o.client_nom || "—"} · ${o.client_telephone || ""}` } : { label: "Table", valeur: String(o.table_num || "—") },
                             { label: "Service", valeur: SERVICES[o.type_service] || o.type_service },
                           ],
-                          lignes: items.map((i: any) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
+                          lignes: items.map((i) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
                           total: o.total, modePaiement: o.type_paiement,
                         })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
                         <select value={o.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch(() => null); reloadOrders(); reloadTables(); reloadDash(); }}
@@ -612,7 +614,7 @@ export default function GestionRestaurant() {
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{s.prenom ? `${s.prenom} ${s.nom}` : s.nom}</div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>{s.poste}{s.telephone ? ` · 📞 ${s.telephone}` : ""}</div>
-                    {s.salaire > 0 && <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginTop: 2 }}>{fmtMoney(s.salaire)}/mois</div>}
+                    {+s.salaire > 0 && <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginTop: 2 }}>{fmtMoney(+s.salaire)}/mois</div>}
                   </div>
                   <button onClick={async () => { if (confirm("Retirer ce membre ?")) { if (await envoyerGestion(`${BASE(tenantCode!)}/staff/${s.id}`, { method: "DELETE", headers: auth() })) setStaff(ss => ss.filter(x => x.id !== s.id)); } }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>

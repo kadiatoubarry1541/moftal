@@ -16,6 +16,8 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementGestion } from "../types/pro";
+import type { MosqueeAnnouncement, MosqueeDonation, MosqueeImam, MosqueeMember, MosqueePartenaire, MosqueePredication, TableauMosquee, MosqueeQuranStudent } from "../types/gestion-mosque";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -38,18 +40,18 @@ export default function GestionMosquee() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [members, setMembers] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [donations, setDonations] = useState<any[]>([]);
-  const [quranStudents, setQuranStudents] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauMosquee | null>(null);
+  const [members, setMembers] = useState<MosqueeMember[]>([]);
+  const [announcements, setAnnouncements] = useState<MosqueeAnnouncement[]>([]);
+  const [donations, setDonations] = useState<MosqueeDonation[]>([]);
+  const [quranStudents, setQuranStudents] = useState<MosqueeQuranStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [imams, setImams] = useState<any[]>([]);
-  const [predications, setPredications] = useState<any[]>([]);
-  const [partenaires, setPartenaires] = useState<any[]>([]);
+  const [imams, setImams] = useState<MosqueeImam[]>([]);
+  const [predications, setPredications] = useState<MosqueePredication[]>([]);
+  const [partenaires, setPartenaires] = useState<MosqueePartenaire[]>([]);
   const [showAddImam, setShowAddImam] = useState(false);
   const [showAddPred, setShowAddPred] = useState(false);
   const [showAddPart, setShowAddPart] = useState(false);
@@ -359,7 +361,7 @@ export default function GestionMosquee() {
             </div>
             {(dash.recentAnnouncements?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>{tr("Aucune annonce récente")}</div>
-            ) : dash.recentAnnouncements.map((a: any) => (
+            ) : dash.recentAnnouncements.map((a) => (
               <div key={a.id} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #f1f5f9", alignItems: "flex-start" }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, background: GREEN_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>📢</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -386,10 +388,10 @@ export default function GestionMosquee() {
             <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouveau membre")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["NuméroH (si membre)", "numero_h"]].map(([label, key]) => (
+                {([["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["NuméroH (si membre)", "numero_h"]] as [string, keyof typeof mForm][]).map(([label, key]) => (
                   <div key={key}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{tr(label)}</div>
-                    <input value={(mForm as any)[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <input value={mForm[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
                 <div>
@@ -520,7 +522,7 @@ export default function GestionMosquee() {
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{d.donateur_nom || tr("Anonyme")}</div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(d.date_don)} · {tr(d.type_don)}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: GREEN, fontSize: 15 }}>{fmtMoney(d.montant)}</div>
+                <div style={{ fontWeight: 700, color: GREEN, fontSize: 15 }}>{fmtMoney(+d.montant)}</div>
               </div>
             ))}
             {donations.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>{tr("Aucun don enregistré.")}</div>}
@@ -541,10 +543,10 @@ export default function GestionMosquee() {
             <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouvel élève")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["Nom *", "nom"], ["Prénom", "prenom"], ["Tél. parent", "telephone_parent"]].map(([label, key]) => (
+                {([["Nom *", "nom"], ["Prénom", "prenom"], ["Tél. parent", "telephone_parent"]] as [string, keyof typeof qForm][]).map(([label, key]) => (
                   <div key={key}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{tr(label)}</div>
-                    <input value={(qForm as any)[key]} onChange={e => setQForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <input value={qForm[key]} onChange={e => setQForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
                 <div>
@@ -606,7 +608,7 @@ export default function GestionMosquee() {
           {/* 3 slots d'imams */}
           <div style={{ display: "grid", gap: 16 }}>
             {[1, 2, 3].map(rang => {
-              const imam = imams.find((i: any) => i.rang === rang);
+              const imam = imams.find((i) => i.rang === rang);
               const labels = ["", "Cheikh Imam Principal", "Cheikh Imam 2", "Cheikh Imam 3"];
               const colors = ["", "#1a8f1a", "#0891b2", "#7c3aed"];
               const bgs = ["", "#f0fdf0", "#ecfeff", "#f5f3ff"];
@@ -782,10 +784,10 @@ export default function GestionMosquee() {
             <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{tr("Nouvelle mosquée partenaire")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["Nom de la mosquée *", "nom_mosquee"], ["Ville / Quartier", "ville"], ["Nom de l'imam", "imam_nom"], ["Téléphone", "telephone"]].map(([label, key]) => (
+                {([["Nom de la mosquée *", "nom_mosquee"], ["Ville / Quartier", "ville"], ["Nom de l'imam", "imam_nom"], ["Téléphone", "telephone"]] as [string, keyof typeof partForm][]).map(([label, key]) => (
                   <div key={key}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{tr(label)}</div>
-                    <input value={(partForm as any)[key]} onChange={e => setPartForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <input value={partForm[key]} onChange={e => setPartForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>

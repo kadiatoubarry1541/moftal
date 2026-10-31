@@ -15,6 +15,8 @@ import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { SecuriteAnnouncement, SecuriteClient, SecuriteMgmtAgent, SecuriteMission, TableauSecurite } from "../types/gestion-security";
 
 const BASE = (code: string) => `/api/security-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -42,13 +44,13 @@ export default function GestionSecurite() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauSecurite | null>(null);
   const [dashError, setDashError] = useState("");
-  const [agents, setAgents] = useState<any[]>([]);
-  const [missions, setMissions] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [agents, setAgents] = useState<SecuriteMgmtAgent[]>([]);
+  const [missions, setMissions] = useState<SecuriteMission[]>([]);
+  const [clients, setClients] = useState<SecuriteClient[]>([]);
+  const [announcements, setAnnouncements] = useState<SecuriteAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -253,7 +255,7 @@ export default function GestionSecurite() {
             </div>
             {(dash.recentMissions?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>Aucune mission récente</div>
-            ) : dash.recentMissions.map((m: any) => {
+            ) : dash.recentMissions.map((m) => {
               const sc = STATUT_COLORS[m.statut] || { bg: "#f1f5f9", color: "#64748b", label: m.statut };
               return (
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>

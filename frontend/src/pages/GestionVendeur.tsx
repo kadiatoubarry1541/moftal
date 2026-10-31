@@ -16,6 +16,8 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { TableauVendeur, VendeurClient, VendeurExpense, VendeurProduct, VendeurSale } from "../types/gestion-retailer";
 
 const BASE = (code: string) => `/api/retailer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -38,12 +40,12 @@ export default function GestionVendeur() {
 
   const [tab, setTab]               = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant]         = useState<any>(null);
-  const [dash, setDash]             = useState<any>(null);
-  const [products, setProducts]     = useState<any[]>([]);
-  const [sales, setSales]           = useState<any[]>([]);
-  const [clients, setClients]       = useState<any[]>([]);
-  const [expenses, setExpenses]     = useState<any[]>([]);
+  const [tenant, setTenant]         = useState<EtablissementGestion | null>(null);
+  const [dash, setDash]             = useState<TableauVendeur | null>(null);
+  const [products, setProducts]     = useState<VendeurProduct[]>([]);
+  const [sales, setSales]           = useState<VendeurSale[]>([]);
+  const [clients, setClients]       = useState<VendeurClient[]>([]);
+  const [expenses, setExpenses]     = useState<VendeurExpense[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
   const [saving, setSaving]         = useState(false);
@@ -52,7 +54,7 @@ export default function GestionVendeur() {
   const [showNewSale, setShowNewSale]         = useState(false);
   const [showAddClient, setShowAddClient]     = useState(false);
   const [showAddExpense, setShowAddExpense]   = useState(false);
-  const [editProduct, setEditProduct]         = useState<any>(null);
+  const [editProduct, setEditProduct]         = useState<VendeurProduct | null>(null);
 
   const [pForm, setPForm] = useState({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" });
   const [sForm, setSForm] = useState({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
@@ -116,7 +118,7 @@ export default function GestionVendeur() {
 
   // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
   // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
-  async function envoyer(url: string, method: string, body: object): Promise<any> {
+  async function envoyer(url: string, method: string, body: object): Promise<ReponseServeur> {
     setSaving(true);
     try {
       const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(body) });
@@ -252,7 +254,7 @@ export default function GestionVendeur() {
           {(dash?.recentSales?.length > 0) && (
             <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Dernières ventes</h3>
-              {dash.recentSales.map((s: any) => (
+              {dash.recentSales.map((s) => (
                 <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>
                   <span>{s.client_nom || "Client"} {s.est_credit && <span style={{ color: "#ea580c", fontSize: 12 }}>· crédit</span>}</span>
                   <span style={{ fontWeight: 700, color: COLOR }}>{fmtMoney(s.total)}</span>
@@ -389,7 +391,7 @@ export default function GestionVendeur() {
                   <button onClick={() => imprimerRecu({
                     titre: "Reçu de vente", numero: s.id, date: s.date_vente, etablissement: tenant || {}, couleur: COLOR,
                     client: s.client_nom || "Client",
-                    lignes: (s.items || []).map((i: any) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
+                    lignes: (s.items || []).map((i) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
                     total: s.total, paye: s.est_credit ? 0 : s.total, modePaiement: s.est_credit ? `${s.type_paiement} (crédit)` : s.type_paiement,
                   })} style={{ padding: "5px 10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#475569" }}>🖨 Reçu</button>
                 </div>
