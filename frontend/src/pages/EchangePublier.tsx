@@ -12,7 +12,8 @@ type PublishMode = 'simple' | 'lot';
 // Publication de plusieurs produits à la fois : une photo = une annonce
 const MAX_LOT = 5;
 interface LotItem { file: File; preview: string; title: string; price: string; }
-type Level = 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire';
+type Level = 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire' | 'nourriture';
+const SECTEURS: Level[] = ['primaire', 'secondaire', 'tertiaire', 'quaternaire', 'nourriture'];
 
 interface UserData {
   numeroH: string;
@@ -25,6 +26,7 @@ const CATEGORIES_PRIMAIRE = ['Alimentation', 'Aliments', 'Textile', 'Agriculture
 const CATEGORIES_SECONDAIRE = ['Électronique', 'Machinerie', 'Équipements', 'Véhicules', 'Autre'];
 const CATEGORIES_TERTIAIRE = ['Maison à louer', 'Matériaux de construction', 'Services', 'Autre'];
 const CATEGORIES_QUATERNAIRE = ['Téléphones', 'Ordinateurs', 'TV & Son', 'Accessoires', 'Véhicules', 'Autre'];
+const CATEGORIES_NOURRITURE = ['Plats', 'Boissons', 'Pâtisserie', 'Fruits & légumes', 'Autre'];
 
 function Toast({ message, type, onClose }: { message: string; type: 'error' | 'success'; onClose: () => void }) {
   useEffect(() => {
@@ -52,7 +54,9 @@ export default function EchangePublier() {
   const [publishMode, setPublishMode] = useState<PublishMode>(validMode);
   const [medias, setMedias] = useState<Medias>(MEDIAS_VIDES);
   const [plusDeDetails, setPlusDeDetails] = useState(false);
-  const [level, setLevel] = useState<Level>('primaire');
+  // Section demandée par le bouton « Publier » de la page d'où l'on vient
+  const secteurDemande = SECTEURS.find(x => x === searchParams.get('secteur'));
+  const [level, setLevel] = useState<Level>(secteurDemande || 'primaire');
   const [approvedSectors, setApprovedSectors] = useState<Level[]>([]);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [product, setProduct] = useState({
@@ -67,7 +71,7 @@ export default function EchangePublier() {
   const lotGalleryRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const categories = level === 'primaire' ? CATEGORIES_PRIMAIRE : level === 'secondaire' ? CATEGORIES_SECONDAIRE : level === 'tertiaire' ? CATEGORIES_TERTIAIRE : CATEGORIES_QUATERNAIRE;
+  const categories = level === 'primaire' ? CATEGORIES_PRIMAIRE : level === 'secondaire' ? CATEGORIES_SECONDAIRE : level === 'tertiaire' ? CATEGORIES_TERTIAIRE : level === 'nourriture' ? CATEGORIES_NOURRITURE : CATEGORIES_QUATERNAIRE;
 
   useEffect(() => {
     const session = localStorage.getItem('session_user');
@@ -90,10 +94,10 @@ export default function EchangePublier() {
         setIsAdminUser(!!data.isAdmin);
         const sectors = (data.approvedSectors || []) as Level[];
         setApprovedSectors(sectors);
-        if (sectors.length > 0) setLevel(sectors[0]);
+        if (sectors.length > 0 && !(secteurDemande && (data.isAdmin || sectors.includes(secteurDemande)))) setLevel(sectors[0]);
       })
       .catch(() => {});
-  }, [navigate]);
+  }, [navigate, secteurDemande]);
 
   const showToast = (message: string, type: 'error' | 'success') => setToast({ message, type });
 
@@ -283,8 +287,8 @@ export default function EchangePublier() {
             {/* Secteur — visible pour tous les modes, limité aux secteurs où vous êtes approuvé */}
             <div className="p-6 sm:p-8 pb-0">
               <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_publier.sector_label')}</label>
-              <div className="grid grid-cols-4 gap-2">
-                {(['primaire', 'secondaire', 'tertiaire', 'quaternaire'] as Level[]).map(l => {
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {SECTEURS.map(l => {
                   const allowed = isAdminUser || approvedSectors.includes(l);
                   return (
                     <button

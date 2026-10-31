@@ -302,7 +302,7 @@ export default function EchangeTertiaire() {
           <div className="mt-3">
             {canPublish ? (
               <PublierAnnonceButtons
-                onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+                secteur="tertiaire"
                 title={t('echange_tertiaire.sell_item_title')}
               />
             ) : (
@@ -491,7 +491,7 @@ export default function EchangeTertiaire() {
               {t('echange_tertiaire.no_ads_before')} <strong>{currentTab.label}</strong> {t('echange_tertiaire.no_ads_after')}
             </p>
             {userData && (
-              <button onClick={() => { setShowCreateProduct(true); setPublishMode(null); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700">
+              <button onClick={() => navigate('/echange/publier?secteur=tertiaire')} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700">
                 {t('echange_tertiaire.publish_first_btn')}
               </button>
             )}

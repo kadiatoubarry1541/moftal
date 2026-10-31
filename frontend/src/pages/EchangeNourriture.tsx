@@ -289,7 +289,7 @@ export default function EchangeNourriture() {
                 <p className="text-xs text-green-700 font-medium">{t('echange_nourriture.vendor_moftal_prefix')} {vendorName}</p>
               )}
               <PublierAnnonceButtons
-                onSelect={() => setShowCreateProduct(true)}
+                secteur="nourriture"
                 title={t('echange_secondaire.publish_ad_title')}
               />
             </>
@@ -641,7 +641,7 @@ export default function EchangeNourriture() {
               <p className="text-gray-600 text-lg">{t('echange_primaire.no_products')}</p>
               {(canPublish || isAdmin) && (
                 <button
-                  onClick={() => setShowCreateProduct(true)}
+                  onClick={() => navigate('/echange/publier?secteur=nourriture')}
                   className="mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200"
                 >
                   {t('echange_primaire.publish_first_product_btn')}
@@ -758,7 +758,7 @@ export default function EchangeNourriture() {
             <>
               <p className="text-lg mb-6">{t('echange_nourriture.be_first_food')}</p>
               <button
-                onClick={() => setShowCreateProduct(true)}
+                onClick={() => navigate('/echange/publier?secteur=nourriture')}
                 className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg"
               >
                 {t('echange_primaire.publish_first_product_btn')}
