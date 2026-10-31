@@ -2711,6 +2711,22 @@ async function initAllTables() {
 // supprimé), modèle par modèle pour qu'un échec n'empêche pas les autres.
 async function creerTablesManquantesSecondaires() {
   const { sequelize: secondaire } = await import('./config/database.js');
+  // Membres des gouvernements : une ancienne table a ses colonnes en snake_case
+  // (government_id…) alors que le modèle lit governmentId… → on renomme, sans perte.
+  const camel = (c) => c.replace(/_([a-z])/g, (_m, l) => l.toUpperCase());
+  try {
+    const colonnes = await secondaire.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'government_members'`,
+      { type: secondaire.QueryTypes.SELECT }
+    );
+    const noms = new Set(colonnes.map((c) => c.column_name));
+    for (const ancien of ['government_id', 'member_numero_h', 'appointed_date', 'created_at', 'updated_at']) {
+      const nouveau = camel(ancien);
+      if (noms.has(ancien) && !noms.has(nouveau)) {
+        await secondaire.query(`ALTER TABLE government_members RENAME COLUMN "${ancien}" TO "${nouveau}"`);
+      }
+    }
+  } catch (e) { console.warn('⚠️ government_members :', e.message); }
   for (const modele of Object.values(secondaire.models)) {
     try { await modele.sync(); }
     catch (e) { console.warn(`⚠️ Table ${modele.getTableName?.() || modele.name} :`, e.message); }

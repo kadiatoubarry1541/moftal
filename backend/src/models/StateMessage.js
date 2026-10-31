@@ -71,20 +71,14 @@ StateMessage.init({
   documentId: {
     type: DataTypes.UUID,
     allowNull: true,
-    references: {
-      model: 'documents',
-      key: 'id'
-    },
+    // lien vers « documents » vérifié par le serveur (pas de contrainte : elle empêchait de créer la table)
     comment: 'ID du document associé (null pour messages généraux)',
     field: 'document_id'
   },
   senderId: {
     type: DataTypes.STRING,
     allowNull: false,
-    references: {
-      model: 'users',
-      key: 'numero_h'
-    },
+    // lien vers « users » vérifié par le serveur (pas de contrainte : elle empêchait de créer la table)
     comment: 'NumeroH de l\'expéditeur',
     field: 'sender_id'
   },
@@ -96,10 +90,7 @@ StateMessage.init({
   recipientId: {
     type: DataTypes.STRING,
     allowNull: false,
-    references: {
-      model: 'users',
-      key: 'numero_h'
-    },
+    // lien vers « users » vérifié par le serveur (pas de contrainte : elle empêchait de créer la table)
     comment: 'NumeroH du destinataire',
     field: 'recipient_id'
   },
