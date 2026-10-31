@@ -625,5 +625,7 @@ const lot: Lot = {
   "Réinitialiser": ["Reset", "إعادة الضبط", "A segin a daminɛ ma", "Artir e fuɗɗoode"],
   "Aperçu :": ["Preview:", "معاينة:", "Lajɛli :", "Yiyannde :"],
   "Aperçu du cadrage": ["Framing preview", "معاينة التأطير", "Dan lajɛli", "Yiyannde kaatiri"],
+  "Impossible de charger la liste.": ["Unable to load the list.", "تعذّر تحميل القائمة.", "Lisi ma se ka doni.", "Doggol ngol waawaa loowneede."],
+  "Vérifiez votre connexion et réessayez.": ["Check your connection and try again.", "تحقّق من اتصالك وأعد المحاولة.", "I ka ɛntɛrinɛti sɛgɛsɛgɛ ka a kɛ tugun.", "Ƴeewto enternet maa, fuɗɗito."],
 };
 export default lot;

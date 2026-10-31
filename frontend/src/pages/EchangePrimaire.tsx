@@ -9,6 +9,7 @@ import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
 import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
+import ErreurChargement from "../components/ErreurChargement";
 
 interface UserData {
   numeroH: string;
@@ -80,6 +81,8 @@ export default function EchangePrimaire() {
   const { t } = useI18n();
   const { tr } = useTraduction();
   const PRIMAIRE_TABS = useMemo(() => getPrimaireTabs(t), [t]);
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
@@ -149,7 +152,6 @@ export default function EchangePrimaire() {
         .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.includes('primaire'))); })
         .catch(() => {});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   useEffect(() => {
@@ -177,7 +179,7 @@ export default function EchangePrimaire() {
         const productsData = await productsResponse.json();
         setRawProducts(productsData.products || []);
       } else {
-        setRawProducts(getDefaultProducts());
+        setRawProducts([]); setErreurChargement(true);
       }
 
       // Charger les fournisseurs
@@ -198,72 +200,13 @@ export default function EchangePrimaire() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setRawProducts(getDefaultProducts());
+      setRawProducts([]); setErreurChargement(true);
       setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultProducts = (): ExchangeProduct[] => [
-    {
-      id: '1',
-      title: 'Riz Local Premium',
-      description: 'Riz de qualité supérieure cultivé localement, idéal pour la consommation familiale.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 15000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Ville Principale',
-      seller: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      sellerName: `${userData?.prenom} ${userData?.nomFamille}`,
-      contactInfo: { phone: '+224 123 456 789' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'Huile de Palme Artisanale',
-      description: 'Huile de palme extraite artisanalement, sans conservateurs chimiques.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 8000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Kindia',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Producteur Local',
-      contactInfo: { phone: '+224 987 654 321' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Coton Biologique',
-      description: 'Coton cultivé sans pesticides, parfait pour la confection de vêtements.',
-      category: 'Textile',
-      level: 'primaire',
-      price: 25000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Faranah',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Coopérative Agricole',
-      contactInfo: { phone: '+224 555 123 456' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    }
-  ];
 
   const createProduct = async () => {
     try {
@@ -455,6 +398,7 @@ export default function EchangePrimaire() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadData(); }} />
       <button
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"

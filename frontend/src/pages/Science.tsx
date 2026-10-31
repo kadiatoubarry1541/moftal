@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QuickMediaCapture } from '../components/QuickMediaCapture';
 import ProSection from '../components/ProSection';
 import { useI18n } from '../i18n/useI18n';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -38,6 +39,8 @@ interface ScienceComment {
 
 export default function Science() {
   const { t } = useI18n();
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'recentes' | 'recherches' | 'anciens'>('recentes');
   const [posts, setPosts] = useState<SciencePost[]>([]);
@@ -206,113 +209,19 @@ export default function Science() {
           const data = await response.json();
           setPosts(data.posts || []);
         } else {
-          setPosts(getDefaultPosts());
+          setPosts([]); setErreurChargement(true);
         }
       } else {
-        setPosts(getDefaultPosts());
+        setPosts([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des posts:', error);
-      setPosts(getDefaultPosts());
+      setPosts([]); setErreurChargement(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultPosts = (): SciencePost[] => {
-    const authors = [
-      { numeroH: 'USER001', name: 'Dr. Alpha Diallo' },
-      { numeroH: 'USER002', name: 'Mme Fatou Camara' },
-      { numeroH: 'USER003', name: 'Dr. Mamadou Bah' },
-      { numeroH: 'USER004', name: 'M. Ousmane Barry' }
-    ];
-
-    const now = new Date();
-    const randomDate = (daysAgo: number) => new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
-
-    const defaultData: { [key: string]: SciencePost[] } = {
-      recentes: [
-        {
-          id: '1',
-          title: 'Découverte scientifique récente',
-          content: 'Notre équipe de recherche vient de publier une étude révolutionnaire sur les énergies renouvelables en Afrique. Les résultats montrent un potentiel énorme pour l\'autonomie énergétique.',
-          type: 'text',
-          category: 'recentes',
-          author: authors[0].numeroH,
-          authorName: authors[0].name,
-          likes: ['USER002', 'USER003'],
-          comments: [],
-          createdAt: randomDate(1)
-        },
-        {
-          id: '2',
-          title: 'Conférence internationale de science',
-          content: 'Une grande conférence internationale sur les sciences africaines aura lieu ce mois-ci. Plusieurs chercheurs renommés seront présents pour partager leurs découvertes.',
-          type: 'text',
-          category: 'recentes',
-          author: authors[1].numeroH,
-          authorName: authors[1].name,
-          likes: ['USER001', 'USER004'],
-          comments: [],
-          createdAt: randomDate(2)
-        }
-      ],
-      recherches: [
-        {
-          id: '3',
-          title: 'Recherche sur la médecine traditionnelle',
-          content: 'Mes recherches portent sur la médecine traditionnelle africaine et son intégration avec la médecine moderne. Les résultats préliminaires sont très prometteurs pour le traitement de certaines maladies.',
-          type: 'text',
-          category: 'recherches',
-          author: authors[2].numeroH,
-          authorName: authors[2].name,
-          likes: ['USER001', 'USER002', 'USER004'],
-          comments: [],
-          createdAt: randomDate(10)
-        },
-        {
-          id: '4',
-          title: 'Étude sur l\'agriculture durable',
-          content: 'J\'ai récemment terminé une étude sur l\'agriculture durable en Guinée. Les pratiques traditionnelles combinées avec les techniques modernes offrent des solutions prometteuses.',
-          type: 'text',
-          category: 'recherches',
-          author: authors[0].numeroH,
-          authorName: authors[0].name,
-          likes: ['USER003', 'USER004'],
-          comments: [],
-          createdAt: randomDate(15)
-        }
-      ],
-      anciens: [
-        {
-          id: '5',
-          title: 'Savoirs anciens en science',
-          content: 'Les anciens scientifiques africains avaient développé des connaissances remarquables en astronomie, médecine et mathématiques. Ces savoirs continuent d\'inspirer les recherches modernes.',
-          type: 'text',
-          category: 'anciens',
-          author: authors[3].numeroH,
-          authorName: authors[3].name,
-          likes: ['USER001', 'USER002'],
-          comments: [],
-          createdAt: randomDate(30)
-        },
-        {
-          id: '6',
-          title: 'Histoire des sciences africaines',
-          content: 'Un documentaire a été réalisé sur l\'histoire des sciences africaines et leurs contributions méconnues aux connaissances scientifiques mondiales. Il montre la richesse du patrimoine scientifique africain.',
-          type: 'text',
-          category: 'anciens',
-          author: authors[1].numeroH,
-          authorName: authors[1].name,
-          likes: ['USER003', 'USER004'],
-          comments: [],
-          createdAt: randomDate(45)
-        }
-      ]
-    };
-
-    return defaultData[activeTab] || [];
-  };
 
   const handleCreatePost = () => {
     setNewPost({
@@ -445,6 +354,7 @@ export default function Science() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadPosts(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

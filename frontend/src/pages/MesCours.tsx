@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -61,6 +62,8 @@ interface CoursePermission {
 }
 
 export default function MesCours() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'cours' | 'audio' | 'video' | 'ecrit' | 'bibliotheque' | 'publier' | 'progres' | 'certificats'>('cours');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -174,11 +177,11 @@ export default function MesCours() {
         const data = await response.json();
         setCourses(data.courses || []);
       } else {
-        setCourses(getDefaultCourses());
+        setCourses([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur:', error);
-      setCourses(getDefaultCourses());
+      setCourses([]); setErreurChargement(true);
     }
   };
 
@@ -208,11 +211,11 @@ export default function MesCours() {
         const data = await response.json();
         setBooks(data.books || []);
       } else {
-        setBooks(getDefaultBooks());
+        setBooks([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur:', error);
-      setBooks(getDefaultBooks());
+      setBooks([]); setErreurChargement(true);
     }
   };
 
@@ -238,59 +241,7 @@ export default function MesCours() {
     }
   };
 
-  const getDefaultCourses = (): Course[] => [
-    {
-      id: '1',
-      title: 'Introduction à la programmation',
-      description: 'Cours complet pour débuter en programmation',
-      category: 'video',
-      content: [],
-      progress: 45,
-      completed: false,
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      title: 'Grammaire française',
-      description: 'Améliorer votre grammaire française',
-      category: 'audio',
-      content: [],
-      progress: 60,
-      completed: false,
-      createdAt: '2024-01-10T10:00:00Z'
-    },
-    {
-      id: '3',
-      title: 'Histoire de la Guinée',
-      description: 'Découvrez l\'histoire de votre pays',
-      category: 'ecrit',
-      content: [],
-      progress: 30,
-      completed: false,
-      createdAt: '2024-01-20T10:00:00Z'
-    }
-  ];
 
-  const getDefaultBooks = (): Book[] => [
-    {
-      id: '1',
-      title: 'Les fondateurs de la Guinée',
-      author: 'Alpha Diallo',
-      description: 'Biographie des grands hommes de la Guinée',
-      category: 'Histoire',
-      pages: 250,
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      title: 'Cuisine guinéenne traditionnelle',
-      author: 'Mariama Camara',
-      description: 'Recettes et traditions culinaires',
-      category: 'Cuisine',
-      pages: 180,
-      createdAt: '2024-01-10T10:00:00Z'
-    }
-  ];
 
   const updateProgress = (courseId: string, contentId: string) => {
     // Mettre à jour le progrès du cours
@@ -462,6 +413,7 @@ export default function MesCours() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadCourses(); loadBooks(); }} />
       <button
         onClick={() => navigate('/compte')}
         className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"

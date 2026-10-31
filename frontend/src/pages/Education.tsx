@@ -5,6 +5,7 @@ import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { sortByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
+import ErreurChargement from "../components/ErreurChargement";
 
 interface UserData {
   numeroH: string;
@@ -146,6 +147,8 @@ interface School {
 
 export default function Education() {
   const { t } = useI18n();
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'ecoles' | 'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('ecoles');
@@ -520,11 +523,11 @@ export default function Education() {
         const data = await response.json();
         setStages(data.stages || []);
       } else {
-        setStages(getDefaultStages());
+        setStages([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des stages:', error);
-      setStages(getDefaultStages());
+      setStages([]); setErreurChargement(true);
     }
   };
 
@@ -663,48 +666,6 @@ export default function Education() {
   };
 
 
-  const getDefaultStages = (): Stage[] => [
-    {
-      id: '1',
-      title: 'Stage en Arabe - Coran',
-      description: 'Apprenez le Coran et la langue arabe',
-      specialties: ['Coran', 'Arabe', 'Tajwid'],
-      qualifications: ['Maîtrise du Coran', 'Diplôme en Arabe'],
-      experience: 10,
-      city: 'Conakry',
-      address: 'Hamdallaye',
-      phone: '+224 123 456 789',
-      email: 'stage.arabe@email.com',
-      consultationFee: 15000,
-      availability: { monday: true, tuesday: true, wednesday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.9,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      title: 'Stage en Arabe - Hadith',
-      description: 'Étude des Hadiths et sciences islamiques',
-      specialties: ['Hadith', 'Fiqh', 'Arabe'],
-      qualifications: ['Maîtrise en Hadith', 'Diplôme en Fiqh'],
-      experience: 8,
-      city: 'Conakry',
-      address: 'Kaloum',
-      phone: '+224 987 654 321',
-      email: 'stage.hadith@email.com',
-      consultationFee: 18000,
-      availability: { thursday: true, friday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.7,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
 
   if (loading) {
@@ -720,6 +681,7 @@ export default function Education() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadStages(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

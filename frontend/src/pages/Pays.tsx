@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { AudioRecorder } from '../components/AudioRecorder';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -294,6 +295,8 @@ const getCountryFlag = (pays: string): { emoji: string; label: string } | null =
 };
 
 export default function Pays() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'residence' | 'Communauté'>('residence');
   const [residenceActiveTab, setResidenceActiveTab] = useState<'lieu1' | 'lieu2'>('lieu1');
@@ -417,31 +420,17 @@ export default function Pays() {
         }
       });
       
-      let groups: RegionGroup[] = [];
-      if (response.ok) {
-        try {
-        const data = await response.json();
-          groups = data.groups || [];
-        } catch {
-          groups = getDefaultRegionGroups();
-        }
-      } else {
-        groups = getDefaultRegionGroups();
-      }
+      // Serveur injoignable : on le dit (jamais de faux groupe)
+      const data = response.ok ? await response.json().catch(() => null) : null;
+      if (!data) { setRegionGroups([]); setErreurChargement(true); return; }
+      const groups: RegionGroup[] = data.groups || [];
       
       // Filtrer les groupes par région active
       const filtered = groups.filter(g => g.region === activeTab);
       
-      // Si aucun groupe, utiliser les groupes par défaut
+      // Aucun groupe pour cette région : liste vide
       if (filtered.length === 0) {
-        const defaultGroups = getDefaultRegionGroups();
-        const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
-        setRegionGroups(defaultFiltered);
-        
-        // Auto-sélectionner le premier groupe par défaut
-        if (defaultFiltered.length > 0 && (!selectedGroup || selectedGroup.region !== activeTab)) {
-          setSelectedGroup(defaultFiltered[0]);
-        }
+        setRegionGroups([]);
         return;
       }
       
@@ -489,44 +478,11 @@ export default function Pays() {
         }
       }
     } catch {
-      // Erreur silencieuse - utiliser les groupes par défaut
-      const defaultGroups = getDefaultRegionGroups();
-      const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
-      setRegionGroups(defaultFiltered);
-      // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-      if (defaultFiltered.length > 0) {
-        // Toujours sélectionner le groupe par défaut pour permettre la publication immédiate
-        if (!selectedGroup || selectedGroup.region !== activeTab) {
-          setSelectedGroup(defaultFiltered[0]);
-        }
-      }
+      setRegionGroups([]);
+      setErreurChargement(true);
     }
   };
 
-  const getDefaultRegionGroups = (): RegionGroup[] => [
-    {
-      id: '5',
-      name: 'Communauté Unie',
-      description: 'Communauté nationale de tous les membres',
-      region: 'Communauté',
-      members: [],
-      posts: [
-        {
-          id: '5',
-          author: '',
-          authorName: 'Ousmane Barry',
-          content: 'Fiers d\'être ensemble ! Notre communauté est magnifique',
-          type: 'text',
-          likes: [],
-          comments: [],
-          createdAt: '2024-01-16T09:45:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z'
-    }
-  ];
 
 
   const handleJoinGroup = async (groupId: string) => {
@@ -684,22 +640,10 @@ export default function Pays() {
         }
       });
       
-      let groups: ResidenceGroup[] = [];
-      if (response.ok) {
-        try {
-        const data = await response.json();
-          groups = data.groups || [];
-        } catch {
-          groups = getDefaultResidenceGroups();
-        }
-      } else {
-        groups = getDefaultResidenceGroups();
-      }
-      
-      // Si aucun groupe, utiliser les groupes par défaut
-      if (groups.length === 0) {
-        groups = getDefaultResidenceGroups();
-      }
+      // Serveur injoignable : on le dit (jamais de faux groupe)
+      const data = response.ok ? await response.json().catch(() => null) : null;
+      if (!data) { setResidenceGroups([]); setErreurChargement(true); return; }
+      const groups: ResidenceGroup[] = data.groups || [];
       
       setResidenceGroups(groups);
       
@@ -745,16 +689,8 @@ export default function Pays() {
         }
       }
     } catch {
-      // Erreur silencieuse - utiliser les groupes par défaut
-      const defaultGroups = getDefaultResidenceGroups();
-      setResidenceGroups(defaultGroups);
-      // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-      if (defaultGroups.length > 0) {
-        // Toujours sélectionner le groupe par défaut pour permettre la publication immédiate
-        if (!selectedResidenceGroup || selectedResidenceGroup.type !== residenceActiveTab) {
-          setSelectedResidenceGroup(defaultGroups[0]);
-        }
-      }
+      setResidenceGroups([]);
+      setErreurChargement(true);
     }
   };
 
@@ -770,31 +706,7 @@ export default function Pays() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [residenceActiveTab, activeTab, userData]);
 
-  const getCurrentLocation = useCallback(() => {
-    switch (residenceActiveTab) {
-      case 'lieu1': return userData?.lieu1 || 'Cercle 1';
-      case 'lieu2': return userData?.lieu2 || 'Cercle 2';
-      default: return 'Cercle 1';
-    }
-  }, [residenceActiveTab, userData]);
 
-  const getDefaultResidenceGroups = useCallback((): ResidenceGroup[] => {
-    const location = getCurrentLocation();
-    return [
-    {
-      id: '1',
-        name: `Organisation ${location}`,
-        description: `Rencontres entre personnes résidant au même endroit : ${location}`,
-        location: location,
-      type: residenceActiveTab,
-      members: [userData?.numeroH || ''],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString()
-    }
-  ];
-  }, [getCurrentLocation, residenceActiveTab, userData]);
 
 
   const joinResidenceGroup = async (groupId: string) => {
@@ -958,6 +870,7 @@ export default function Pays() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadRegionGroups(); loadResidenceGroups(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

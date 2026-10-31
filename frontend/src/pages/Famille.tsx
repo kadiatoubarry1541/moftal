@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNumeroHForDisplay } from '../utils/auth';
 import { calculerAge } from '../utils/calculs';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE = (import.meta as any)?.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
 const getImageUrl = (url: string | null | undefined): string | null => {
@@ -95,6 +96,8 @@ interface FamilyTreeData {
 }
 
 export default function Famille() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'parents' | 'enfants' | 'epoux' | 'freres' | 'soeurs' | 'oncles' | 'tantes' | 'cousins' | 'cousines' | 'neveux' | 'nieces' | 'grandparents' | 'arbre' | 'gestion'>('parents');
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
@@ -312,11 +315,11 @@ export default function Famille() {
         const data = await response.json();
         setFamilyMembers(data.members || []);
       } else {
-        setFamilyMembers(getDefaultFamilyMembers());
+        setFamilyMembers([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des membres:', error);
-      setFamilyMembers(getDefaultFamilyMembers());
+      setFamilyMembers([]); setErreurChargement(true);
     }
   };
 
@@ -451,13 +454,13 @@ export default function Famille() {
       
       if (response.ok) {
         const data = await response.json();
-        setFamilyTree(data.tree || getDefaultFamilyTree());
+        setFamilyTree(data.tree || null);
       } else {
-        setFamilyTree(getDefaultFamilyTree());
+        setFamilyTree(null);
       }
     } catch (error) {
       console.error('Erreur lors du chargement de l\'arbre:', error);
-      setFamilyTree(getDefaultFamilyTree());
+      setFamilyTree(null);
     }
   };
 
@@ -489,64 +492,7 @@ export default function Famille() {
     }
   };
 
-  const getDefaultFamilyMembers = (): FamilyMember[] => [
-    {
-      id: '1',
-      numeroH: 'PARENT001',
-      prenom: 'Mamadou',
-      nomFamille: 'Diallo',
-      relation: 'Père',
-      phone: '+224 123 456 789',
-      email: 'mamadou.diallo@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1960-05-15',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Fonctionnaire',
-      maritalStatus: 'Marié',
-      children: 3
-    },
-    {
-      id: '2',
-      numeroH: 'PARENT002',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      relation: 'Mère',
-      phone: '+224 987 654 321',
-      email: 'fatou.camara@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1965-08-20',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Enseignante',
-      maritalStatus: 'Mariée',
-      children: 3
-    },
-    {
-      id: '3',
-      numeroH: 'EPOUX001',
-      prenom: 'Mariama',
-      nomFamille: 'Bah',
-      relation: 'Épouse',
-      phone: '+224 555 123 456',
-      email: 'mariama.bah@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1990-12-10',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Infirmière',
-      maritalStatus: 'Mariée',
-      children: 2
-    }
-  ];
 
-  const getDefaultFamilyTree = (): FamilyTree => ({
-    id: '1',
-    rootMember: userData?.numeroH || '',
-    members: getDefaultFamilyMembers(),
-        isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  });
 
   const handleAddMember = () => {
         setNewMember({
@@ -705,6 +651,7 @@ export default function Famille() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadFamilyMembers(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

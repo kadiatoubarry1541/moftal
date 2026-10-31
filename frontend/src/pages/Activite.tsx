@@ -7,6 +7,7 @@ import { isAdmin } from '../utils/auth';
 import { isActivityBlocked } from '../utils/activityIcons';
 import { ActivityIcon } from '../components/ActivityIconBadge';
 import { hideIncrement } from '../utils/formatNumeroH';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -67,6 +68,8 @@ interface ActivityComment {
 
 
 export default function Activite({ embedded = false }: { embedded?: boolean } = {}) {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'Activité1' | 'Activité2' | 'Activité3'>('Activité1');
 
@@ -292,98 +295,20 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
           }
         }
       } else {
-        const defaultGroups = getDefaultActivityGroups();
-        setGroups(defaultGroups);
-        // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-        if (defaultGroups.length > 0) {
-          if (!selectedGroup || selectedGroup.activity !== activityName) {
-            setSelectedGroup(defaultGroups[0]);
-          }
-        }
+        // Serveur injoignable : on le dit (jamais de faux groupe)
+        setGroups([]);
+        setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      const defaultGroups = getDefaultActivityGroups();
-      setGroups(defaultGroups);
-      if (defaultGroups.length > 0) {
-        if (!selectedGroup || selectedGroup.activity !== activityName) {
-          setSelectedGroup(defaultGroups[0]);
-        }
-      }
+      setGroups([]);
+      setErreurChargement(true);
     } finally {
       setIsLoadingGroup(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedPays, userData?.activite1, userData?.activite2, userData?.activite3]);
 
-  const getDefaultActivityGroups = (): ActivityGroup[] => [
-    {
-      id: '1',
-      name: 'Sport Conakry',
-      description: 'Rencontres sportives et activités physiques à Conakry',
-      activity: 'Activité1',
-      members: ['USER001', 'USER002', 'USER003'],
-      posts: [
-        {
-          id: '1',
-          author: 'USER001',
-          authorName: 'Alpha Diallo',
-          content: 'Match de football demain à 16h au stade du 28 septembre',
-          type: 'text',
-          likes: ['USER002', 'USER003'],
-          comments: [],
-          createdAt: '2024-01-20T10:00:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      name: 'Artistes Guinéens',
-      description: 'Communauté d\'artistes et créateurs guinéens',
-      activity: 'Activité2',
-      members: ['USER004', 'USER005', 'USER006'],
-      posts: [
-        {
-          id: '2',
-          author: 'USER004',
-          authorName: 'Fatou Camara',
-          content: 'Exposition d\'art prévue pour le mois prochain',
-          type: 'text',
-          likes: ['USER005'],
-          comments: [],
-          createdAt: '2024-01-19T14:30:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-10T09:00:00Z'
-    },
-    {
-      id: '3',
-      name: 'Entrepreneurs Guinée',
-      description: 'Réseau d\'entrepreneurs et de business guinéens',
-      activity: 'Activité3',
-      members: ['USER007', 'USER008', 'USER009'],
-      posts: [
-        {
-          id: '3',
-          author: 'USER007',
-          authorName: 'Mamadou Bah',
-          content: 'Nouvelle opportunité d\'investissement disponible',
-          type: 'text',
-          likes: ['USER008', 'USER009'],
-          comments: [],
-          createdAt: '2024-01-18T16:45:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-05T11:20:00Z'
-    }
-  ];
 
 
   const loadActivityMessages = async () => {
@@ -491,6 +416,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
 
   return (
     <>
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadActivityGroups(); }} />
     <div className={embedded ? "bg-gray-50" : "min-h-screen bg-gray-50"}>
       {/* Header */}
       {!embedded && (
