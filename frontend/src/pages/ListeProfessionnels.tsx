@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { sortByProximity, proximityScore, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 import LogoEtablissement from "../components/LogoEtablissement";
+import ErreurChargement from "../components/ErreurChargement";
 import { avecLibellesServices } from "../utils/libellesServices";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -51,6 +52,7 @@ export default function ListeProfessionnels() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [rawAccounts, setRawAccounts] = useState<ProAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const filterType = searchParams.get("type") || "";
@@ -118,8 +120,10 @@ export default function ListeProfessionnels() {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) setRawAccounts((data.accounts || []).map(avecLibellesServices));
+      setErreurChargement(!data.success);
     } catch (error) {
       console.error("Erreur:", error);
+      setErreurChargement(true);
     } finally {
       setLoading(false);
     }
@@ -133,8 +137,10 @@ export default function ListeProfessionnels() {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) setRawAccounts((data.accounts || []).map(avecLibellesServices));
+      setErreurChargement(!data.success);
     } catch (error) {
       console.error("Erreur:", error);
+      setErreurChargement(true);
     } finally {
       setLoading(false);
     }
@@ -218,6 +224,7 @@ export default function ListeProfessionnels() {
         )}
 
         {/* Liste */}
+        <ErreurChargement visible={erreurChargement && !loading} onRetry={handleSearch} />
         {loading ? (
           <div className="text-center py-12 text-gray-500">Chargement...</div>
         ) : accounts.length === 0 ? (
