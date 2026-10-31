@@ -508,7 +508,7 @@ export default function EchangeSecondaire() {
           <div className="flex-1">
             {canPublish ? (
               <PublierAnnonceButtons
-                onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+                secteur="secondaire"
                 title={t('echange_secondaire.publish_ad_title')}
               />
             ) : (
@@ -866,7 +866,7 @@ export default function EchangeSecondaire() {
             <div className="col-span-full text-center py-12 bg-gray-50 rounded-xl">
               <p className="text-gray-600 text-lg">{t('echange_primaire.no_products')}</p>
               <button
-                onClick={() => setShowCreateProduct(true)}
+                onClick={() => navigate('/echange/publier?secteur=secondaire')}
                 className="mt-4 px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-200"
               >
                 {t('echange_primaire.publish_first_product_btn')}
@@ -1038,7 +1038,7 @@ export default function EchangeSecondaire() {
           <h3 className="text-2xl font-bold mb-4">{t('echange_secondaire.no_secondary_products')}</h3>
           <p className="text-lg mb-6">{t('echange_secondaire.be_first_to_publish')}</p>
           <button
-            onClick={() => setShowCreateProduct(true)}
+            onClick={() => navigate('/echange/publier?secteur=secondaire')}
             className="px-8 py-4 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all duration-200 font-semibold shadow-lg"
           >
             {t('echange_primaire.publish_first_product_btn')}
