@@ -11,6 +11,18 @@ import User from '../models/User.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import School from '../models/School.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+
+// Liens entre formations / inscriptions et professeurs / demandes (lecture seule :
+// aucune contrainte ajoutée en base). Sans eux, « Mes formations », « Mes demandes »
+// et les statistiques échouaient.
+if (!Formation.associations.registrations) {
+  Formation.hasMany(FormationRegistration, { as: 'registrations', foreignKey: 'formationId', constraints: false });
+  FormationRegistration.belongsTo(Formation, { as: 'formation', foreignKey: 'formationId', constraints: false });
+}
+if (!Professor.associations.requests) {
+  Professor.hasMany(ProfessorRequest, { as: 'requests', foreignKey: 'professorId', constraints: false });
+  ProfessorRequest.belongsTo(Professor, { as: 'professor', foreignKey: 'professorId', constraints: false });
+}
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';

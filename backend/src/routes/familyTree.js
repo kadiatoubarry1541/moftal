@@ -550,43 +550,6 @@ router.post('/add-deceased', async (req, res) => {
     const user = req.user;
     const { numeroHD: _ignored, ...deceasedData } = req.body; // ignorer le numeroHD client
 
-    // Membre de la famille (non admin) : le signalement reste EN ATTENTE.
-    // Le compte n'est jamais fermé sur la seule parole d'un membre : les
-    // administrateurs sont notifiés et confirment en refaisant le signalement.
-    if (!isAdmin) {
-      const nomMembre = `${membre.prenom || ''} ${membre.nomFamille || ''}`.trim() || membre.numeroH;
-      const nomReporter = [reporter.prenom, reporter.nomFamille].filter(Boolean).join(' ') || reporter.numeroH;
-      const details = [
-        dateDeces ? `date : ${dateDeces}` : (anneeDeces ? `année : ${anneeDeces}` : null),
-        causeDeces ? `cause : ${causeDeces}` : null
-      ].filter(Boolean).join(', ');
-      const admins = await User.findAll({
-        where: {
-          [Op.or]: [
-            { role: { [Op.in]: ['admin', 'super-admin'] } },
-            { numeroH: { [Op.in]: MASTER_ADMIN_NUMEROS } }
-          ]
-        },
-        attributes: ['numeroH']
-      });
-      const destinataires = [...new Set(admins.map(a => a.numeroH).filter(Boolean))];
-      if (!destinataires.length) {
-        return res.status(503).json({ success: false, message: 'Aucun administrateur disponible pour confirmer ce décès. Réessayez plus tard.' });
-      }
-      await Promise.all(destinataires.map(numeroH => Notification.createNotification({
-        recipientNumeroH: numeroH,
-        type: 'death_report',
-        title: 'Signalement de décès à confirmer',
-        message: `${nomReporter} (${reporter.numeroH}) signale le décès de ${nomMembre} (${membre.numeroH})${details ? ` — ${details}` : ''}. À confirmer avant la fermeture du compte.`,
-        relatedId: null // related_id est un UUID : le NuméroH du membre figure dans le message
-      })));
-      return res.status(202).json({
-        success: true,
-        pending: true,
-        message: `Le signalement du décès de ${nomMembre} a été transmis. Un administrateur doit le confirmer avant la fermeture du compte.`
-      });
-    }
-
     // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
     const numeroHD = await genererNumeroHD();
 
@@ -680,6 +643,44 @@ router.post('/report-death', async (req, res) => {
     if (!isAdmin && !isInSameTree) {
       return res.status(403).json({ success: false, message: 'Vous devez être membre de la même famille pour signaler un décès.' });
     }
+
+    // Membre de la famille (non admin) : le signalement reste EN ATTENTE.
+    // Le compte n'est jamais fermé sur la seule parole d'un membre : les
+    // administrateurs sont notifiés et confirment en refaisant le signalement.
+    if (!isAdmin) {
+      const nomMembre = `${membre.prenom || ''} ${membre.nomFamille || ''}`.trim() || membre.numeroH;
+      const nomReporter = [reporter.prenom, reporter.nomFamille].filter(Boolean).join(' ') || reporter.numeroH;
+      const details = [
+        dateDeces ? `date : ${dateDeces}` : (anneeDeces ? `année : ${anneeDeces}` : null),
+        causeDeces ? `cause : ${causeDeces}` : null
+      ].filter(Boolean).join(', ');
+      const admins = await User.findAll({
+        where: {
+          [Op.or]: [
+            { role: { [Op.in]: ['admin', 'super-admin'] } },
+            { numeroH: { [Op.in]: MASTER_ADMIN_NUMEROS } }
+          ]
+        },
+        attributes: ['numeroH']
+      });
+      const destinataires = [...new Set(admins.map(a => a.numeroH).filter(Boolean))];
+      if (!destinataires.length) {
+        return res.status(503).json({ success: false, message: 'Aucun administrateur disponible pour confirmer ce décès. Réessayez plus tard.' });
+      }
+      await Promise.all(destinataires.map(numeroH => Notification.createNotification({
+        recipientNumeroH: numeroH,
+        type: 'death_report',
+        title: 'Signalement de décès à confirmer',
+        message: `${nomReporter} (${reporter.numeroH}) signale le décès de ${nomMembre} (${membre.numeroH})${details ? ` — ${details}` : ''}. À confirmer avant la fermeture du compte.`,
+        relatedId: null // related_id est un UUID : le NuméroH du membre figure dans le message
+      })));
+      return res.status(202).json({
+        success: true,
+        pending: true,
+        message: `Le signalement du décès de ${nomMembre} a été transmis. Un administrateur doit le confirmer avant la fermeture du compte.`
+      });
+    }
+
 
     // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
     const numeroHD = await genererNumeroHD();

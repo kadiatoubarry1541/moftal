@@ -19,7 +19,7 @@ class Formation extends Model {
     const formations = await this.findAll({
       attributes: ['id', 'title', 'category'],
       include: [{
-        model: FormationRegistration,
+        model: this.sequelize.models.FormationRegistration,
         as: 'registrations',
         attributes: ['id']
       }]

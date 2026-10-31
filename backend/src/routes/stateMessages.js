@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op } from 'sequelize';
 import multer from 'multer';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import StateMessage from '../models/StateMessage.js';

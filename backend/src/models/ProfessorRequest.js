@@ -7,7 +7,7 @@ class ProfessorRequest extends Model {
     return await this.findAll({
       where: { numeroH },
       include: [{
-        model: Professor,
+        model: this.sequelize.models.Professor,
         as: 'professor'
       }],
       order: [['created_at', 'DESC']]
