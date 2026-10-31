@@ -460,7 +460,8 @@ router.get('/pending-sent', async (req, res) => {
 router.get('/my-children', async (req, res) => {
   try {
     const user = req.user;
-    const links = isAdmin(user)
+    // « Mes » liens, même pour un administrateur ; tous les liens seulement sur demande (?tout=1)
+    const links = isAdmin(user) && req.query.tout === '1'
       ? await ParentChildLink.findAll({ where: { status: 'active', isActive: true }, order: [['created_at', 'DESC']] })
       : await ParentChildLink.getMyChildren(user.numeroH);
 
@@ -497,7 +498,7 @@ router.get('/my-children', async (req, res) => {
     res.json({
       success: true,
       children: childrenWithDetails,
-      ...(isAdmin(user) && { adminView: true })
+      ...(isAdmin(user) && req.query.tout === '1' && { adminView: true })
     });
   } catch (error) {
     console.error('Erreur récupération mes enfants:', error);
@@ -581,7 +582,8 @@ router.get('/parents-of/:numeroH', async (req, res) => {
 router.get('/my-parents', async (req, res) => {
   try {
     const user = req.user;
-    const links = isAdmin(user)
+    // « Mes » liens, même pour un administrateur ; tous les liens seulement sur demande (?tout=1)
+    const links = isAdmin(user) && req.query.tout === '1'
       ? await ParentChildLink.findAll({ where: { status: 'active', isActive: true }, order: [['created_at', 'DESC']] })
       : await ParentChildLink.getMyParents(user.numeroH);
 
@@ -603,7 +605,7 @@ router.get('/my-parents', async (req, res) => {
     res.json({
       success: true,
       parents: parentsWithDetails,
-      ...(isAdmin(user) && { adminView: true })
+      ...(isAdmin(user) && req.query.tout === '1' && { adminView: true })
     });
   } catch (error) {
     console.error('Erreur récupération mes parents:', error);

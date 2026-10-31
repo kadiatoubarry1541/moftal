@@ -10,7 +10,7 @@ import { InvitationsReceived } from './InvitationsReceived'
 import AjouterEnfantModal from './AjouterEnfantModal'
 import ChampPersonne from './ChampPersonne'
 import type { UserData } from '../utils/auth'
-import type { ArbreConjoint, DefuntServeur, PersonneLiee } from '../types/arbre'
+import type { ArbreConjoint, DefuntServeur, LienParent, PersonneLiee } from '../types/arbre'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -176,11 +176,15 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
       try {
         const [parentsRes, partnerRes] = await Promise.all([
-          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then((r): Promise<{ success: boolean; parents?: PersonneLiee[] }> => r.json()).catch((): null => null),
+          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then((r): Promise<{ success: boolean; parents?: LienParent[] }> => r.json()).catch((): null => null),
           fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then((r): Promise<{ success: boolean; partner?: PersonneLiee }> => r.json()).catch((): null => null),
         ])
 
-        const realParents: PersonneLiee[] = (parentsRes?.success ? parentsRes.parents : []) || []
+        // /my-parents renvoie des liens (la personne est dans « parent ») ; pour un
+        // administrateur, ce sont tous les liens : on garde ceux dont je suis l'enfant
+        const realParents: PersonneLiee[] = ((parentsRes?.success ? parentsRes.parents : []) || [])
+          .filter(l => l.childNumeroH === userData.numeroH && l.parent?.numeroH)
+          .map(l => ({ ...l.parent!, parentType: l.parentType }))
         const toMember = (p: PersonneLiee, relation: FamilyMember['relation'], generation: string, idPrefix: string): FamilyMember => ({
           id: `${idPrefix}-${p.numeroH}`,
           numeroH: p.numeroH,

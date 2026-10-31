@@ -109,3 +109,13 @@ export interface MessageOrganisation {
   section?: string
   createdAt: string
 }
+
+/** Lien parent-enfant (/api/parent-child/my-parents) : le lien, avec la personne dedans */
+export interface LienParent {
+  id: string
+  parentNumeroH: string
+  childNumeroH: string
+  parentType: 'pere' | 'mere'
+  status: string
+  parent: PersonneLiee | null
+}

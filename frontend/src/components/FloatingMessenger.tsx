@@ -87,6 +87,7 @@ interface WifeItem {
 
 interface RelativeItem {
   id: string
+  childNumeroH?: string
   child?: Person | null
   parent?: Person | null
 }
@@ -413,7 +414,8 @@ export function FloatingMessenger() {
 
       if (parentsRes?.success) {
         (parentsRes.parents || []).forEach((p: RelativeItem) => {
-          if (!p.parent) return
+          // Pour un administrateur, le serveur renvoie tous les liens : seuls les miens
+          if (!p.parent || (p.childNumeroH && p.childNumeroH !== myNumeroH)) return
           base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent })
         })
       }
