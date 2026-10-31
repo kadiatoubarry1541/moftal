@@ -118,15 +118,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   // Contacts cochés dans la liste du téléphone, et échec éventuel de la recherche
   const [contactsChoisis, setContactsChoisis] = useState(0);
   const [contactsErreur, setContactsErreur] = useState(false);
-  const [phoneInput, setPhoneInput] = useState('');
-  const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
-  const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
-  const [phoneSearchError, setPhoneSearchError] = useState('');
 
-  const [emailInput, setEmailInput] = useState('');
-  const [emailResult, setEmailResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
-  const [emailSearchLoading, setEmailSearchLoading] = useState(false);
-  const [emailSearchError, setEmailSearchError] = useState('');
   const [qrSubMode, setQrSubMode] = useState<'show' | 'scan'>('show');
   const [qrScannerActive, setQrScannerActive] = useState(false);
   const [qrScannedUser, setQrScannedUser] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
@@ -489,99 +481,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     setAddFriendForm(f => ({ ...f, numeroH }));
   };
 
-  const searchByPhone = async () => {
-    if (!phoneInput.trim()) return;
-    setPhoneSearchLoading(true);
-    setPhoneSearchError('');
-    setPhoneResult(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/friends/search-by-phone?tel=${encodeURIComponent(phoneInput.trim())}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setPhoneResult(data.user);
-      } else {
-        setPhoneSearchError(data.message || 'Aucun utilisateur trouvé');
-      }
-    } catch {
-      setPhoneSearchError('Erreur de connexion');
-    } finally {
-      setPhoneSearchLoading(false);
-    }
-  };
-
-  const searchByEmail = async () => {
-    if (!emailInput.trim()) return;
-    setEmailSearchLoading(true);
-    setEmailSearchError('');
-    setEmailResult(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/friends/search-by-email?email=${encodeURIComponent(emailInput.trim())}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setEmailResult(data.user);
-      } else {
-        setEmailSearchError(data.message || 'Aucun utilisateur trouvé');
-      }
-    } catch {
-      setEmailSearchError('Erreur de connexion');
-    } finally {
-      setEmailSearchLoading(false);
-    }
-  };
-
-  const sendFriendFromEmailResult = async () => {
-    if (!emailResult) return;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/friends/send-request`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toUser: emailResult.numeroH, message: addFriendForm.message?.trim() || undefined })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setShowAddFriend(false);
-        setEmailInput(''); setEmailResult(null);
-        setAddFriendForm(f => ({ ...f, message: '' }));
-        alert('Demande envoyée !');
-      } else {
-        setEmailSearchError(data.message || 'Erreur lors de l\'envoi');
-      }
-    } catch {
-      setEmailSearchError('Erreur de connexion');
-    }
-  };
-
-  const sendFriendFromPhoneResult = async () => {
-    if (!phoneResult) return;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/friends/send-request`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toUser: phoneResult.numeroH, message: addFriendForm.message?.trim() || undefined })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        alert('Demande d\'amitié envoyée !');
-        setShowAddFriend(false);
-        setPhoneResult(null);
-        setPhoneInput('');
-        loadFriendRequests();
-      } else {
-        alert(data?.message || 'Erreur lors de l\'envoi');
-      }
-    } catch {
-      alert('Erreur de connexion');
-    }
-  };
-
   const sendFriendFromQR = async () => {
     if (!qrScannedUser) return;
     try {
@@ -653,9 +552,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     setAddFriendForm({ numeroH: '', message: '' });
     setAddMode('numeroh');
     setContactMatches(null);
-    setPhoneInput('');
-    setPhoneResult(null);
-    setPhoneSearchError('');
     setQrSubMode('show');
     setQrScannedUser(null);
     setQrScanError('');
@@ -1050,37 +946,22 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
 
-            {/* Tabs mode */}
-            <div className="flex border-b mx-6 mb-4">
-              {([
-                { key: 'numeroh', label: t('amitie.add_friend.tab_numeroh') },
-                { key: 'phone',   label: t('amitie.add_friend.tab_phone') },
-                { key: 'email',   label: t('amitie.add_friend.tab_email') },
-                { key: 'qr',      label: t('amitie.add_friend.tab_qr') },
-              ] as const).map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => {
-                    stopQRScanner();
-                    setAddMode(tab.key);
-                    setPhoneResult(null); setPhoneSearchError('');
-                    setEmailResult(null); setEmailSearchError('');
-                    setQrScannedUser(null); setQrScanError('');
-                  }}
-                  className={`flex-1 py-2 text-xs font-medium border-b-2 transition-colors ${addMode === tab.key ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
             {/* Contacts du téléphone déjà sur Moftal — ajout direct en un clic */}
-            {isContactPickerSupported() && (
+            {addMode !== 'qr' && (
               <div className="px-6 pb-4">
-                <button onClick={importContactMatches} disabled={contactMatchesLoading}
-                  className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
-                  📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
-                </button>
+                {/* Une seule case pour tout ; à côté : les contacts du téléphone et le QR code */}
+                <div className="flex gap-2">
+                  {isContactPickerSupported() && (
+                    <button onClick={importContactMatches} disabled={contactMatchesLoading}
+                      className="flex-1 py-2.5 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
+                      📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
+                    </button>
+                  )}
+                  <button onClick={() => { setAddMode('qr'); setQrScannedUser(null); setQrScanError(''); }}
+                    className="flex-1 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 text-sm font-semibold hover:bg-gray-50 flex items-center justify-center gap-2">
+                    📷 {t('amitie.add_friend.tab_qr')}
+                  </button>
+                </div>
                 {contactMatches && (
                   contactMatches.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center mt-2">{contactsErreur ? "Connexion impossible : la recherche n'a pas pu se faire. Réessayez." : `Parmi les ${contactsChoisis} numéro(s) choisi(s), aucun nouveau contact à ajouter (déjà amis ou pas encore sur Moftal). Pour en vérifier d'autres, rouvrez la liste et cochez-les tous.`}</p>
@@ -1136,137 +1017,11 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 </>
               )}
 
-              {/* ── Mode Téléphone ── */}
-              {addMode === 'phone' && (
-                <>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={phoneInput}
-                      onChange={(e) => { setPhoneInput(e.target.value); setPhoneResult(null); setPhoneSearchError(''); }}
-                      onKeyDown={(e) => e.key === 'Enter' && searchByPhone()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="+224 6XX XXX XXX"
-                    />
-                    <button
-                      onClick={searchByPhone}
-                      disabled={phoneSearchLoading || !phoneInput.trim()}
-                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      {phoneSearchLoading ? '...' : t('amitie.add_friend.search_btn')}
-                    </button>
-                  </div>
-
-                  {phoneSearchError && (
-                    <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{phoneSearchError}</p>
-                  )}
-
-                  {phoneResult && (
-                    <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">
-                          {phoneResult.prenom?.[0] || '?'}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{phoneResult.prenom} {phoneResult.nomFamille}</p>
-                          <p className="text-xs text-gray-500">{phoneResult.numeroH}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <textarea
-                          value={addFriendForm.message}
-                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value.slice(0, 30) }))}
-                          maxLength={30}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          rows={2}
-                          placeholder={t('amitie.add_friend.message_placeholder')}
-                        />
-                        <p className="text-xs text-gray-400 text-right mt-0.5">{addFriendForm.message.length}/30</p>
-                      </div>
-                      <button
-                        onClick={sendFriendFromPhoneResult}
-                        className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        {t('amitie.add_friend.send_invitation')}
-                      </button>
-                    </div>
-                  )}
-
-                  {!phoneResult && !phoneSearchError && (
-                    <div className="flex justify-end pt-2">
-                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.cancel')}</button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ── Mode Email ── */}
-              {addMode === 'email' && (
-                <>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      value={emailInput}
-                      onChange={(e) => { setEmailInput(e.target.value); setEmailResult(null); setEmailSearchError(''); }}
-                      onKeyDown={(e) => e.key === 'Enter' && searchByEmail()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="exemple@email.com"
-                    />
-                    <button
-                      onClick={searchByEmail}
-                      disabled={emailSearchLoading || !emailInput.trim()}
-                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      {emailSearchLoading ? '...' : t('amitie.add_friend.search_btn')}
-                    </button>
-                  </div>
-
-                  {emailSearchError && (
-                    <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{emailSearchError}</p>
-                  )}
-
-                  {emailResult && (
-                    <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">
-                          {emailResult.prenom?.[0] || '?'}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{emailResult.prenom} {emailResult.nomFamille}</p>
-                          <p className="text-xs text-gray-500">{emailResult.numeroH}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <textarea
-                          value={addFriendForm.message}
-                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value.slice(0, 30) }))}
-                          maxLength={30}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          rows={2}
-                          placeholder={t('amitie.add_friend.message_placeholder')}
-                        />
-                        <p className="text-xs text-gray-400 text-right mt-0.5">{addFriendForm.message.length}/30</p>
-                      </div>
-                      <button
-                        onClick={sendFriendFromEmailResult}
-                        className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        {t('amitie.add_friend.send_invitation')}
-                      </button>
-                    </div>
-                  )}
-
-                  {!emailResult && !emailSearchError && (
-                    <div className="flex justify-end pt-2">
-                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.cancel')}</button>
-                    </div>
-                  )}
-                </>
-              )}
-
               {/* ── Mode QR Code ── */}
               {addMode === 'qr' && (
                 <>
+                  <button onClick={() => { stopQRScanner(); setAddMode('numeroh'); }}
+                    className="text-sm font-semibold text-emerald-700 hover:underline">← {t('btn.back')}</button>
                   {/* Sous-tabs : Mon QR / Scanner */}
                   <div className="flex rounded-lg overflow-hidden border border-gray-200">
                     <button

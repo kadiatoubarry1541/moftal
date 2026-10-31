@@ -34,7 +34,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
 
   const [inputNumeroH, setInputNumeroH] = useState('');
 
-  const [phoneInput, setPhoneInput] = useState('');
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneResult, setPhoneResult] = useState<FoundUser | null>(null);
@@ -45,7 +44,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
   const [contactsChoisis, setContactsChoisis] = useState(0);
   const [contactsErreur, setContactsErreur] = useState(false);
 
-  const [emailInput, setEmailInput] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [emailResult, setEmailResult] = useState<FoundUser | null>(null);
@@ -224,11 +222,11 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     }
   };
 
-  const searchByPhone = async () => {
-    if (!phoneInput.trim()) return;
+  const searchByPhone = async (valeur: string) => {
+    if (!valeur.trim()) return;
     setPhoneLoading(true); setPhoneError(''); setPhoneResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/friends/search-by-phone?tel=${encodeURIComponent(phoneInput.trim())}`, {
+      const res = await fetch(`${API_BASE}/api/friends/search-by-phone?tel=${encodeURIComponent(valeur.trim())}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -238,11 +236,11 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     finally { setPhoneLoading(false); }
   };
 
-  const searchByEmail = async () => {
-    if (!emailInput.trim()) return;
+  const searchByEmail = async (valeur: string) => {
+    if (!valeur.trim()) return;
     setEmailLoading(true); setEmailError(''); setEmailResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/friends/search-by-email?email=${encodeURIComponent(emailInput.trim())}`, {
+      const res = await fetch(`${API_BASE}/api/friends/search-by-email?email=${encodeURIComponent(valeur.trim())}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -250,6 +248,16 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
       else setEmailError(data.message || 'Aucun compte trouvé avec cet email.');
     } catch { setEmailError('Erreur réseau. Vérifiez votre connexion.'); }
     finally { setEmailLoading(false); }
+  };
+
+  // Une seule case : on reconnaît tout seul un e-mail, un téléphone ou un NuméroH
+  const chercherPersonne = () => {
+    const v = inputNumeroH.trim();
+    if (!v) return;
+    setPhoneResult(null); setPhoneError(''); setEmailResult(null); setEmailError('');
+    if (v.includes('@')) { void searchByEmail(v); return; }
+    if (/^[+\d\s().-]+$/.test(v) && v.replace(/\D/g, '').length >= 6) { void searchByPhone(v); return; }
+    handleSelect(v);
   };
 
   const switchMode = (m: Mode) => {
@@ -344,29 +352,23 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-xl">&times;</button>
         </div>
 
-        <div className="flex border-b border-gray-200 mx-5">
-          {([
-            { key: 'numeroh', label: '🔢 NumH' },
-            { key: 'phone',   label: '📞 Tél.' },
-            { key: 'email',   label: '✉️ Email' },
-            { key: 'qr',      label: '📷 QR' },
-          ] as { key: Mode; label: string }[]).map(tab => (
-            <button key={tab.key} onClick={() => switchMode(tab.key)}
-              className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                mode === tab.key ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="mb-3" />
+        <div className="mb-1" />
 
-        {isContactPickerSupported() && (
+        {mode !== 'qr' && (
           <div className="px-5 pb-3">
-            <button onClick={importContactMatches} disabled={contactMatchesLoading}
-              className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
-              📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
-            </button>
+            {/* Une seule case pour tout ; à côté : les contacts du téléphone et le QR code */}
+            <div className="flex gap-2">
+              {isContactPickerSupported() && (
+                <button onClick={importContactMatches} disabled={contactMatchesLoading}
+                  className="flex-1 py-2.5 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
+                  📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
+                </button>
+              )}
+              <button onClick={() => switchMode('qr')}
+                className="flex-1 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 text-sm font-semibold hover:bg-gray-50 flex items-center justify-center gap-2">
+                📷 QR code
+              </button>
+            </div>
             {contactMatches && (
               contactMatches.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center mt-2">{contactsErreur ? "Connexion impossible : la recherche n'a pas pu se faire. Réessayez." : `Parmi les ${contactsChoisis} numéro(s) choisi(s), aucun n'a encore de compte Moftal. Pour en vérifier d'autres, rouvrez la liste et cochez-les tous.`}</p>
@@ -390,98 +392,47 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
 
         <div className="px-5 pb-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 145px)' }}>
 
-          {/* ── NumeroH ── */}
-          {mode === 'numeroh' && (
+          {/* ── Une seule case : téléphone, e-mail ou NuméroH ── */}
+          {mode !== 'qr' && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">NumeroH de la personne</label>
+              <div className="flex gap-2">
                 <input type="text" value={inputNumeroH}
-                  onChange={e => setInputNumeroH(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && inputNumeroH.trim()) handleSelect(inputNumeroH.trim()); }}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Ex: G1C1P2R1E1F1 1" autoFocus />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleClose} className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm">Annuler</button>
-                <button onClick={() => inputNumeroH.trim() && handleSelect(inputNumeroH.trim())} disabled={!inputNumeroH.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-semibold text-sm">
-                  Confirmer →
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ── Téléphone ── */}
-          {mode === 'phone' && (
-            <>
-              <p className="text-sm text-gray-500">Entrez le numéro de téléphone pour trouver la personne.</p>
-              <div className="flex gap-2">
-                <input type="tel" value={phoneInput}
-                  onChange={e => { setPhoneInput(e.target.value); setPhoneResult(null); setPhoneError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && searchByPhone()}
-                  className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="+224 6XX XXX XXX" autoFocus />
-                <button onClick={searchByPhone} disabled={phoneLoading || !phoneInput.trim()}
+                  onChange={e => { setInputNumeroH(e.target.value); setPhoneResult(null); setPhoneError(''); setEmailResult(null); setEmailError(''); }}
+                  onKeyDown={e => { if (e.key === 'Enter') chercherPersonne(); }}
+                  className="flex-1 min-w-0 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="Téléphone, e-mail ou NuméroH" autoFocus />
+                <button onClick={chercherPersonne} disabled={phoneLoading || emailLoading || !inputNumeroH.trim()}
                   className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-semibold text-sm">
-                  {phoneLoading ? '...' : 'Chercher'}
+                  {phoneLoading || emailLoading ? '...' : 'Valider'}
                 </button>
               </div>
-              {phoneError && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{phoneError}</p>}
-              {phoneResult && (
-                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">{phoneResult.prenom?.[0] || '?'}</div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{phoneResult.prenom} {phoneResult.nomFamille}</p>
-                      <p className="text-xs text-gray-500">{phoneResult.numeroH}</p>
+              {(phoneError || emailError) && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{phoneError || emailError}</p>}
+              {(phoneResult || emailResult) && (() => {
+                const trouve = (phoneResult || emailResult)!;
+                return (
+                  <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">{trouve.prenom?.[0] || '?'}</div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{trouve.prenom} {trouve.nomFamille}</p>
+                        <p className="text-xs text-gray-500">{trouve.numeroH}</p>
+                      </div>
                     </div>
+                    <button onClick={() => handleSelect(trouve.numeroH)}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm">
+                      Sélectionner cette personne →
+                    </button>
                   </div>
-                  <button onClick={() => handleSelect(phoneResult.numeroH)}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm">
-                    Sélectionner cette personne →
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── Email ── */}
-          {mode === 'email' && (
-            <>
-              <p className="text-sm text-gray-500">Entrez l'email pour trouver la personne.</p>
-              <div className="flex gap-2">
-                <input type="email" value={emailInput}
-                  onChange={e => { setEmailInput(e.target.value); setEmailResult(null); setEmailError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && searchByEmail()}
-                  className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="exemple@email.com" autoFocus />
-                <button onClick={searchByEmail} disabled={emailLoading || !emailInput.trim()}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-semibold text-sm">
-                  {emailLoading ? '...' : 'Chercher'}
-                </button>
-              </div>
-              {emailError && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailError}</p>}
-              {emailResult && (
-                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">{emailResult.prenom?.[0] || '?'}</div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{emailResult.prenom} {emailResult.nomFamille}</p>
-                      <p className="text-xs text-gray-500">{emailResult.numeroH}</p>
-                    </div>
-                  </div>
-                  <button onClick={() => handleSelect(emailResult.numeroH)}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm">
-                    Sélectionner cette personne →
-                  </button>
-                </div>
-              )}
+                );
+              })()}
+              <button onClick={handleClose} className="w-full py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm">Annuler</button>
             </>
           )}
 
           {/* ── QR Code ── */}
           {mode === 'qr' && (
             <>
+              <button onClick={() => switchMode('numeroh')} className="text-sm font-semibold text-emerald-700 hover:underline">← Retour</button>
               <div className="flex rounded-xl overflow-hidden border border-gray-200">
                 <button onClick={() => { stopLiveScanner(); setQrSub('show'); setQrFound(null); setQrError(''); }}
                   className={`flex-1 py-2 text-sm font-semibold transition-colors ${qrSub === 'show' ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
