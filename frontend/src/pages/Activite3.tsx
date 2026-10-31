@@ -173,6 +173,8 @@ export default function Activite3() {
         if (data.group) {
           setMyGroup(data.group as Activity3Group);
           setGroups([data.group as Activity3Group]);
+          // Le groupe ouvert se met à jour (nouvelle publication, inscription)
+          setSelectedGroup(prev => prev && prev.id === data.group.id ? data.group as Activity3Group : prev);
           setActivityValue(data.activityValue || '');
         } else {
           setMyGroup(null); setGroups([]); setActivityValue('');
@@ -234,7 +236,7 @@ export default function Activite3() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/activities/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/activities/groups/${selectedGroup.id}/posts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

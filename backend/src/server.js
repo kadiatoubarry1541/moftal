@@ -2847,6 +2847,8 @@ const limiteurConnexion = rateLimit({
 });
 app.post('/api/auth/login', limiteurConnexion);
 app.use('/api/auth', authRoutes);
+// Badges : gérés depuis l'espace admin (/api/admin/badges), réservés aux admins
+app.use('/api/admin/badges', badgeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/logos', logoRoutes);

@@ -1043,14 +1043,26 @@ router.get('/my-certificates', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    const certificates = completed
-      .filter(r => (r.progress ?? 0) >= 100)
-      .map(r => ({
+    const termines = completed.filter(r => (r.progress ?? 0) >= 100);
+    // Titre et description de la formation, pour afficher un vrai certificat
+    const formations = termines.length
+      ? await Formation.findAll({ where: { id: termines.map(r => r.formationId) }, attributes: ['id', 'title', 'description'] })
+      : [];
+    const parId = new Map(formations.map(f => [String(f.id), f]));
+    const certificates = termines.map(r => {
+      const f = parId.get(String(r.formationId));
+      const date = r.completedAt || r.approvedAt || r.updatedAt;
+      return {
         id: r.id,
         formationId: r.formationId,
-        completedAt: r.completedAt || r.approvedAt || r.updatedAt,
+        title: f?.title || 'Formation terminée',
+        description: f?.description || '',
+        completedAt: date,
+        receivedDate: date,
+        issuedBy: 'Moftal',
         progress: r.progress
-      }));
+      };
+    });
 
     res.json({ success: true, certificates });
   } catch (error) {

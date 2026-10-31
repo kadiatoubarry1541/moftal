@@ -12,6 +12,71 @@ router.use(authenticate);
 
 // ========== CONTENU DE FOI ==========
 
+// ========== RÉFLÉCHISSONS (page /reflechissons) ==========
+// Les réflexions sont des contenus de foi marqués « reflechissons » : même table,
+// rien de nouveau à créer en base.
+const ESPACE_REFLEXIONS = 'reflechissons';
+const enReflexion = (c) => {
+  const contenu = c.content || {};
+  return {
+    id: c.id,
+    title: c.title,
+    description: c.description || '',
+    type: c.type,
+    content: { text: contenu.text, videoUrl: contenu.videoUrl, audioUrl: contenu.audioUrl, transcript: contenu.transcript },
+    religion: c.religion,
+    category: c.category,
+    isActive: c.isActive,
+    createdBy: c.createdBy,
+    createdAt: c.createdAt || c.created_at,
+    tags: Array.isArray(contenu.tags) ? contenu.tags : [],
+  };
+};
+
+// @route   GET /api/faith/reflections
+router.get('/reflections', async (req, res) => {
+  try {
+    const rows = await FaithContent.findAll({
+      where: { isActive: true, [Op.and]: [FaithContent.sequelize.literal(`content->>'espace' = '${ESPACE_REFLEXIONS}'`)] },
+      order: [['created_at', 'DESC']],
+      limit: 500,
+    });
+    res.json({ success: true, reflections: rows.map(enReflexion) });
+  } catch (error) {
+    console.error('faith/reflections GET:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/faith/reflections — l'auteur est toujours la personne connectée
+router.post('/reflections', async (req, res) => {
+  try {
+    const { title, description, type, content, category, religion, tags } = req.body || {};
+    const titre = String(title || '').trim().slice(0, 255);
+    const texte = String(content || '').trim();
+    const genre = ['message', 'video', 'audio'].includes(type) ? type : 'message';
+    if (!titre || !texte) return res.status(400).json({ success: false, message: 'Titre et contenu requis.' });
+    const contenu = { espace: ESPACE_REFLEXIONS, tags: (Array.isArray(tags) ? tags : []).map(String).map(t => t.trim()).filter(Boolean).slice(0, 20) };
+    if (genre === 'video') contenu.videoUrl = texte;
+    else if (genre === 'audio') contenu.audioUrl = texte;
+    else contenu.text = texte.slice(0, 20000);
+    const c = await FaithContent.create({
+      title: titre,
+      description: String(description || '').slice(0, 5000),
+      type: genre,
+      content: contenu,
+      category: String(category || 'reflexion').slice(0, 50),
+      religion: String(religion || req.user.religion || 'Islam').slice(0, 50),
+      createdBy: req.user.numeroH,
+    });
+    res.status(201).json({ success: true, reflection: enReflexion(c) });
+  } catch (error) {
+    console.error('faith/reflections POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+
 // @route   GET /api/faith/content
 // @desc    Récupérer le contenu de foi
 // @access  Authentifié
