@@ -189,7 +189,8 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
       const d = await r.json();
       if (d.success) {
         const logoChange = profilModal.form.photo !== (account?.photo || "");
-        setAccount((a) => (a ? { ...a, ...profilModal.form } : a));
+        // Le serveur garde le logo si le champ arrive vide : l'écran aussi
+        setAccount((a) => (a ? { ...a, ...profilModal.form, photo: profilModal.form.photo || a.photo } : a));
         setProfilModal(null);
         // Nouveau logo : on recharge pour qu'il soit le même partout dans la gestion
         if (logoChange) window.location.reload();

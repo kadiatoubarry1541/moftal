@@ -260,10 +260,9 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
             <input type="file" accept="image/*" ref={fileRef} onChange={handlePhoto} style={{ display:"none" }} />
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               {modal.form.photo ? (
+                // Logo obligatoire : il se remplace, il ne se retire pas
                 <div style={{ position:"relative" }}>
-                  <img src={modal.form.photo} alt="logo" style={{ width:64, height:64, borderRadius:12, objectFit:"cover", border:"1.5px solid #e2e8f0" }} />
-                  <button onClick={() => onChange({ ...modal.form, photo: "" })}
-                    style={{ position:"absolute", top:-8, right:-8, width:22, height:22, borderRadius:"50%", background:"#ef4444", color:"white", border:"none", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                  <img src={modal.form.photo} alt="logo" style={{ width:64, height:64, borderRadius:12, objectFit:"contain", background:"white", border:"1.5px solid #e2e8f0" }} />
                 </div>
               ) : (
                 <div style={{ width:64, height:64, borderRadius:12, background:"#f1f5f9", border:"1.5px dashed #cbd5e1", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>🏢</div>

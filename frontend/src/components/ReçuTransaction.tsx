@@ -50,7 +50,7 @@ export function ReçuTransaction({
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; color: #111; }
         .recu { max-width: 400px; margin: auto; background: #fff; border: 2px solid #1e3a5f; border-radius: 14px; overflow: hidden; }
         .header { background: linear-gradient(135deg,#1e3a5f,#2563eb); padding: 24px; text-align: center; color: white; }
-        .logo { width: 72px; height: 72px; object-fit: cover; border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); margin-bottom: 10px; }
+        .logo { width: 72px; height: 72px; object-fit: contain; background: white; border-radius: 12px; border: 3px solid rgba(255,255,255,0.5); margin-bottom: 10px; }
         .logo-placeholder { width: 56px; height: 56px; font-size: 36px; margin-bottom: 10px; }
         .title { font-size: 18px; font-weight: 900; }
         .subtitle { font-size: 11px; opacity: 0.8; margin-top: 2px; }
@@ -89,7 +89,7 @@ export function ReçuTransaction({
             {/* Header */}
             <div className="header" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', padding: '24px', textAlign: 'center', color: 'white' }}>
               {logoUrl ? (
-                <img src={logoUrl} alt={proNom} className="logo" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.5)', marginBottom: 10, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                <img src={logoUrl} alt={proNom} className="logo" style={{ width: 72, height: 72, objectFit: 'contain', background: 'white', borderRadius: 12, border: '3px solid rgba(255,255,255,0.5)', marginBottom: 10, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
               ) : (
                 <div style={{ fontSize: 40, marginBottom: 8 }}>💰</div>
               )}

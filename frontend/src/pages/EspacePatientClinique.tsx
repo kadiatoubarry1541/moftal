@@ -204,8 +204,9 @@ export default function EspacePatientClinique() {
               ← Vitrine
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {clinic?.logo_url ? <img src={clinic.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>✚</span>}
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: clinic?.logo_url ? "white" : "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {/* Le logo en entier, jamais coupé */}
+                {clinic?.logo_url ? <img src={clinic.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span>✚</span>}
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: "white" }}>{clinic?.name}</div>

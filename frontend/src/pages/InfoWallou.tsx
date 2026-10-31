@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { BackToMoftalBadge } from "../components/InstallAppButton";
 import { reconcileInstalledFlag } from "../utils/reconcileInstalledFlag";
+import ErreurChargement from "../components/ErreurChargement";
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
@@ -1684,7 +1685,10 @@ export default function InfoWallou() {
 
   // Système de points InfoWallou
   const [pointsDisponibles, setPointsDisponibles] = useState<number | null>(null);
-  const [userNumeroH, setUserNumeroH] = useState<string | null>(null);
+  // Cartes enregistrées en base pour l'utilisateur connecté
+  const [carteGratuiteDisponible, setCarteGratuiteDisponible] = useState<boolean | null>(null);
+  const [erreurCartes, setErreurCartes] = useState(false);
+  const [enregistrementCarte, setEnregistrementCarte] = useState(false);
   const [showAcheterPoints, setShowAcheterPoints] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [sendToNumeroH, setSendToNumeroH] = useState('');
@@ -1742,20 +1746,26 @@ export default function InfoWallou() {
       const parsed = JSON.parse(session);
       const user = parsed.userData || parsed;
       if (user?.numeroH) {
-        setUserNumeroH(user.numeroH);
         const token = localStorage.getItem("token");
         fetch(`${API_BASE}/api/quotas/my-points`, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(r => r.json()).then(d => {
           if (d.success) setPointsDisponibles(d.pointsDisponibles);
         }).catch(() => {});
+        // Mes cartes enregistrées en base (et la carte gratuite encore disponible ?)
+        fetch(`${API_BASE}/api/info-cards/mine`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()).then(d => {
+          if (!d.success) return;
+          setSavedCards(d.cards || []);
+          setCarteGratuiteDisponible(!!d.carteGratuiteDisponible);
+        }).catch(() => setErreurCartes(true));
       }
     } catch {}
   }, []);
 
-  // "Carte gratuite" = première carte créée dans cette session (trackée par localStorage par user)
-  const freeCardKey = userNumeroH ? `iw_free_${userNumeroH}` : null;
-  const freeCardUsed = freeCardKey ? localStorage.getItem(freeCardKey) === "1" : false;
+  // La première carte est gratuite : c'est le serveur qui le sait (jamais le téléphone)
+  const freeCardUsed = carteGratuiteDisponible === false;
 
   // Touch swipe pour le carousel
   const touchStartX = useRef(0);
@@ -1773,49 +1783,40 @@ export default function InfoWallou() {
   }, [savedCards]);
 
   const handleSaveCard = async () => {
-    if (!selected) return;
-
-    // Mode édition : pas de coût
-    if (editingId) {
-      setSavedCards(prev => prev.map(s => s.id === editingId ? { ...s, card, type: selected } : s));
-      setEditingId(null);
-      setSelected(null);
-      return;
-    }
-
-    // Nouvelle carte : vérifier si la carte gratuite a déjà été utilisée
-    if (!freeCardUsed) {
-      // Première carte → GRATUITE, on marque dans localStorage
-      if (freeCardKey) localStorage.setItem(freeCardKey, "1");
-      setSavedCards(prev => [...prev, { id: Date.now().toString(), type: selected, card, savedAt: Date.now() }]);
-      setSelected(null);
-      return;
-    }
-
-    // Cartes suivantes → coûtent 2 points (= 1 000 FG)
+    if (!selected || enregistrementCarte) return;
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Connectez-vous pour créer une carte payante.");
+      alert("Connectez-vous pour enregistrer une carte.");
       return;
     }
-
+    setEnregistrementCarte(true);
     try {
-      const res = await fetch(`${API_BASE}/api/quotas/consume-infowallou`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+      // Modification : pas de coût
+      const res = await fetch(`${API_BASE}/api/info-cards${editingId ? `/${editingId}` : ""}`, {
+        method: editingId ? "PUT" : "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ type: selected, card }),
       });
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
+      // Nouvelle carte sans assez de points : proposer d'en acheter
+      if (res.status === 402) { setShowAcheterPoints(true); return; }
       if (!res.ok || !data.success) {
-        setShowAcheterPoints(true);
+        alert(data.message || "La carte n'a pas été enregistrée. Réessayez.");
         return;
       }
-
-      setPointsDisponibles(data.pointsRestants);
-      setSavedCards(prev => [...prev, { id: Date.now().toString(), type: selected, card, savedAt: Date.now() }]);
+      if (editingId) {
+        setSavedCards(prev => prev.map(s => s.id === editingId ? data.card : s));
+        setEditingId(null);
+      } else {
+        setSavedCards(prev => [...prev, data.card]);
+        setCarteGratuiteDisponible(false);
+        if (data.pointsRestants != null) setPointsDisponibles(data.pointsRestants);
+      }
       setSelected(null);
     } catch {
       alert("Erreur réseau. Vérifiez votre connexion et réessayez.");
+    } finally {
+      setEnregistrementCarte(false);
     }
   };
 
@@ -1825,8 +1826,16 @@ export default function InfoWallou() {
     setEditingId(saved.id);
   };
 
-  const handleDeleteSaved = (id: string) => {
-    setSavedCards(prev => prev.filter(s => s.id !== id));
+  const handleDeleteSaved = async (id: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE}/api/info-cards/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) { alert(data.message || "La carte n'a pas été supprimée. Réessayez."); return; }
+      setSavedCards(prev => prev.filter(s => s.id !== id));
+    } catch {
+      alert("Erreur réseau. Vérifiez votre connexion et réessayez.");
+    }
   };
 
   const copyToClipboard = async (text: string, format: string) => {
@@ -1975,6 +1984,7 @@ export default function InfoWallou() {
       <div className="max-w-lg mx-auto px-4">
 
         {/* ── Galerie carousel ── */}
+        <ErreurChargement visible={erreurCartes} />
         {savedCards.length > 0 && (
           <div className="pt-6 pb-2">
             <div className="flex items-center justify-between mb-4">
