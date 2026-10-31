@@ -25,6 +25,11 @@ export interface UserData {
   ville?: string;
   pays?: string;
   specialite?: string;
+  /** Téléphone (selon l'ancienneté du compte) */
+  tel1?: string;
+  telephone?: string;
+  phone?: string;
+  email?: string;
   /** NuméroH au format serveur (snake_case) */
   numero_h?: string;
   /** Autres champs du profil, lus après vérification */

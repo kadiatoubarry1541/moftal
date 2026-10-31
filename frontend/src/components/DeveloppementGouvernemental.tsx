@@ -55,16 +55,34 @@ function getMyNumeroH(): string | null {
   } catch { return null; }
 }
 
+
+/** Personne autorisée à publier les actualités de l'État */
+interface Editeur { id: string; numeroH: string; name?: string | null; role?: string | null }
+
+/** Actualité publiée (développement gouvernemental) */
+interface Actualite {
+  id: string;
+  titre?: string | null;
+  content?: string | null;
+  domaine?: string | null;
+  numeroH?: string;
+  authorName?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  createdAt?: string;
+  created_at?: string;
+}
+
 export default function DeveloppementGouvernemental({ scope, location, locationName, isJournalist, isAdmin, higherLevels = [] }: Props) {
   const canPublish = isJournalist || isAdmin;
   const myNumeroH = getMyNumeroH();
   const [canPublishActu, setCanPublishActu] = useState(canPublish);
   const [showPublishers, setShowPublishers] = useState(false);
-  const [publishers, setPublishers] = useState<any[]>([]);
+  const [publishers, setPublishers] = useState<Editeur[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
 
   // Actualités
-  const [actualites, setActualites] = useState<any[]>([]);
+  const [actualites, setActualites] = useState<Actualite[]>([]);
   const [loadingActu, setLoadingActu] = useState(true);
   const [showActuForm, setShowActuForm] = useState(false);
   const [actuForm, setActuForm] = useState({ titre: '', content: '', domaine: '' });
@@ -214,7 +232,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         const d = await res.json();
         // Les alertes sécurité remontent toujours en premier, puis la sensibilisation.
         const priorite = (dom?: string) => dom === 'securite' ? 2 : dom === 'sensibilisation' ? 1 : 0;
-        const list = (d.actualites || []).sort((a: any, b: any) => priorite(b.domaine) - priorite(a.domaine));
+        const list = (d.actualites || []).sort((a: Actualite, b: Actualite) => priorite(b.domaine) - priorite(a.domaine));
         setActualites(list);
       }
     } catch {} finally { setLoadingActu(false); }
@@ -444,7 +462,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
               <div className="space-y-2">
                 {publishers.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-4">Personne d'autre autorisé pour l'instant</p>
-                ) : publishers.map((p: any) => (
+                ) : publishers.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg p-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{p.name || p.numeroH}</p>

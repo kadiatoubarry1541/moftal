@@ -21,6 +21,8 @@ interface UserData {
   generation?: string;
   ethnie?: string;
   region?: string;
+  /** Nom de la région en base (le formulaire lit « region ») */
+  regionOrigine?: string;
   pays?: string;
   nationalite?: string;
   religion?: string;
@@ -162,7 +164,7 @@ export default function EditProfileModal({
     }
   }, [open, userData]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     if (formData) {
       setFormData({ ...formData, [field]: value });
     }
@@ -251,7 +253,7 @@ export default function EditProfileModal({
       // 0. Compte provisoire : attribuer d'abord le vrai NuméroH (enregistré en base),
       // puis la suite (photo, vitrine…) se fait avec ce NuméroH.
       let numeroH = formData.numeroH;
-      let completedUser: any = null;
+      let completedUser: UserData | null = null;
       if (provisoire) {
         const manque = [
           !formData.prenom?.trim() && "Prénom",
@@ -407,14 +409,14 @@ export default function EditProfileModal({
         handicap: formData.handicap,
       };
       // Après attribution du NuméroH, on compare au profil tel qu'il vient d'être enregistré
-      const reference: any = completedUser || userData;
+      const reference: UserData | null = completedUser || userData;
       const originalTel = reference?.telephone || reference?.tel1;
       const textChanged = Object.entries(textFields).some(([k, v]) => {
         const before = k === "telephone" || k === "tel1" ? originalTel : reference?.[k];
         return (v ?? "") !== (before ?? "");
       });
 
-      let serverUser: any = completedUser || {};
+      let serverUser: Partial<UserData> = completedUser || {};
       // Champs que le serveur n'a pas pu enregistrer (aucune colonne en base)
       let champsIgnores: string[] = [];
       if (textChanged || preuveFile) {
@@ -447,7 +449,7 @@ export default function EditProfileModal({
       // 4. Construire l'utilisateur final — uniquement à partir de ce que le
       // serveur a enregistré (jamais le formulaire brut : un champ refusé ou
       // ignoré par le serveur ne doit pas paraître enregistré)
-      const base: any = { ...(reference || {}), ...serverUser };
+      const base: Partial<UserData> = { ...(reference || {}), ...serverUser };
       const updatedUser: UserData = {
         ...base,
         // Le formulaire lit « region » / « telephone » ; la base les nomme regionOrigine / tel1
