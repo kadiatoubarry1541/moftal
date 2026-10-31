@@ -1,19 +1,22 @@
 ﻿import { useRef } from 'react';
 import { useTraduction } from '../i18n/traduction';
 
+/** Données d'un reçu (sans la fermeture) */
+export type DonneesReçu = Omit<ReçuProps, "onClose">;
+
 interface ReçuProps {
   id: string;
   type: string;
   montant: number;
   date: string;
-  acteurNom?: string;
-  beneficiaireNom?: string;
-  beneficiaireContact?: string;
-  description?: string;
+  acteurNom?: string | null;
+  beneficiaireNom?: string | null;
+  beneficiaireContact?: string | null;
+  description?: string | null;
   nomFamille?: string;
-  logoUrl?: string;
+  logoUrl?: string | null;
   proNom?: string;
-  repartition?: Record<string, number>;
+  repartition?: Record<string, number> | null;
   onClose: () => void;
 }
 
