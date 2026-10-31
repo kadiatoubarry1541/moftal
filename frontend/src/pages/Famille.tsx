@@ -266,9 +266,12 @@ export default function Famille() {
           mariage:   raw.mariage   || [],
           deces:     raw.deces     || [],
         });
+      } else {
+        alert("La photo n'a pas pu être ajoutée. Réessayez.");
       }
     } catch (error) {
       console.error('Erreur upload galerie:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setUploadingAlbum(null);
     }
@@ -292,9 +295,12 @@ export default function Famille() {
           deces:     raw.deces     || [],
         });
         setViewerMedia(null);
+      } else {
+        alert("La suppression n'a pas pu être enregistrée. Réessayez.");
       }
     } catch (error) {
       console.error('Erreur suppression galerie:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setDeletingGalleryIdx(null);
     }
@@ -559,6 +565,8 @@ export default function Famille() {
         if (response.ok) {
           setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
           loadFamilyMessages();
+        } else {
+          alert("Le message n'a pas pu être envoyé. Réessayez.");
         }
       } else {
         const formData = new FormData();
@@ -572,10 +580,13 @@ export default function Famille() {
         if (response.ok) {
           setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
           loadFamilyMessages();
+        } else {
+          alert("Le message n'a pas pu être envoyé. Réessayez.");
         }
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
+      alert("Connexion impossible : le message n'a pas été envoyé. Réessayez.");
     }
   };
 

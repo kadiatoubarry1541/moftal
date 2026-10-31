@@ -202,9 +202,12 @@ export default function Activite3() {
       
       if (response.ok) {
         loadGroups();
+      } else {
+        alert("L'adhésion au groupe n'a pas pu être enregistrée.");
       }
     } catch (error) {
       console.error('Erreur:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 

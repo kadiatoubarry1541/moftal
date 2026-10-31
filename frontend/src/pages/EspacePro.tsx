@@ -1111,9 +1111,12 @@ export default function EspacePro() {
         await loadAppointments(account.id);
         setRejectId(null);
         setRejectReason("");
+      } else {
+        alert(data.message || "Le refus n'a pas pu être enregistré.");
       }
     } catch (err) {
       console.error(err);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setActionLoading(null);
     }
@@ -1197,8 +1200,8 @@ export default function EspacePro() {
   };
 
   /* ---- Sauvegarder le menu ---- */
-  const saveMenu = async (updatedItems: MenuItem[]) => {
-    if (!account) return;
+  const saveMenu = async (updatedItems: MenuItem[]): Promise<boolean> => {
+    if (!account) return false;
     setMenuSaving(true);
     try {
       const res = await fetch(`${API}/api/professionals/${account.id}`, {
@@ -1210,8 +1213,15 @@ export default function EspacePro() {
       if (data.success) {
         setMenuItems(updatedItems);
         setAccount(prev => prev ? { ...prev, services: updatedItems } : prev);
+        return true;
       }
-    } catch (err) { console.error(err); }
+      alert(data.message || "Le menu n'a pas pu être enregistré.");
+      return false;
+    } catch (err) {
+      console.error(err);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
+      return false;
+    }
     finally { setMenuSaving(false); }
   };
 
@@ -1221,7 +1231,7 @@ export default function EspacePro() {
       return;
     }
     const updated = [...menuItems, { ...newMenuItem }];
-    await saveMenu(updated);
+    if (!(await saveMenu(updated))) return;
     setNewMenuItem({ name: '', price: '', category: 'Plat', description: '' });
     setShowAddMenuItem(false);
   };
@@ -1254,7 +1264,7 @@ export default function EspacePro() {
       } else {
         alert("Erreur lors de la publication");
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); alert("Connexion impossible : rien n'a été enregistré. Réessayez."); }
     finally { setCourseSaving(false); }
   };
 

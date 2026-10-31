@@ -490,6 +490,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Erreur approbation:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -511,6 +512,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Erreur rejet:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -645,6 +647,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Erreur grant/revoke visibility:", error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 

@@ -99,9 +99,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setParentChildLinks(prev => prev.map(l => l.id === linkId ? { ...l, status: 'active' } : l))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -119,9 +121,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setParentChildLinks(prev => prev.filter(l => l.id !== linkId))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -138,9 +142,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setCoupleLinks(prev => prev.map(l => l.id === linkId ? { ...l, status: 'active' } : l))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -159,9 +165,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setCoupleLinks(prev => prev.filter(l => l.id !== linkId))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }

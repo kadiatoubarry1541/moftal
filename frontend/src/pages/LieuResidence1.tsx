@@ -189,6 +189,7 @@ export default function LieuResidence1() {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -239,6 +240,7 @@ export default function LieuResidence1() {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
