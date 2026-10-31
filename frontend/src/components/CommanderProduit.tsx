@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser, isAdmin, type UserData } from "../utils/auth";
+import type { CommandeEchange } from "../types/echange";
+import type { MessageDuSite } from "../types/vitrine";
 import { useTraduction } from "../i18n/traduction";
 
 // Commandes de l'Échange : « Commander » sur une publication → la commande est
@@ -9,7 +11,7 @@ import { useTraduction } from "../i18n/traduction";
 
 const API = `${config.API_BASE_URL}/exchange`;
 const entetes = () => ({ Authorization: `Bearer ${localStorage.getItem("token") || ""}`, "Content-Type": "application/json" });
-const montant = (v: any, devise?: string) => `${Number(v || 0).toLocaleString("fr-FR")} ${devise || "FG"}`;
+const montant = (v: number | string | null | undefined, devise?: string) => `${Number(v || 0).toLocaleString("fr-FR")} ${devise || "FG"}`;
 
 const STATUTS: Record<string, { label: string; fond: string; texte: string }> = {
   nouvelle: { label: "Nouvelle", fond: "#fef3c7", texte: "#92400e" },
@@ -30,7 +32,7 @@ export interface ProduitACommander {
 /** Fenêtre « Commander » : quantité, téléphone, adresse, message → au vendeur. */
 export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }: { product: ProduitACommander; couleur?: string; onClose: () => void }) {
   const { tr } = useTraduction();
-  const moi: any = getSessionUser() || {};
+  const moi: Partial<UserData> = getSessionUser() || {};
   const [quantite, setQuantite] = useState(1);
   const [nom, setNom] = useState([moi.prenom, moi.nomFamille].filter(Boolean).join(" "));
   const [telephone, setTelephone] = useState(moi.tel1 || moi.telephone || moi.phone || "");
@@ -52,8 +54,8 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || tr("La commande n'a pas pu être envoyée."));
       setEnvoyee(true);
-    } catch (e: any) {
-      setErreur(e.message || tr("La commande n'a pas pu être envoyée."));
+    } catch (e) {
+      setErreur((e as Error).message || tr("La commande n'a pas pu être envoyée."));
     } finally { setEnvoi(false); }
   };
 
@@ -123,7 +125,7 @@ function BadgeStatut({ statut }: { statut: string }) {
 export function CommandesRecues({ tout = false, toujoursVisible = false }: { tout?: boolean; toujoursVisible?: boolean }) {
   const { tr } = useTraduction();
   const voirTout = tout && isAdmin(getSessionUser());
-  const [commandes, setCommandes] = useState<any[] | null>(null);
+  const [commandes, setCommandes] = useState<CommandeEchange[] | null>(null);
   const [erreur, setErreur] = useState("");
   const [filtre, setFiltre] = useState<string>("toutes");
 
@@ -134,7 +136,7 @@ export function CommandesRecues({ tout = false, toujoursVisible = false }: { tou
       .then(d => { if (!d.success) throw new Error(d.message); setCommandes(d.commandes || []); })
       .catch((e) => { setErreur(e.message || tr("Impossible de charger les commandes.")); setCommandes([]); });
   };
-  useEffect(charger, [voirTout]);
+  useEffect(charger, [tr, voirTout]);
 
   const changer = async (id: number, statut: string) => {
     try {
@@ -142,7 +144,7 @@ export function CommandesRecues({ tout = false, toujoursVisible = false }: { tou
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || tr("La commande n'a pas pu être mise à jour."));
       setCommandes(cs => (cs || []).map(c => c.id === id ? { ...c, statut } : c));
-    } catch (e: any) { alert(e.message); }
+    } catch (e) { alert((e as Error).message); }
   };
 
   if (commandes === null) return null;
@@ -201,7 +203,7 @@ export function CommandesRecues({ tout = false, toujoursVisible = false }: { tou
 /** Suivi des commandes passées par la personne (page Échange). */
 export function MesCommandes() {
   const { tr } = useTraduction();
-  const [commandes, setCommandes] = useState<any[] | null>(null);
+  const [commandes, setCommandes] = useState<CommandeEchange[] | null>(null);
   const charger = () => {
     fetch(`${API}/orders/mine`, { headers: entetes() })
       .then(r => r.json()).then(d => setCommandes(d.success ? d.commandes || [] : [])).catch(() => setCommandes([]));
@@ -243,7 +245,7 @@ export function MesCommandes() {
  */
 export function MessagesTousLesSites() {
   const { tr } = useTraduction();
-  const [demandes, setDemandes] = useState<any[] | null>(null);
+  const [demandes, setDemandes] = useState<(MessageDuSite & { tenant_code: string; etablissement?: string | null; type?: string | null })[] | null>(null);
   const [erreur, setErreur] = useState("");
   const [filtre, setFiltre] = useState("toutes");
   const charger = () => {
@@ -253,7 +255,7 @@ export function MessagesTousLesSites() {
       .then(d => { if (!d.success) throw new Error(d.message); setDemandes(d.demandes || []); })
       .catch((e) => { setErreur(e.message || tr("Impossible de charger les messages.")); setDemandes([]); });
   };
-  useEffect(charger, []);
+  useEffect(charger, [tr]);
   if (demandes === null) return null;
   const visibles = filtre === "commandes" ? demandes.filter(d => /commande/i.test(d.objet || "")) : filtre === "nouveau" ? demandes.filter(d => d.statut === "nouveau") : demandes;
 

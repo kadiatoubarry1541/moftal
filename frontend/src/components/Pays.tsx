@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import './Pays.css'
 import { useTraduction } from '../i18n/traduction'
+import type { UserData } from '../utils/auth'
 
 interface PaysProps {
-  userData: any
+  /** Régions choisies dans le profil (region1 … region5) */
+  userData: UserData & Partial<Record<"region1" | "region2" | "region3" | "region4" | "region5", string>>
 }
 
 export function Pays({ userData }: PaysProps) {

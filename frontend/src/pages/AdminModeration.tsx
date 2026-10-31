@@ -76,8 +76,8 @@ export default function AdminModeration() {
         throw new Error(data.message || "Erreur lors du scan");
       }
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Erreur réseau");
+    } catch (err) {
+      setError((err as Error).message || "Erreur réseau");
     } finally {
       setScanning(false);
     }
@@ -101,8 +101,8 @@ export default function AdminModeration() {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || "Erreur suppression");
       setDeleted(prev => new Set([...prev, key]));
-    } catch (err: any) {
-      alert("Erreur : " + (err.message || "Suppression échouée"));
+    } catch (err) {
+      alert("Erreur : " + ((err as Error).message || "Suppression échouée"));
     } finally {
       setDeleting(null);
     }

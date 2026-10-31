@@ -1,21 +1,24 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { BeauteAnnouncement, BeauteBooking, BeauteClient, BeauteService, BeauteStaff, TableauBeaute } from "../types/gestion-beauty";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -45,13 +48,13 @@ export default function GestionBeauty() {
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant]                 = useState<any>(null);
-  const [dash, setDash]                     = useState<any>(null);
-  const [services, setServices]             = useState<any[]>([]);
-  const [bookings, setBookings]             = useState<any[]>([]);
-  const [staff, setStaff]                   = useState<any[]>([]);
-  const [clients, setClients]               = useState<any[]>([]);
-  const [announcements, setAnnouncements]   = useState<any[]>([]);
+  const [tenant, setTenant]                 = useState<EtablissementGestion | null>(null);
+  const [dash, setDash]                     = useState<TableauBeaute | null>(null);
+  const [services, setServices]             = useState<BeauteService[]>([]);
+  const [bookings, setBookings]             = useState<BeauteBooking[]>([]);
+  const [staff, setStaff]                   = useState<BeauteStaff[]>([]);
+  const [clients, setClients]               = useState<BeauteClient[]>([]);
+  const [announcements, setAnnouncements]   = useState<BeauteAnnouncement[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState("");
   const [saving, setSaving]                 = useState(false);
@@ -74,6 +77,7 @@ export default function GestionBeauty() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -83,6 +87,7 @@ export default function GestionBeauty() {
     if (tab === "staff")        loadStaff();
     if (tab === "clients")      loadClients();
     if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   async function loadAll() {
@@ -109,11 +114,11 @@ export default function GestionBeauty() {
 
   // Envoi d'un formulaire : en cas de coupure ou de réponse illisible, on renvoie
   // une erreur (jamais de faux succès) et le bouton est toujours débloqué.
-  async function poster(url: string, body: object): Promise<any> {
+  async function poster(url: string, body: object): Promise<ReponseServeur> {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
       if (!r.ok && d.success !== false) return { ...d, success: false };
       return d;
@@ -254,7 +259,7 @@ export default function GestionBeauty() {
           {(dash?.recentBookings?.length > 0) && (
             <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Derniers rendez-vous</h3>
-              {dash.recentBookings.map((b: any) => (
+              {dash.recentBookings.map((b) => (
                 <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>
                   <span style={{ fontWeight: 600 }}>{b.client_nom}</span>
                   <span style={{ color: "#64748b" }}>{b.service_nom || "Service"} · {fmtDate(b.date_rdv)} {b.heure_rdv}</span>

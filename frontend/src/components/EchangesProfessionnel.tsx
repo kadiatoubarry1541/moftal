@@ -27,10 +27,6 @@ interface ExchangeProduct {
   contactInfo?: { phone?: string };
 }
 
-interface EchangesProfessionnelProps {
-  userData?: any;
-}
-
 function buildImageUrl(path: string | undefined): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http')) return path;
@@ -85,7 +81,7 @@ const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }
   violet: { bg: 'bg-violet-600', border: 'border-violet-200', text: 'text-violet-600' },
 };
 
-export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelProps) {
+export function EchangesProfessionnel() {
   const { t } = useI18n();
   const { tr } = useTraduction();
   const SECTIONS = getSections(t);
@@ -146,6 +142,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
         setLoadingBySection(prev => ({ ...prev, [section.id]: false }));
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   // Le raccourci actif suit toujours la section réellement visible à l'écran
@@ -164,6 +161,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
       if (el) observer.observe(el);
     });
     return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const scrollToSection = (id: string) => {

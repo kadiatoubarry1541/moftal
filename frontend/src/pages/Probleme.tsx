@@ -1,12 +1,14 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReçuTransaction } from "../components/ReçuTransaction";
+import type { CompteFamille } from '../types/compteFamille';
+import type { DonneesReçu } from '../components/ReçuTransaction';
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export default function Probleme() {
@@ -27,14 +29,14 @@ export default function Probleme() {
 
   // Moftal Pay — paiement santé depuis problème familial
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
-  const [fundCompte, setFundCompte] = useState<any>(null);
+  const [fundCompte, setFundCompte] = useState<CompteFamille | null>(null);
   const [showMoftalPay, setShowMoftalPay] = useState(false);
   const [moftalMontant, setMoftalMontant] = useState('');
   const [moftalBenef, setMoftalBenef] = useState('');
   const [moftalContact, setMoftalContact] = useState('');
   const [moftalRaison, setMoftalRaison] = useState('');
   const [moftalLoading, setMoftalLoading] = useState(false);
-  const [moftalReçu, setMoftalReçu] = useState<any>(null);
+  const [moftalReçu, setMoftalReçu] = useState<DonneesReçu | null>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -137,6 +139,7 @@ export default function Probleme() {
       }
     };
     loadMedia();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userData]);
 
   const handleUpload = async (file: File | null) => {
@@ -162,7 +165,7 @@ export default function Probleme() {
       }
       setDescription("");
       setFamilyMedia((prev) => [data.item, ...prev]);
-    } catch (e) {
+    } catch {
       setUploadError("Erreur réseau. Réessayez plus tard.");
     } finally {
       setUploading(false);

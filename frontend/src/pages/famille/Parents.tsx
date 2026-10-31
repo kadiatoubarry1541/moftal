@@ -3,14 +3,10 @@ import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { RejoindreMaFiche } from '../../components/FicheEnfantActions'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-}
 
 interface ParentLink {
   id: string
@@ -66,10 +62,12 @@ interface PendingInvitation {
   parentType: string
   codeLiaison?: string
   parent?: { numeroH: string; prenom: string; nomFamille: string }
+  /** Demande faite par l'enfant (« je suis votre enfant ») */
+  demandeDeLEnfant?: boolean
 }
 
 // focusNumeroH : ouvre directement la galerie avec ce parent (clic depuis le Noyau)
-export default function Parents({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
+export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [parents, setParents] = useState<ParentLink[]>([])
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
@@ -147,7 +145,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
         loadPendingInvitations()
         loadMyParents()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -168,7 +166,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
       if (data.success) {
         loadPendingInvitations()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -189,7 +187,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
         setSelectedParent(null)
         loadMyParents()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -284,6 +282,7 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
     } else {
       setActivities([])
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedParent?.id])
 
   const handleAddMedia = (mediaData: { type: 'photo' | 'video' | 'audio'; url: string; caption?: string }) => {
@@ -303,10 +302,16 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
       [chapter]: [...prev[chapter], optimistic]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaByChapter((prev) => ({ ...prev, [chapter]: (prev[chapter] || []).filter((m) => m.id !== optimistic.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         const dataUrl = await toDataUrl(mediaData.url)
         const toNumeroH =
           user.numeroH === selectedParent.parentNumeroH ? selectedParent.childNumeroH : selectedParent.parentNumeroH
@@ -326,12 +331,14 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média parent:', data)
+          annuler()
         } else {
           // Recharger depuis le serveur pour récupérer les IDs réels
           await loadActivitiesForParent(selectedParent)
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média parent:', e)
+        annuler()
       }
     }
 
@@ -408,8 +415,8 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
                       {inv.parent ? `${inv.parent.prenom} ${inv.parent.nomFamille}` : inv.parentNumeroH}
                     </p>
                     <p className="text-sm text-slate-500">
-                      {(inv as any).demandeDeLEnfant
-                        ? `Dit être votre enfant · ${getNumeroHForDisplay((inv as any).childNumeroH || '', false)}`
+                      {inv.demandeDeLEnfant
+                        ? `Dit être votre enfant · ${getNumeroHForDisplay(inv.childNumeroH || '', false)}`
                         : getNumeroHForDisplay(inv.parentNumeroH, false)}
                     </p>
                   </div>

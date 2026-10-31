@@ -17,6 +17,8 @@
 
     /* Linting */
     "strict": false,
+    /* Aucun type deviné « any » : chaque donnée est décrite */
+    "noImplicitAny": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "erasableSyntaxOnly": true,

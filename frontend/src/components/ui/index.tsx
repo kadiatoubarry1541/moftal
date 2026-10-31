@@ -331,7 +331,7 @@ export const Grid: React.FC<BaseProps & { cols?: 1 | 2 | 3 | 4 | "auto" }> = ({
   className,
 }) => {
   const gridStyle =
-    COMPONENT_STYLES.grid[`cols${cols}`] || COMPONENT_STYLES.grid.auto;
+    COMPONENT_STYLES.grid[cols === "auto" ? "auto" : (`cols${cols}` as const)];
 
   return <div className={combineClasses(gridStyle, className)}>{children}</div>;
 };

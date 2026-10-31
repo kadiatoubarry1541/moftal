@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { TermsModal, resetTermsAcceptance, CONDITIONS } from '../components/TermsModal';
+import { TermsModal } from '../components/TermsModal';
+import { resetTermsAcceptance, CONDITIONS } from '../utils/conditionsUtilisation';
 import { useTraduction } from '../i18n/traduction';
 
 export default function ConditionsUtilisation() {

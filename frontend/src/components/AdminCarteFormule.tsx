@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { config } from "../config/api";
 import BoutonLienAppGestion from "./BoutonLienAppGestion";
-import { getTypeInfo } from "./EspaceProModals";
+import { getTypeInfo } from "./espaceProTypes";
 
 // Vue admin d'un espace pro : la formule en clair, pour la changer, ouvrir la
 // gestion du pro et copier le lien de SON application (celui qui installe la

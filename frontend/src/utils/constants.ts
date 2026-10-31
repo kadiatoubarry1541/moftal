@@ -104,32 +104,7 @@ export const REGION_CODES = [
   { label: 'Guinée-forestière', code: 'R4' }
 ]
 
-// Fonction pour générer un code séquentiel adaptatif (E1, E2, E10, E100, E1000, etc.)
-function generateSequentialCode(index: number, prefix: string): string {
-  // Index commence à 1 (première ethnie/famille = E1 ou F1)
-  const num = index + 1
-  
-  // Système adaptatif : pas de zéros devant, longueur naturelle
-  // E1, E2, ..., E9 (1 chiffre)
-  // E10, E11, ..., E99 (2 chiffres)
-  // E100, E101, ..., E999 (3 chiffres)
-  // E1000, E1001, ..., E9999 (4 chiffres)
-  // E10000, E10001, ..., E99999 (5 chiffres)
-  
-  return prefix + num.toString()
-}
 
-// Fonction pour convertir un code avec zéros (E001) en code sans zéros (E1)
-function normalizeCode(code: string): string {
-  // Si le code a des zéros devant (E001, E002, etc.), les enlever (E1, E2, etc.)
-  const match = code.match(/^([EF])(0*)(\d+)$/)
-  if (match) {
-    const prefix = match[1]
-    const number = parseInt(match[3], 10)
-    return prefix + number.toString()
-  }
-  return code
-}
 
 // Codes d'ethnies - Système séquentiel adaptatif (E1, E2, E10, E100, etc.)
 export const ETHNIE_CODES = ETHNIES.map((ethnie, index) => {

@@ -23,7 +23,7 @@ export function Select({ value, onChange, options, placeholder }: { value?: stri
   )
 }
 
-export function SelectCode({ value, onChange, options, placeholder }: { value?: string, onChange: (v: string)=>void, options: {label:string,code:string}[], placeholder?: string }) {
+export function SelectCode({ value, onChange, options, placeholder }: { value?: string, onChange: (v: string)=>void, options: readonly {label:string,code:string}[], placeholder?: string }) {
   const { tr } = useTraduction()
   return (
     <select value={value || ''} onChange={(e)=>onChange(e.target.value)}>
@@ -51,7 +51,7 @@ export function CheckboxGroup({ options, values, onChange }: { options: string[]
   )
 }
 
-export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file: File)=>void }) {
+export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file: File | null)=>void }) {
   const { tr } = useTraduction();
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<string | null>(null);
@@ -101,7 +101,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
     }
     setSelectedFile(null);
     setPreview(null);
-    onFile(null as any); // Notifier qu'aucun fichier n'est sélectionné
+    onFile(null); // Notifier qu'aucun fichier n'est sélectionné
   };
 
   return (

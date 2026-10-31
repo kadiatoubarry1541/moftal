@@ -6,7 +6,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface StorySection {
@@ -127,27 +127,7 @@ export default function ARetenir() {
   const [publishedSections, setPublishedSections] = useState<PublishedSectionInfo[]>([]);
   const navigate = useNavigate();
 
-  // Calculer l'âge de l'utilisateur
-  const getUserAge = (): number => {
-    if (!userData) return 0;
-    if (userData.age && typeof userData.age === 'number') return userData.age;
-    if (userData.dateNaissance) {
-      const birth = new Date(userData.dateNaissance);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-      return age;
-    }
-    return 0;
-  };
 
-  const isAdminUser = (): boolean => {
-    if (!userData) return false;
-    return userData.role === 'admin' || userData.role === 'super-admin' ||
-      userData.isAdmin === true || userData.isMasterAdmin === true ||
-      (typeof userData.role === 'string' && userData.role.includes('admin'));
-  };
 
   const canPublishSection = (_sectionId: string): boolean => true;
 
@@ -215,7 +195,7 @@ export default function ARetenir() {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/published?numeroH=${encodeURIComponent(numeroH)}&limit=100`);
       if (response.ok) {
         const data = await response.json();
-        setPublishedSections((data.stories || []).map((s: any) => ({
+        setPublishedSections((data.stories || []).map((s: { sectionId: string; publishedAt: string; authorName: string }) => ({
           sectionId: s.sectionId,
           publishedAt: s.publishedAt,
           authorName: s.authorName
@@ -270,8 +250,8 @@ export default function ARetenir() {
       } else {
         throw new Error('Erreur lors de la sauvegarde');
       }
-    } catch (error: any) {
-      if (error.message !== 'session_expired') {
+    } catch (error) {
+      if ((error as Error).message !== 'session_expired') {
         console.error('Erreur lors de la sauvegarde:', error);
         toast.error('Erreur lors de la sauvegarde. Vérifiez que le serveur est démarré.');
       }
@@ -321,11 +301,11 @@ export default function ARetenir() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de la publication');
       }
-    } catch (error: any) {
-      if (error.message?.includes('fetch') || error.name === 'TypeError') {
+    } catch (error) {
+      if ((error as Error).message?.includes('fetch') || (error as Error).name === 'TypeError') {
         toast.error('Impossible de contacter le serveur. Vérifiez que le backend est démarré.');
       } else {
-        toast.error(error.message || 'Erreur lors de la publication');
+        toast.error((error as Error).message || 'Erreur lors de la publication');
       }
     } finally {
       setSaving(false);
@@ -407,9 +387,9 @@ export default function ARetenir() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de l\'upload');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      toast.error(error.message || 'Erreur lors de l\'upload');
+      toast.error((error as Error).message || 'Erreur lors de l\'upload');
     } finally {
       setUploading({ ...uploading, [`${sectionId}-${type}`]: false });
     }
@@ -434,7 +414,7 @@ export default function ARetenir() {
 
     setSaving(true);
     try {
-      const stories: Record<string, any> = {};
+      const stories: Record<string, { content: string; photos: string[]; videos: string[] }> = {};
       storySections.forEach(section => {
         stories[section.id] = {
           content: section.content,

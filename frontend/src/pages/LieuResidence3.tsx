@@ -9,7 +9,9 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   lieu3?: string;
-  [key: string]: any;
+  lieuResidence3?: string;
+  lieu_residence_3?: string;
+  [key: string]: unknown;
 }
 
 interface Residence3Group {
@@ -66,7 +68,7 @@ export default function LieuResidence3() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [groups, setGroups] = useState<Residence3Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [, setShowCreateGroup] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Residence3Group | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
 
@@ -87,13 +89,6 @@ export default function LieuResidence3() {
   const [showMarketForm, setShowMarketForm] = useState(false);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const navigate = useNavigate();
-
-  const [newGroup, setNewGroup] = useState({
-    name: '',
-    description: '',
-    neighborhood: '',
-    district: ''
-  });
 
   const [newPost, setNewPost] = useState({
     content: '',
@@ -137,6 +132,7 @@ export default function LieuResidence3() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadGroups = async (user?: UserData) => {
@@ -162,64 +158,7 @@ export default function LieuResidence3() {
     }
   };
 
-  const getDefaultGroups = (): Residence3Group[] => [
-    {
-      id: '1',
-      name: 'Résidents de Conakry Est',
-      description: 'Communauté des résidents de l\'est de Conakry pour échanger et s\'entraider',
-      location: 'Conakry Est',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Dixinn',
-      district: 'Est'
-    },
-    {
-      id: '2',
-      name: 'Voisins de Ratoma',
-      description: 'Organisation de voisinage pour les habitants de Ratoma',
-      location: 'Ratoma',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Ratoma',
-      district: 'Nord'
-    }
-  ];
 
-  const createGroup = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/residences/groups`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...newGroup,
-          location: 'Lieu de Résidence 3',
-          createdBy: userData?.numeroH
-        })
-      });
-      
-      if (response.ok) {
-        alert('Organisation créé avec succès !');
-        setShowCreateGroup(false);
-        setNewGroup({ name: '', description: '', neighborhood: '', district: '' });
-        loadGroups();
-      } else {
-        alert('Erreur lors de la création du Organisation');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la création du Organisation');
-    }
-  };
 
   const joinGroup = async (groupId: string) => {
     try {
@@ -749,7 +688,7 @@ export default function LieuResidence3() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de contenu</label>
                   <select
                     value={newPost.type}
-                    onChange={(e) => setNewPost({...newPost, type: e.target.value as any})}
+                    onChange={(e) => setNewPost({...newPost, type: e.target.value as typeof newPost.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="text">📝 Texte</option>

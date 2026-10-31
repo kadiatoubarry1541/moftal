@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -9,13 +9,15 @@ import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 import { useI18n } from '../i18n/useI18n';
 import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
+import ErreurChargement from "../components/ErreurChargement";
+import type { AdresseEchange, ContactEchange } from "../types/echange";
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExchangeProduct {
@@ -29,10 +31,12 @@ interface ExchangeProduct {
   images: string[];
   videos: string[];
   condition: 'neuf' | 'bon' | 'moyen' | 'usé';
+  /** Message vocal (publication « photo + audio ») */
+  audio?: string[];
   location: string;
   seller: string;
   sellerName: string;
-  contactInfo: any;
+  contactInfo: ContactEchange;
   isActive: boolean;
   isApproved: boolean;
   createdAt: string;
@@ -45,9 +49,9 @@ interface Supplier {
   businessType: string;
   description: string;
   categories: string[];
-  contactInfo: any;
-  address: any;
-  documents: any[];
+  contactInfo: ContactEchange;
+  address: AdresseEchange;
+  documents: string[];
   isActive: boolean;
   isApproved: boolean;
   rating: number;
@@ -80,6 +84,8 @@ export default function EchangePrimaire() {
   const { t } = useI18n();
   const { tr } = useTraduction();
   const PRIMAIRE_TABS = useMemo(() => getPrimaireTabs(t), [t]);
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
@@ -174,10 +180,9 @@ export default function EchangePrimaire() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        const geo = getUserGeoContext();
         setRawProducts(productsData.products || []);
       } else {
-        setRawProducts(getDefaultProducts());
+        setRawProducts([]); setErreurChargement(true);
       }
 
       // Charger les fournisseurs
@@ -198,72 +203,13 @@ export default function EchangePrimaire() {
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setRawProducts(getDefaultProducts());
+      setRawProducts([]); setErreurChargement(true);
       setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultProducts = (): ExchangeProduct[] => [
-    {
-      id: '1',
-      title: 'Riz Local Premium',
-      description: 'Riz de qualité supérieure cultivé localement, idéal pour la consommation familiale.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 15000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Ville Principale',
-      seller: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      sellerName: `${userData?.prenom} ${userData?.nomFamille}`,
-      contactInfo: { phone: '+224 123 456 789' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'Huile de Palme Artisanale',
-      description: 'Huile de palme extraite artisanalement, sans conservateurs chimiques.',
-      category: 'Alimentation',
-      level: 'primaire',
-      price: 8000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'neuf',
-      location: 'Kindia',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Producteur Local',
-      contactInfo: { phone: '+224 987 654 321' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Coton Biologique',
-      description: 'Coton cultivé sans pesticides, parfait pour la confection de vêtements.',
-      category: 'Textile',
-      level: 'primaire',
-      price: 25000,
-      currency: 'FG',
-      images: [],
-      videos: [],
-      condition: 'bon',
-      location: 'Faranah',
-      seller: 'G0C0P0R0E0F0 0',
-      sellerName: 'Coopérative Agricole',
-      contactInfo: { phone: '+224 555 123 456' },
-      isActive: true,
-      isApproved: true,
-      createdAt: new Date().toISOString()
-    }
-  ];
 
   const createProduct = async () => {
     try {
@@ -455,6 +401,7 @@ export default function EchangePrimaire() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadData(); }} />
       <button
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
@@ -511,7 +458,7 @@ export default function EchangePrimaire() {
             {PRIMAIRE_TABS.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveSubTab(tab.key as any)}
+                onClick={() => setActiveSubTab(tab.key as typeof activeSubTab)}
                 className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
                   activeSubTab === tab.key
                     ? 'bg-green-600 text-white shadow-lg scale-105'
@@ -600,7 +547,7 @@ export default function EchangePrimaire() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_quaternaire.condition_label')}</label>
-                  <select value={newProduct.condition} onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
+                  <select value={newProduct.condition} onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as ExchangeProduct['condition']})}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500">
                     <option value="neuf">{t('echange_primaire.condition_new')}</option>
                     <option value="bon">{t('echange_quaternaire.condition_good')}</option>
@@ -746,7 +693,7 @@ export default function EchangePrimaire() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_primaire.business_type_label')}</label>
               <select
                 value={newSupplier.businessType}
-                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as any})}
+                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as typeof newSupplier.businessType})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               >
                 <option value="individuel">{t('echange_primaire.biztype_individual')}</option>
@@ -875,11 +822,11 @@ export default function EchangePrimaire() {
                 autoPlay muted loop playsInline
                 onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
               />
-            ) : (product as any).audio && (product as any).audio.length > 0 ? (
+            ) : product.audio && product.audio.length > 0 ? (
               <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
                 <span className="text-4xl">🎙️</span>
                 <p className="text-xs text-amber-700 font-medium text-center">{t('echange_tertiaire.voice_message_vendor')}</p>
-                <audio src={buildImageUrl((product as any).audio[0])} controls className="w-full" />
+                <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
               </div>
             ) : (
               <div className="w-full h-48 bg-green-50 flex flex-col items-center justify-center gap-2">

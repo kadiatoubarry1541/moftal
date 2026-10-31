@@ -3,32 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import DefiEducatifContent from '../components/DefiEducatifContent';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
-import { sortByProximity, sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { sortByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
+import ErreurChargement from "../components/ErreurChargement";
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-interface Formation {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  duration: number;
-  level: string;
-  requirements: string[];
-  curriculum: string[];
-  isActive: boolean;
-  createdBy: string;
-  maxStudents: number;
-  price: number;
-  startDate: string;
-  endDate: string;
-}
 
 interface Professor {
   id: string;
@@ -41,7 +26,7 @@ interface Professor {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
@@ -49,7 +34,7 @@ interface Professor {
   // Renvoyés par le serveur (modèle Professor)
   specialty?: string;
   bio?: string;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -105,12 +90,12 @@ interface Stage {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -162,30 +147,31 @@ interface School {
 
 export default function Education() {
   const { t } = useI18n();
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'ecoles' | 'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('ecoles');
   const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
-  const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
+  const [, setRawSchoolsList] = useState<School[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
   const professors = useMemo(() => sortByProximity(rawProfessors, userGeo), [rawProfessors, userGeo]);
-  const [stages, setStages] = useState<Stage[]>([]);
+  const [, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [linkedCourses, setLinkedCourses] = useState<Course[]>([]);
   const [linkedStudents, setLinkedStudents] = useState<Array<{ numeroH: string; name: string }>>([]);
   const [publishAssignedStudents, setPublishAssignedStudents] = useState<string[]>([]);
   const [myRegistrations, setMyRegistrations] = useState<FormationRegistration[]>([]);
   const [myRequests, setMyRequests] = useState<ProfessorRequest[]>([]);
-  const [myStageRequests, setMyStageRequests] = useState<StageRequest[]>([]);
+  const [, setMyStageRequests] = useState<StageRequest[]>([]);
   const [myProgress, setMyProgress] = useState<Progress[]>([]);
   const [myCertificates, setMyCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProfessorRequestForm, setShowProfessorRequestForm] = useState(false);
   const [showStageRequestForm, setShowStageRequestForm] = useState(false);
   const [selectedProfessor, setSelectedProfessor] = useState<Professor | null>(null);
-  const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
+  const [selectedStage] = useState<Stage | null>(null);
   const [activeCourseTab, setActiveCourseTab] = useState<'audio' | 'video' | 'written' | 'exercice' | 'library' | 'progress' | 'certificates' | 'publier'>('audio');
-  const [showPublishForm, setShowPublishForm] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
   const [myProfessorProfile, setMyProfessorProfile] = useState<Professor | null>(null);
@@ -193,18 +179,7 @@ export default function Education() {
   const [linkChildNumeroH, setLinkChildNumeroH] = useState('');
   const [linkChildLoading, setLinkChildLoading] = useState(false);
   const [linkChildMessage, setLinkChildMessage] = useState<string | null>(null);
-  const [registerProfessorForm, setRegisterProfessorForm] = useState({ specialty: 'Français', bio: '' });
-  const [registerProfessorLoading, setRegisterProfessorLoading] = useState(false);
-  const [registerProfessorSuccess, setRegisterProfessorSuccess] = useState<string | null>(null);
-  const [inscriptionStep, setInscriptionStep] = useState<'button' | 'choice' | 'professeur' | 'apprenant'>('button');
-  const [apprenantParent1, setApprenantParent1] = useState('');
-  const [apprenantParent2, setApprenantParent2] = useState('');
-  const [registerParentsLoading, setRegisterParentsLoading] = useState(false);
-  const [registerParentsMessage, setRegisterParentsMessage] = useState<string | null>(null);
-  const schools = useMemo(() => sortAnyByProximity(rawSchoolsList, userGeo), [rawSchoolsList, userGeo]);
-  const [schoolForm, setSchoolForm] = useState({ name: '', address: '', contact: '', description: '' });
-  const [schoolLoading, setSchoolLoading] = useState(false);
-  const [schoolMessage, setSchoolMessage] = useState<string | null>(null);
+  const [, setInscriptionStep] = useState<'button' | 'choice' | 'professeur' | 'apprenant'>('button');
   const [publishForm, setPublishForm] = useState({
     type: 'written' as 'written' | 'video' | 'audio' | 'test' | 'library',
     title: '',
@@ -249,6 +224,7 @@ export default function Education() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   // GPS silencieux
@@ -351,30 +327,6 @@ export default function Education() {
     }
   };
 
-  const handleRegisterProfessor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegisterProfessorLoading(true);
-    setRegisterProfessorSuccess(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/register-professor`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerProfessorForm)
-      });
-      const data = await response.json();
-      if (data.success) {
-        setRegisterProfessorSuccess(data.message || 'Demande enregistrée. Un administrateur confirmera votre statut.');
-        setMyProfessorProfile(data.professor);
-      } else {
-        setRegisterProfessorSuccess(data.message || 'Erreur');
-      }
-    } catch {
-      setRegisterProfessorSuccess('Erreur de connexion');
-    } finally {
-      setRegisterProfessorLoading(false);
-    }
-  };
 
   const handleLinkChildByNumeroH = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,35 +356,6 @@ export default function Education() {
     }
   };
 
-  const handleRegisterParents = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const p1 = apprenantParent1.trim();
-    if (!p1) return;
-    setRegisterParentsLoading(true);
-    setRegisterParentsMessage(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/parent-child/register-parents`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parent1NumeroH: p1, parent2NumeroH: apprenantParent2.trim() || undefined })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setRegisterParentsMessage(data.message || 'NumeroH des parents enregistrés.');
-        if (data.created && data.created > 0) {
-          setApprenantParent1('');
-          setApprenantParent2('');
-        }
-      } else {
-        setRegisterParentsMessage(data.message || 'Erreur');
-      }
-    } catch {
-      setRegisterParentsMessage('Erreur de connexion');
-    } finally {
-      setRegisterParentsLoading(false);
-    }
-  };
 
   const loadSchools = async () => {
     try {
@@ -451,32 +374,6 @@ export default function Education() {
     }
   };
 
-  const handleRegisterSchool = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!schoolForm.name.trim()) return;
-    setSchoolLoading(true);
-    setSchoolMessage(null);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/register-school`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(schoolForm)
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSchoolMessage(data.message || 'École enregistrée. Elle sera visible après validation.');
-        setSchoolForm({ name: '', address: '', contact: '', description: '' });
-        loadSchools();
-      } else {
-        setSchoolMessage(data.message || 'Erreur');
-      }
-    } catch {
-      setSchoolMessage('Erreur de connexion');
-    } finally {
-      setSchoolLoading(false);
-    }
-  };
 
   const fetchWithTimeout = (url: string, options: RequestInit, ms = 6000) => {
     const controller = new AbortController();
@@ -626,11 +523,11 @@ export default function Education() {
         const data = await response.json();
         setStages(data.stages || []);
       } else {
-        setStages(getDefaultStages());
+        setStages([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des stages:', error);
-      setStages(getDefaultStages());
+      setStages([]); setErreurChargement(true);
     }
   };
 
@@ -734,15 +631,6 @@ export default function Education() {
     }
   };
 
-  const handleStageRequest = async (stage: Stage) => {
-    setSelectedStage(stage);
-    setStageRequestForm({
-      numeroH: userData?.numeroH || '',
-      subject: '',
-      message: ''
-    });
-    setShowStageRequestForm(true);
-  };
 
   const submitStageRequest = async () => {
     const numeroH = userData?.numeroH || stageRequestForm.numeroH;
@@ -777,120 +665,8 @@ export default function Education() {
     }
   };
 
-  const getDefaultProfessors = (): Professor[] => [
-    {
-      id: '1',
-      name: 'Dr. Alpha Diallo',
-      specialties: ['Mathématiques', 'Physique'],
-      qualifications: ['PhD Mathématiques', 'Master Physique'],
-      experience: 15,
-      city: 'Conakry',
-      address: 'Hamdallaye',
-      phone: '+224 123 456 789',
-      email: 'alpha.diallo@email.com',
-      consultationFee: 25000,
-      availability: { monday: true, tuesday: true },
-      languages: ['Français', 'Anglais'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.8,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      name: 'Prof. Fatou Camara',
-      specialties: ['Français', 'Littérature'],
-      qualifications: ['Master Français', 'Licence Littérature'],
-      experience: 10,
-      city: 'Conakry',
-      address: 'Kaloum',
-      phone: '+224 987 654 321',
-      email: 'fatou.camara@email.com',
-      consultationFee: 20000,
-      availability: { wednesday: true, thursday: true },
-      languages: ['Français', 'Soussou'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.5,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
-  const getDefaultStages = (): Stage[] => [
-    {
-      id: '1',
-      title: 'Stage en Arabe - Coran',
-      description: 'Apprenez le Coran et la langue arabe',
-      specialties: ['Coran', 'Arabe', 'Tajwid'],
-      qualifications: ['Maîtrise du Coran', 'Diplôme en Arabe'],
-      experience: 10,
-      city: 'Conakry',
-      address: 'Hamdallaye',
-      phone: '+224 123 456 789',
-      email: 'stage.arabe@email.com',
-      consultationFee: 15000,
-      availability: { monday: true, tuesday: true, wednesday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.9,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      title: 'Stage en Arabe - Hadith',
-      description: 'Étude des Hadiths et sciences islamiques',
-      specialties: ['Hadith', 'Fiqh', 'Arabe'],
-      qualifications: ['Maîtrise en Hadith', 'Diplôme en Fiqh'],
-      experience: 8,
-      city: 'Conakry',
-      address: 'Kaloum',
-      phone: '+224 987 654 321',
-      email: 'stage.hadith@email.com',
-      consultationFee: 18000,
-      availability: { thursday: true, friday: true },
-      languages: ['Arabe', 'Français'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.7,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
-  const getDefaultCourses = (): Course[] => [
-    {
-      id: '1',
-      title: 'Cours de Mathématiques',
-      description: 'Cours complet de mathématiques niveau lycée',
-      type: 'video',
-      content: 'Contenu vidéo du cours',
-      duration: 120,
-      level: 'Lycée',
-      category: 'Sciences',
-      instructor: 'Dr. Alpha Diallo',
-      materials: ['Livre de cours', 'Exercices'],
-      isActive: true,
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      title: 'Cours de Français',
-      description: 'Cours de français niveau collège',
-      type: 'audio',
-      content: 'Contenu audio du cours',
-      duration: 90,
-      level: 'Collège',
-      category: 'Langues',
-      instructor: 'Prof. Fatou Camara',
-      materials: ['Manuel', 'Dictées'],
-      isActive: true,
-      createdBy: 'admin'
-    }
-  ];
 
   if (loading) {
     return (
@@ -905,6 +681,7 @@ export default function Education() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadStages(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -953,7 +730,7 @@ export default function Education() {
                 if ('link' in tab && tab.link) {
                   navigate(tab.link);
                 } else {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                   if (tab.id === 'inscription-suivi') setInscriptionStep('button');
                 }
               }}
@@ -1220,7 +997,7 @@ export default function Education() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveCourseTab(tab.id as any)}
+                    onClick={() => setActiveCourseTab(tab.id as typeof activeCourseTab)}
                     className={`py-2 px-4 rounded-lg font-medium ${
                       activeCourseTab === tab.id
                         ? 'bg-blue-600 text-white'
@@ -1388,7 +1165,7 @@ export default function Education() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.content_type_label')}</label>
                         <select
                           value={publishForm.type}
-                          onChange={(e) => setPublishForm({ ...publishForm, type: e.target.value as any })}
+                          onChange={(e) => setPublishForm({...publishForm, type: e.target.value as typeof publishForm.type })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           required
                         >

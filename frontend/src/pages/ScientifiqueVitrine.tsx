@@ -6,6 +6,7 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, PublicationScienceVitrine, MembreVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -25,8 +26,8 @@ export default function ScientifiqueVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [lab, setLab]         = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [lab, setLab]         = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ publications: PublicationScienceVitrine[]; members: MembreVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -169,7 +170,7 @@ export default function ScientifiqueVitrine() {
             <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>{tr("Aucune publication disponible.")}</div>
           ) : (
             <div className="pub-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-              {publications.map((p: any, i: number) => (
+              {publications.map((p, i) => (
                 <div key={i} className="pub-card" style={{ background: "white", borderRadius: 16, padding: "24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ width: 48, height: 48, borderRadius: 12, background: `${INDIGO}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 14 }}>
                     {TYPE_ICONS[p.type_pub] || "📄"}
@@ -201,7 +202,7 @@ export default function ScientifiqueVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Notre Équipe de Recherche")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {members.map((m: any, i: number) => (
+              {members.map((m, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 14, padding: "20px", textAlign: "center", border: "1px solid #e2e8f0" }}>
                   <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg,${INDIGO},${INDIGO_LIGHT})`, margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 20, fontWeight: 700 }}>
                     {(m.prenom || "?").charAt(0)}{(m.nom || "?").charAt(0)}

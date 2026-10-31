@@ -514,12 +514,16 @@ const sectionIcons: Record<string, string> = {
   revelation: '✨', persecution: '🛡️', unification: '🏆', heritage: '📜'
 };
 
+
+interface StatsRecits {
+  totalStories?: number;
+}
 export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boolean }) {
   const { t } = useI18n();
   const [stories, setStories] = useState<PublishedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsRecits | null>(null);
   const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
   const [testifyingId, setTestifyingId] = useState<number | null>(null);
   const [selectedStory, setSelectedStory] = useState<PublishedStory | null>(null);
@@ -531,6 +535,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const genRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const navigate = useNavigate();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   const sections = [
     { id: 'naissance', title: t('recit.sec_naissance'), icon: '👶' },
     { id: 'jeunesse', title: t('recit.sec_jeunesse'), icon: '🌱' },
@@ -574,6 +579,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     }
     loadStories();
     loadStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [parsedSearch.generation, parsedSearch.sectionId, parsedSearch.text]);
 
   const loadStories = async () => {
@@ -663,7 +669,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const toggleBookSection = (key: string) => {
     setExpandedBookSections(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
@@ -671,7 +677,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const toggleWitnesses = (key: string) => {
     setWitnessesVisible(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   };
@@ -680,7 +686,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     e.stopPropagation();
     setExpandedGens(prev => {
       const next = new Set(prev);
-      next.has(gen) ? next.delete(gen) : next.add(gen);
+      if (next.has(gen)) next.delete(gen); else next.add(gen);
       return next;
     });
   };

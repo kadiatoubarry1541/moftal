@@ -8,6 +8,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction, trHors } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, BienVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -30,8 +31,8 @@ export default function ImmobilierVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [agency, setAgency]   = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [agency, setAgency]   = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ properties: BienVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [filter, setFilter]   = useState("Tous");
@@ -80,9 +81,9 @@ export default function ImmobilierVitrine() {
   const stats      = data?.stats || {};
   const properties = data?.properties || [];
 
-  const statuts = ["Tous", ...Array.from(new Set(properties.map((p: any) => p.statut).filter(Boolean))) as string[]];
-  const filtered = filter === "Tous" ? properties : properties.filter((p: any) => p.statut === filter);
-  const biensChoisis = properties.filter((p: any) => choix.includes(p.id));
+  const statuts = ["Tous", ...Array.from(new Set(properties.map((p) => p.statut).filter(Boolean))) as string[]];
+  const filtered = filter === "Tous" ? properties : properties.filter((p) => p.statut === filter);
+  const biensChoisis = properties.filter((p) => choix.includes(p.id));
   const basculerChoix = (id: number) => setChoix(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
   const ouvrirDemande = () => { setErreurDemande(""); setDemandeEnvoyee(false); setDemandeOuverte(true); };
   const envoyerDemande = async () => {
@@ -103,7 +104,7 @@ export default function ImmobilierVitrine() {
     } finally { setEnvoi(false); }
   };
   // Toutes les photos du bien (la principale d'abord)
-  const photosDe = (p: any): string[] => {
+  const photosDe = (p: BienVitrine): string[] => {
     const liste = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
     return liste.length ? liste : p.image_url ? [p.image_url] : [];
   };
@@ -175,7 +176,7 @@ export default function ImmobilierVitrine() {
             </div>
           ) : (
             <div className="prop-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              {filtered.map((p: any, i: number) => (
+              {filtered.map((p, i) => (
                 <div key={p.id ?? i} className="prop-card" style={{ background: "white", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
                   {/* L'image (ou la vidéo) publiée depuis la gestion occupe toute la carte */}
                   {p.video_url && !p.image_url
@@ -196,7 +197,7 @@ export default function ImmobilierVitrine() {
                     : <div style={{ aspectRatio: "1 / 1", background: `linear-gradient(135deg, ${ORANGE}10, ${ORANGE}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</div>}
                   <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>{fmtMoney(p.prix)}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: ORANGE }}>{fmtMoney(+p.prix)}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: p.statut === "vacant" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "vacant" ? "#1a8f1a" : "#64748b" }}>
                         {tr(STATUT_LIBELLE[p.statut] || p.statut || "Disponible")}
                       </span>
@@ -323,14 +324,14 @@ export default function ImmobilierVitrine() {
               </div>
             ) : (<>
               <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
-                {biensChoisis.map((p: any) => (
+                {biensChoisis.map((p) => (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", border: "1px solid #f1f5f9", borderRadius: 10 }}>
                     {photosDe(p)[0]
                       ? <img src={getPhotoUrl(photosDe(p)[0]) || ""} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
                       : <span style={{ width: 48, height: 48, borderRadius: 8, background: `${ORANGE}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{TYPE_ICONS[p.type_bien?.toLowerCase()] || "🏠"}</span>}
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{p.nom}</div>
-                      <div style={{ fontSize: 12, color: ORANGE, fontWeight: 700 }}>{fmtMoney(p.prix)}</div>
+                      <div style={{ fontSize: 12, color: ORANGE, fontWeight: 700 }}>{fmtMoney(+p.prix)}</div>
                     </div>
                     <button onClick={() => basculerChoix(p.id)} aria-label={tr("Retirer")} style={{ border: "none", background: "#f1f5f9", borderRadius: 8, width: 30, height: 30, cursor: "pointer", flexShrink: 0 }}>✕</button>
                   </div>

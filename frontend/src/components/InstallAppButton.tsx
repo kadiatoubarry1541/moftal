@@ -2,13 +2,9 @@ import { useEffect, useState } from "react";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { setProBrand } from "./proBrand";
 import { synchroniserIconeApp } from "../utils/appIcon";
-import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay } from "../utils/appMoftalInstallee";
+import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay, lienPlayStore } from "../utils/appMoftalInstallee";
 import { useTraduction } from "../i18n/traduction";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import { reconcileInstalledFlag } from "../utils/reconcileInstalledFlag";
 
 interface Props {
   // Props pour la gestion interne (ignorées sur la page d'accueil)
@@ -45,12 +41,6 @@ function getTenantStorageKey() {
   return null;
 }
 
-function getShownKey() {
-  const p = window.location.pathname;
-  if (p.startsWith("/espace-pro/")) return `proCardShown_${p.split("/")[2]}`;
-  if (p.startsWith("/gestion-"))   return `gestionCardShown_${p.split("/")[2]}`;
-  return null;
-}
 
 function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -219,25 +209,6 @@ function useCodeChrome(actif: boolean) {
   return code;
 }
 
-// Demande au navigateur (Chrome/Edge/Android uniquement — API absente sur iOS
-// Safari et Firefox) si l'app est installée. Une réponse positive confirme la note
-// « installée ». Une réponse vide ne l'efface PAS : ce navigateur ne voit souvent
-// pas l'app installée, et effacer la note faisait revenir le bouton « Installer »,
-// d'où des installations en double. Si l'app a vraiment été désinstallée, le
-// navigateur propose à nouveau l'installation (beforeinstallprompt) et la note est
-// effacée à ce moment-là.
-export async function reconcileInstalledFlag(storageKey: string | null, setInstalled: (v: boolean) => void) {
-  if (!storageKey) return;
-  const nav = navigator as any;
-  if (typeof nav.getInstalledRelatedApps !== "function") return;
-  try {
-    const related = await nav.getInstalledRelatedApps();
-    if (related && related.length > 0) {
-      localStorage.setItem(storageKey, "1");
-      setInstalled(true);
-    }
-  } catch { /* silencieux */ }
-}
 
 // Moftal (l'app principale) ne s'installe que depuis moftal.com, et une gestion
 // que depuis gestions.moftal.com : la même page installée depuis deux adresses
@@ -300,7 +271,7 @@ function noterInvitation(cle: string) {
 }
 
 function estEnModeApp() {
-  return window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
 // ─── Composant ──────────────────────────────────────────────────────────────
@@ -332,7 +303,7 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
 }
 
 // La barre du haut affiche le logo du professionnel (pas celui de Moftal)
-function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: string; color: string }) {
+function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: string; color: string }): null {
   useEffect(() => { setProBrand({ name, logoUrl, color }); }, [name, logoUrl, color]);
   // iPhone : nom affiché sous l'icône ajoutée à l'écran d'accueil
   useEffect(() => {
@@ -380,15 +351,15 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
       minuterie = setTimeout(() => { noterInvitation(cleInvitation); setOuvert(true); }, 2500);
     }
 
-    const existing = (window as any).__pwaGestionPrompt;
+    const existing = window.__pwaGestionPrompt;
     if (existing) setPrompt(existing);
-    const onPrompt = (e: Event) => {
+    const onPrompt = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
-      (window as any).__pwaGestionPrompt = e;
-      setPrompt(e as BeforeInstallPromptEvent);
+      window.__pwaGestionPrompt = e;
+      setPrompt(e);
     };
     const onReady = () => {
-      const p = (window as any).__pwaGestionPrompt;
+      const p = window.__pwaGestionPrompt;
       if (p) setPrompt(p);
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
@@ -404,7 +375,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
 
   const installer = async () => {
     setEtat("installation");
-    let p = prompt || (window as any).__pwaGestionPrompt as BeforeInstallPromptEvent | null;
+    let p = prompt || window.__pwaGestionPrompt;
     // Hors d'un vrai onglet Chrome (app Moftal ou autre application) : on ouvre Chrome directement
     if (!p && isAndroid() && !estOngletChrome()) {
       const parti = await essayerOuvrirChrome();
@@ -414,7 +385,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
     // Chrome peut mettre quelques secondes à proposer l'installation après l'ouverture
     for (let i = 0; !p && i < 10; i++) {
       await new Promise(r => setTimeout(r, 400));
-      p = (window as any).__pwaGestionPrompt;
+      p = window.__pwaGestionPrompt;
     }
     if (!p) { setEtat("manuel"); return; }
     try {
@@ -429,7 +400,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
       setEtat("manuel");
     } finally {
       setPrompt(null);
-      (window as any).__pwaGestionPrompt = null;
+      window.__pwaGestionPrompt = null;
     }
   };
 
@@ -509,10 +480,10 @@ export function InvitationInstallerMoftal() {
 
   const installer = async () => {
     setEtat("installation");
-    let p = (window as any).__pwaInstallPrompt as BeforeInstallPromptEvent | null;
+    let p = window.__pwaInstallPrompt;
     for (let i = 0; !p && i < 10; i++) {
       await new Promise(r => setTimeout(r, 400));
-      p = (window as any).__pwaInstallPrompt;
+      p = window.__pwaInstallPrompt;
     }
     if (!p) { setEtat("manuel"); return; }
     try {
@@ -525,7 +496,7 @@ export function InvitationInstallerMoftal() {
     } catch {
       setEtat("manuel");
     } finally {
-      (window as any).__pwaInstallPrompt = null;
+      window.__pwaInstallPrompt = null;
     }
   };
 
@@ -558,6 +529,10 @@ export function InvitationInstallerMoftal() {
               </>
             )}
           </div>
+        ) : isAndroid() ? (
+          <a href={lienPlayStore()} onClick={() => setOuvert(false)} style={{ display: "block", boxSizing: "border-box", width: "100%", padding: 14, background: "#1a8f1a", color: "white", borderRadius: 14, fontSize: 15, fontWeight: 800, textAlign: "center", textDecoration: "none", marginBottom: 10 }}>
+            {tr("📲 Installer maintenant")}
+          </a>
         ) : (
           <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
             {etat === "installation" ? tr("⏳ Installation…") : tr("📲 Installer maintenant")}
@@ -583,25 +558,25 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
+      window.navigator.standalone === true;
     setInstalled(standalone || localStorage.getItem("mainAppInstalled") === "1");
     if (!standalone) reconcileInstalledFlag("mainAppInstalled", setInstalled);
 
     // Récupérer le prompt déjà capturé dans main.tsx
-    const existing = (window as any).__pwaInstallPrompt;
+    const existing = window.__pwaInstallPrompt;
     if (existing) setPrompt(existing);
 
-    const onPrompt = (e: Event) => {
+    const onPrompt = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
-      (window as any).__pwaInstallPrompt = e;
-      setPrompt(e as BeforeInstallPromptEvent);
+      window.__pwaInstallPrompt = e;
+      setPrompt(e);
       // Le navigateur propose d'installer → il ne considère pas l'app comme installée
       // (ex: elle a été désinstallée depuis la dernière visite). On corrige l'état local.
       localStorage.removeItem("mainAppInstalled");
       setInstalled(false);
     };
     const onReady = () => {
-      const p = (window as any).__pwaInstallPrompt;
+      const p = window.__pwaInstallPrompt;
       if (p) setPrompt(p);
     };
     const onInstalled = () => {
@@ -657,6 +632,31 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
         <span style={{ fontSize: 18 }}>✅</span>
         <span style={{ fontSize: 13, fontWeight: 700 }}>{tr("Application installée — ouvrez-la depuis son icône (elle peut mettre une minute à apparaître).")}</span>
       </div>
+    );
+  }
+
+  // Android : Moftal s'installe par le Play Store (chaque installation y compte).
+  // iPhone et ordinateur gardent l'installation depuis le site.
+  if (isAndroid()) {
+    return (
+      <a
+        href={lienPlayStore()}
+        title={tr("Installer l'application")}
+        aria-label={tr("Installer l'application")}
+        style={isBanner
+          ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", borderBottom: "1px solid #f0f0f0", textDecoration: "none" }
+          : { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", borderRadius: "50%", fontSize: 20, textDecoration: "none", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+      >
+        {isBanner ? (
+          <>
+            <span style={{ fontSize: 22 }}>📲</span>
+            <span>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>{tr("Installer l'application")}</span>
+              <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>{tr("Application mobile gratuite")}</span>
+            </span>
+          </>
+        ) : "📲"}
+      </a>
     );
   }
 
@@ -739,7 +739,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
       }
     } finally {
       setPrompt(null);
-      (window as any).__pwaInstallPrompt = null;
+      window.__pwaInstallPrompt = null;
       setLoading(false);
     }
   };
@@ -789,7 +789,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
 
 // ─── Bouton installation gestion interne (espace professionnel) ─────────────
 
-function GestionInstallButton({ name, logoUrl, themeColor, label }: {
+function GestionInstallButton({ themeColor, label }: {
   name?: string; logoUrl?: string; themeColor: string; label?: string;
 }) {
   const { tr } = useTraduction();
@@ -809,7 +809,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
+      window.navigator.standalone === true;
     // L'app d'une gestion s'ouvre sur gestions.moftal.com ; en mode app sur
     // moftal.com, c'est l'app Moftal principale, pas celle de la gestion.
     // Une gestion ouverte depuis l'app Moftal s'affiche dans la fenêtre de Moftal
@@ -821,7 +821,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     setDansLApp(appGestion);
 
     // Le navigateur propose l'installation → l'app N'EST PAS installée
-    const existing = (window as any).__pwaGestionPrompt;
+    const existing = window.__pwaGestionPrompt;
     if (existing) {
       setPrompt(existing);
       if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
@@ -834,15 +834,15 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     setInstalled(appGestion || notee);
     setDejaSurEcran(notee);
 
-    const onPrompt = (e: Event) => {
+    const onPrompt = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
-      (window as any).__pwaGestionPrompt = e;
-      setPrompt(e as BeforeInstallPromptEvent);
+      window.__pwaGestionPrompt = e;
+      setPrompt(e);
       if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
       setInstalled(false);
     };
     const onReady = () => {
-      const p = (window as any).__pwaGestionPrompt;
+      const p = window.__pwaGestionPrompt;
       if (p) {
         setPrompt(p);
         if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
@@ -853,10 +853,10 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     // Demande au téléphone si CETTE app de gestion est sur l'écran d'accueil
     // (Chrome Android ; le manifest de la gestion la déclare dans
     // related_applications). Réponse positive = certitude : installée.
-    const nav = navigator as any;
+    const nav = navigator;
     if (!appGestion && typeof nav.getInstalledRelatedApps === "function") {
       nav.getInstalledRelatedApps()
-        .then((apps: any[]) => {
+        .then((apps) => {
           // Chrome ne renvoie que les apps déclarées par le manifest de cette gestion
           const trouvee = (apps || []).some(a => a.platform === "webapp");
           if (trouvee) {
@@ -877,6 +877,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("pwa-prompt-ready", onReady);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const handleInstall = async () => {
@@ -909,7 +910,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       }
     } finally {
       setPrompt(null);
-      (window as any).__pwaGestionPrompt = null;
+      window.__pwaGestionPrompt = null;
       setInstalling(false);
     }
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTraduction } from '../i18n/traduction';
+import type { CompteFamilleAdmin, TotauxFamilles, TransactionFamille } from "../types/compteFamille";
 
 interface Props {
   token: string;
@@ -12,11 +13,11 @@ const TYPE_FR: Record<string, string> = {
 };
 
 export function AdminCompteFamille({ token, apiBase }: Props) {
-  const [comptes, setComptes] = useState<any[]>([]);
-  const [total, setTotal] = useState<any>(null);
+  const [comptes, setComptes] = useState<CompteFamilleAdmin[]>([]);
+  const [total, setTotal] = useState<TotauxFamilles | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<TransactionFamille[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [testFundId, setTestFundId] = useState<string | null>(null);
@@ -25,6 +26,7 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
   const [testMsg, setTestMsg] = useState('');
   const { tr } = useTraduction();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   async function charger() {

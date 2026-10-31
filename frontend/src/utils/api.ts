@@ -25,7 +25,8 @@ export interface User {
   lieuResidence2?: string
   lieuResidence3?: string
   
-  [key: string]: any
+  /** Autres champs du formulaire d'inscription */
+  [key: string]: unknown
 }
 
 export const api = {
@@ -72,9 +73,9 @@ export const api = {
       }
 
       return { ...result, user: userSafe }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur enregistrement vivant:', error)
-      const isTimeout = error?.name === 'AbortError'
+      const isTimeout = (error as Error)?.name === 'AbortError'
       return {
         success: false,
         user: null,
@@ -88,7 +89,8 @@ export const api = {
   },
 
   // Enregistrer un utilisateur défunt
-  async registerDeceased(userData: User) {
+  // NuméroH et mot de passe ne sont pas demandés : le serveur génère le NuméroHD
+  async registerDeceased(userData: Partial<User> & { nom?: string }) {
     try {
       // Ajouter un défunt exige d'être connecté (le serveur le refuse sinon)
       const jeton = localStorage.getItem('token')
@@ -218,10 +220,10 @@ export const api = {
           numeroHExists: result.numeroHExists
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(timeoutId)
-      console.error('[LOGIN] Erreur fetch:', error?.name, error?.message)
-      const isAbort = error?.name === 'AbortError'
+      console.error('[LOGIN] Erreur fetch:', (error as Error)?.name, (error as Error)?.message)
+      const isAbort = (error as Error)?.name === 'AbortError'
       return {
         success: false,
         networkError: true,
@@ -237,7 +239,7 @@ export const api = {
     try {
       const response = await fetch(`${API_BASE_URL}/health`)
       return response.ok
-    } catch (error) {
+    } catch {
       return false
     }
   },

@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  WORLD_GEOGRAPHY,
-  findLocationByCode,
-  getLocationGroupTitle,
-  type GeographicLocation
-} from '../utils/worldGeography';
+import { WORLD_GEOGRAPHY, findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
@@ -25,7 +20,36 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  activite1?: string;
+  vitrinePhoto1?: string;
+  vitrinePhoto2?: string;
+  vitrineVideo?: string;
+  continent?: string;
+  continentCode?: string;
+  isAdmin?: boolean;
+  isJournalist?: boolean;
+  lieu1?: string;
+  lieu2?: string;
+  lieu3?: string;
+  lieuResidence1?: string;
+  lieuResidence2?: string;
+  lieuResidence3?: string;
+  logoUrl?: string;
+  pays?: string;
+  paysCode?: string;
+  prefecture?: string;
+  prefectureCode?: string;
+  quartier?: string;
+  quartierCode?: string;
+  quartierCode2?: string;
+  quartierCode3?: string;
+  region?: string;
+  regionCode?: string;
+  regionOrigine?: string;
+  role?: string;
+  sousPrefecture?: string;
+  sousPrefectureCode?: string;
+  [key: string]: unknown;
 }
 
 interface ResidenceGroup {
@@ -35,8 +59,9 @@ interface ResidenceGroup {
   description?: string;
   location: string;
   displayPath?: string;
-  members: UserData[] | string[];
-  posts?: any[];
+  /** Fiches des membres, ou seulement leur NuméroH */
+  members: (UserData | string)[];
+  posts?: unknown[];
   isActive?: boolean;
   admin?: string;
   logoUrl?: string | null;
@@ -74,7 +99,7 @@ export default function TerreAdam() {
     </button>
   );
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
-  const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
+  const [, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
   // États pour les groupes de quartier (infos + outils — la messagerie
   // elle-même vit désormais dans le bouton flottant).
@@ -109,7 +134,6 @@ export default function TerreAdam() {
   const userRegion = userData?.regionCode ? findLocationByCode(userData.regionCode) : null;
   const userPrefecture = userData?.prefectureCode ? findLocationByCode(userData.prefectureCode) : null;
   const userSousPrefecture = userData?.sousPrefectureCode ? findLocationByCode(userData.sousPrefectureCode) : null;
-  const userQuartier = userData?.quartierCode ? findLocationByCode(userData.quartierCode) : null;
 
   // 🔎 Si les codes ne sont pas enregistrés (anciens comptes), essayer de déduire
   // le pays et le continent à partir du nom de pays (`userData.pays`)
@@ -289,6 +313,7 @@ export default function TerreAdam() {
         })
         .catch(() => { /* hors-ligne : on garde les données en cache */ });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   useEffect(() => {
@@ -301,6 +326,7 @@ export default function TerreAdam() {
     } else {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [activeTab, activeLieuTab, userData, filterScope]);
 
   // Charge le logo du groupe principal de chaque résidence réelle de
@@ -339,7 +365,7 @@ export default function TerreAdam() {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         const data = await response.json();
-        const mapped = (data.groups || []).map((g: any) => {
+        const mapped = (data.groups || []).map((g: ResidenceGroup) => {
           const displayName = findLocationByCode(g.location) ? getLocationGroupTitle(g.location) : (g.title || g.name);
           return { ...g, name: displayName, title: displayName, members: g.members || [] };
         });
@@ -359,7 +385,7 @@ export default function TerreAdam() {
         return;
       }
 
-      const allGroups: any[] = [];
+      const allGroups: ResidenceGroup[] = [];
       const seenIds = new Set<string>();
       for (const loc of quartiersToLoad) {
         const normalizedLoc = normalizeLoc(loc);
@@ -492,7 +518,7 @@ export default function TerreAdam() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0 text-[7px] font-bold transition leading-none"
                   style={{
                     borderRadius: 8,
@@ -703,7 +729,7 @@ export default function TerreAdam() {
                               </div>
                               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
                                 <div className="flex -space-x-2 flex-shrink-0">
-                                  {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
+                                  {selectedGroup.members.slice(0, 4).map((member, index) => {
                                     const isObject = member && typeof member === 'object';
                                     const prenom = isObject ? (member.prenom as string | undefined) : undefined;
                                     const photo = isObject ? (member.photo as string | undefined) : undefined;
@@ -1021,7 +1047,7 @@ export default function TerreAdam() {
             </div>
             <div className="overflow-y-auto flex-1 p-3 space-y-3">
               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 ? (
-                selectedGroup.members.map((member: any, index: number) => {
+                selectedGroup.members.map((member, index) => {
                   const isObject = member && typeof member === 'object';
                   if (!isObject) return null;
                   const prenom = member.prenom as string | undefined;

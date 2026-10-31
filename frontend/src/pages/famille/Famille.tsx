@@ -6,6 +6,7 @@ import { useI18n } from '../../i18n/useI18n'
 import HeritageTab from './Arbre'
 import type { MesAmoursHandle } from './MesAmours'
 import InspirButton from '../../components/InspirButton'
+import type { UserData } from '../../utils/auth'
 
 const AmitieTab     = lazy(() => import('./MesAmours'))
 const RecitTab      = lazy(() => import('../HistoireHumanite'))
@@ -30,7 +31,7 @@ export default function Famille() {
   const [activeTab, setActiveTab] = useState<TabId | null>(
     VALID_TAB_IDS.includes(initialTab as TabId) ? (initialTab as TabId) : null
   )
-  const [user, setUser]           = useState<any>(null)
+  const [user, setUser]           = useState<UserData | null>(null)
   const contentRef                = useRef<HTMLDivElement>(null)
   const amitieRef                 = useRef<MesAmoursHandle>(null)
 

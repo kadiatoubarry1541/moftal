@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { AudioRecorder } from '../components/AudioRecorder';
+import ErreurChargement from "../components/ErreurChargement";
+import type { MessageGroupe } from "../types/groupes";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -9,7 +11,8 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  pays?: string;
+  [key: string]: unknown;
 }
 
 interface RegionGroup {
@@ -294,6 +297,8 @@ const getCountryFlag = (pays: string): { emoji: string; label: string } | null =
 };
 
 export default function Pays() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'residence' | 'Communauté'>('residence');
   const [residenceActiveTab, setResidenceActiveTab] = useState<'lieu1' | 'lieu2'>('lieu1');
@@ -302,8 +307,8 @@ export default function Pays() {
   const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<RegionGroup | null>(null);
   const [selectedResidenceGroup, setSelectedResidenceGroup] = useState<ResidenceGroup | null>(null);
-  const [residenceMessages, setResidenceMessages] = useState<any[]>([]);
-  const [regionMessages, setRegionMessages] = useState<any[]>([]);
+  const [residenceMessages, setResidenceMessages] = useState<MessageGroupe[]>([]);
+  const [regionMessages, setRegionMessages] = useState<MessageGroupe[]>([]);
   const messagesEndRefResidence = useRef<HTMLDivElement>(null);
   const messagesEndRefRegion = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -390,6 +395,7 @@ export default function Pays() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadData = async () => {
@@ -416,31 +422,17 @@ export default function Pays() {
         }
       });
       
-      let groups: RegionGroup[] = [];
-      if (response.ok) {
-        try {
-        const data = await response.json();
-          groups = data.groups || [];
-        } catch (jsonError) {
-          groups = getDefaultRegionGroups();
-        }
-      } else {
-        groups = getDefaultRegionGroups();
-      }
+      // Serveur injoignable : on le dit (jamais de faux groupe)
+      const data = response.ok ? await response.json().catch((): null => null) : null;
+      if (!data) { setRegionGroups([]); setErreurChargement(true); return; }
+      const groups: RegionGroup[] = data.groups || [];
       
       // Filtrer les groupes par région active
       const filtered = groups.filter(g => g.region === activeTab);
       
-      // Si aucun groupe, utiliser les groupes par défaut
+      // Aucun groupe pour cette région : liste vide
       if (filtered.length === 0) {
-        const defaultGroups = getDefaultRegionGroups();
-        const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
-        setRegionGroups(defaultFiltered);
-        
-        // Auto-sélectionner le premier groupe par défaut
-        if (defaultFiltered.length > 0 && (!selectedGroup || selectedGroup.region !== activeTab)) {
-          setSelectedGroup(defaultFiltered[0]);
-        }
+        setRegionGroups([]);
         return;
       }
       
@@ -473,7 +465,7 @@ export default function Pays() {
             } else {
               setSelectedGroup(firstGroup);
       }
-    } catch (error) {
+    } catch {
             // Si erreur, sélectionner quand même le groupe
             setSelectedGroup(firstGroup);
           }
@@ -487,45 +479,12 @@ export default function Pays() {
           setSelectedGroup(updatedGroup);
         }
       }
-    } catch (error) {
-      // Erreur silencieuse - utiliser les groupes par défaut
-      const defaultGroups = getDefaultRegionGroups();
-      const defaultFiltered = defaultGroups.filter(g => g.region === activeTab);
-      setRegionGroups(defaultFiltered);
-      // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-      if (defaultFiltered.length > 0) {
-        // Toujours sélectionner le groupe par défaut pour permettre la publication immédiate
-        if (!selectedGroup || selectedGroup.region !== activeTab) {
-          setSelectedGroup(defaultFiltered[0]);
-        }
-      }
+    } catch {
+      setRegionGroups([]);
+      setErreurChargement(true);
     }
   };
 
-  const getDefaultRegionGroups = (): RegionGroup[] => [
-    {
-      id: '5',
-      name: 'Communauté Unie',
-      description: 'Communauté nationale de tous les membres',
-      region: 'Communauté',
-      members: [],
-      posts: [
-        {
-          id: '5',
-          author: '',
-          authorName: 'Ousmane Barry',
-          content: 'Fiers d\'être ensemble ! Notre communauté est magnifique',
-          type: 'text',
-          likes: [],
-          comments: [],
-          createdAt: '2024-01-16T09:45:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-01T00:00:00Z'
-    }
-  ];
 
 
   const handleJoinGroup = async (groupId: string) => {
@@ -645,15 +604,15 @@ export default function Pays() {
         console.error('Erreur serveur:', errorData);
         alert(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      console.error('Type d\'erreur:', error.name);
-      console.error('Message d\'erreur:', error.message);
+      console.error('Type d\'erreur:', (error as Error).name);
+      console.error('Message d\'erreur:', (error as Error).message);
       
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
+      if ((error as Error).message === 'Failed to fetch' || (error as Error).name === 'TypeError' || (error as Error).message?.includes('fetch')) {
         alert(`❌ Erreur de connexion: Impossible de se connecter au serveur.\n\nVérifiez que:\n1. Le backend est démarré sur le port 5002\n2. L'URL ${API_BASE_URL} est correcte\n3. Votre connexion internet fonctionne\n\nPour démarrer le backend:\ncd backend\nnpm run dev`);
       } else {
-        alert(`Erreur: ${error.message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
+        alert(`Erreur: ${(error as Error).message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
       }
     }
   };
@@ -670,6 +629,7 @@ export default function Pays() {
       }, 10000); // Augmenté de 5s à 10s pour réduire la charge
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup]);
 
   const loadResidenceGroups = async () => {
@@ -682,22 +642,10 @@ export default function Pays() {
         }
       });
       
-      let groups: ResidenceGroup[] = [];
-      if (response.ok) {
-        try {
-        const data = await response.json();
-          groups = data.groups || [];
-        } catch (jsonError) {
-          groups = getDefaultResidenceGroups();
-        }
-      } else {
-        groups = getDefaultResidenceGroups();
-      }
-      
-      // Si aucun groupe, utiliser les groupes par défaut
-      if (groups.length === 0) {
-        groups = getDefaultResidenceGroups();
-      }
+      // Serveur injoignable : on le dit (jamais de faux groupe)
+      const data = response.ok ? await response.json().catch((): null => null) : null;
+      if (!data) { setResidenceGroups([]); setErreurChargement(true); return; }
+      const groups: ResidenceGroup[] = data.groups || [];
       
       setResidenceGroups(groups);
       
@@ -728,7 +676,7 @@ export default function Pays() {
             } else {
               setSelectedResidenceGroup(firstGroup);
             }
-          } catch (error) {
+          } catch {
             // Si erreur, sélectionner quand même le groupe
             setSelectedResidenceGroup(firstGroup);
           }
@@ -742,17 +690,9 @@ export default function Pays() {
           setSelectedResidenceGroup(updatedGroup);
         }
       }
-    } catch (error) {
-      // Erreur silencieuse - utiliser les groupes par défaut
-      const defaultGroups = getDefaultResidenceGroups();
-      setResidenceGroups(defaultGroups);
-      // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-      if (defaultGroups.length > 0) {
-        // Toujours sélectionner le groupe par défaut pour permettre la publication immédiate
-        if (!selectedResidenceGroup || selectedResidenceGroup.type !== residenceActiveTab) {
-          setSelectedResidenceGroup(defaultGroups[0]);
-        }
-      }
+    } catch {
+      setResidenceGroups([]);
+      setErreurChargement(true);
     }
   };
 
@@ -768,31 +708,7 @@ export default function Pays() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [residenceActiveTab, activeTab, userData]);
 
-  const getCurrentLocation = useCallback(() => {
-    switch (residenceActiveTab) {
-      case 'lieu1': return userData?.lieu1 || 'Cercle 1';
-      case 'lieu2': return userData?.lieu2 || 'Cercle 2';
-      default: return 'Cercle 1';
-    }
-  }, [residenceActiveTab, userData]);
 
-  const getDefaultResidenceGroups = useCallback((): ResidenceGroup[] => {
-    const location = getCurrentLocation();
-    return [
-    {
-      id: '1',
-        name: `Organisation ${location}`,
-        description: `Rencontres entre personnes résidant au même endroit : ${location}`,
-        location: location,
-      type: residenceActiveTab,
-      members: [userData?.numeroH || ''],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString()
-    }
-  ];
-  }, [getCurrentLocation, residenceActiveTab, userData]);
 
 
   const joinResidenceGroup = async (groupId: string) => {
@@ -809,9 +725,12 @@ export default function Pays() {
       
       if (response.ok) {
         loadResidenceGroups();
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
-    } catch (error) {
-      // Erreur silencieuse
+    } catch {
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     }
   };
 
@@ -905,15 +824,15 @@ export default function Pays() {
         console.error('Erreur serveur:', errorData);
         alert(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      console.error('Type d\'erreur:', error.name);
-      console.error('Message d\'erreur:', error.message);
+      console.error('Type d\'erreur:', (error as Error).name);
+      console.error('Message d\'erreur:', (error as Error).message);
       
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
+      if ((error as Error).message === 'Failed to fetch' || (error as Error).name === 'TypeError' || (error as Error).message?.includes('fetch')) {
         alert(`❌ Erreur de connexion: Impossible de se connecter au serveur.\n\nVérifiez que:\n1. Le backend est démarré sur le port 5002\n2. L'URL ${API_BASE_URL} est correcte\n3. Votre connexion internet fonctionne\n\nPour démarrer le backend:\ncd backend\nnpm run dev`);
       } else {
-        alert(`Erreur: ${error.message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
+        alert(`Erreur: ${(error as Error).message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
       }
     }
   };
@@ -930,6 +849,7 @@ export default function Pays() {
       }, 10000); // Augmenté de 5s à 10s pour réduire la charge
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedResidenceGroup]);
 
   const filteredGroups = regionGroups.filter(group => group.region === activeTab);
@@ -955,6 +875,7 @@ export default function Pays() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadRegionGroups(); loadResidenceGroups(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -993,7 +914,7 @@ export default function Pays() {
             ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center gap-2 ${
                 activeTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -1041,7 +962,7 @@ export default function Pays() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setResidenceActiveTab(tab.id as any)}
+                    onClick={() => setResidenceActiveTab(tab.id as typeof residenceActiveTab)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
                       residenceActiveTab === tab.id
                         ? 'bg-green-600 text-white'
@@ -1161,7 +1082,7 @@ export default function Pays() {
                         <div className="relative flex-1">
                           <select
                             value={newResidencePost.category}
-                            onChange={(e) => setNewResidencePost({...newResidencePost, category: e.target.value as any})}
+                            onChange={(e) => setNewResidencePost({...newResidencePost, category: e.target.value as typeof newResidencePost.category})}
                             className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                             <option value="information">Information</option>
@@ -1191,7 +1112,7 @@ export default function Pays() {
                         <select
                           value={newResidencePost.type}
                             onChange={(e) => {
-                              setNewResidencePost({...newResidencePost, type: e.target.value as any, mediaFile: null});
+                              setNewResidencePost({...newResidencePost, type: e.target.value as typeof newResidencePost.type, mediaFile: null});
                             }}
                             className="pl-10 pr-8 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[80px]"
                         >
@@ -1394,7 +1315,7 @@ export default function Pays() {
                       <div className="relative flex-1">
                         <select
                           value={newRegionPost.category}
-                          onChange={(e) => setNewRegionPost({...newRegionPost, category: e.target.value as any})}
+                          onChange={(e) => setNewRegionPost({...newRegionPost, category: e.target.value as typeof newRegionPost.category})}
                           className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="information">Information</option>
@@ -1424,7 +1345,7 @@ export default function Pays() {
                         <select
                           value={newRegionPost.type}
                           onChange={(e) => {
-                            setNewRegionPost({...newRegionPost, type: e.target.value as any, mediaFile: null});
+                            setNewRegionPost({...newRegionPost, type: e.target.value as typeof newRegionPost.type, mediaFile: null});
                           }}
                           className="pl-10 pr-8 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[80px]"
                       >

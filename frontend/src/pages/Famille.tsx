@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNumeroHForDisplay } from '../utils/auth';
 import { calculerAge } from '../utils/calculs';
+import ErreurChargement from "../components/ErreurChargement";
+import type { DefuntServeur } from '../types/arbre';
+import type { MessageGroupe } from '../types/groupes';
 
-const API_BASE = (import.meta as any)?.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
+const API_BASE = import.meta.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
 const getImageUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
   if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url;
@@ -27,7 +30,7 @@ interface UserData {
   nomFamille: string;
   dateNaissance?: string;
   date_naissance?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface FamilyMember {
@@ -90,15 +93,17 @@ interface FamilyTreeData {
   rootMember: string;
   chefFamille1?: string;
   chefFamille2?: string;
-  members: any[];
-  deceasedMembers: any[];
+  members: FamilyMember[];
+  deceasedMembers: DefuntServeur[];
 }
 
 export default function Famille() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'parents' | 'enfants' | 'epoux' | 'freres' | 'soeurs' | 'oncles' | 'tantes' | 'cousins' | 'cousines' | 'neveux' | 'nieces' | 'grandparents' | 'arbre' | 'gestion'>('parents');
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [familyTree, setFamilyTree] = useState<FamilyTree | null>(null);
+  const [, setFamilyTree] = useState<FamilyTree | null>(null);
   const [familyTreeData, setFamilyTreeData] = useState<FamilyTreeData | null>(null);
   const [pendingConfirmations, setPendingConfirmations] = useState<FamilyTreeConfirmation[]>([]);
   const [showSetHeadsForm, setShowSetHeadsForm] = useState(false);
@@ -111,7 +116,6 @@ export default function Famille() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTreeChat, setShowTreeChat] = useState(false);
   const [showFamilyGallery, setShowFamilyGallery] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const navigate = useNavigate();
 
   // État pour les photos de famille
@@ -121,12 +125,10 @@ export default function Famille() {
     wifePhoto: null as string | null,
     childrenPhotos: [] as Array<{ name: string; photoUrl: string; uploadedAt: string }>
   });
-  const [uploading, setUploading] = useState<string | null>(null);
 
   // Galerie albums
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbums>({ rencontre: [], bapteme: [], mariage: [], deces: [] });
   const [activeAlbum, setActiveAlbum] = useState<AlbumKey | null>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploadingAlbum, setUploadingAlbum] = useState<string | null>(null);
   const [gallerySection, setGallerySection] = useState<'photos' | 'albums'>('photos');
   const [viewerMedia, setViewerMedia] = useState<AlbumMedia | null>(null);
@@ -173,6 +175,7 @@ export default function Famille() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadData = async () => {
@@ -218,77 +221,7 @@ export default function Famille() {
     }
   };
 
-  const uploadPhoto = async (type: 'family' | 'man' | 'wife' | 'children', file: File, childName?: string) => {
-    try {
-      setUploading(type);
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append('photo', file);
-      if (childName) {
-        formData.append('childName', childName);
-      }
 
-      const endpoint = type === 'children' ? `${API_BASE}/api/family/photos/children` : `${API_BASE}/api/family/photos/${type}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (type === 'children') {
-          setFamilyPhotos(prev => ({
-            ...prev,
-            childrenPhotos: data.childrenPhotos || prev.childrenPhotos
-          }));
-        } else {
-          const photoKey = type === 'family' ? 'familyPhoto' : type === 'man' ? 'manPhoto' : 'wifePhoto';
-          setFamilyPhotos(prev => ({
-            ...prev,
-            [photoKey]: data.photoUrl
-          }));
-        }
-        alert('Photo uploadée avec succès !');
-      } else {
-        alert('Erreur lors de l\'upload de la photo');
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      alert('Erreur lors de l\'upload de la photo');
-    } finally {
-      setUploading(null);
-    }
-  };
-
-  const deleteChildPhoto = async (index: number) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/family/photos/children/${index}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFamilyPhotos(prev => ({
-          ...prev,
-          childrenPhotos: data.childrenPhotos || prev.childrenPhotos
-        }));
-        alert('Photo supprimée avec succès !');
-      } else {
-        alert('Erreur lors de la suppression de la photo');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression de la photo');
-    }
-  };
 
   // ── Galerie albums ────────────────────────────────────────────────────────
   const loadGalleryAlbums = async () => {
@@ -333,9 +266,12 @@ export default function Famille() {
           mariage:   raw.mariage   || [],
           deces:     raw.deces     || [],
         });
+      } else {
+        alert("La photo n'a pas pu être ajoutée. Réessayez.");
       }
     } catch (error) {
       console.error('Erreur upload galerie:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setUploadingAlbum(null);
     }
@@ -359,9 +295,12 @@ export default function Famille() {
           deces:     raw.deces     || [],
         });
         setViewerMedia(null);
+      } else {
+        alert("La suppression n'a pas pu être enregistrée. Réessayez.");
       }
     } catch (error) {
       console.error('Erreur suppression galerie:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setDeletingGalleryIdx(null);
     }
@@ -384,11 +323,11 @@ export default function Famille() {
         const data = await response.json();
         setFamilyMembers(data.members || []);
       } else {
-        setFamilyMembers(getDefaultFamilyMembers());
+        setFamilyMembers([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des membres:', error);
-      setFamilyMembers(getDefaultFamilyMembers());
+      setFamilyMembers([]); setErreurChargement(true);
     }
   };
 
@@ -523,13 +462,13 @@ export default function Famille() {
       
       if (response.ok) {
         const data = await response.json();
-        setFamilyTree(data.tree || getDefaultFamilyTree());
+        setFamilyTree(data.tree || null);
       } else {
-        setFamilyTree(getDefaultFamilyTree());
+        setFamilyTree(null);
       }
     } catch (error) {
       console.error('Erreur lors du chargement de l\'arbre:', error);
-      setFamilyTree(getDefaultFamilyTree());
+      setFamilyTree(null);
     }
   };
 
@@ -545,7 +484,7 @@ export default function Famille() {
 
       if (response.ok) {
         const data = await response.json();
-        const msgs = (data.messages || []).map((m: any) => ({
+        const msgs = (data.messages || []).map((m: MessageGroupe & { created_at?: string }) => ({
           id: m.id,
           author: m.numeroH,
           authorName: m.authorName,
@@ -561,64 +500,7 @@ export default function Famille() {
     }
   };
 
-  const getDefaultFamilyMembers = (): FamilyMember[] => [
-    {
-      id: '1',
-      numeroH: 'PARENT001',
-      prenom: 'Mamadou',
-      nomFamille: 'Diallo',
-      relation: 'Père',
-      phone: '+224 123 456 789',
-      email: 'mamadou.diallo@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1960-05-15',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Fonctionnaire',
-      maritalStatus: 'Marié',
-      children: 3
-    },
-    {
-      id: '2',
-      numeroH: 'PARENT002',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      relation: 'Mère',
-      phone: '+224 987 654 321',
-      email: 'fatou.camara@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1965-08-20',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Enseignante',
-      maritalStatus: 'Mariée',
-      children: 3
-    },
-    {
-      id: '3',
-      numeroH: 'EPOUX001',
-      prenom: 'Mariama',
-      nomFamille: 'Bah',
-      relation: 'Épouse',
-      phone: '+224 555 123 456',
-      email: 'mariama.bah@email.com',
-      address: 'Conakry, Guinée',
-      birthDate: '1990-12-10',
-      isActive: true,
-      createdAt: '2024-01-01T00:00:00Z',
-      occupation: 'Infirmière',
-      maritalStatus: 'Mariée',
-      children: 2
-    }
-  ];
 
-  const getDefaultFamilyTree = (): FamilyTree => ({
-    id: '1',
-    rootMember: userData?.numeroH || '',
-    members: getDefaultFamilyMembers(),
-        isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  });
 
   const handleAddMember = () => {
         setNewMember({
@@ -683,6 +565,8 @@ export default function Famille() {
         if (response.ok) {
           setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
           loadFamilyMessages();
+        } else {
+          alert("Le message n'a pas pu être envoyé. Réessayez.");
         }
       } else {
         const formData = new FormData();
@@ -696,10 +580,13 @@ export default function Famille() {
         if (response.ok) {
           setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
           loadFamilyMessages();
+        } else {
+          alert("Le message n'a pas pu être envoyé. Réessayez.");
         }
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
+      alert("Connexion impossible : le message n'a pas été envoyé. Réessayez.");
     }
   };
 
@@ -777,6 +664,7 @@ export default function Famille() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadFamilyMembers(); }} />
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -911,7 +799,7 @@ export default function Famille() {
             {['parents', 'enfants', 'epoux', 'freres', 'soeurs', 'oncles', 'tantes', 'cousins', 'cousines', 'neveux', 'nieces', 'grandparents', 'arbre', 'gestion'].map((tab) => (
             <button
                 key={tab}
-                onClick={() => setActiveTab(tab as any)}
+                onClick={() => setActiveTab(tab as typeof activeTab)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-blue-500 text-blue-600'
@@ -1530,7 +1418,7 @@ export default function Famille() {
               <div className="flex gap-2 flex-wrap">
                 <select
                   value={newMessage.category}
-                  onChange={e => setNewMessage({...newMessage, category: e.target.value as any})}
+                  onChange={e => setNewMessage({...newMessage, category: e.target.value as typeof newMessage.category})}
                   className="flex-1 min-w-[140px] border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
                 >
                   <option value="information">ℹ️ Information</option>
@@ -1542,7 +1430,7 @@ export default function Famille() {
                 </select>
                 <select
                   value={newMessage.type}
-                  onChange={e => setNewMessage({...newMessage, type: e.target.value as any, mediaFile: null})}
+                  onChange={e => setNewMessage({...newMessage, type: e.target.value as typeof newMessage.type, mediaFile: null})}
                   className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
                 >
                   <option value="text">📝 Texte</option>

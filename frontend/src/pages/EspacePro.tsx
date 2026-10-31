@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
-import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
-import { ReçuTransaction } from "../components/ReçuTransaction";
+import { getSessionUser, isAdmin } from "../utils/auth";
+import { ReçuTransaction, type DonneesReçu } from "../components/ReçuTransaction";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
@@ -10,7 +10,7 @@ import { normaliserLogo } from "../utils/logoImage";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AccueilAppGestion from "../components/AccueilAppGestion";
 import AdminCarteFormule from "../components/AdminCarteFormule";
-import { getTypeInfo } from "../components/EspaceProModals";
+import { getTypeInfo } from "../components/espaceProTypes";
 import { libellesServices } from "../utils/libellesServices";
 
 interface ProAccount {
@@ -23,7 +23,8 @@ interface ProAccount {
   country: string;
   phone: string;
   email: string;
-  services: any[];
+  /** Services (texte) ; pour un restaurant, les plats du menu */
+  services: (string | MenuItem)[];
   specialties: string[];
   status: string;
   ownerNumeroH: string;
@@ -394,6 +395,9 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
 
 import { config } from "../config/api";
 import { CommandesRecues } from "../components/CommanderProduit";
+import type { DemandeRetrait } from "../types/moftalPay";
+import type { MembrePro, PublicationPro } from "../types/pro";
+import type { UserData } from "../utils/auth";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
@@ -407,7 +411,7 @@ function SubscriptionPaymentWall({
   onSuccess,
 }: {
   account: ProAccount;
-  userData: any;
+  userData: UserData | null;
   onSuccess: () => void;
 }) {
   const navigate = useNavigate();
@@ -431,6 +435,7 @@ function SubscriptionPaymentWall({
       .then(r => r.json())
       .then(d => { if (d.success) setPrix(d); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account.id, isBlocked]);
 
   useEffect(() => {
@@ -441,6 +446,7 @@ function SubscriptionPaymentWall({
       .then(r => r.json())
       .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account.id, isBlocked]);
 
   if (isBlocked) {
@@ -690,9 +696,9 @@ export default function EspacePro() {
   const [retraitCoord, setRetraitCoord]                 = useState('');
   const [retraitLoading, setRetraitLoading]             = useState(false);
   const [retraitMsg, setRetraitMsg]                     = useState('');
-  const [mesDemandes, setMesDemandes]                   = useState<any[]>([]);
+  const [mesDemandes, setMesDemandes]                   = useState<DemandeRetrait[]>([]);
   const [loadingDemandes, setLoadingDemandes]           = useState(false);
-  const [retraitReçu, setRetraitReçu]                   = useState<any>(null);
+  const [retraitReçu, setRetraitReçu]                   = useState<Omit<DonneesReçu, "type"> | null>(null);
 
   // Cours école / prof
   const [showPublishCourse, setShowPublishCourse] = useState(false);
@@ -702,7 +708,7 @@ export default function EspacePro() {
   const [linkedStudents, setLinkedStudents] = useState<string[]>([]);
 
   // Carnet d'accès (membres liés)
-  const [members, setMembers]           = useState<any[]>([]);
+  const [members, setMembers]           = useState<MembrePro[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [showAddMember, setShowAddMember]   = useState(false);
   const [addMemberRole, setAddMemberRole]   = useState('client');
@@ -720,7 +726,7 @@ export default function EspacePro() {
   const [servicesSaving, setServicesSaving]   = useState(false);
   const [servicesSuccess, setServicesSuccess] = useState(false);
 
-  const [publications, setPublications]   = useState<any[]>([]);
+  const [publications, setPublications]   = useState<PublicationPro[]>([]);
   const [pubsLoading, setPubsLoading]     = useState(false);
   const [showAddPub, setShowAddPub]       = useState(false);
   const [pubSaving, setPubSaving]         = useState(false);
@@ -759,6 +765,7 @@ export default function EspacePro() {
   const memberLabel = account ? (MEMBER_LABELS[account.type] || DEFAULT_MEMBER_LABEL) : DEFAULT_MEMBER_LABEL;
 
   /* ---- Chargement initial ---- */
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { loadAccount(); }, [id]);
   // Formule complète, dans SON application (installée, ou sur gestions.moftal.com) :
   // l'application s'ouvre toujours sur la GESTION INTERNE complète, jamais sur
@@ -769,7 +776,7 @@ export default function EspacePro() {
     if (!account) return;
     const me = getSessionUser();
     const estProprietaire = !!me && me.numeroH === account.ownerNumeroH;
-    const enModeApp = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+    const enModeApp = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     const dansApp = enModeApp || window.location.hostname.startsWith("gestions.");
     const depuisGestion = new URLSearchParams(window.location.search).get("rdv") === "1";
     const complete = account.status === "approved" && account.planType !== "visibility"
@@ -781,16 +788,20 @@ export default function EspacePro() {
       .then(r => r.json())
       .then(d => { if (d.success && d.tenantCode) navigate(`/${chemin}/${d.tenantCode}`, { replace: true }); })
       .catch(() => { /* reste sur cette page : rien n'est perdu */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
   useEffect(() => {
     if (tab === 'vitrine' && account) {
       setVitrineInfo({ name: account.name || '', description: account.description || '', address: account.address || '', city: account.city || '', country: account.country || '', phone: account.phone || '', email: account.email || '' });
-      setEditServices(Array.isArray(account.services) ? account.services.filter((s: any) => typeof s === 'string') : []);
+      setEditServices(Array.isArray(account.services) ? account.services.filter((s): s is string => typeof s === 'string') : []);
       setEditSpecialties(Array.isArray(account.specialties) ? account.specialties : []);
       loadPublications(account.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, account?.id]);
 
   const loadAccount = async () => {
@@ -847,7 +858,7 @@ export default function EspacePro() {
     }
   };
 
-  const removeMember = async (memberId: string) => {
+  const removeMember = async (memberId: number) => {
     if (!account) return;
     if (!window.confirm('Retirer cette personne ?')) return;
     try {
@@ -955,7 +966,7 @@ export default function EspacePro() {
     } catch { alert("Erreur de connexion : rien n'a été supprimé. Réessayez."); }
   };
 
-  const toggleDisponible = async (pub: any) => {
+  const toggleDisponible = async (pub: PublicationPro) => {
     if (!account) return;
     try {
       const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pub.id}`, {
@@ -1100,9 +1111,12 @@ export default function EspacePro() {
         await loadAppointments(account.id);
         setRejectId(null);
         setRejectReason("");
+      } else {
+        alert(data.message || "Le refus n'a pas pu être enregistré.");
       }
     } catch (err) {
       console.error(err);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     } finally {
       setActionLoading(null);
     }
@@ -1153,7 +1167,7 @@ export default function EspacePro() {
     try {
       // Converti en PNG 512 px : s'affiche partout et sert d'icône d'application
       base64 = await normaliserLogo(file);
-    } catch (err: any) { alert(err.message); return; }
+    } catch (err) { alert((err as Error).message); return; }
     setLogoUploading(true);
     setLogoSuccess(false);
     try {
@@ -1180,14 +1194,14 @@ export default function EspacePro() {
   /* ---- Chargement menu restaurant ---- */
   const loadMenuItems = (acc: ProAccount) => {
     if (acc.type === 'restaurant') {
-      const items = (acc.services || []).filter((s: any) => typeof s === 'object' && s !== null && s.name);
+      const items = (acc.services || []).filter((s): s is MenuItem => typeof s === 'object' && s !== null && !!s.name);
       setMenuItems(items);
     }
   };
 
   /* ---- Sauvegarder le menu ---- */
-  const saveMenu = async (updatedItems: MenuItem[]) => {
-    if (!account) return;
+  const saveMenu = async (updatedItems: MenuItem[]): Promise<boolean> => {
+    if (!account) return false;
     setMenuSaving(true);
     try {
       const res = await fetch(`${API}/api/professionals/${account.id}`, {
@@ -1199,8 +1213,15 @@ export default function EspacePro() {
       if (data.success) {
         setMenuItems(updatedItems);
         setAccount(prev => prev ? { ...prev, services: updatedItems } : prev);
+        return true;
       }
-    } catch (err) { console.error(err); }
+      alert(data.message || "Le menu n'a pas pu être enregistré.");
+      return false;
+    } catch (err) {
+      console.error(err);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
+      return false;
+    }
     finally { setMenuSaving(false); }
   };
 
@@ -1210,7 +1231,7 @@ export default function EspacePro() {
       return;
     }
     const updated = [...menuItems, { ...newMenuItem }];
-    await saveMenu(updated);
+    if (!(await saveMenu(updated))) return;
     setNewMenuItem({ name: '', price: '', category: 'Plat', description: '' });
     setShowAddMenuItem(false);
   };
@@ -1243,7 +1264,7 @@ export default function EspacePro() {
       } else {
         alert("Erreur lors de la publication");
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); alert("Connexion impossible : rien n'a été enregistré. Réessayez."); }
     finally { setCourseSaving(false); }
   };
 
@@ -1890,7 +1911,7 @@ export default function EspacePro() {
                     onChange={e => setNewCourseData(p => ({ ...p, description: e.target.value }))}
                     rows={3} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400" />
                   <div className="grid grid-cols-2 gap-3">
-                    <select value={newCourseData.type} onChange={e => setNewCourseData(p => ({ ...p, type: e.target.value as any }))}
+                    <select value={newCourseData.type} onChange={e => setNewCourseData(p => ({ ...p, type: e.target.value as typeof newCourseData.type }))}
                       className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
                       <option value="audio">🎧 Audio</option>
                       <option value="video">🎥 Vidéo</option>
@@ -2199,7 +2220,7 @@ export default function EspacePro() {
                         onChange={e => setVitrineInfo(prev => ({ ...prev, [f.key]: e.target.value }))}
                         placeholder={f.placeholder}
                         className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-0"
-                        style={{ '--tw-ring-color': 'currentColor' } as any}
+                        style={{ '--tw-ring-color': 'currentColor' } as React.CSSProperties}
                       />
                     </div>
                   ))}

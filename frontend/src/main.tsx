@@ -117,10 +117,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   const isGestionPage = _gestionMatch || _proPathMatch;
   if (isGestionPage) {
-    (window as any).__pwaGestionPrompt = e;
+    window.__pwaGestionPrompt = e;
   } else if (!appPlayInstallee()) {
     // App du Play Store déjà sur ce téléphone : pas de deuxième installation
-    (window as any).__pwaInstallPrompt = e;
+    window.__pwaInstallPrompt = e;
   }
   window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
 });

@@ -7,6 +7,8 @@ import { isAdmin } from '../utils/auth';
 import { isActivityBlocked } from '../utils/activityIcons';
 import { ActivityIcon } from '../components/ActivityIconBadge';
 import { hideIncrement } from '../utils/formatNumeroH';
+import ErreurChargement from "../components/ErreurChargement";
+import type { MessageGroupe } from "../types/groupes";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -22,7 +24,7 @@ interface UserData {
   activite1?: string;
   activite2?: string;
   activite3?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ActivityGroup {
@@ -65,27 +67,21 @@ interface ActivityComment {
 }
 
 
-// Liste de pays pour le sélecteur — les plus utilisés d'abord
-const PAYS_LISTE = [
-  'Guinée', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Burkina Faso',
-  'Niger', 'Mauritanie', 'Guinée-Bissau', 'Sierra Leone', 'Liberia',
-  'Ghana', 'Bénin', 'Togo', 'Cameroun', 'Congo', 'Gabon',
-  'France', 'Belgique', 'Canada', 'États-Unis', 'Maroc', 'Algérie',
-  'Tunisie', 'Égypte', 'Afrique du Sud', 'Autre'
-];
 
 export default function Activite({ embedded = false }: { embedded?: boolean } = {}) {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'Activité1' | 'Activité2' | 'Activité3'>('Activité1');
 
   // Pays sélectionné — par défaut = pays de l'utilisateur connecté
   const [selectedPays, setSelectedPays] = useState<string>('');
 
-  const [groups, setGroups] = useState<ActivityGroup[]>([]);
+  const [, setGroups] = useState<ActivityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(false);
   const [blockedActivity, setBlockedActivity] = useState(false);
-  const [activityMessages, setActivityMessages] = useState<any[]>([]);
+  const [activityMessages, setActivityMessages] = useState<MessageGroupe[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -93,7 +89,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
   // Carte outil cliquable — URL ouvre le lien, app name → recherche Google
-  const renderToolCard = (msg: any) => {
+  const renderToolCard = (msg: MessageGroupe) => {
     const content = msg.content || '';
     const dashIdx = content.indexOf(' — ');
     const nom = dashIdx > -1 ? content.substring(0, dashIdx) : content;
@@ -129,7 +125,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
 
   // Garde paiement Info Moftal
   const [outilsAcces, setOutilsAcces] = useState<boolean | null>(null);
-  const [outilsPayLoading, setOutilsPayLoading] = useState(false);
+  const [outilsPayLoading] = useState(false);
   const [showOutilsModal, setShowOutilsModal] = useState(false);
   const [prixInfoMoftal, setPrixInfoMoftal] = useState<{ mois: number; an: number } | null>(null);
   const [showPaymentOutils, setShowPaymentOutils] = useState(false);
@@ -208,6 +204,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const getToken = () => {
@@ -299,120 +296,21 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
           }
         }
       } else {
-        const defaultGroups = getDefaultActivityGroups();
-        setGroups(defaultGroups);
-        // Auto-sélectionner le premier groupe par défaut pour permettre la publication
-        if (defaultGroups.length > 0) {
-          if (!selectedGroup || selectedGroup.activity !== activityName) {
-            setSelectedGroup(defaultGroups[0]);
-          }
-        }
+        // Serveur injoignable : on le dit (jamais de faux groupe)
+        setGroups([]);
+        setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      const defaultGroups = getDefaultActivityGroups();
-      setGroups(defaultGroups);
-      if (defaultGroups.length > 0) {
-        if (!selectedGroup || selectedGroup.activity !== activityName) {
-          setSelectedGroup(defaultGroups[0]);
-        }
-      }
+      setGroups([]);
+      setErreurChargement(true);
     } finally {
       setIsLoadingGroup(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedPays, userData?.activite1, userData?.activite2, userData?.activite3]);
 
-  const getDefaultActivityGroups = (): ActivityGroup[] => [
-    {
-      id: '1',
-      name: 'Sport Conakry',
-      description: 'Rencontres sportives et activités physiques à Conakry',
-      activity: 'Activité1',
-      members: ['USER001', 'USER002', 'USER003'],
-      posts: [
-        {
-          id: '1',
-          author: 'USER001',
-          authorName: 'Alpha Diallo',
-          content: 'Match de football demain à 16h au stade du 28 septembre',
-          type: 'text',
-          likes: ['USER002', 'USER003'],
-          comments: [],
-          createdAt: '2024-01-20T10:00:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-15T10:00:00Z'
-    },
-    {
-      id: '2',
-      name: 'Artistes Guinéens',
-      description: 'Communauté d\'artistes et créateurs guinéens',
-      activity: 'Activité2',
-      members: ['USER004', 'USER005', 'USER006'],
-      posts: [
-        {
-          id: '2',
-          author: 'USER004',
-          authorName: 'Fatou Camara',
-          content: 'Exposition d\'art prévue pour le mois prochain',
-          type: 'text',
-          likes: ['USER005'],
-          comments: [],
-          createdAt: '2024-01-19T14:30:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-10T09:00:00Z'
-    },
-    {
-      id: '3',
-      name: 'Entrepreneurs Guinée',
-      description: 'Réseau d\'entrepreneurs et de business guinéens',
-      activity: 'Activité3',
-      members: ['USER007', 'USER008', 'USER009'],
-      posts: [
-        {
-          id: '3',
-          author: 'USER007',
-          authorName: 'Mamadou Bah',
-          content: 'Nouvelle opportunité d\'investissement disponible',
-          type: 'text',
-          likes: ['USER008', 'USER009'],
-          comments: [],
-          createdAt: '2024-01-18T16:45:00Z'
-        }
-      ],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-05T11:20:00Z'
-    }
-  ];
 
-  const joinActivityGroup = async (groupId: string) => {
-    try {
-      const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/activities/groups/${groupId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          numeroH: userData?.numeroH
-        })
-      });
-
-      if (response.ok) {
-        loadActivityGroups();
-      }
-    } catch (error) {
-      // Erreur silencieuse
-    }
-  };
 
   const loadActivityMessages = async () => {
     if (!selectedGroup) return;
@@ -508,6 +406,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       }, 10000);
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup?.id]);
 
   useEffect(() => {
@@ -515,12 +414,10 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     loadActivityGroups();
   }, [activeTab, selectedPays, loadActivityGroups]);
 
-  const activeActivityName = getActivityName(activeTab)
-    || (activeTab === 'Activité1' ? 'Activité 1' : activeTab === 'Activité2' ? 'Activité 2' : 'Activité 3');
-  const filteredGroups = groups.filter(group => group.activity === activeActivityName);
 
   return (
     <>
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadActivityGroups(); }} />
     <div className={embedded ? "bg-gray-50" : "min-h-screen bg-gray-50"}>
       {/* Header */}
       {!embedded && (
@@ -553,7 +450,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
             return (
               <span className="text-sm text-amber-700 flex items-center gap-1">
                 🎯 <strong>{currentActivityName}</strong>
-                {(userData as any)?.specialite && ` · ${(userData as any).specialite}`}
+                {userData?.specialite && ` · ${userData.specialite}`}
               </span>
             );
           })()}
@@ -653,7 +550,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                       <p className="text-gray-400 text-sm">Connexion au groupe…</p>
                     </div>
                   ) : (() => {
-                    const filtered = activityMessages.filter((m: any) => (m.category || 'information') === 'outil');
+                    const filtered = activityMessages.filter((m) => (m.category || 'information') === 'outil');
                     return (
                       <>
                         <div className="mb-4 flex justify-center">
@@ -679,7 +576,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                         </div>
                         {filtered.length === 0
                           ? <div className="text-center text-gray-500 py-6"><p>Aucun outil partagé. Proposez une ressource !</p></div>
-                          : filtered.map((msg: any) => renderToolCard(msg))}
+                          : filtered.map((msg) => renderToolCard(msg))}
                       </>
                     );
                   })()}

@@ -9,7 +9,9 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   lieu1?: string;
-  [key: string]: any;
+  lieuResidence1?: string;
+  lieu_residence_1?: string;
+  [key: string]: unknown;
 }
 
 interface Residence1Group {
@@ -130,6 +132,7 @@ export default function LieuResidence1() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadGroups = async (user?: UserData) => {
@@ -166,34 +169,6 @@ export default function LieuResidence1() {
     }
   };
 
-  const getDefaultGroups = (): Residence1Group[] => [
-    {
-      id: '1',
-      name: 'Résidents de Conakry Centre',
-      description: 'Communauté des résidents du centre de Conakry pour échanger et s\'entraider',
-      location: 'Conakry Centre',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Kaloum',
-      district: 'Centre'
-    },
-    {
-      id: '2',
-      name: 'Voisins de Dixinn',
-      description: 'Organisation de voisinage pour les habitants de Dixinn',
-      location: 'Dixinn',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Dixinn',
-      district: 'Est'
-    }
-  ];
 
   const joinGroup = async (groupId: string) => {
     try {
@@ -214,6 +189,7 @@ export default function LieuResidence1() {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -264,6 +240,7 @@ export default function LieuResidence1() {
       }
     } catch (error) {
       console.error('Erreur:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -656,7 +633,7 @@ export default function LieuResidence1() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de contenu</label>
                   <select
                     value={newPost.type}
-                    onChange={(e) => setNewPost({...newPost, type: e.target.value as any})}
+                    onChange={(e) => setNewPost({...newPost, type: e.target.value as typeof newPost.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="text">📝 Texte</option>

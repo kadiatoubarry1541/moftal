@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import type { CompteProfessionnel } from "../types/pro";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
@@ -19,7 +20,7 @@ export default function MonEspacePro() {
     })
       .then((r) => r.json())
       .then((data) => {
-        const accounts: any[] = data.accounts || [];
+        const accounts: CompteProfessionnel[] = data.accounts || [];
 
         const activeAccounts = accounts.filter(
           (a) => a.status === "approved" && a.subscriptionStatus === "active"
@@ -43,6 +44,7 @@ export default function MonEspacePro() {
       .catch(() => {
         navigate("/mes-comptes-pro", { replace: true });
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   return (

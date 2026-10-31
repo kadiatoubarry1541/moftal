@@ -15,7 +15,8 @@ interface Publicite {
   raison_refus?: string;
   expire_le?: string;
   is_active: boolean;
-  en_ligne?: boolean;
+  /** Booléen, ou « t » selon la façon dont la base le renvoie */
+  en_ligne?: boolean | string;
   created_at: string;
 }
 
@@ -36,6 +37,7 @@ export default function AdminPublicites() {
 
   useEffect(() => {
     chargerTout();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function chargerTout() {
@@ -152,7 +154,7 @@ export default function AdminPublicites() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {liste.map(p => {
               const info = STATUT_LABEL[p.statut] || STATUT_LABEL.en_attente;
-              const enLigne = p.is_active && (p.en_ligne === true || (p as any).en_ligne === "t");
+              const enLigne = p.is_active && (p.en_ligne === true || p.en_ligne === "t");
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   {p.image_url

@@ -1,20 +1,23 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { ProductionAnnouncement, ProductionLot, ProductionOrder, ProductionProduct, ProductionStaff, TableauProduction } from "../types/gestion-producer";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -50,13 +53,13 @@ export default function GestionProducer() {
 
   const [tab, setTab]                     = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant]               = useState<any>(null);
-  const [dash, setDash]                   = useState<any>(null);
-  const [products, setProducts]           = useState<any[]>([]);
-  const [lots, setLots]                   = useState<any[]>([]);
-  const [orders, setOrders]               = useState<any[]>([]);
-  const [staff, setStaff]                 = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant]               = useState<EtablissementGestion | null>(null);
+  const [dash, setDash]                   = useState<TableauProduction | null>(null);
+  const [products, setProducts]           = useState<ProductionProduct[]>([]);
+  const [lots, setLots]                   = useState<ProductionLot[]>([]);
+  const [orders, setOrders]               = useState<ProductionOrder[]>([]);
+  const [staff, setStaff]                 = useState<ProductionStaff[]>([]);
+  const [announcements, setAnnouncements] = useState<ProductionAnnouncement[]>([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState("");
   const [saving, setSaving]               = useState(false);
@@ -79,6 +82,7 @@ export default function GestionProducer() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -88,6 +92,7 @@ export default function GestionProducer() {
     if (tab === "orders")        { loadOrders(); loadProducts(); }
     if (tab === "staff")         loadStaff();
     if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   async function loadAll() {
@@ -114,7 +119,7 @@ export default function GestionProducer() {
 
   // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
   // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
-  async function envoyer(chemin: string, body: object): Promise<any> {
+  async function envoyer(chemin: string, body: object): Promise<ReponseServeur> {
     setSaving(true);
     try {
       const r = await fetch(`${b(tenantCode!)}${chemin}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
@@ -271,7 +276,7 @@ export default function GestionProducer() {
           {(dash?.recentOrders?.length > 0) && (
             <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Dernières commandes</h3>
-              {dash.recentOrders.map((o: any) => {
+              {dash.recentOrders.map((o) => {
                 const st = STATUT_ORDER[o.statut] || STATUT_ORDER.en_attente;
                 return (
                   <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>

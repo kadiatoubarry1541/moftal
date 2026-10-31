@@ -7,6 +7,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, EmployeVitrine, AnnonceVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -21,8 +22,8 @@ export default function EntrepriseVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [ent, setEnt]         = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [ent, setEnt]         = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ employees: EmployeVitrine[]; announcements: AnnonceVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -62,7 +63,6 @@ export default function EntrepriseVitrine() {
 
   const stats     = data?.stats || {};
   const employees = data?.employees || [];
-  const announces = data?.announcements || [];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -189,7 +189,7 @@ export default function EntrepriseVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Notre Équipe")}</h2>
             </div>
             <div className="emp-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {employees.map((e: any, i: number) => (
+              {employees.map((e, i) => (
                 <div key={i} className="emp-card" style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${BLUE},${BLUE_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700 }}>
                     {(e.prenom || "?").charAt(0)}{(e.nom || "?").charAt(0)}

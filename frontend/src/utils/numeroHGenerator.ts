@@ -30,7 +30,7 @@ export async function findLastNumeroForPrefix(prefix: string): Promise<number> {
         return data.lastNumber
       }
     }
-  } catch (error) {
+  } catch {
     // Backend indisponible, utiliser localStorage
     console.warn('Backend indisponible pour vérifier le dernier numéro, utilisation de localStorage')
   } finally {
@@ -67,7 +67,7 @@ export async function findLastNumeroForPrefix(prefix: string): Promise<number> {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // Ignore les erreurs de parsing
       }
     }
@@ -92,7 +92,7 @@ export async function findLastNumeroForPrefix(prefix: string): Promise<number> {
               }
             }
           }
-        } catch (e) {
+        } catch {
           // Ignore
         }
       }
@@ -138,7 +138,7 @@ export async function generateUniqueNumeroH(prefix: string): Promise<string> {
           // Ce NumeroH existe déjà, utiliser le suivant
           return `${prefix} ${nextNumber + 1}`
         }
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }

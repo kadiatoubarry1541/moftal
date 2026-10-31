@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function MoftalPay() {
+export default function MoftalPay(): null {
   const navigate = useNavigate();
 
   useEffect(() => {

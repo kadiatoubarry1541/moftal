@@ -667,7 +667,7 @@ const fr: Record<string, string> = {
   // Footer
   'footer.copy': '© {year} Moftal',
   'footer.tagline': "Ensemble pour les enfants d'Adam",
-  'footer.system': "Système d'enregistrement généalogique",
+  'footer.system': "Famille & Services",
   'footer.conditions': "Conditions d'Utilisation",
   'footer.privacy': "Politique de Confidentialité",
   'footer.pro_space': 'Moftal · Espace Professionnel',

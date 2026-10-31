@@ -625,5 +625,9 @@ const lot: Lot = {
   "Réinitialiser": ["Reset", "إعادة الضبط", "A segin a daminɛ ma", "Artir e fuɗɗoode"],
   "Aperçu :": ["Preview:", "معاينة:", "Lajɛli :", "Yiyannde :"],
   "Aperçu du cadrage": ["Framing preview", "معاينة التأطير", "Dan lajɛli", "Yiyannde kaatiri"],
+  "Impossible de charger la liste.": ["Unable to load the list.", "تعذّر تحميل القائمة.", "Lisi ma se ka doni.", "Doggol ngol waawaa loowneede."],
+  "Connexion impossible : rien n'a été enregistré. Réessayez.": ["Connection failed: nothing was saved. Try again.", "تعذّر الاتصال: لم يُحفظ أي شيء. أعد المحاولة.", "Jɛɲɔgɔnya ma se ka kɛ : foyi ma mara. A kɛ tugun.", "Seŋaade waawaaka : alaa ko danndaa. Fuɗɗito."],
+  "L'action n'a pas pu être enregistrée. Réessayez.": ["The action could not be saved. Try again.", "تعذّر حفظ الإجراء. أعد المحاولة.", "Baara in ma se ka mara. A kɛ tugun.", "Golle ngal waawaa danndeede. Fuɗɗito."],
+  "Vérifiez votre connexion et réessayez.": ["Check your connection and try again.", "تحقّق من اتصالك وأعد المحاولة.", "I ka ɛntɛrinɛti sɛgɛsɛgɛ ka a kɛ tugun.", "Ƴeewto enternet maa, fuɗɗito."],
 };
 export default lot;

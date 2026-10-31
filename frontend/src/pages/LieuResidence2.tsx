@@ -9,7 +9,9 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   lieu2?: string;
-  [key: string]: any;
+  lieuResidence2?: string;
+  lieu_residence_2?: string;
+  [key: string]: unknown;
 }
 
 interface Residence2Group {
@@ -129,6 +131,7 @@ export default function LieuResidence2() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadGroups = async (user?: UserData) => {
@@ -154,34 +157,6 @@ export default function LieuResidence2() {
     }
   };
 
-  const getDefaultGroups = (): Residence2Group[] => [
-    {
-      id: '1',
-      name: 'Résidents de Conakry Est',
-      description: 'Communauté des résidents de l\'est de Conakry pour échanger et s\'entraider',
-      location: 'Conakry Est',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Dixinn',
-      district: 'Est'
-    },
-    {
-      id: '2',
-      name: 'Voisins de Ratoma',
-      description: 'Organisation de voisinage pour les habitants de Ratoma',
-      location: 'Ratoma',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      neighborhood: 'Ratoma',
-      district: 'Nord'
-    }
-  ];
 
   const joinGroup = async (groupId: string) => {
     try {
@@ -699,7 +674,7 @@ export default function LieuResidence2() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de contenu</label>
                   <select
                     value={newPost.type}
-                    onChange={(e) => setNewPost({...newPost, type: e.target.value as any})}
+                    onChange={(e) => setNewPost({...newPost, type: e.target.value as typeof newPost.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="text">📝 Texte</option>

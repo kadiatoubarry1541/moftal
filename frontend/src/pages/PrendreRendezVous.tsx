@@ -72,6 +72,7 @@ export default function PrendreRendezVous() {
 
   useEffect(() => {
     loadAccount();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [id]);
 
   const loadAccount = async () => {

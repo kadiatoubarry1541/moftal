@@ -3,7 +3,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
 import { config } from '../config/api'
 import { useI18n } from '../i18n/useI18n'
-import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
+import { TermsModal } from '../components/TermsModal';
+import { hasAcceptedTerms } from '../utils/conditionsUtilisation';
 
 export function Login() {
   const [numeroH, setNumeroH] = useState('')
@@ -35,13 +36,14 @@ export function Login() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          const from = (location.state as any)?.from || retour || '/compte'
+          const from = (location.state as { from?: string } | null)?.from || retour || '/compte'
           navigate(from, { replace: true })
           return
         }
       }
     } catch {}
     if (!hasAcceptedTerms()) setShowTerms(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
   const successMessage = (location.state as { message?: string } | null)?.message
 
@@ -62,7 +64,7 @@ export function Login() {
 
   const allerApresConnexion = () => {
     // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
-    const from = (location.state as any)?.from || retour || '/compte'
+    const from = (location.state as { from?: string } | null)?.from || retour || '/compte'
     navigate(from, { replace: true, state: { fromLogin: true } })
   }
 

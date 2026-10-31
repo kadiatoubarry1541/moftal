@@ -11,7 +11,6 @@ import NotificationBell, { InvitationNotifications } from "./components/Notifica
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
-import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
@@ -313,7 +312,7 @@ function App() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [navigate]);
 
   // Recharger le profil dès que la session change (ex: après modification dans EditProfileModal)
   useEffect(() => {
@@ -358,7 +357,7 @@ function App() {
     navigate(pathname + (q ? `?${q}` : ""), { replace: true });
     setPanneauVue("messages");
     setPanneauProOuvert(true);
-  }, [pathname, location.search]);
+  }, [pathname, location.search, navigate]);
   // Dans l'espace du pro : icône d'onglet et titre à son nom, pas ceux de Moftal
   useEffect(() => {
     if (!isEspaceTenant || !proBrand) return;
@@ -374,6 +373,7 @@ function App() {
       anciens.forEach(({ l, href, type }) => { if (href) l.setAttribute("href", href); if (type) l.setAttribute("type", type); });
       document.title = ancienTitre;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [isEspaceTenant, proBrand?.logoUrl, proBrand?.name, proBrand?.color]);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
@@ -411,7 +411,7 @@ function App() {
     const avant = pagePrecedente.current;
     pagePrecedente.current = pathname + location.search;
     if (isVitrineMode) {
-      if ((location.state as any)?.sansRetourGestion) {
+      if ((location.state as { sansRetourGestion?: boolean } | null)?.sansRetourGestion) {
         // Client renvoyé sur le site : il n'a pas accès à la gestion
         ecrireRetourGestion(null);
         setRetourGestion(null);
@@ -424,6 +424,7 @@ function App() {
       ecrireRetourGestion(null);
       setRetourGestion(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [pathname]);
   const isProfilPage = pathname === '/moi/profil';
   // Applis autonomes avec leur propre écran, logo et bouton d'installation —
@@ -648,7 +649,7 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
               {!isEspaceTenant && (
                 <button
-                  onClick={() => navigate(-1 as any)}
+                  onClick={() => navigate(-1)}
                   style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
@@ -682,19 +683,19 @@ function App() {
                   to="/moi/profil"
                   style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "3px 7px 3px 3px", textDecoration: "none", minWidth: 0 }}
                 >
-                  {getPhotoUrl((currentUser as any).photo) ? (
-                    <img src={getPhotoUrl((currentUser as any).photo)!} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }} />
+                  {getPhotoUrl(currentUser.photo) ? (
+                    <img src={getPhotoUrl(currentUser.photo)!} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }} />
                   ) : (
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, border: "2px solid #34d399", flexShrink: 0 }}>
-                      {((currentUser as any).prenom?.[0] || (currentUser as any).nom?.[0] || '?').toUpperCase()}
+                      {(currentUser.prenom?.[0] || currentUser.nom?.[0] || '?').toUpperCase()}
                     </div>
                   )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: "rgba(255,255,255,0.95)", fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
-                      {(currentUser as any).prenom || (currentUser as any).nom || "Profil"}
+                      {currentUser.prenom || currentUser.nom || "Profil"}
                     </div>
                     <div style={{ color: "#34d399", fontSize: 9, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
-                      {getNumeroHForDisplay((currentUser as any).numeroH, true, false)}
+                      {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </div>
                   </div>
                 </Link>

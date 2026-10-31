@@ -7,6 +7,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "../components/PhotosVitrine
 import { usePhotosSite } from "../utils/photosSite";
 import EcrireAuSite from "../components/EcrireAuSite";
 import { useTraduction } from "../i18n/traduction";
+import type { EtablissementPublic, DonneesVitrine, AgentVitrine } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -20,8 +21,8 @@ export default function SecuriteVitrine() {
   const photos = usePhotosSite(tenantCode);
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [agency, setAgency]   = useState<any>(null);
-  const [data, setData]       = useState<any>(null);
+  const [agency, setAgency]   = useState<EtablissementPublic | null>(null);
+  const [data, setData]       = useState<DonneesVitrine<{ agents: AgentVitrine[] }> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
@@ -188,7 +189,7 @@ export default function SecuriteVitrine() {
               <h2 style={{ fontSize: 32, fontWeight: 800, color: "#0f172a" }}>{tr("Nos Agents")}</h2>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-              {agents.map((a: any, i: number) => (
+              {agents.map((a, i) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 14, padding: "20px", textAlign: "center", border: "1px solid #e2e8f0" }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: DARK, margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 18, fontWeight: 700 }}>
                     {(a.prenom || "?").charAt(0)}{(a.nom || "?").charAt(0)}

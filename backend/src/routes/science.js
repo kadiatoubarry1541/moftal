@@ -120,7 +120,7 @@ const handleMulterError = (err, req, res, next) => {
 // @access  Admin ou Utilisateur autorisé
 router.post('/create-post', canPublish, upload.single('media'), handleMulterError, async (req, res) => {
   try {
-    const { title, content, type, category, author, authorName } = req.body;
+    const { title, content, type, category, authorName } = req.body;
     
     console.log('Création de post Science:', {
       title,
@@ -156,7 +156,7 @@ router.post('/create-post', canPublish, upload.single('media'), handleMulterErro
       content: content || '',
       type: type || 'text',
       category: category || 'recentes',
-      author: author || req.user.numeroH,
+      author: req.user.numeroH,
       authorName: authorName || `${req.user.prenom} ${req.user.nomFamille}`
     };
     

@@ -32,6 +32,7 @@ export default function AcheterPoints() {
     const user = getSessionUser()
     if (!user) { navigate('/login'); return }
     charger()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, token])
 
   async function charger() {

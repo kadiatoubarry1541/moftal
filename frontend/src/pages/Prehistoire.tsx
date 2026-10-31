@@ -7,7 +7,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface HistorySection {
@@ -63,6 +63,7 @@ export default function Prehistoire() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadSections = async () => {
@@ -328,7 +329,7 @@ Ces outils témoignent de l'adaptation des populations aux changements climatiqu
               <label className="block text-sm font-semibold text-gray-700 mb-3">Importance historique</label>
               <select
                 value={newSection.importance}
-                onChange={(e) => setNewSection({...newSection, importance: e.target.value as any})}
+                onChange={(e) => setNewSection({...newSection, importance: e.target.value as typeof newSection.importance})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200"
               >
                 <option value="low">Faible</option>

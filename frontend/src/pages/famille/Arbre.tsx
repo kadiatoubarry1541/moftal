@@ -5,13 +5,15 @@ import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
+import type { ChefsArbre, DefuntDetail, DefuntServeur, InfosArbre, PersonneLiee } from '../../types/arbre'
 
 interface UserData {
   numeroH: string
   prenom: string
   nomFamille: string
   genre: 'HOMME' | 'FEMME' | 'AUTRE'
-  [key: string]: any
+  photo?: string
+  [key: string]: unknown
 }
 
 interface PartnerInfo {
@@ -197,14 +199,14 @@ export default function Arbre() {
   const [treeHidden, setTreeHidden] = useState<string[]>([])
 
   // Méta de l'arbre (familyCode, bloodNumber — visible admin)
-  const [treeInfo, setTreeInfo] = useState<any>(null)
+  const [treeInfo, setTreeInfo] = useState<InfosArbre | null>(null)
 
   // Filtre vivants / décédés / tous
   const [filtreArbre, setFiltreArbre] = useState<'vivants' | 'defunts' | 'tous'>('vivants')
 
   // Modal signalement de décès
   const [showDecesModal, setShowDecesModal] = useState(false)
-  const [memberToReport, setMemberToReport] = useState<any>(null)
+  const [memberToReport, setMemberToReport] = useState<PersonneLiee | null>(null)
   const [dateDeces, setDateDeces] = useState('')
   const [anneeDeces, setAnneeDeces] = useState('')
   const [causeDeces, setCauseDeces] = useState('')
@@ -213,11 +215,11 @@ export default function Arbre() {
 
   // Modal détail défunt
   const [showDefuntDetail, setShowDefuntDetail] = useState(false)
-  const [defuntDetail, setDefuntDetail] = useState<any>(null)
+  const [defuntDetail, setDefuntDetail] = useState<DefuntDetail | null>(null)
   const [loadingDefunt, setLoadingDefunt] = useState(false)
 
   // Désignation des chefs de l'arbre (Gérant 1, Gérant 2, Conseiller)
-  const [fund, setFund] = useState<any>(null)
+  const [fund, setFund] = useState<ChefsArbre | null>(null)
   const [showDesignerChefs, setShowDesignerChefs] = useState(false)
   const [newGerant1, setNewGerant1] = useState('')
   const [newGerant2, setNewGerant2] = useState('')
@@ -322,7 +324,7 @@ useEffect(() => {
         const data = await parentsRes.json()
         if (data.success && Array.isArray(data.parents)) {
           setParentsLinks(
-            data.parents.map((p: any) => ({
+            data.parents.map((p: ParentLinkInfo) => ({
               id: p.id,
               parentNumeroH: p.parentNumeroH,
               childNumeroH: p.childNumeroH,
@@ -532,7 +534,7 @@ const enhancedUser: UserData = useMemo(() => {
     }
   }
 
-  const ouvrirDetailDefunt = async (d: any) => {
+  const ouvrirDetailDefunt = async (d: DefuntServeur) => {
     setDefuntDetail(d)
     setShowDefuntDetail(true)
     if (d.numeroHD) {
@@ -583,11 +585,11 @@ const enhancedUser: UserData = useMemo(() => {
       } else if (data.success) {
         setMsgDeces(`✅ ${data.message}`)
         // Mettre à jour treeInfo localement
-        setTreeInfo((prev: any) => {
+        setTreeInfo((prev) => {
           if (!prev) return prev
           return {
             ...prev,
-            members: (prev.members || []).filter((m: any) => m.numeroH !== memberToReport.numeroH),
+            members: (prev.members || []).filter((m) => m.numeroH !== memberToReport.numeroH),
             deceasedMembers: [
               ...(prev.deceasedMembers || []),
               {
@@ -663,7 +665,7 @@ const enhancedUser: UserData = useMemo(() => {
                 conjointNumeroH: user?.numeroH,
                 conjointNomFamille: user?.nomFamille,
                 conjointGenre: user?.genre,
-                conjointPhoto: (user as any)?.photo
+                conjointPhoto: user?.photo
               }}
               cercleCounts={cercleCounts}
               onOpenGallery={openGallery}
@@ -803,7 +805,7 @@ const enhancedUser: UserData = useMemo(() => {
                 {/* Liste membres vivants */}
                 {(filtreArbre === 'vivants' || filtreArbre === 'tous') && (treeInfo.members || []).length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-                    {(treeInfo.members as any[]).map((m: any) => (
+                    {(treeInfo.members || []).map((m) => (
                       <div key={m.numeroH} className="flex flex-col items-center gap-1 rounded-xl border border-emerald-100 bg-emerald-50 p-2 text-center relative">
                         {m.photo
                           ? <img src={m.photo} alt={m.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-emerald-200" />
@@ -827,7 +829,7 @@ const enhancedUser: UserData = useMemo(() => {
                 {/* Liste membres décédés — cliquables pour voir les détails */}
                 {(filtreArbre === 'defunts' || filtreArbre === 'tous') && (treeInfo.deceasedMembers || []).length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-                    {(treeInfo.deceasedMembers as any[]).map((d: any) => (
+                    {(treeInfo.deceasedMembers || []).map((d) => (
                       <button
                         key={d.numeroHD}
                         onClick={() => ouvrirDetailDefunt(d)}

@@ -4,7 +4,7 @@ import { AdminPanel } from "../components/AdminPanel";
 import { AdminCompteFamille } from "../components/AdminCompteFamille";
 import { AdminWalletPro } from "../components/AdminWalletPro";
 import { getSessionUser, isAdmin, isMasterAdmin } from "../utils/auth";
-import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
+import { getStats, getAllUsers, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
 import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
@@ -12,6 +12,8 @@ import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
+import type { UserData } from "../utils/auth";
+import type { ResponsablePage } from "../utils/adminApi";
 
 interface ProfessionalAccount {
   id: string;
@@ -42,18 +44,68 @@ interface ProfessionalAccount {
   planType?: "visibility" | "full" | null;
   /** Code de la gestion interne (absent tant qu'elle n'a pas été créée) */
   tenant_code?: string | null;
+  /** Compte confié à un administrateur de secteur */
+  grantedToSubAdmin?: boolean;
+}
+
+
+
+/** Publication d'une vitrine pro, avec son professionnel (/api/pro-vitrine/admin/all) */
+interface PublicationAdmin {
+  id: string;
+  type: string;
+  titre: string;
+  contenu?: string | null;
+  prix?: string | null;
+  is_active?: boolean;
+  pro_name?: string | null;
+  pro_type?: string | null;
+  pro_city?: string | null;
+}
+
+/** Produit de la place de marché Échanges (/api/exchange/admin/products) */
+interface ProduitEchangeAdmin {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  price?: number | string;
+  currency?: string;
+  location?: string;
+  numeroH?: string;
+  createdBy?: string;
+}
+
+/** Narrateur des récits (Reci) */
+interface Narrateur {
+  numeroH: string;
+  nom?: string;
+  contact?: string;
+  pays?: string;
+  nbRecits?: number;
+}
+
+/** Arbre familial en attente ou activé (/api/admin/arbres-activation) */
+interface ArbreActivation {
+  id: string;
+  familyName: string;
+  memberCount: number;
+  arbreActive: boolean;
+  familyCode?: string | null;
+  bloodNumber?: string | null;
+  activationRef?: string | null;
+  createdAt: string;
+}
+
+interface StatsArbres {
+  total?: number;
+  nbActives?: number;
+  nbInactives?: number;
+  nbEnAttente?: number;
 }
 
 const isFormuleRdv = (p: { planType?: string | null }) => p.planType === "visibility";
 
-interface UserData {
-  numeroH: string;
-  prenom: string;
-  nomFamille: string;
-  role?: string;
-  isAdmin?: boolean;
-  [key: string]: string | number | boolean | undefined;
-}
 
 interface Stats {
   totalUsers: number;
@@ -63,7 +115,7 @@ interface Stats {
   totalDefunts: number;
   totalAdmins: number;
   totalFamilies: number;
-  recentUsers?: any[];
+  recentUsers?: UserData[];
 }
 
 interface CoupleLink {
@@ -106,7 +158,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [recentUsers, setRecentUsers] = useState<UserData[]>([]);
   const [pendingPros, setPendingPros] = useState<ProfessionalAccount[]>([]);
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
   // Compte pro dont l'admin modifie le nom et le logo
@@ -126,7 +178,7 @@ export default function AdminDashboard() {
   const [searchPC, setSearchPC] = useState("");
   const [mySectors, setMySectors] = useState<SectorInfo[]>([]);
   const [sectorAdminOnly, setSectorAdminOnly] = useState(false);
-  const [pageAdmins, setPageAdmins] = useState<any[]>([]);
+  const [pageAdmins, setPageAdmins] = useState<ResponsablePage[]>([]);
   const [pageAdminsLoading, setPageAdminsLoading] = useState(false);
   const [sectorAdminNumeroH, setSectorAdminNumeroH] = useState("");
   const [sectorAdminSector, setSectorAdminSector] = useState<
@@ -141,10 +193,9 @@ export default function AdminDashboard() {
     | "/juridique"
     | "/journalisme"
   >("/sante");
-  const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
-  const [publications, setPublications] = useState<any[]>([]);
+  const [publications, setPublications] = useState<PublicationAdmin[]>([]);
   const [publicationsLoading, setPublicationsLoading] = useState(false);
-  const [exchangeProducts, setExchangeProducts] = useState<any[]>([]);
+  const [exchangeProducts, setExchangeProducts] = useState<ProduitEchangeAdmin[]>([]);
   const [exchangeProductsLoading, setExchangeProductsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -199,6 +250,7 @@ export default function AdminDashboard() {
         navigate("/moi");
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadStats = async () => {
@@ -217,7 +269,7 @@ export default function AdminDashboard() {
     try {
       const response = await getAllUsers({ limit: 5 });
       const users = (response.users || []).filter(
-        (u: any) => u.numeroH !== HIDDEN_MASTER_NUMEROH
+        (u: UserData) => u.numeroH !== HIDDEN_MASTER_NUMEROH
       );
       setRecentUsers(users);
     } catch (error) {
@@ -438,6 +490,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Erreur approbation:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -459,6 +512,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Erreur rejet:', error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -523,7 +577,7 @@ export default function AdminDashboard() {
         ];
         setPageAdmins(
           res.pageAdmins.filter(
-            (pa: any) =>
+            (pa: ResponsablePage) =>
               sectorPaths.includes(pa.pagePath || pa.page_path) &&
               pa.isActive !== false
           )
@@ -561,8 +615,8 @@ export default function AdminDashboard() {
       });
       setSectorAdminNumeroH("");
       loadPageAdmins();
-    } catch (e: any) {
-      alert(e?.message || "Erreur lors de l'ajout.");
+    } catch (e) {
+      alert((e as Error)?.message || "Erreur lors de l'ajout.");
     }
   };
 
@@ -571,8 +625,8 @@ export default function AdminDashboard() {
     try {
       await removePageAdmin(id);
       loadPageAdmins();
-    } catch (e: any) {
-      alert(e?.message || "Erreur.");
+    } catch (e) {
+      alert((e as Error)?.message || "Erreur.");
     }
   };
 
@@ -593,6 +647,7 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Erreur grant/revoke visibility:", error);
+      alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
     }
   };
 
@@ -661,24 +716,7 @@ export default function AdminDashboard() {
     ? allAdminTabs.filter((t) => G0_TABS.includes(t.id))
     : allAdminTabs;
 
-  const SERVICE_GROUPS = [
-    { id: "all",        label: "Tous",       icon: "🌐", types: [] as string[], from: "from-gray-600",   to: "to-gray-700"   },
-    { id: "sante",      label: "Santé",      icon: "🏥", types: ["clinic"],                              from: "from-emerald-600", to: "to-teal-600"  },
-    { id: "securite",   label: "Sécurité",   icon: "🛡️", types: ["security_agency"],                    from: "from-slate-600",   to: "to-gray-700"  },
-    { id: "juridique",  label: "Juridique",  icon: "⚖️", types: ["lawyer", "legal_advisor"],             from: "from-red-900",     to: "to-amber-700" },
-    { id: "education",  label: "Éducation",  icon: "🎓", types: ["school", "enterprise"],               from: "from-amber-500",   to: "to-orange-500"},
-    { id: "science",    label: "Science",    icon: "🔬", types: ["scientist"],                           from: "from-indigo-600",  to: "to-violet-600"},
-    { id: "solidarite", label: "Solidarité", icon: "🤝", types: ["ngo"],                                from: "from-rose-500",    to: "to-pink-600"  },
-    { id: "echanges",   label: "Échanges",   icon: "🔄", types: ["supplier","vendor","producer","broker","journalist"], from: "from-cyan-600", to: "to-blue-600" },
-  ];
 
-  const approvedPros = allPros.filter(p => p.status === "approved");
-  const servicesFiltered = servicesTypeFilter === "all"
-    ? approvedPros
-    : approvedPros.filter(p => {
-        const group = SERVICE_GROUPS.find(g => g.id === servicesTypeFilter);
-        return group ? group.types.includes(p.type) : true;
-      });
 
   const filteredFamilies = families.filter(f =>
     !searchFamily || f.nomFamille.toLowerCase().includes(searchFamily.toLowerCase()) ||
@@ -1386,7 +1424,7 @@ export default function AdminDashboard() {
                       <div className="flex flex-wrap gap-2 self-end sm:self-center">
                         {/* Bouton accorder/retirer visibilité — super admin G7 uniquement */}
                         {isSuperAdmin7(userData) && (
-                          (pro as any).grantedToSubAdmin ? (
+                          pro.grantedToSubAdmin ? (
                             <button
                               onClick={() => handleGrantVisibility(pro.id, false)}
                               className="min-h-[36px] px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
@@ -1405,7 +1443,7 @@ export default function AdminDashboard() {
                           )
                         )}
                         {/* Badge si visible par l'admin délégué */}
-                        {isSuperAdmin7(userData) && (pro as any).grantedToSubAdmin && (
+                        {isSuperAdmin7(userData) && pro.grantedToSubAdmin && (
                           <span className="self-center text-xs text-indigo-700 font-medium">✓ Vu par admin délégué</span>
                         )}
                         {pro.justificatifDocument && (
@@ -2292,7 +2330,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-gray-500">Aucun admin de secteur configuré.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {pageAdmins.map((pa: any) => {
+                    {pageAdmins.map((pa) => {
                       const admin = pa.admin || {};
                       const path = pa.pagePath ?? pa.page_path;
                       const name = pa.pageName ?? pa.page_name ?? path;
@@ -2530,7 +2568,7 @@ function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: str
 
 // ─── Section Narrateurs Reci ─────────────────────────────────────────────────
 function NarateursReciSection({ token, apiBase }: { token: string; apiBase: string }) {
-  const [narrateurs, setNarrateurs] = useState<any[]>([]);
+  const [narrateurs, setNarrateurs] = useState<Narrateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -2541,6 +2579,7 @@ function NarateursReciSection({ token, apiBase }: { token: string; apiBase: stri
       .then(r => r.json())
       .then(d => { if (d.success) setNarrateurs(d.narrateurs || []); })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const filtrés = narrateurs.filter(n =>
@@ -2613,8 +2652,8 @@ function NarateursReciSection({ token, apiBase }: { token: string; apiBase: stri
 
 // ─── Section Arbres Familiaux — Activation ───────────────────────────────────
 function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: string }) {
-  const [arbres, setArbres] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [arbres, setArbres] = useState<ArbreActivation[]>([]);
+  const [stats, setStats] = useState<StatsArbres | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtre, setFiltre] = useState<'tous' | 'actives' | 'inactifs'>('tous');
@@ -2632,6 +2671,7 @@ function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: s
     } finally { setLoading(false); }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   async function activer(treeId: string, activer: boolean) {
@@ -2646,7 +2686,7 @@ function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: s
     } finally { setActionId(null); }
   }
 
-  const fmt = (n: number) => new Date(n).toLocaleDateString('fr-FR');
+  const fmt = (d: string | number) => new Date(d).toLocaleDateString('fr-FR');
 
   const filtrés = arbres
     .filter(a => filtre === 'tous' || (filtre === 'actives' ? a.arbreActive : (!a.arbreActive && a.memberCount >= 5)))

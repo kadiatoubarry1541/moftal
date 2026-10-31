@@ -1,20 +1,23 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import type { EtablissementGestion, ReponseServeur } from "../types/pro";
+import type { ArtisanAnnouncement, ArtisanClient, ArtisanIntervention, ArtisanService, TableauArtisan } from "../types/gestion-artisan";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -50,12 +53,12 @@ export default function GestionArtisan() {
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant]                 = useState<any>(null);
-  const [dash, setDash]                     = useState<any>(null);
-  const [interventions, setInterventions]   = useState<any[]>([]);
-  const [services, setServices]             = useState<any[]>([]);
-  const [clients, setClients]               = useState<any[]>([]);
-  const [announcements, setAnnouncements]   = useState<any[]>([]);
+  const [tenant, setTenant]                 = useState<EtablissementGestion | null>(null);
+  const [dash, setDash]                     = useState<TableauArtisan | null>(null);
+  const [interventions, setInterventions]   = useState<ArtisanIntervention[]>([]);
+  const [services, setServices]             = useState<ArtisanService[]>([]);
+  const [clients, setClients]               = useState<ArtisanClient[]>([]);
+  const [announcements, setAnnouncements]   = useState<ArtisanAnnouncement[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState("");
   const [saving, setSaving]                 = useState(false);
@@ -77,6 +80,7 @@ export default function GestionArtisan() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -85,12 +89,14 @@ export default function GestionArtisan() {
     if (tab === "services")      loadServices();
     if (tab === "clients")       loadClients();
     if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   // Liste des interventions : rechargée aussi quand on change le filtre de statut.
   useEffect(() => {
     if (!tenantCode || loading || tab !== "interventions") return;
     loadInterventions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading, filterStatut]);
 
   async function loadAll() {
@@ -119,11 +125,11 @@ export default function GestionArtisan() {
 
   // Envoi d'un formulaire : en cas de coupure ou de réponse illisible, on renvoie
   // une erreur (jamais de faux succès) et le bouton est toujours débloqué.
-  async function poster(url: string, body: object): Promise<any> {
+  async function poster(url: string, body: object): Promise<ReponseServeur> {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
       if (!r.ok && d.success !== false) return { ...d, success: false };
       return d;
@@ -142,7 +148,7 @@ export default function GestionArtisan() {
   }
 
   async function patchIntervention(id: number, statut: string, cout_reel?: string) {
-    const body: any = { statut };
+    const body: { statut: string; cout_reel?: string } = { statut };
     if (cout_reel !== undefined) body.cout_reel = cout_reel;
     if (!(await envoyerGestion(`${b(tenantCode!)}/interventions/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }))) { return; }
     loadInterventions(); loadAll();
@@ -260,7 +266,7 @@ export default function GestionArtisan() {
           {(dash?.recentInterventions?.length > 0) && (
             <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Dernières interventions</h3>
-              {dash.recentInterventions.map((i: any) => {
+              {dash.recentInterventions.map((i) => {
                 const st = STATUT_INT[i.statut] || STATUT_INT.en_attente;
                 const pr = PRIORITE[i.priorite] || PRIORITE.normale;
                 return (

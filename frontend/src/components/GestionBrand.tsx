@@ -1,5 +1,4 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import type { NavigateFunction } from "react-router-dom";
 import { config } from "../config/api";
 import { useTraduction } from "../i18n/traduction";
 
@@ -37,14 +36,6 @@ export function TenantLogo({ tenantCode, logoUrl, fallback, size = 40, radius = 
   );
 }
 
-/** Seul chemin de retour vers le site Moftal. */
-export function goToMoftal(navigate: NavigateFunction) {
-  if (window.location.hostname.startsWith("gestions.")) {
-    window.location.href = "https://moftal.com/mes-comptes-pro";
-  } else {
-    navigate("/mes-comptes-pro");
-  }
-}
 
 /** Logo Moftal — à utiliser uniquement dans le bouton de retour. */
 export function MoftalMark({ size = 16 }: { size?: number }) {

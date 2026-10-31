@@ -21,6 +21,8 @@ interface UserData {
   generation?: string;
   ethnie?: string;
   region?: string;
+  /** Nom de la région en base (le formulaire lit « region ») */
+  regionOrigine?: string;
   pays?: string;
   nationalite?: string;
   religion?: string;
@@ -45,7 +47,10 @@ interface UserData {
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
   vitrineVideo?: string;
-  [key: string]: any;
+  video?: string;
+  /** Langues parlées, séparées par « ; » */
+  languesAutre?: string;
+  [key: string]: unknown;
 }
 
 interface EditProfileModalProps {
@@ -160,7 +165,7 @@ export default function EditProfileModal({
     }
   }, [open, userData]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     if (formData) {
       setFormData({ ...formData, [field]: value });
     }
@@ -249,7 +254,7 @@ export default function EditProfileModal({
       // 0. Compte provisoire : attribuer d'abord le vrai NuméroH (enregistré en base),
       // puis la suite (photo, vitrine…) se fait avec ce NuméroH.
       let numeroH = formData.numeroH;
-      let completedUser: any = null;
+      let completedUser: UserData | null = null;
       if (provisoire) {
         const manque = [
           !formData.prenom?.trim() && "Prénom",
@@ -405,14 +410,14 @@ export default function EditProfileModal({
         handicap: formData.handicap,
       };
       // Après attribution du NuméroH, on compare au profil tel qu'il vient d'être enregistré
-      const reference: any = completedUser || userData;
+      const reference: UserData | null = completedUser || userData;
       const originalTel = reference?.telephone || reference?.tel1;
       const textChanged = Object.entries(textFields).some(([k, v]) => {
         const before = k === "telephone" || k === "tel1" ? originalTel : reference?.[k];
         return (v ?? "") !== (before ?? "");
       });
 
-      let serverUser: any = completedUser || {};
+      let serverUser: Partial<UserData> = completedUser || {};
       // Champs que le serveur n'a pas pu enregistrer (aucune colonne en base)
       let champsIgnores: string[] = [];
       if (textChanged || preuveFile) {
@@ -445,7 +450,9 @@ export default function EditProfileModal({
       // 4. Construire l'utilisateur final — uniquement à partir de ce que le
       // serveur a enregistré (jamais le formulaire brut : un champ refusé ou
       // ignoré par le serveur ne doit pas paraître enregistré)
-      const base: any = { ...(reference || {}), ...serverUser };
+      // Le profil d'avant (toujours présent : la fenêtre s'ouvre avec lui) complété
+      // par ce que le serveur a enregistré
+      const base: UserData = { ...reference!, ...serverUser };
       const updatedUser: UserData = {
         ...base,
         // Le formulaire lit « region » / « telephone » ; la base les nomme regionOrigine / tel1
@@ -496,8 +503,8 @@ export default function EditProfileModal({
       } else {
         setTimeout(() => onClose(), 1500);
       }
-    } catch (err: any) {
-      const msg = err.message || "";
+    } catch (err) {
+      const msg = (err as Error).message || "";
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed")) {
         setError("La connexion a été coupée pendant l'envoi. Vérifiez votre connexion internet puis réessayez.");
       } else {

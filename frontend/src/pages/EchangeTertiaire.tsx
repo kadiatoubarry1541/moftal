@@ -17,7 +17,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExchangeProduct {

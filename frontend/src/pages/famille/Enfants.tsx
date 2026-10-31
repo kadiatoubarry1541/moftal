@@ -5,14 +5,10 @@ import { AddPersonModal } from '../../components/AddPersonModal'
 import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import { FicheEnfantActions, AnnulerFusionFiche } from '../../components/FicheEnfantActions'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-}
 
 interface ChildLink {
   id: string
@@ -73,7 +69,7 @@ function getToken() {
 type SessionKey = 'avant' | 'paradis' | 'objectif'
 
 // focusNumeroH : ouvre directement la galerie avec cet enfant (clic depuis le Noyau)
-export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
+export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [children, setChildren] = useState<ChildLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -165,7 +161,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
         loadMyChildren()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -258,6 +254,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
     if (!focusNumeroH || !children.length) return
     const match = children.find(c => c.childNumeroH === focusNumeroH)
     if (match && selectedChild?.id !== match.id) setSelectedChild(match)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [focusNumeroH, children])
 
   useEffect(() => {
@@ -268,6 +265,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       setActivities([])
       setChildRatings([])
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedChild?.id])
 
   const handleAddLink = async () => {
@@ -300,7 +298,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       } else {
         alert(data.message || 'Erreur lors de l\'ajout du lien')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -333,7 +331,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -356,10 +354,16 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
       [session]: [...prev[session], optimistic]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaByChapter((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== optimistic.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         const toNumeroH =
           user.numeroH === selectedChild.parentNumeroH ? selectedChild.childNumeroH : selectedChild.parentNumeroH
         const response = await fetch(mediaData.url)
@@ -382,11 +386,13 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média enfant:', data)
+          annuler()
         } else {
           await loadActivitiesForChild(selectedChild)
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média enfant:', e)
+        annuler()
       }
     }
 
@@ -425,7 +431,7 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
           : (data.message || 'Erreur')
         alert(msg)
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau. Vérifiez que le backend tourne sur le port configuré (ex. 5002).')
     } finally {
       setSubmitting(false)

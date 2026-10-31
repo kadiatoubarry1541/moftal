@@ -6,10 +6,11 @@ const config = {
   DB_NAME: process.env.DB_NAME || 'enfants_adam_eve',
   DB_USER: process.env.DB_USER || 'postgres',
   DB_PASSWORD: process.env.DB_PASSWORD || '',
-  // En production, le secret doit venir de l'environnement (la valeur de secours
-  // est connue de tous ceux qui lisent le code : n'importe qui fabriquerait un jeton).
+  // En production, le secret doit venir de l'environnement : la valeur de secours
+  // est connue de tous ceux qui lisent le code (n'importe qui fabriquerait un jeton
+  // d'administrateur). Sans lui, le serveur refuse de démarrer.
   JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
-    ? (console.error('🚨 JWT_SECRET absent en production : définissez-le sur Render !'), 'enfants-adam-dev-only-change-in-production')
+    ? (() => { throw new Error('🚨 JWT_SECRET absent en production : définissez-le chez l\'hébergeur avant de démarrer le serveur.'); })()
     : 'enfants-adam-dev-only-change-in-production'),
   JWT_EXPIRE: process.env.JWT_EXPIRE || '365d',
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 10,

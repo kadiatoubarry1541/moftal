@@ -4,10 +4,6 @@ import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropd
 import { AdCarousel } from '../components/AdCarousel'
 import { useI18n } from '../i18n/useI18n'
 
-interface ServicesProps {
-  onClose?: () => void
-}
-
 interface ServiceItem {
   to: string
   emoji: string
@@ -48,7 +44,7 @@ function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFav
   )
 }
 
-export default function Services({ onClose }: ServicesProps = {}) {
+export default function Services() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [numeroH, setNumeroH] = useState('')

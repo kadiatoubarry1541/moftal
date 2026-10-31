@@ -55,6 +55,7 @@ export function UserDashboard() {
     const handleSessionUpdate = () => loadUserData();
     window.addEventListener("session-updated", handleSessionUpdate);
     return () => window.removeEventListener("session-updated", handleSessionUpdate);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   if (!userData) {

@@ -4,12 +4,13 @@ import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
 import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
+import type { DonServeur } from '../types/compteFamille';
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PoorPerson {
@@ -30,7 +31,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -65,6 +66,8 @@ interface HolyBook {
   createdBy: string;
   createdAt: string;
   reflexions?: string; // Réflexions spécifiques à ce livre
+  /** Version PDF du livre, si disponible */
+  pdfUrl?: string;
 }
 
 export default function Solidarite() {
@@ -75,7 +78,6 @@ export default function Solidarite() {
   const [rawPoorPeople, setRawPoorPeople] = useState<PoorPerson[]>([]);
   const [poorLoadError, setPoorLoadError] = useState('');
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
-  const [gpsActive, setGpsActive] = useState(false);
   const poorPeople = useMemo(() => sortAnyByProximity(rawPoorPeople, userGeo), [rawPoorPeople, userGeo]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [holyBooks, setHolyBooks] = useState<HolyBook[]>([]);
@@ -111,54 +113,6 @@ export default function Solidarite() {
     recipient: ''
   });
 
-  const getDefaultPoorPeople = (): PoorPerson[] => [
-    {
-      id: '1',
-      numeroH: 'POOR001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      age: 65,
-      location: 'Conakry',
-      situation: 'Veuve avec 5 enfants orphelins',
-      needs: ['Nourriture', 'Vêtements', 'Médicaments'],
-      urgency: 'critical',
-      contactInfo: {
-        phone: '+224 123 456 789',
-        address: 'Kaloum, Conakry'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-15T10:00:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 6,
-      occupation: 'Sans emploi',
-      healthCondition: 'Maladie chronique'
-    },
-    {
-      id: '2',
-      numeroH: 'POOR002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      age: 45,
-      location: 'Kindia',
-      situation: 'Handicapé, père de 3 enfants',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation enfants'],
-      urgency: 'high',
-      contactInfo: {
-        phone: '+224 987 654 321',
-        address: 'Centre-ville, Kindia'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-10T14:30:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 4,
-      occupation: 'Vendeur ambulant',
-      healthCondition: 'Handicap physique'
-    }
-  ];
 
   const getDefaultHolyBooks = (): HolyBook[] => [
     {
@@ -275,13 +229,13 @@ export default function Solidarite() {
 
       if (response.ok) {
         const data = await response.json();
-        const dons: Donation[] = (data.dons || []).map((d: any, i: number) => ({
+        const dons: Donation[] = (data.dons || []).map((d: DonServeur, i: number) => ({
           id: String(i),
           donor: userData?.numeroH || '',
           donorName: d.de_nom,
           recipient: '',
           recipientName: d.vers_nom,
-          amount: parseFloat(d.montant),
+          amount: parseFloat(String(d.montant)),
           currency: d.currency,
           type: 'money',
           description: d.description,
@@ -418,7 +372,7 @@ export default function Solidarite() {
         const err = await response.json().catch(() => ({}));
         alert(err.message || 'Erreur lors de la publication');
       }
-    } catch (e) {
+    } catch {
       alert('Erreur de connexion');
     } finally {
       setUploadingBook(false);
@@ -462,6 +416,7 @@ export default function Solidarite() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   // GPS silencieux
@@ -523,7 +478,7 @@ export default function Solidarite() {
                 onClick={() => {
                   if (tab.id === 'zaka') navigate('/zaka');
                   else if (tab.id === 'racines') navigate('/solidarite/racines');
-                  else setActiveTab(tab.id as any);
+                  else setActiveTab(tab.id as typeof activeTab);
                 }}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg font-medium text-[10px] transition-all ${
                   activeTab === tab.id
@@ -554,7 +509,7 @@ export default function Solidarite() {
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setDonsSubTab(tab.id as any)}
+                      onClick={() => setDonsSubTab(tab.id as typeof donsSubTab)}
                       className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                         donsSubTab === tab.id
                           ? 'bg-green-500 text-white shadow-md'
@@ -878,8 +833,8 @@ export default function Solidarite() {
                         >
                           📖 Lire
                         </button>
-                        {(book as any).pdfUrl && (
-                          <a href={(book as any).pdfUrl} target="_blank" rel="noopener noreferrer"
+                        {book.pdfUrl && (
+                          <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer"
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors text-sm text-center">
                             📥 PDF
                           </a>
@@ -942,7 +897,7 @@ export default function Solidarite() {
                 </label>
                 <select
                   value={donationForm.type}
-                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
+                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as typeof donationForm.type})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="money">Argent</option>

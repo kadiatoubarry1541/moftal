@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Route, Routes, useNavigate } from 'react-router-dom'
-import { FAMILLES, ETHNIES, REGIONS, CONTINENT_CODE, PAYS, REGION_CODES, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
+import { FAMILLES, ETHNIES, REGIONS, PAYS, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
 import { Field, FilePicker, Select, SelectCode } from '../../components/inputs'
 import { useI18n } from '../../i18n/useI18n'
 import { anneesEcoulees } from '../../utils/calculs'
@@ -9,15 +9,6 @@ import { DeceasedChoice } from './DeceasedChoice'
 import { DeceasedVideoRegistration } from './DeceasedVideoRegistration'
 import { DeceasedWrittenForm } from './DeceasedWrittenForm'
 import { api } from '../../utils/api'
-import {
-  getContinents,
-  getCountriesByContinent,
-  getRegionsByCountry,
-  getPrefecturesByRegion,
-  getSousPrefecturesByPrefecture,
-  getQuartiersBySousPrefecture,
-  type GeographicLocation
-} from '../../utils/worldGeography'
 
 type EtatDefunt = {
   // page 1
@@ -183,7 +174,7 @@ export function DeceasedWizard() {
       return
     }
     // NuméroHD attribué par le serveur (DM0001, DM0002…)
-    numero = (result as any).deceased?.numeroHD || numero
+    numero = result.deceased?.numeroHD || numero
     complet.numeroHD = numero
     complet.numeroH = numero
     const { password: _pw, confirmPassword: _cpw, ...sansMotDePasse } = complet
@@ -219,7 +210,7 @@ export function DeceasedWizard() {
             <div className="row">
               <div className="col-6"><Field label={t('label.family_father')}><Select value={state.famillePere} onChange={(v)=>set({ famillePere: v })} options={FAMILLES} /></Field></div>
               <div className="col-6"><Field label={t('label.father_firstname')}><input value={state.prenomPere||''} onChange={e=>set({ prenomPere: e.target.value })} /></Field></div>
-              <div className="col-6"><Field label={t('label.father_status')}><Select value={state.pereStatut} onChange={(v)=>set({ pereStatut: v as any })} options={[ { value: 'Vivant', label: t('option.status_alive') }, { value: 'Mort', label: t('option.status_dead') } ]} placeholder={t('option.select_placeholder')} /></Field></div>
+              <div className="col-6"><Field label={t('label.father_status')}><Select value={state.pereStatut} onChange={(v)=>set({ pereStatut: v as 'Vivant' | 'Mort' })} options={[ { value: 'Vivant', label: t('option.status_alive') }, { value: 'Mort', label: t('option.status_dead') } ]} placeholder={t('option.select_placeholder')} /></Field></div>
               <div className="col-6"><Field label={t('label.father_numeroh')}><input value={state.numeroHPere||''} onChange={e=>set({ numeroHPere: e.target.value })} /></Field></div>
               <div className="col-6"><Field label={t('label.family_mother')}><Select value={state.familleMere} onChange={(v)=>set({ familleMere: v })} options={FAMILLES} /></Field></div>
               <div className="col-6"><Field label={t('label.mother_firstname')}><input value={state.prenomMere||''} onChange={e=>set({ prenomMere: e.target.value })} /></Field></div>
@@ -265,7 +256,7 @@ export function DeceasedWizard() {
             </div>
             <div className="row">
               <div className="col-4"><Field label={t('label.origin')}><input value={state.origine||''} onChange={e=>set({ origine: e.target.value })} /></Field></div>
-              <div className="col-4"><Field label={t('label.country')}><SelectCode value={state.pays} onChange={(v)=>set({ pays: v })} options={PAYS as any} /></Field></div>
+              <div className="col-4"><Field label={t('label.country')}><SelectCode value={state.pays} onChange={(v)=>set({ pays: v })} options={PAYS} /></Field></div>
               <div className="col-4"><Field label={t('label.region_origin_select')}><Select value={state.regionOrigine} onChange={(v)=>set({ regionOrigine: v })} options={REGIONS} /></Field></div>
             </div>
             <div className="actions">

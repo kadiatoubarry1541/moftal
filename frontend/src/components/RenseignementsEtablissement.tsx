@@ -1,28 +1,29 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { TenantLogo } from "./GestionBrand";
 import { normaliserLogo } from "../utils/logoImage";
+import type { EtablissementGestion } from "../types/pro";
 
 // Paramètres d'une gestion interne : renseignements de l'établissement (logo,
 // nom, description, contact, horaires, urgence). Enregistrés sur le serveur
 // (PUT <base>/settings) et affichés sur le site de l'établissement.
 const champ: CSSProperties = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, boxSizing: "border-box" };
 const etiquette: CSSProperties = { fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 4 };
-const formulaireDe = (t: any) => ({ name: t?.name || "", description: t?.description || "", phone: t?.phone || "", email: t?.email || "", address: t?.address || "", horaires: t?.horaires || "", phone_urgence: t?.phone_urgence || "" });
+const formulaireDe = (t: Partial<EtablissementGestion> | null) => ({ name: t?.name || "", description: t?.description || "", phone: t?.phone || "", email: t?.email || "", address: t?.address || "", horaires: t?.horaires || "", phone_urgence: t?.phone_urgence || "" });
 
 export default function RenseignementsEtablissement({ base, tenantCode, tenant, couleur, emoji, titre, nomLabel, descriptionAide, horairesAide, onSaved }: {
   /** Préfixe des routes de la gestion, ex. /api/restaurant-mgmt/CODE */
   base: string;
   tenantCode?: string;
-  tenant: any;
+  tenant: EtablissementGestion & { acces_employe?: string | null };
   couleur: string;
   emoji: string;
   titre: string;
   nomLabel: string;
   descriptionAide?: string;
   horairesAide?: string;
-  onSaved: (tenant: any) => void;
+  onSaved: (tenant: EtablissementGestion) => void;
 }) {
-  const [form, setForm] = useState<any>(() => formulaireDe(tenant));
+  const [form, setForm] = useState<ReturnType<typeof formulaireDe> & { logo_url?: string }>(() => formulaireDe(tenant));
   const [envoi, setEnvoi] = useState(false);
   useEffect(() => { setForm(formulaireDe(tenant)); }, [tenant]);
 
@@ -35,13 +36,13 @@ export default function RenseignementsEtablissement({ base, tenantCode, tenant, 
     );
   }
 
-  const set = (cle: string) => (e: { target: { value: string } }) => setForm((f: any) => ({ ...f, [cle]: e.target.value }));
+  const set = (cle: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [cle]: e.target.value }));
   // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const choisirLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    normaliserLogo(file).then(logo => setForm((f: any) => ({ ...f, logo_url: logo }))).catch(err => alert(err.message));
+    normaliserLogo(file).then(logo => setForm((f) => ({ ...f, logo_url: logo }))).catch(err => alert(err.message));
   };
   const enregistrer = async () => {
     if (!(form.name || "").trim()) { alert(`${nomLabel.replace(/ \*$/, "")} : ce champ est obligatoire.`); return; }

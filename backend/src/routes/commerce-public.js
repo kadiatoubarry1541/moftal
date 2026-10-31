@@ -88,11 +88,12 @@ router.post('/:tenantCode/reviews', async (req, res) => {
   try {
     await ensureCommerceReviewsTable();
     const { tenantCode } = req.params;
-    const { nom_auteur, note, commentaire } = req.body;
-    if (!note || note < 1 || note > 5) return res.status(400).json({ success: false, message: 'Note invalide (1 à 5).' });
+    const { nom_auteur, commentaire } = req.body || {};
+    const note = Number(req.body?.note);
+    if (!Number.isInteger(note) || note < 1 || note > 5) return res.status(400).json({ success: false, message: 'Note invalide (1 à 5).' });
     await sequelize.query(
       `INSERT INTO commerce_reviews (tenant_code, nom_auteur, note, commentaire) VALUES (:code,:nom,:note,:com)`,
-      { replacements: { code: tenantCode, nom: nom_auteur || 'Anonyme', note, com: commentaire || null } }
+      { replacements: { code: tenantCode, nom: String(nom_auteur || 'Anonyme').slice(0, 100), note, com: commentaire ? String(commentaire).slice(0, 2000) : null } }
     );
     res.json({ success: true, message: 'Merci ! Votre avis sera visible après modération.' });
   } catch (e) {

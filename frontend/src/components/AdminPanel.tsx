@@ -12,8 +12,9 @@ interface User {
   isVerified: boolean
   role: 'user' | 'admin' | 'super-admin'
   type: 'vivant' | 'defunt'
-  children: any[]
-  parents: any[]
+  /** NuméroH des enfants et des parents */
+  children: string[]
+  parents: string[]
   created_at: string
   lastLogin?: string
   email?: string
@@ -22,6 +23,13 @@ interface User {
 
 // Compte créé par l'inscription rapide (téléphone + mot de passe) : NuméroH provisoire
 const isQuickAccount = (u: User) => (u.numeroH || '').startsWith('TMP-')
+
+/** Famille listée par l'administration (/api/admin/families) */
+interface FamilleAdmin {
+  nomFamille: string
+  memberCount: number
+  members: User[]
+}
 
 interface Stats {
   totalUsers: number
@@ -34,7 +42,7 @@ interface Stats {
 }
 
 interface AdminPanelProps {
-  userData: any
+  userData: { numeroH?: string } | null
 }
 
 export function AdminPanel({ userData: _userData }: AdminPanelProps) {
@@ -42,7 +50,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'users' | 'families' | 'reports' | 'settings' | 'badges' | 'logos'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
-  const [families, setFamilies] = useState<any[]>([])
+  const [families, setFamilies] = useState<FamilleAdmin[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState<string>('all')
@@ -55,6 +63,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
     loadUsers()
     loadStats()
     loadFamilies()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   const loadUsers = async () => {
@@ -67,7 +76,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
         (u: User) => u.numeroH !== HIDDEN_MASTER_NUMEROH
       )
       setUsers(safeUsers)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur lors du chargement des utilisateurs:', err)
       setUsers([])
     } finally {
@@ -126,9 +135,9 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
       await loadStats()
       
       alert(`✅ Utilisateur ${userToDelete.prenom} ${userToDelete.nomFamille} supprimé avec succès`)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la suppression:', error)
-      alert(`❌ Erreur: ${error.message || 'Impossible de supprimer l\'utilisateur'}`)
+      alert(`❌ Erreur: ${(error as Error).message || 'Impossible de supprimer l\'utilisateur'}`)
     }
   }
 
@@ -144,49 +153,13 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
       ))
       
       await loadStats()
-    } catch (error: any) {
-      console.error('Erreur lors de la modification:', error)
-      alert(`❌ Erreur: ${error.message || 'Impossible de modifier le statut'}`)
-    }
-  }
-
-  const handleRemoveChild = async (parentNumeroH: string, childNumeroH: string) => {
-    const parent = users.find(u => u.numeroH === parentNumeroH)
-    const child = users.find(u => u.numeroH === childNumeroH)
-    
-    if (!parent || !child) return
-    
-    const confirmMessage = `Êtes-vous sûr de vouloir retirer ${child.prenom} ${child.nomFamille} (${child.numeroH}) de la famille de ${parent.prenom} ${parent.nomFamille} ?\n\nCette action supprimera le lien familial mais gardera le compte de l'enfant.`
-    
-    if (!confirm(confirmMessage)) return
-    
-    try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_URL}/api/parent-child/link-by-users`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ parentNumeroH, childNumeroH })
-      })
-      const data = await res.json()
-      if (data.success) {
-        await loadUsers()
-        alert(`Lien familial supprimé entre ${parent.prenom} et ${child.prenom}`)
-      } else {
-        alert(`Erreur: ${data.message || 'Impossible de supprimer le lien'}`)
-      }
     } catch (error) {
-      console.error('Erreur lors de la suppression du lien:', error)
-      alert('Erreur réseau lors de la suppression du lien')
+      console.error('Erreur lors de la modification:', error)
+      alert(`❌ Erreur: ${(error as Error).message || 'Impossible de modifier le statut'}`)
     }
   }
 
-  const handleDeleteChild = async (parentNumeroH: string, childNumeroH: string) => {
-    await handleDeleteUser(childNumeroH)
-  }
+
 
   const getRoleBadge = (role: string) => {
     const map: Record<string, { text: string; cls: string }> = {
@@ -459,7 +432,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
         )}
 
         {activeTab === 'badges' && (
-          <BadgeManager userData={_userData} />
+          <BadgeManager />
         )}
 
         {activeTab === 'logos' && (

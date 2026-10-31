@@ -1,19 +1,22 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { SecuriteAnnouncement, SecuriteClient, SecuriteMgmtAgent, SecuriteMission, TableauSecurite } from "../types/gestion-security";
 
 const BASE = (code: string) => `/api/security-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -34,21 +37,20 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 
 export default function GestionSecurite() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
-  const userIsAdmin = isAdmin(user);
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauSecurite | null>(null);
   const [dashError, setDashError] = useState("");
-  const [agents, setAgents] = useState<any[]>([]);
-  const [missions, setMissions] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [agents, setAgents] = useState<SecuriteMgmtAgent[]>([]);
+  const [missions, setMissions] = useState<SecuriteMission[]>([]);
+  const [clients, setClients] = useState<SecuriteClient[]>([]);
+  const [announcements, setAnnouncements] = useState<SecuriteAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -77,6 +79,7 @@ export default function GestionSecurite() {
       if (d?.success) setDash(d);
       else setDashError(d?.message || "Impossible de charger le tableau de bord.");
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -86,13 +89,14 @@ export default function GestionSecurite() {
     if (tab === "missions")     fetch(`${BASE(tenantCode)}/missions`,      { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || []));
     if (tab === "clients")      fetch(`${BASE(tenantCode)}/clients`,       { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || []));
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   const post = async (url: string, body: object) => {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
       if (!r.ok && d.success !== false) return { ...d, success: false };
       return d;
@@ -251,7 +255,7 @@ export default function GestionSecurite() {
             </div>
             {(dash.recentMissions?.length ?? 0) === 0 ? (
               <div style={{ textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: 14 }}>Aucune mission récente</div>
-            ) : dash.recentMissions.map((m: any) => {
+            ) : dash.recentMissions.map((m) => {
               const sc = STATUT_COLORS[m.statut] || { bg: "#f1f5f9", color: "#64748b", label: m.statut };
               return (
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
@@ -309,7 +313,7 @@ export default function GestionSecurite() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: SLATE_BG, color: SLATE, padding: "3px 10px", borderRadius: 6, border: `1px solid ${SLATE_BORDER}` }}>{a.grade}</span>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/agents/${a.id}`, item: a, colonnes: ["nom", "prenom", "telephone", "numero_h", "grade", "zone"], onSaved: (it: any) => setAgents((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/agents/${a.id}`, item: a, colonnes: ["nom", "prenom", "telephone", "numero_h", "grade", "zone"], onSaved: (it) => setAgents((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/agents/${a.id}`))) return; setAgents(as => as.filter(x => x.id !== a.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
@@ -383,7 +387,7 @@ export default function GestionSecurite() {
                       <option value="terminee">Terminée</option>
                       <option value="annulee">Annulée</option>
                     </select>
-                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/missions/${m.id}`, item: m, colonnes: ["agent_id", "agent_nom", "titre", "client_nom", "lieu", "date_debut", "date_fin", "statut", "notes"], onSaved: (it: any) => setMissions((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/missions/${m.id}`, item: m, colonnes: ["agent_id", "agent_nom", "titre", "client_nom", "lieu", "date_debut", "date_fin", "statut", "notes"], onSaved: (it) => setMissions((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                     <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/missions/${m.id}`))) return; setMissions(ms => ms.filter(x => x.id !== m.id)); }}
                       style={{ padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
@@ -432,7 +436,7 @@ export default function GestionSecurite() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: SLATE_BG, color: SLATE, padding: "3px 10px", borderRadius: 6, border: `1px solid ${SLATE_BORDER}` }}>{c.type_contrat}</span>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_contrat"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_contrat"], onSaved: (it) => setClients((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
@@ -479,7 +483,7 @@ export default function GestionSecurite() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it) => setAnnouncements((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver

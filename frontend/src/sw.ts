@@ -1,7 +1,7 @@
 /// <reference lib="WebWorker" />
 /// <reference types="vite-plugin-pwa/client" />
 
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL, matchPrecache } from 'workbox-precaching'
+import { precacheAndRoute, cleanupOutdatedCaches, matchPrecache } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'

@@ -42,6 +42,7 @@ export default function AdminRetraits() {
       return;
     }
     charger();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function charger() {

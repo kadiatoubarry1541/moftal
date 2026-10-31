@@ -1,10 +1,10 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
@@ -12,13 +12,17 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import ParametreLangue from "../components/ParametreLangue";
+import type {
+  ActeDeces, ActeMariage, ActeNaissance, AgentMairie, ChefQuartier, EtablissementMairie,
+  ParametresMairie, ReponseMairie, Residence, StatsMairie, ValidationChef,
+} from "../types/mairie";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 // Appel au serveur qui ne lève jamais d'exception : une panne réseau ou une
 // réponse non JSON devient { success: false, message } pour être affichée.
-type Reponse = { success?: boolean; message?: string; [k: string]: any };
+type Reponse = ReponseMairie;
 async function appeler(url: string, init?: RequestInit): Promise<{ status: number; d: Reponse }> {
   let r: Response;
   try {
@@ -35,7 +39,6 @@ async function appeler(url: string, init?: RequestInit): Promise<{ status: numbe
 }
 
 type Section = "dashboard" | "mariages" | "naissances" | "deces" | "residences" | "chefs_quartier" | "agents" | "settings";
-type Statut = "en_attente" | "en_traitement" | "valide_chef" | "valide" | "rejete";
 
 const ROLES_AGENT = ["Directeur", "Chef de service", "Agent d'état civil", "Secrétaire", "Archiviste", "Comptable", "Autre"];
 const STATUT_LABELS: Record<string, string> = { en_attente: "En attente", en_traitement: "En traitement", valide_chef: "Validé chef quartier", valide: "Validé", rejete: "Rejeté" };
@@ -48,7 +51,6 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const BLUE = "#1d4ed8";
-const BLUE_LIGHT = "#3b82f6";
 const BLUE_DARK = "#1e3a8a";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
@@ -94,62 +96,62 @@ export default function GestionMairie() {
 
   const [section, setSection] = useState<Section>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [tenant, setTenant] = useState<any>(null);
-  const [stats, setStats] = useState<any>({});
-  const [recentMariages, setRecentMariages] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementMairie | null>(null);
+  const [stats, setStats] = useState<StatsMairie>({});
+  const [recentMariages, setRecentMariages] = useState<ActeMariage[]>([]);
   const [loading, setLoading] = useState(true);
   const [accesRefuse, setAccesRefuse] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // Mariages
-  const [mariages, setMariages] = useState<any[]>([]);
+  const [mariages, setMariages] = useState<ActeMariage[]>([]);
   const [mariageSearch, setMariageSearch] = useState("");
   const [mariageStatut, setMariageStatut] = useState("");
   const [showMariageForm, setShowMariageForm] = useState(false);
-  const [editingMariage, setEditingMariage] = useState<any>(null);
-  const [mariageForm, setMariageForm] = useState<any>({});
+  const [editingMariage, setEditingMariage] = useState<ActeMariage | null>(null);
+  const [mariageForm, setMariageForm] = useState<Partial<ActeMariage>>({});
 
   // Naissances
-  const [naissances, setNaissances] = useState<any[]>([]);
+  const [naissances, setNaissances] = useState<ActeNaissance[]>([]);
   const [naissanceSearch, setNaissanceSearch] = useState("");
   const [naissanceStatut, setNaissanceStatut] = useState("");
   const [showNaissanceForm, setShowNaissanceForm] = useState(false);
-  const [editingNaissance, setEditingNaissance] = useState<any>(null);
-  const [naissanceForm, setNaissanceForm] = useState<any>({});
+  const [editingNaissance, setEditingNaissance] = useState<ActeNaissance | null>(null);
+  const [naissanceForm, setNaissanceForm] = useState<Partial<ActeNaissance>>({});
 
   // Décès
-  const [deces, setDeces] = useState<any[]>([]);
+  const [deces, setDeces] = useState<ActeDeces[]>([]);
   const [decesSearch, setDecesSearch] = useState("");
   const [decesStatut, setDecesStatut] = useState("");
   const [showDecesForm, setShowDecesForm] = useState(false);
-  const [editingDeces, setEditingDeces] = useState<any>(null);
-  const [decesForm, setDecesForm] = useState<any>({});
+  const [editingDeces, setEditingDeces] = useState<ActeDeces | null>(null);
+  const [decesForm, setDecesForm] = useState<Partial<ActeDeces>>({});
 
   // Résidences
-  const [residences, setResidences] = useState<any[]>([]);
+  const [residences, setResidences] = useState<Residence[]>([]);
   const [residenceSearch, setResidenceSearch] = useState("");
   const [residenceStatut, setResidenceStatut] = useState("");
   const [showResidenceForm, setShowResidenceForm] = useState(false);
-  const [editingResidence, setEditingResidence] = useState<any>(null);
-  const [residenceForm, setResidenceForm] = useState<any>({});
+  const [editingResidence, setEditingResidence] = useState<Residence | null>(null);
+  const [residenceForm, setResidenceForm] = useState<Partial<Residence>>({});
 
   // Chefs de quartier
-  const [chefsQuartier, setChefsQuartier] = useState<any[]>([]);
+  const [chefsQuartier, setChefsQuartier] = useState<ChefQuartier[]>([]);
   const [showChefForm, setShowChefForm] = useState(false);
-  const [editingChef, setEditingChef] = useState<any>(null);
-  const [chefForm, setChefForm] = useState<any>({});
+  const [editingChef, setEditingChef] = useState<ChefQuartier | null>(null);
+  const [chefForm, setChefForm] = useState<Partial<ChefQuartier>>({});
   const [showChefValidationModal, setShowChefValidationModal] = useState(false);
-  const [validatingResidence, setValidatingResidence] = useState<any>(null);
-  const [chefValidationForm, setChefValidationForm] = useState<any>({});
+  const [validatingResidence, setValidatingResidence] = useState<Residence | null>(null);
+  const [chefValidationForm, setChefValidationForm] = useState<ValidationChef>({});
 
   // Agents
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<AgentMairie[]>([]);
   const [showAgentForm, setShowAgentForm] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<any>(null);
-  const [agentForm, setAgentForm] = useState<any>({});
+  const [editingAgent, setEditingAgent] = useState<AgentMairie | null>(null);
+  const [agentForm, setAgentForm] = useState<Partial<AgentMairie>>({});
 
   // Settings
-  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsForm, setSettingsForm] = useState<ParametresMairie>({});
   const [savingSettings, setSavingSettings] = useState(false);
 
   const showToast = (msg: string, ok = true) => {
@@ -219,6 +221,7 @@ export default function GestionMairie() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     fetchTenant();
     fetchDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [fetchTenant, fetchDashboard]);
 
   useEffect(() => { if (section === "mariages") fetchMariages(); }, [section, fetchMariages]);
@@ -226,15 +229,20 @@ export default function GestionMairie() {
   useEffect(() => { if (section === "deces") fetchDeces(); }, [section, fetchDeces]);
   useEffect(() => { if (section === "residences") fetchResidences(); }, [section, fetchResidences]);
   useEffect(() => { if (section === "chefs_quartier") fetchChefsQuartier(); }, [section, fetchChefsQuartier]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "residences") fetchChefsQuartier(); }, [section]);
   useEffect(() => { if (section === "agents") fetchAgents(); }, [section, fetchAgents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "mariages") fetchMariages(); }, [mariageSearch, mariageStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "naissances") fetchNaissances(); }, [naissanceSearch, naissanceStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "deces") fetchDeces(); }, [decesSearch, decesStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "residences") fetchResidences(); }, [residenceSearch, residenceStatut]);
 
   // ── MARIAGE HANDLERS ──────────────────────────────────────────────────────
-  const openMariageForm = (m?: any) => {
+  const openMariageForm = (m?: ActeMariage) => {
     setEditingMariage(m || null);
     setMariageForm(m ? { ...m } : { epoux_nom: "", epoux_prenom: "", epouse_nom: "", epouse_prenom: "", date_mariage: "", lieu_mariage: "", temoin1_nom: "", temoin2_nom: "", notes: "" });
     setShowMariageForm(true);
@@ -260,7 +268,7 @@ export default function GestionMairie() {
   };
 
   // ── NAISSANCE HANDLERS ────────────────────────────────────────────────────
-  const openNaissanceForm = (n?: any) => {
+  const openNaissanceForm = (n?: ActeNaissance) => {
     setEditingNaissance(n || null);
     setNaissanceForm(n ? { ...n } : { enfant_nom: "", enfant_prenom: "", date_naissance: "", lieu_naissance: "", sexe: "M", pere_nom: "", pere_prenom: "", mere_nom: "", mere_prenom: "", declarant_nom: "", notes: "" });
     setShowNaissanceForm(true);
@@ -286,7 +294,7 @@ export default function GestionMairie() {
   };
 
   // ── DÉCÈS HANDLERS ────────────────────────────────────────────────────────
-  const openDecesForm = (d?: any) => {
+  const openDecesForm = (d?: ActeDeces) => {
     setEditingDeces(d || null);
     setDecesForm(d ? { ...d } : { defunt_nom: "", defunt_prenom: "", date_deces: "", lieu_deces: "", cause_deces: "", declarant_nom: "", declarant_telephone: "", notes: "" });
     setShowDecesForm(true);
@@ -312,7 +320,7 @@ export default function GestionMairie() {
   };
 
   // ── RÉSIDENCE HANDLERS ───────────────────────────────────────────────────
-  const openResidenceForm = (r?: any) => {
+  const openResidenceForm = (r?: Residence) => {
     setEditingResidence(r || null);
     setResidenceForm(r ? { ...r } : { nom: "", prenom: "", adresse: "", depuis_quand: "", motif: "Emploi", notes: "", chef_quartier_id: "", chef_quartier_nom: "", chef_quartier_telephone: "" });
     setShowResidenceForm(true);
@@ -338,7 +346,7 @@ export default function GestionMairie() {
   };
 
   // ── CHEF DE QUARTIER HANDLERS ─────────────────────────────────────────────
-  const openChefForm = (c?: any) => {
+  const openChefForm = (c?: ChefQuartier) => {
     setEditingChef(c || null);
     setChefForm(c ? { ...c } : { nom: "", prenom: "", quartier: "", telephone: "", date_prise_fonction: "" });
     setShowChefForm(true);
@@ -358,7 +366,7 @@ export default function GestionMairie() {
     fetchChefsQuartier();
   };
 
-  const openChefValidation = (residence: any) => {
+  const openChefValidation = (residence: Residence) => {
     setValidatingResidence(residence);
     const chef = chefsQuartier.find(c => c.id === residence.chef_quartier_id);
     setChefValidationForm({
@@ -382,7 +390,7 @@ export default function GestionMairie() {
   };
 
   // ── AGENT HANDLERS ────────────────────────────────────────────────────────
-  const openAgentForm = (a?: any) => {
+  const openAgentForm = (a?: AgentMairie) => {
     setEditingAgent(a || null);
     setAgentForm(a ? { ...a } : { nom: "", prenom: "", role: "Agent d'état civil", telephone: "", email: "" });
     setShowAgentForm(true);
@@ -573,32 +581,32 @@ export default function GestionMairie() {
         <FormModal title={editingMariage ? "Modifier le dossier" : "Nouveau dossier de mariage"} onClose={() => setShowMariageForm(false)} onSave={saveMariage}>
           <div style={{ fontWeight: 700, color: BLUE, fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Époux</div>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={mariageForm.epoux_nom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_nom: e.target.value }))} placeholder="Nom de l'époux" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={mariageForm.epoux_prenom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={mariageForm.epoux_nom || ""} onChange={e => setMariageForm((f) => ({ ...f, epoux_nom: e.target.value }))} placeholder="Nom de l'époux" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={mariageForm.epoux_prenom || ""} onChange={e => setMariageForm((f) => ({ ...f, epoux_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={mariageForm.epoux_ddn || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_ddn: e.target.value }))} /></Field>
-            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={mariageForm.epoux_numero_h || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
+            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={mariageForm.epoux_ddn || ""} onChange={e => setMariageForm((f) => ({ ...f, epoux_ddn: e.target.value }))} /></Field>
+            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={mariageForm.epoux_numero_h || ""} onChange={e => setMariageForm((f) => ({ ...f, epoux_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
           </FieldRow>
           <div style={{ fontWeight: 700, color: "#22a722", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Épouse</div>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_nom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_nom: e.target.value }))} placeholder="Nom de l'épouse" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_prenom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_nom || ""} onChange={e => setMariageForm((f) => ({ ...f, epouse_nom: e.target.value }))} placeholder="Nom de l'épouse" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_prenom || ""} onChange={e => setMariageForm((f) => ({ ...f, epouse_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={mariageForm.epouse_ddn || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_ddn: e.target.value }))} /></Field>
-            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={mariageForm.epouse_numero_h || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
+            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={mariageForm.epouse_ddn || ""} onChange={e => setMariageForm((f) => ({ ...f, epouse_ddn: e.target.value }))} /></Field>
+            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={mariageForm.epouse_numero_h || ""} onChange={e => setMariageForm((f) => ({ ...f, epouse_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
           </FieldRow>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Cérémonie</div>
           <FieldRow>
-            <Field label="Date du mariage *"><input type="date" className={inp} style={inpStyle} value={mariageForm.date_mariage || ""} onChange={e => setMariageForm((f: any) => ({ ...f, date_mariage: e.target.value }))} /></Field>
-            <Field label="Lieu"><input className={inp} style={inpStyle} value={mariageForm.lieu_mariage || ""} onChange={e => setMariageForm((f: any) => ({ ...f, lieu_mariage: e.target.value }))} placeholder="Lieu de la cérémonie" /></Field>
+            <Field label="Date du mariage *"><input type="date" className={inp} style={inpStyle} value={mariageForm.date_mariage || ""} onChange={e => setMariageForm((f) => ({ ...f, date_mariage: e.target.value }))} /></Field>
+            <Field label="Lieu"><input className={inp} style={inpStyle} value={mariageForm.lieu_mariage || ""} onChange={e => setMariageForm((f) => ({ ...f, lieu_mariage: e.target.value }))} placeholder="Lieu de la cérémonie" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Témoin 1"><input className={inp} style={inpStyle} value={mariageForm.temoin1_nom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, temoin1_nom: e.target.value }))} placeholder="Nom du 1er témoin" /></Field>
-            <Field label="Témoin 2"><input className={inp} style={inpStyle} value={mariageForm.temoin2_nom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, temoin2_nom: e.target.value }))} placeholder="Nom du 2e témoin" /></Field>
+            <Field label="Témoin 1"><input className={inp} style={inpStyle} value={mariageForm.temoin1_nom || ""} onChange={e => setMariageForm((f) => ({ ...f, temoin1_nom: e.target.value }))} placeholder="Nom du 1er témoin" /></Field>
+            <Field label="Témoin 2"><input className={inp} style={inpStyle} value={mariageForm.temoin2_nom || ""} onChange={e => setMariageForm((f) => ({ ...f, temoin2_nom: e.target.value }))} placeholder="Nom du 2e témoin" /></Field>
           </FieldRow>
-          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as any} value={mariageForm.notes || ""} onChange={e => setMariageForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
+          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as React.CSSProperties} value={mariageForm.notes || ""} onChange={e => setMariageForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
         </FormModal>
       )}
     </div>
@@ -663,31 +671,31 @@ export default function GestionMairie() {
         <FormModal title={editingNaissance ? "Modifier la déclaration" : "Nouvelle déclaration de naissance"} onClose={() => setShowNaissanceForm(false)} onSave={saveNaissance}>
           <div style={{ fontWeight: 700, color: "#22a722", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Enfant</div>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_nom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, enfant_nom: e.target.value }))} placeholder="Nom de l'enfant" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_prenom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, enfant_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_nom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, enfant_nom: e.target.value }))} placeholder="Nom de l'enfant" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_prenom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, enfant_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Date de naissance *"><input type="date" className={inp} style={inpStyle} value={naissanceForm.date_naissance || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, date_naissance: e.target.value }))} /></Field>
-            <Field label="Lieu de naissance"><input className={inp} style={inpStyle} value={naissanceForm.lieu_naissance || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, lieu_naissance: e.target.value }))} placeholder="Ville / Hôpital" /></Field>
+            <Field label="Date de naissance *"><input type="date" className={inp} style={inpStyle} value={naissanceForm.date_naissance || ""} onChange={e => setNaissanceForm((f) => ({ ...f, date_naissance: e.target.value }))} /></Field>
+            <Field label="Lieu de naissance"><input className={inp} style={inpStyle} value={naissanceForm.lieu_naissance || ""} onChange={e => setNaissanceForm((f) => ({ ...f, lieu_naissance: e.target.value }))} placeholder="Ville / Hôpital" /></Field>
           </FieldRow>
           <Field label="Sexe">
-            <select className={inp} style={inpStyle} value={naissanceForm.sexe || "M"} onChange={e => setNaissanceForm((f: any) => ({ ...f, sexe: e.target.value }))}>
+            <select className={inp} style={inpStyle} value={naissanceForm.sexe || "M"} onChange={e => setNaissanceForm((f) => ({ ...f, sexe: e.target.value }))}>
               <option value="M">Masculin</option>
               <option value="F">Féminin</option>
             </select>
           </Field>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Père</div>
           <FieldRow>
-            <Field label="Nom du père"><input className={inp} style={inpStyle} value={naissanceForm.pere_nom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, pere_nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom du père"><input className={inp} style={inpStyle} value={naissanceForm.pere_prenom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, pere_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom du père"><input className={inp} style={inpStyle} value={naissanceForm.pere_nom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, pere_nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom du père"><input className={inp} style={inpStyle} value={naissanceForm.pere_prenom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, pere_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Mère</div>
           <FieldRow>
-            <Field label="Nom de la mère"><input className={inp} style={inpStyle} value={naissanceForm.mere_nom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, mere_nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom de la mère"><input className={inp} style={inpStyle} value={naissanceForm.mere_prenom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, mere_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom de la mère"><input className={inp} style={inpStyle} value={naissanceForm.mere_nom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, mere_nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom de la mère"><input className={inp} style={inpStyle} value={naissanceForm.mere_prenom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, mere_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
-          <Field label="Déclarant"><input className={inp} style={inpStyle} value={naissanceForm.declarant_nom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, declarant_nom: e.target.value }))} placeholder="Nom de la personne qui déclare" /></Field>
-          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as any} value={naissanceForm.notes || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
+          <Field label="Déclarant"><input className={inp} style={inpStyle} value={naissanceForm.declarant_nom || ""} onChange={e => setNaissanceForm((f) => ({ ...f, declarant_nom: e.target.value }))} placeholder="Nom de la personne qui déclare" /></Field>
+          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as React.CSSProperties} value={naissanceForm.notes || ""} onChange={e => setNaissanceForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
         </FormModal>
       )}
     </div>
@@ -748,25 +756,25 @@ export default function GestionMairie() {
         <FormModal title={editingDeces ? "Modifier la déclaration" : "Nouvelle déclaration de décès"} onClose={() => setShowDecesForm(false)} onSave={saveDeces}>
           <div style={{ fontWeight: 700, color: "#6366f1", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Défunt(e)</div>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={decesForm.defunt_nom || ""} onChange={e => setDecesForm((f: any) => ({ ...f, defunt_nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={decesForm.defunt_prenom || ""} onChange={e => setDecesForm((f: any) => ({ ...f, defunt_prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={decesForm.defunt_nom || ""} onChange={e => setDecesForm((f) => ({ ...f, defunt_nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={decesForm.defunt_prenom || ""} onChange={e => setDecesForm((f) => ({ ...f, defunt_prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={decesForm.defunt_ddn || ""} onChange={e => setDecesForm((f: any) => ({ ...f, defunt_ddn: e.target.value }))} /></Field>
-            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={decesForm.defunt_numero_h || ""} onChange={e => setDecesForm((f: any) => ({ ...f, defunt_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
+            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={decesForm.defunt_ddn || ""} onChange={e => setDecesForm((f) => ({ ...f, defunt_ddn: e.target.value }))} /></Field>
+            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={decesForm.defunt_numero_h || ""} onChange={e => setDecesForm((f) => ({ ...f, defunt_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
           </FieldRow>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Informations du décès</div>
           <FieldRow>
-            <Field label="Date du décès *"><input type="date" className={inp} style={inpStyle} value={decesForm.date_deces || ""} onChange={e => setDecesForm((f: any) => ({ ...f, date_deces: e.target.value }))} /></Field>
-            <Field label="Lieu du décès"><input className={inp} style={inpStyle} value={decesForm.lieu_deces || ""} onChange={e => setDecesForm((f: any) => ({ ...f, lieu_deces: e.target.value }))} placeholder="Hôpital / Domicile / Ville" /></Field>
+            <Field label="Date du décès *"><input type="date" className={inp} style={inpStyle} value={decesForm.date_deces || ""} onChange={e => setDecesForm((f) => ({ ...f, date_deces: e.target.value }))} /></Field>
+            <Field label="Lieu du décès"><input className={inp} style={inpStyle} value={decesForm.lieu_deces || ""} onChange={e => setDecesForm((f) => ({ ...f, lieu_deces: e.target.value }))} placeholder="Hôpital / Domicile / Ville" /></Field>
           </FieldRow>
-          <Field label="Cause du décès"><input className={inp} style={inpStyle} value={decesForm.cause_deces || ""} onChange={e => setDecesForm((f: any) => ({ ...f, cause_deces: e.target.value }))} placeholder="Cause (si connue)" /></Field>
+          <Field label="Cause du décès"><input className={inp} style={inpStyle} value={decesForm.cause_deces || ""} onChange={e => setDecesForm((f) => ({ ...f, cause_deces: e.target.value }))} placeholder="Cause (si connue)" /></Field>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Déclarant</div>
           <FieldRow>
-            <Field label="Nom du déclarant"><input className={inp} style={inpStyle} value={decesForm.declarant_nom || ""} onChange={e => setDecesForm((f: any) => ({ ...f, declarant_nom: e.target.value }))} placeholder="Nom complet" /></Field>
-            <Field label="Téléphone"><input className={inp} style={inpStyle} value={decesForm.declarant_telephone || ""} onChange={e => setDecesForm((f: any) => ({ ...f, declarant_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
+            <Field label="Nom du déclarant"><input className={inp} style={inpStyle} value={decesForm.declarant_nom || ""} onChange={e => setDecesForm((f) => ({ ...f, declarant_nom: e.target.value }))} placeholder="Nom complet" /></Field>
+            <Field label="Téléphone"><input className={inp} style={inpStyle} value={decesForm.declarant_telephone || ""} onChange={e => setDecesForm((f) => ({ ...f, declarant_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
           </FieldRow>
-          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as any} value={decesForm.notes || ""} onChange={e => setDecesForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
+          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as React.CSSProperties} value={decesForm.notes || ""} onChange={e => setDecesForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
         </FormModal>
       )}
     </div>
@@ -844,31 +852,31 @@ export default function GestionMairie() {
         <FormModal title={editingResidence ? "Modifier la demande" : "Nouvelle demande de résidence"} onClose={() => setShowResidenceForm(false)} onSave={saveResidence}>
           <div style={{ fontWeight: 700, color: "#0891b2", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Demandeur</div>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={residenceForm.nom || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={residenceForm.prenom || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={residenceForm.nom || ""} onChange={e => setResidenceForm((f) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={residenceForm.prenom || ""} onChange={e => setResidenceForm((f) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <FieldRow>
-            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={residenceForm.date_naissance || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, date_naissance: e.target.value }))} /></Field>
-            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={residenceForm.numero_h || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
+            <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={residenceForm.date_naissance || ""} onChange={e => setResidenceForm((f) => ({ ...f, date_naissance: e.target.value }))} /></Field>
+            <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={residenceForm.numero_h || ""} onChange={e => setResidenceForm((f) => ({ ...f, numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
           </FieldRow>
           <div style={{ fontWeight: 700, color: "#64748b", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Résidence</div>
-          <Field label="Adresse complète *"><input className={inp} style={inpStyle} value={residenceForm.adresse || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, adresse: e.target.value }))} placeholder="Quartier, rue, numéro…" /></Field>
+          <Field label="Adresse complète *"><input className={inp} style={inpStyle} value={residenceForm.adresse || ""} onChange={e => setResidenceForm((f) => ({ ...f, adresse: e.target.value }))} placeholder="Quartier, rue, numéro…" /></Field>
           <FieldRow>
             <Field label="Réside depuis">
-              <input className={inp} style={inpStyle} value={residenceForm.depuis_quand || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, depuis_quand: e.target.value }))} placeholder="Ex: Janvier 2020" />
+              <input className={inp} style={inpStyle} value={residenceForm.depuis_quand || ""} onChange={e => setResidenceForm((f) => ({ ...f, depuis_quand: e.target.value }))} placeholder="Ex: Janvier 2020" />
             </Field>
             <Field label="Motif de la demande">
-              <select className={inp} style={inpStyle} value={residenceForm.motif || "Emploi"} onChange={e => setResidenceForm((f: any) => ({ ...f, motif: e.target.value }))}>
+              <select className={inp} style={inpStyle} value={residenceForm.motif || "Emploi"} onChange={e => setResidenceForm((f) => ({ ...f, motif: e.target.value }))}>
                 {MOTIFS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </Field>
           </FieldRow>
-          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as any} value={residenceForm.notes || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
+          <Field label="Notes"><textarea className={inp} style={{ ...inpStyle, resize: "vertical", minHeight: 60 } as React.CSSProperties} value={residenceForm.notes || ""} onChange={e => setResidenceForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Observations…" /></Field>
           <div style={{ fontWeight: 700, color: "#92400e", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em", borderTop: "1px solid #fef9c3", paddingTop: 12 }}>Chef de quartier</div>
           <Field label="Sélectionner un chef de quartier (optionnel)">
             <select className={inp} style={inpStyle} value={residenceForm.chef_quartier_id || ""} onChange={e => {
               const chef = chefsQuartier.find(c => String(c.id) === e.target.value);
-              setResidenceForm((f: any) => ({ ...f, chef_quartier_id: e.target.value || null, chef_quartier_nom: chef ? `${chef.prenom} ${chef.nom}`.trim() : f.chef_quartier_nom, chef_quartier_telephone: chef?.telephone || f.chef_quartier_telephone }));
+              setResidenceForm((f) => ({ ...f, chef_quartier_id: e.target.value || null, chef_quartier_nom: chef ? `${chef.prenom} ${chef.nom}`.trim() : f.chef_quartier_nom, chef_quartier_telephone: chef?.telephone || f.chef_quartier_telephone }));
             }}>
               <option value="">-- Choisir un chef de quartier --</option>
               {chefsQuartier.filter(c => c.is_active).map(c => (
@@ -878,8 +886,8 @@ export default function GestionMairie() {
           </Field>
           {!residenceForm.chef_quartier_id && (
             <FieldRow>
-              <Field label="Nom du chef (manuel)"><input className={inp} style={inpStyle} value={residenceForm.chef_quartier_nom || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, chef_quartier_nom: e.target.value }))} placeholder="Nom complet du chef de quartier" /></Field>
-              <Field label="Téléphone chef"><input className={inp} style={inpStyle} value={residenceForm.chef_quartier_telephone || ""} onChange={e => setResidenceForm((f: any) => ({ ...f, chef_quartier_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
+              <Field label="Nom du chef (manuel)"><input className={inp} style={inpStyle} value={residenceForm.chef_quartier_nom || ""} onChange={e => setResidenceForm((f) => ({ ...f, chef_quartier_nom: e.target.value }))} placeholder="Nom complet du chef de quartier" /></Field>
+              <Field label="Téléphone chef"><input className={inp} style={inpStyle} value={residenceForm.chef_quartier_telephone || ""} onChange={e => setResidenceForm((f) => ({ ...f, chef_quartier_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
             </FieldRow>
           )}
         </FormModal>
@@ -899,15 +907,15 @@ export default function GestionMairie() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={labelStyle}>Nom du chef de quartier *</label>
-                <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.chef_quartier_nom || ""} onChange={e => setChefValidationForm((f: any) => ({ ...f, chef_quartier_nom: e.target.value }))} placeholder="Nom complet" />
+                <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.chef_quartier_nom || ""} onChange={e => setChefValidationForm((f) => ({ ...f, chef_quartier_nom: e.target.value }))} placeholder="Nom complet" />
               </div>
               <div>
                 <label style={labelStyle}>Téléphone du chef</label>
-                <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.chef_quartier_telephone || ""} onChange={e => setChefValidationForm((f: any) => ({ ...f, chef_quartier_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" />
+                <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.chef_quartier_telephone || ""} onChange={e => setChefValidationForm((f) => ({ ...f, chef_quartier_telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" />
               </div>
               <div>
                 <label style={labelStyle}>Décision</label>
-                <select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.valide ? "oui" : "non"} onChange={e => setChefValidationForm((f: any) => ({ ...f, valide: e.target.value === "oui" }))}>
+                <select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={chefValidationForm.valide ? "oui" : "non"} onChange={e => setChefValidationForm((f) => ({ ...f, valide: e.target.value === "oui" }))}>
                   <option value="oui">✓ Le chef confirme la résidence</option>
                   <option value="non">✗ Le chef infirme / annule</option>
                 </select>
@@ -968,17 +976,17 @@ export default function GestionMairie() {
       {showChefForm && (
         <FormModal title={editingChef ? "Modifier le chef de quartier" : "Enregistrer un chef de quartier"} onClose={() => setShowChefForm(false)} onSave={saveChef}>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={chefForm.nom || ""} onChange={e => setChefForm((f: any) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom"><input className={inp} style={inpStyle} value={chefForm.prenom || ""} onChange={e => setChefForm((f: any) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={chefForm.nom || ""} onChange={e => setChefForm((f) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom"><input className={inp} style={inpStyle} value={chefForm.prenom || ""} onChange={e => setChefForm((f) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
-          <Field label="Quartier *"><input className={inp} style={inpStyle} value={chefForm.quartier || ""} onChange={e => setChefForm((f: any) => ({ ...f, quartier: e.target.value }))} placeholder="Nom du quartier" /></Field>
+          <Field label="Quartier *"><input className={inp} style={inpStyle} value={chefForm.quartier || ""} onChange={e => setChefForm((f) => ({ ...f, quartier: e.target.value }))} placeholder="Nom du quartier" /></Field>
           <FieldRow>
-            <Field label="Téléphone"><input className={inp} style={inpStyle} value={chefForm.telephone || ""} onChange={e => setChefForm((f: any) => ({ ...f, telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
-            <Field label="Date de prise de fonction"><input type="date" className={inp} style={inpStyle} value={chefForm.date_prise_fonction ? chefForm.date_prise_fonction.slice(0, 10) : ""} onChange={e => setChefForm((f: any) => ({ ...f, date_prise_fonction: e.target.value }))} /></Field>
+            <Field label="Téléphone"><input className={inp} style={inpStyle} value={chefForm.telephone || ""} onChange={e => setChefForm((f) => ({ ...f, telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
+            <Field label="Date de prise de fonction"><input type="date" className={inp} style={inpStyle} value={chefForm.date_prise_fonction ? chefForm.date_prise_fonction.slice(0, 10) : ""} onChange={e => setChefForm((f) => ({ ...f, date_prise_fonction: e.target.value }))} /></Field>
           </FieldRow>
           {editingChef && (
             <Field label="Statut">
-              <select className={inp} style={inpStyle} value={chefForm.is_active ? "true" : "false"} onChange={e => setChefForm((f: any) => ({ ...f, is_active: e.target.value === "true" }))}>
+              <select className={inp} style={inpStyle} value={chefForm.is_active ? "true" : "false"} onChange={e => setChefForm((f) => ({ ...f, is_active: e.target.value === "true" }))}>
                 <option value="true">Actif</option>
                 <option value="false">Inactif</option>
               </select>
@@ -1033,21 +1041,21 @@ export default function GestionMairie() {
       {showAgentForm && (
         <FormModal title={editingAgent ? "Modifier l'agent" : "Ajouter un agent"} onClose={() => setShowAgentForm(false)} onSave={saveAgent}>
           <FieldRow>
-            <Field label="Nom *"><input className={inp} style={inpStyle} value={agentForm.nom || ""} onChange={e => setAgentForm((f: any) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
-            <Field label="Prénom *"><input className={inp} style={inpStyle} value={agentForm.prenom || ""} onChange={e => setAgentForm((f: any) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
+            <Field label="Nom *"><input className={inp} style={inpStyle} value={agentForm.nom || ""} onChange={e => setAgentForm((f) => ({ ...f, nom: e.target.value }))} placeholder="Nom" /></Field>
+            <Field label="Prénom *"><input className={inp} style={inpStyle} value={agentForm.prenom || ""} onChange={e => setAgentForm((f) => ({ ...f, prenom: e.target.value }))} placeholder="Prénom" /></Field>
           </FieldRow>
           <Field label="Rôle">
-            <select className={inp} style={inpStyle} value={agentForm.role || ""} onChange={e => setAgentForm((f: any) => ({ ...f, role: e.target.value }))}>
+            <select className={inp} style={inpStyle} value={agentForm.role || ""} onChange={e => setAgentForm((f) => ({ ...f, role: e.target.value }))}>
               {ROLES_AGENT.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </Field>
           <FieldRow>
-            <Field label="Téléphone"><input className={inp} style={inpStyle} value={agentForm.telephone || ""} onChange={e => setAgentForm((f: any) => ({ ...f, telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
-            <Field label="Email"><input type="email" className={inp} style={inpStyle} value={agentForm.email || ""} onChange={e => setAgentForm((f: any) => ({ ...f, email: e.target.value }))} placeholder="email@mairie.gn" /></Field>
+            <Field label="Téléphone"><input className={inp} style={inpStyle} value={agentForm.telephone || ""} onChange={e => setAgentForm((f) => ({ ...f, telephone: e.target.value }))} placeholder="+224 6XX XX XX XX" /></Field>
+            <Field label="Email"><input type="email" className={inp} style={inpStyle} value={agentForm.email || ""} onChange={e => setAgentForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@mairie.gn" /></Field>
           </FieldRow>
           {editingAgent && (
             <Field label="Statut">
-              <select className={inp} style={inpStyle} value={agentForm.is_active ? "true" : "false"} onChange={e => setAgentForm((f: any) => ({ ...f, is_active: e.target.value === "true" }))}>
+              <select className={inp} style={inpStyle} value={agentForm.is_active ? "true" : "false"} onChange={e => setAgentForm((f) => ({ ...f, is_active: e.target.value === "true" }))}>
                 <option value="true">Actif</option>
                 <option value="false">Inactif</option>
               </select>
@@ -1080,32 +1088,32 @@ export default function GestionMairie() {
                   e.target.value = "";
                   if (!file) return;
                   normaliserLogo(file)
-                    .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+                    .then(logo => setSettingsForm((f) => ({ ...f, logo_url: logo })))
                     .catch(err => alert(err.message));
                 }} />
             </div>
           </div>
           <div>
             <label style={labelStyle}>Nom de la mairie</label>
-            <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} placeholder="Mairie de …" />
+            <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f) => ({ ...f, name: e.target.value }))} placeholder="Mairie de …" />
           </div>
           <div>
             <label style={labelStyle}>Adresse</label>
-            <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} placeholder="Adresse complète" />
+            <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f) => ({ ...f, address: e.target.value }))} placeholder="Adresse complète" />
           </div>
           <FieldRow>
             <div>
               <label style={labelStyle}>Téléphone</label>
-              <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} placeholder="+224 6XX XX XX XX" />
+              <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+224 6XX XX XX XX" />
             </div>
             <div>
               <label style={labelStyle}>Email</label>
-              <input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} placeholder="contact@mairie.gn" />
+              <input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f) => ({ ...f, email: e.target.value }))} placeholder="contact@mairie.gn" />
             </div>
           </FieldRow>
           <div>
             <label style={labelStyle}>Description</label>
-            <textarea className={inp} style={{ ...inpStyle, marginTop: 4, resize: "vertical", minHeight: 80 } as any} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} placeholder="Présentation de la mairie…" />
+            <textarea className={inp} style={{ ...inpStyle, marginTop: 4, resize: "vertical", minHeight: 80 } as React.CSSProperties} value={settingsForm.description || ""} onChange={e => setSettingsForm((f) => ({ ...f, description: e.target.value }))} placeholder="Présentation de la mairie…" />
           </div>
           <button onClick={saveSettings} disabled={savingSettings} style={{ background: BLUE, color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontWeight: 700, fontSize: 14, cursor: savingSettings ? "not-allowed" : "pointer", opacity: savingSettings ? 0.7 : 1, alignSelf: "flex-start" }}>
             {savingSettings ? "Sauvegarde…" : "Sauvegarder"}

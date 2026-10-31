@@ -1,10 +1,9 @@
-﻿import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
-import { config } from '../../config/api'
 import { uploadForRegistration } from '../../utils/uploadMedia'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
-import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
+import { ETHNIES, FAMILLES } from '../../utils/constants'
 import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
 import ActiviteChoix from '../../components/ActiviteChoix'
 import { calculateGeneration, genererNumeroH } from '../../utils/numeroHIdentite'
@@ -291,8 +290,8 @@ export function WrittenRegistration() {
 
     // Les fichiers activitePreuve/activiteDoc sont volumineux et facultatifs
     // → on ne les envoie pas lors de l'inscription pour ne pas alourdir le payload
-    const activitePreuveBase64 = null
-    const activiteDocBase64 = null
+    const activitePreuveBase64: string | null = null
+    const activiteDocBase64: string | null = null
 
     // Upload photo vers ImageKit
     let photoUrl = normalizedForm.photoPreview || null
@@ -327,7 +326,7 @@ export function WrittenRegistration() {
     // Le compte n'existe que s'il est enregistré dans la base : jamais de
     // « faux » compte gardé seulement dans le téléphone si le serveur échoue.
     try {
-      const result = await api.registerLiving(completeData as any)
+      const result = await api.registerLiving(completeData)
 
       if (result.success) {
         const user = result.user || completeData
@@ -349,11 +348,11 @@ export function WrittenRegistration() {
       // → on essaie de connecter la personne avec ce qu'elle vient de saisir.
       const identifiant = data.email?.trim() || data.telephone?.trim() || ''
       const loginResult = identifiant
-        ? await api.login(identifiant, data.password).catch(() => null)
+        ? await api.login(identifiant, data.password).catch((): null => null)
         : null
       if (loginResult?.success) {
         // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
-        showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, data.password)
+        showCredentialsReminder(loginResult.user?.numeroH || numeroH, data.password)
         navigate('/compte')
       } else {
         alert(result.message || "L'inscription n'a pas pu être enregistrée. Réessayez.")

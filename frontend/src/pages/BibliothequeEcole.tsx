@@ -4,7 +4,6 @@ import { config } from "../config/api";
 import { CarteLivre, type Livre } from "../components/ecole/CoursEtBibliotheque";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
-import { cheminAppEcole } from "../utils/appEcole";
 import { cheminConnexion } from "../utils/connexionRetour";
 
 // Bibliothèque de l'école, pour ses membres (enseignants, élèves, parents) :
@@ -28,6 +27,7 @@ export default function BibliothequeEcole({ mode = "school" }: { mode?: "school"
       .then(async (r) => ({ ok: r.ok, d: await r.json().catch(() => ({})) }))
       .then(({ ok, d }) => { if (ok && d.success) { setEcole(d.ecole); setLivres(d.livres); } else setErreur(d.message || "Accès refusé."); })
       .catch(() => setErreur("Erreur de connexion. Réessayez."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode, navigate]);
 
   const q = recherche.trim().toLowerCase();

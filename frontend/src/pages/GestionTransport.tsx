@@ -3,17 +3,21 @@ import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import { useTraduction, trHors } from "../i18n/traduction";
+import type { EtablissementGestion } from "../types/pro";
+import type { TableauTransport, TransportAnnouncement, TransportBooking, TransportDelivery, TransportDriver, TransportTrip, TransportVehicle } from "../types/gestion-transport";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -43,14 +47,14 @@ export default function GestionTransport() {
   const code = tenantCode!;
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [trips, setTrips] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [deliveries, setDeliveries] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauTransport | null>(null);
+  const [vehicles, setVehicles] = useState<TransportVehicle[]>([]);
+  const [drivers, setDrivers] = useState<TransportDriver[]>([]);
+  const [trips, setTrips] = useState<TransportTrip[]>([]);
+  const [bookings, setBookings] = useState<TransportBooking[]>([]);
+  const [deliveries, setDeliveries] = useState<TransportDelivery[]>([]);
+  const [announcements, setAnnouncements] = useState<TransportAnnouncement[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [accessError, setAccessError] = useState("");
@@ -95,7 +99,7 @@ export default function GestionTransport() {
   useEffect(() => {
     if (!token()) { navigate(cheminConnexion(), { replace: true }); return; }
     loadAll();
-  }, [loadAll]);
+  }, [loadAll, navigate]);
 
   // VEHICLES
   const addVehicle = async () => {
@@ -255,7 +259,7 @@ export default function GestionTransport() {
             {dash.recentTrips?.length > 0 && (
               <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20 }}>
                 <h3 style={{ margin: "0 0 16px", color: BLUE, fontSize: 16 }}>{tr("Derniers trajets")}</h3>
-                {dash.recentTrips.map((t: any) => (
+                {dash.recentTrips.map((t) => (
                   <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{t.lieu_depart} → {t.lieu_arrivee}</div>
@@ -530,7 +534,7 @@ export default function GestionTransport() {
                       </div>
                       {liv.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{tr("Colis :")} {liv.description}</div>}
                       <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                        {liv.poids > 0 && <span>⚖️ {liv.poids} kg</span>}
+                        {+liv.poids > 0 && <span>⚖️ {liv.poids} kg</span>}
                         {liv.montant > 0 && <span>💰 {liv.montant.toLocaleString()} GNF</span>}
                         {liv.chauffeur_nom && <span>👤 {liv.chauffeur_nom}</span>}
                         {liv.vehicule_immat && <span>🚌 {liv.vehicule_immat}</span>}

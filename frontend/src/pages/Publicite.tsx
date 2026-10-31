@@ -11,6 +11,17 @@ const PUB_ASPECT = 4
 const PUB_OUTPUT_WIDTH = 1200
 const PUB_OUTPUT_HEIGHT = 300
 
+
+interface MaPublicite {
+  /** Calculé par le serveur : publié et pas encore expiré (vrai, ou « t » selon la base) */
+  en_ligne?: boolean | string;
+  expire_le?: string | null;
+  id: string;
+  image_url?: string | null;
+  raison_refus?: string | null;
+  statut?: string | null;
+  titre?: string | null;
+}
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
 const STATUT_INFO: Record<string, { label: string; bg: string; text: string }> = {
@@ -27,7 +38,7 @@ export default function Publicite() {
   const [prix, setPrix] = useState<number | null>(null)
   const [zone, setZone] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mesPublicites, setMesPublicites] = useState<any[]>([])
+  const [mesPublicites, setMesPublicites] = useState<MaPublicite[]>([])
   const [onglet, setOnglet] = useState<'publier' | 'mes-publicites'>('publier')
   const [showPayment, setShowPayment] = useState(false)
   const [payingId, setPayingId] = useState('')
@@ -49,6 +60,7 @@ export default function Publicite() {
         .then(r => r.json()).then(d => { if (d.success) { setPrix(d.prix); setZone(d.zone); } }),
       chargerMesPublicites(),
     ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   async function chargerMesPublicites() {

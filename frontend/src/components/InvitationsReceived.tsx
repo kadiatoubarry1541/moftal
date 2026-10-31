@@ -44,8 +44,8 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
       const invitation = await InvitationManager.acceptInvitation(invitationId)
       await Promise.all([loadInvitations(), loadNotifications()])
       alert(tr("Vous avez accepté l'invitation de {nom}", { nom: invitation.fromName }))
-    } catch (err: any) {
-      alert(tr(err?.message || "Erreur : la réponse n'a pas été enregistrée."))
+    } catch (err) {
+      alert(tr((err as Error)?.message || "Erreur : la réponse n'a pas été enregistrée."))
     }
   }
 
@@ -54,8 +54,8 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
       const invitation = await InvitationManager.declineInvitation(invitationId)
       await Promise.all([loadInvitations(), loadNotifications()])
       alert(tr("Vous avez refusé l'invitation de {nom}", { nom: invitation.fromName }))
-    } catch (err: any) {
-      alert(tr(err?.message || "Erreur : la réponse n'a pas été enregistrée."))
+    } catch (err) {
+      alert(tr((err as Error)?.message || "Erreur : la réponse n'a pas été enregistrée."))
     }
   }
 

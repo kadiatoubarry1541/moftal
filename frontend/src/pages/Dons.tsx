@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { DonServeur } from '../types/compteFamille';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PoorPerson {
@@ -27,7 +28,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -92,6 +93,7 @@ export default function Solidarite() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadData = async () => {
@@ -146,13 +148,13 @@ export default function Solidarite() {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
-        setDonations((data.dons || []).map((d: any, i: number): Donation => ({
+        setDonations((data.dons || []).map((d: DonServeur, i: number): Donation => ({
           id: `${d.created_at || ''}-${i}`,
           donor: userData?.numeroH || '',
           donorName: d.de_nom || '',
           recipient: '',
           recipientName: d.vers_nom || '',
-          amount: parseFloat(d.montant) || 0,
+          amount: parseFloat(String(d.montant)) || 0,
           currency: d.currency || 'GNF',
           type: 'money',
           description: d.description || '',
@@ -168,122 +170,6 @@ export default function Solidarite() {
     }
   };
 
-  const getDefaultPoorPeople = (): PoorPerson[] => [
-    {
-      id: '1',
-      numeroH: 'POOR001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      age: 65,
-      location: 'Conakry',
-      situation: 'Veuve avec 5 enfants orphelins',
-      needs: ['Nourriture', 'Vêtements', 'Médicaments'],
-      urgency: 'critical',
-      contactInfo: {
-        phone: '+224 123 456 789',
-        address: 'Kaloum, Conakry'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-15T10:00:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 6,
-      occupation: 'Sans emploi',
-      healthCondition: 'Maladie chronique'
-    },
-    {
-      id: '2',
-      numeroH: 'POOR002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      age: 45,
-      location: 'Kindia',
-      situation: 'Handicapé, père de 3 enfants',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation enfants'],
-      urgency: 'high',
-      contactInfo: {
-        phone: '+224 987 654 321',
-        address: 'Centre-ville, Kindia'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-10T14:30:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 4,
-      occupation: 'Vendeur ambulant',
-      healthCondition: 'Handicap physique'
-    },
-    {
-      id: '3',
-      numeroH: 'POOR003',
-      prenom: 'Mariama',
-      nomFamille: 'Bah',
-      age: 35,
-      location: 'Kankan',
-      situation: 'Mère célibataire avec 4 enfants',
-      needs: ['Nourriture', 'Vêtements enfants', 'Loyer'],
-      urgency: 'medium',
-      contactInfo: {
-        phone: '+224 555 123 456',
-        address: 'Quartier populaire, Kankan'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-05T09:15:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 5,
-      occupation: 'Femme de ménage',
-      healthCondition: 'Bon'
-    },
-    {
-      id: '4',
-      numeroH: 'POOR004',
-      prenom: 'Ousmane',
-      nomFamille: 'Barry',
-      age: 70,
-      location: 'Labé',
-      situation: 'Vieux sans famille',
-      needs: ['Nourriture', 'Médicaments', 'Soins médicaux'],
-      urgency: 'high',
-      contactInfo: {
-        address: 'Vieux quartier, Labé'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-12T16:45:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 1,
-      occupation: 'Sans emploi',
-      healthCondition: 'Problèmes de vue'
-    },
-    {
-      id: '5',
-      numeroH: 'POOR005',
-      prenom: 'Aminata',
-      nomFamille: 'Sow',
-      age: 28,
-      location: 'N\'Zérékoré',
-      situation: 'Famille nombreuse, père malade',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation'],
-      urgency: 'medium',
-      contactInfo: {
-        phone: '+224 777 888 999',
-        address: 'Banlieue, N\'Zérékoré'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-08T11:20:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 8,
-      occupation: 'Étudiante',
-      healthCondition: 'Bon'
-    }
-  ];
 
   const handleDonation = (poorPerson: PoorPerson) => {
     setSelectedPoorPerson(poorPerson);
@@ -407,7 +293,7 @@ export default function Solidarite() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-green-500 text-white shadow-md'
@@ -624,7 +510,7 @@ export default function Solidarite() {
                 </label>
                 <select
                   value={donationForm.type}
-                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
+                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as typeof donationForm.type})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="money">Argent</option>

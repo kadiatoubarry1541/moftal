@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../i18n/useI18n';
 import { useTraduction } from '../i18n/traduction';
 import ProSection from '../components/ProSection';
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
@@ -13,7 +12,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface SecurityAgent {
@@ -37,7 +36,7 @@ interface SecurityAgent {
   isActive: boolean;
   isAvailable: boolean;
   rating?: number;
-  reviews?: any[];
+  reviews?: unknown[];
   hourlyRate?: number;
 }
 
@@ -58,7 +57,6 @@ export default function Securite() {
   const [locationCheckResult, setLocationCheckResult] = useState<{ safetyLevel?: string; recommendations?: string[] } | null>(null);
   const [locationCheckLoading, setLocationCheckLoading] = useState(false);
   const navigate = useNavigate();
-  const { t } = useI18n();
   const { tr } = useTraduction();
 
   // Re-tri réactif quand GPS arrive
@@ -92,6 +90,7 @@ export default function Securite() {
 
   useEffect(() => {
     if (userCountry) loadAgents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userCountry, activeTab]);
 
   // GPS silencieux
@@ -130,109 +129,6 @@ export default function Securite() {
     }
   };
 
-  const getDefaultAgents = (): SecurityAgent[] => {
-    const defaultAgents: SecurityAgent[] = [
-      {
-        id: '1',
-        name: 'Capitaine Mamadou Diallo',
-        agency: 'Police Nationale',
-        badgeNumber: 'PN-001234',
-        country: 'Guinée',
-        region: 'Conakry',
-        city: 'Conakry',
-        address: 'Commissariat Central, Kaloum',
-        phone: '+224 621 12 34 56',
-        emergencyPhone: '+224 621 12 34 57',
-        email: 'm.diallo@police.gn',
-        specialties: ['Sécurité publique', 'Enquêtes'],
-        experience: 15,
-        isActive: true,
-        isAvailable: true,
-        rating: 4.5
-      },
-      {
-        id: '2',
-        name: 'Lieutenant Fatoumata Bah',
-        agency: 'Gendarmerie Nationale',
-        badgeNumber: 'GN-005678',
-        country: 'Guinée',
-        region: 'Conakry',
-        city: 'Conakry',
-        address: 'Gendarmerie, Dixinn',
-        phone: '+224 622 23 45 67',
-        emergencyPhone: '+224 622 23 45 68',
-        specialties: ['Sécurité routière', 'Ordre public'],
-        experience: 12,
-        isActive: true,
-        isAvailable: true,
-        rating: 4.3
-      },
-      {
-        id: '3',
-        name: 'Adjudant Ibrahima Camara',
-        agency: 'Sapeurs-Pompiers',
-        badgeNumber: 'SP-009012',
-        country: 'Guinée',
-        region: 'Conakry',
-        city: 'Conakry',
-        address: 'Caserne Centrale, Matam',
-        phone: '+224 623 34 56 78',
-        emergencyPhone: '+224 18',
-        specialties: ['Incendie', 'Secours d\'urgence'],
-        experience: 20,
-        isActive: true,
-        isAvailable: true,
-        rating: 4.8
-      },
-      {
-        id: '4',
-        name: 'Agent Alpha Barry',
-        agency: 'Agent de Sécurité Privée',
-        badgeNumber: 'ASP-001',
-        country: 'Guinée',
-        region: 'Conakry',
-        city: 'Conakry',
-        address: 'Zone industrielle',
-        phone: '+224 624 45 67 89',
-        specialties: ['Surveillance', 'Protection'],
-        experience: 8,
-        isActive: true,
-        isAvailable: true,
-        rating: 4.2
-      },
-      {
-        
-        id: '5',
-        name: 'Capitaine Aissatou Diallo',
-        agency: 'Police Nationale',
-        badgeNumber: 'PN-002345',
-        country: 'Guinée',
-        region: 'Fouta-Djallon',
-        city: 'Labé',
-        address: 'Commissariat de Labé',
-        phone: '+224 625 56 78 90',
-        emergencyPhone: '+224 625 56 78 91',
-        specialties: ['Sécurité publique'],
-        experience: 10,
-        isActive: true,
-        isAvailable: true,
-        rating: 4.4
-      }
-    ];
-
-    // Filtrer par type d'agence selon l'onglet actif
-    const agencyFilter: Record<string, string> = {
-      'policiers': 'Police Nationale',
-      'gendarmes': 'Gendarmerie Nationale',
-      'pompiers': 'Sapeurs-Pompiers',
-      'agents': 'Agent de Sécurité Privée'
-    };
-
-    return defaultAgents.filter(agent => {
-      if (activeTab === 'agents') return (agent.agency || '').includes('Sécurité Privée');
-      return agent.agency === agencyFilter[activeTab];
-    }).map(a => ({ ...a, country: a.country || 'Guinée' }));
-  };
 
   const agencyFilter: Record<string, string | ((a: SecurityAgent) => boolean)> = {
     'policiers': 'Police Nationale',

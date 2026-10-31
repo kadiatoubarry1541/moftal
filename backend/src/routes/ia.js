@@ -1580,7 +1580,7 @@ router.post('/chat', authenticate, async function(req, res) {
 });
 
 // POST /api/ia/log
-router.post('/log', async function(req, res) {
+router.post('/log', authenticate, async function(req, res) {
   try {
     var body = req.body || {};
     var sessionId = body.sessionId;
@@ -1592,8 +1592,8 @@ router.post('/log', async function(req, res) {
     }
     await IaConversation.create({
       sessionId: sessionId || null,
-      userMessage: question,
-      botResponse: response,
+      userMessage: String(question).slice(0, 5000),
+      botResponse: String(response).slice(0, 20000),
       source: source || 'professeur_ia',
     });
     return res.json({ success: true, message: 'Conversation IA enregistree.' });

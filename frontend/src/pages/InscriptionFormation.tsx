@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ErreurChargement from "../components/ErreurChargement";
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -7,7 +8,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Formation {
@@ -17,8 +18,10 @@ interface Formation {
   category: string;
   duration: number;
   level: string;
-  requirements: any;
-  curriculum: any[];
+  /** Conditions d'inscription (texte ou liste, selon la formation) */
+  requirements: unknown;
+  /** Modules du programme */
+  curriculum: string[];
   isActive: boolean;
   createdBy: string;
   maxStudents: number;
@@ -32,18 +35,10 @@ interface Formation {
   skills?: string[];
 }
 
-interface RegistrationRequest {
-  id: string;
-  formationId: string;
-  numeroH: string;
-  message: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-}
 
 export default function InscriptionFormation() {
+  // Le serveur n'a pas répondu : on l'affiche (jamais de fausses données)
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [formations, setFormations] = useState<Formation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,102 +90,16 @@ export default function InscriptionFormation() {
         const data = await response.json();
         setFormations(data.formations || []);
       } else {
-        setFormations(getDefaultFormations());
+        setFormations([]); setErreurChargement(true);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des formations:', error);
-      setFormations(getDefaultFormations());
+      setFormations([]); setErreurChargement(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultFormations = (): Formation[] => [
-    {
-      id: '1',
-      title: 'Développement Web Full Stack',
-      description: 'Formation complète en développement web avec React, Node.js et PostgreSQL',
-      category: 'tertiaire',
-      duration: 6,
-      level: 'intermédiaire',
-      requirements: { prerequis: 'Connaissances de base en programmation' },
-      curriculum: ['HTML/CSS', 'JavaScript', 'React', 'Node.js', 'PostgreSQL'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 30,
-      price: 500000,
-      instructor: 'Dr. Alpha Barry',
-      startDate: '2024-01-15',
-      endDate: '2024-07-15',
-      schedule: 'Lundi, Mercredi, Vendredi 18h-20h',
-      location: 'Centre de Formation Tech, Conakry',
-      prerequisites: ['JavaScript de base', 'HTML/CSS'],
-      skills: ['React', 'Node.js', 'PostgreSQL', 'API REST']
-    },
-    {
-      id: '2',
-      title: 'Gestion de Projet',
-      description: 'Apprendre les méthodologies de gestion de projet',
-      category: 'professionnel',
-      duration: 3,
-      level: 'débutant',
-      requirements: { prerequis: 'Aucun prérequis' },
-      curriculum: ['Planification', 'Suivi', 'Communication'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 25,
-      price: 300000,
-      instructor: 'Prof. Fatoumata Diallo',
-      startDate: '2024-02-01',
-      endDate: '2024-05-01',
-      schedule: 'Samedi 9h-12h',
-      location: 'Institut de Management, Conakry',
-      prerequisites: [],
-      skills: ['Planification', 'Gestion d\'équipe', 'Communication']
-    },
-    {
-      id: '3',
-      title: 'Marketing Digital',
-      description: 'Formation complète en marketing digital et réseaux sociaux',
-      category: 'professionnel',
-      duration: 4,
-      level: 'débutant',
-      requirements: { prerequis: 'Aucun prérequis' },
-      curriculum: ['SEO', 'Réseaux sociaux', 'Publicité en ligne', 'Analytics'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 20,
-      price: 400000,
-      instructor: 'Mme. Aminata Traoré',
-      startDate: '2024-03-01',
-      endDate: '2024-07-01',
-      schedule: 'Dimanche 14h-17h',
-      location: 'Centre de Formation Digital, Conakry',
-      prerequisites: [],
-      skills: ['SEO', 'Publicité en ligne', 'Analyse d\'audience', 'Content Marketing']
-    },
-    {
-      id: '4',
-      title: 'Comptabilité Générale',
-      description: 'Formation en comptabilité générale et gestion financière',
-      category: 'tertiaire',
-      duration: 5,
-      level: 'intermédiaire',
-      requirements: { prerequis: 'Mathématiques de base' },
-      curriculum: ['Comptabilité générale', 'Fiscalité', 'Audit', 'Gestion financière'],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      maxStudents: 25,
-      price: 450000,
-      instructor: 'M. Mamadou Bah',
-      startDate: '2024-01-20',
-      endDate: '2024-06-20',
-      schedule: 'Mardi, Jeudi 18h-20h',
-      location: 'École de Commerce, Conakry',
-      prerequisites: ['Mathématiques de base'],
-      skills: ['Comptabilité', 'Fiscalité', 'Audit', 'Excel']
-    }
-  ];
 
   const registerToFormation = async () => {
     if (!selectedFormation || !registrationData.numeroH.trim()) {
@@ -269,6 +178,7 @@ export default function InscriptionFormation() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadFormations(); }} />
       <button
         onClick={() => window.history.back()}
         className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"

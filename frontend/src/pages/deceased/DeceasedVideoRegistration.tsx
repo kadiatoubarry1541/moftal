@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
-import { FAMILLES, ETHNIES, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
+import { FAMILLES, ETHNIES } from '../../utils/constants'
 import { api } from '../../utils/api'
 import { uploadForRegistration } from '../../utils/uploadMedia'
 
@@ -152,7 +152,7 @@ export function DeceasedVideoRegistration() {
       }
 
       // 4. Appel backend → crée le DeceasedMember en base de données
-      const result = await api.registerDeceased(completeData as any)
+      const result = await api.registerDeceased(completeData)
 
       if (result.success) {
         const numeroHD = result.deceased?.numeroHD || ''

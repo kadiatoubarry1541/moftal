@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
+import type { MessageGroupe, PermissionPublication } from "../types/groupes";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -11,7 +12,7 @@ interface UserData {
   nomFamille: string;
   regionOrigine?: string;
   pays?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface RegionGroup {
@@ -57,13 +58,13 @@ export default function FoutaDjallon() {
   const [selectedGroup, setSelectedGroup] = useState<RegionGroup | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<MessageGroupe[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [showPermissionForm, setShowPermissionForm] = useState(false);
   const [permissionNumeroH, setPermissionNumeroH] = useState('');
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<PermissionPublication[]>([]);
   const [showMembersList, setShowMembersList] = useState(false);
   const navigate = useNavigate();
 
@@ -122,6 +123,7 @@ export default function FoutaDjallon() {
         loadPermissions();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup]);
 
   const loadGroups = async () => {
@@ -244,9 +246,9 @@ export default function FoutaDjallon() {
         const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi du message' }));
         alert(error.message || 'Erreur lors de l\'envoi du message');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      alert(error.message || 'Erreur lors de l\'envoi du message');
+      alert((error as Error).message || 'Erreur lors de l\'envoi du message');
     }
   };
 
@@ -304,9 +306,9 @@ export default function FoutaDjallon() {
       setPermissionNumeroH('');
       setShowPermissionForm(false);
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'attribution de la permission:', error);
-      alert(error.message || 'Erreur lors de l\'attribution de la permission');
+      alert((error as Error).message || 'Erreur lors de l\'attribution de la permission');
     }
   };
 
@@ -328,89 +330,13 @@ export default function FoutaDjallon() {
       
       alert('Permission révoquée avec succès');
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la révocation de la permission:', error);
-      alert(error.message || 'Erreur lors de la révocation de la permission');
+      alert((error as Error).message || 'Erreur lors de la révocation de la permission');
     }
   };
 
-  const getDefaultGroups = (): RegionGroup[] => [
-    {
-      id: '1',
-      name: 'Labé Connect',
-      description: 'Communauté des habitants de Labé pour échanger et préserver nos traditions',
-      region: 'Fouta-Djallon',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Labé',
-      district: 'Labé'
-    },
-    {
-      id: '2',
-      name: 'Mamou Solidarité',
-      description: 'Organisation de Mamou pour le développement et l\'entraide communautaire',
-      region: 'Fouta-Djallon',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Mamou',
-      district: 'Mamou'
-    },
-    {
-      id: '3',
-      name: 'Pita Traditions',
-      description: 'Communauté de Pita pour partager nos traditions et cultures',
-      region: 'Fouta-Djallon',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Pita',
-      district: 'Pita'
-    },
-    {
-      id: '4',
-      name: 'Dalaba Montagne',
-      description: 'Organisation de Dalaba pour célébrer notre région montagneuse',
-      region: 'Fouta-Djallon',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Dalaba',
-      district: 'Dalaba'
-    }
-  ];
 
-  const joinGroup = async (groupId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/groups/${groupId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ numeroH: userData?.numeroH })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Erreur lors de l\'adhésion au Organisation');
-      }
-      alert(data.message || 'Vous avez rejoint le Organisation !');
-      loadGroups();
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de l\'adhésion au Organisation');
-    }
-  };
 
 
   const createEvent = async () => {
@@ -437,9 +363,9 @@ export default function FoutaDjallon() {
       setShowEventForm(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'événement');
+      alert((error as Error).message || 'Erreur lors de la création de l\'événement');
     }
   };
 
@@ -467,9 +393,9 @@ export default function FoutaDjallon() {
       setShowAnnouncementForm(false);
       setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'annonce');
+      alert((error as Error).message || 'Erreur lors de la création de l\'annonce');
     }
   };
 
@@ -952,7 +878,7 @@ export default function FoutaDjallon() {
                   <div className="flex gap-2">
                     <select
                       value={newMessage.category}
-                      onChange={(e) => setNewMessage({...newMessage, category: e.target.value as any})}
+                      onChange={(e) => setNewMessage({...newMessage, category: e.target.value as typeof newMessage.category})}
                       className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                     >
                       <option value="information">ℹ️ Information</option>
@@ -966,7 +892,7 @@ export default function FoutaDjallon() {
                     <div className="flex gap-2 flex-1">
                       <select
                         value={newMessage.messageType}
-                        onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
+                        onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as typeof newMessage.messageType, mediaFile: null})}
                         className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                       >
                         <option value="text">📝</option>

@@ -8,11 +8,11 @@ import CoordonneesSite from "./CoordonneesSite";
 import { TenantCodeCard } from "./GestionBrand";
 import ParametreLangue from "./ParametreLangue";
 import { useTraduction } from "../i18n/traduction";
-import {
-  DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
-  type PublishModal, type ProfilModal,
-} from "./EspaceProModals";
+import { PublierModal, ProfilModalComp, type PublishModal, type ProfilModal } from "./EspaceProModals";
+import { DEFAULT_PUB_FORM, getTypeInfo } from "./espaceProTypes";
 import { CommandesRecues } from "./CommanderProduit";
+import type { MessageDuSite } from "../types/vitrine";
+import type { CompteProfessionnel, PublicationPro } from "../types/pro";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -23,7 +23,7 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\
 // d'une boutique, devis…) : enregistrés en base, suivis ici.
 function MessagesDuSite({ tenantCode, onRetour, onNombre }: { tenantCode: string; onRetour: () => void; onNombre: (n: number) => void }) {
   const { tr } = useTraduction();
-  const [demandes, setDemandes] = useState<any[] | null>(null);
+  const [demandes, setDemandes] = useState<MessageDuSite[] | null>(null);
   const [erreur, setErreur] = useState("");
   const auth = { Authorization: `Bearer ${localStorage.getItem("token") || ""}`, "Content-Type": "application/json" };
   const charger = () => fetch(`${API}/api/site-mgmt/${encodeURIComponent(tenantCode)}/demandes`, { headers: auth })
@@ -31,7 +31,7 @@ function MessagesDuSite({ tenantCode, onRetour, onNombre }: { tenantCode: string
     .then(d => {
       if (!d.success) { setErreur(d.message || "Messages indisponibles."); return; }
       setDemandes(d.demandes || []);
-      onNombre((d.demandes || []).filter((x: any) => x.statut === "nouveau").length);
+      onNombre((d.demandes || []).filter((x: MessageDuSite) => x.statut === "nouveau").length);
     })
     .catch(() => setErreur("Connexion impossible : les messages n'ont pas pu être chargés."));
   useEffect(() => { charger(); }, [tenantCode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -89,13 +89,13 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
   useEffect(() => {
     fetch(`${API}/api/site-mgmt/${encodeURIComponent(tenantCode)}/demandes`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } })
       .then(r => r.json())
-      .then(d => { if (d.success) setNouveauxMessages((d.demandes || []).filter((x: any) => x.statut === "nouveau").length); })
+      .then(d => { if (d.success) setNouveauxMessages((d.demandes || []).filter((x: MessageDuSite) => x.statut === "nouveau").length); })
       .catch(() => {});
   }, [tenantCode]);
   const token = localStorage.getItem("token") || "";
   const currentUser = getSessionUser();
 
-  const [account, setAccount] = useState<any>(null);
+  const [account, setAccount] = useState<CompteProfessionnel | null>(null);
   const [erreur, setErreur] = useState("");
   const [publishModal, setPublishModal] = useState<PublishModal | null>(null);
   const [profilModal, setProfilModal] = useState<ProfilModal | null>(null);
@@ -108,11 +108,12 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
       .then(r => r.json())
       .then(d => { if (d.success && d.account) setAccount(d.account); else setErreur(d.message || "Compte introuvable."); })
       .catch(() => setErreur("Erreur de connexion au serveur."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   // ─── Publications ──────────────────────────────────────────────────────────
 
-  async function fetchPubs(accountId: string): Promise<any[]> {
+  async function fetchPubs(accountId: string): Promise<PublicationPro[]> {
     try {
       const r = await fetch(`${API}/api/pro-vitrine/${accountId}/publications`);
       const d = await r.json();
@@ -188,7 +189,8 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
       const d = await r.json();
       if (d.success) {
         const logoChange = profilModal.form.photo !== (account?.photo || "");
-        setAccount((a: any) => ({ ...a, ...profilModal.form }));
+        // Le serveur garde le logo si le champ arrive vide : l'écran aussi
+        setAccount((a) => (a ? { ...a, ...profilModal.form, photo: profilModal.form.photo || a.photo } : a));
         setProfilModal(null);
         // Nouveau logo : on recharge pour qu'il soit le même partout dans la gestion
         if (logoChange) window.location.reload();

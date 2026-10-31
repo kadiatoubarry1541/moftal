@@ -8,11 +8,10 @@ import PaymentModal from "../components/PaymentModal";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { cheminConnexion } from "../utils/connexionRetour";
-import {
-  ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
-  type PublishModal, type ProfilModal,
-} from "../components/EspaceProModals";
+import { PublierModal, ProfilModalComp, OffreGestionInterne, type PublishModal, type ProfilModal } from "../components/EspaceProModals";
+import { ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo } from "../components/espaceProTypes";
 import { CommandesRecues } from "../components/CommanderProduit";
+import type { AccesGestionInterne, CompteProfessionnel, ProfilAffiche, PublicationPro, TenantGestion } from "../types/pro";
 
 // En prod, frontend et backend sont sur des domaines différents : un chemin relatif
 // "/api/..." atterrit sur le frontend lui-même (et échoue silencieusement). L'URL doit
@@ -35,7 +34,7 @@ function LogoCompte({ tenantCode, logoUrl, name, type, size, radius }: {
 
 // La formule de CE compte inclut-elle la Gestion Interne (site client, connexion de clients) ?
 // 'visibility' = Visibilité + Rendez-vous : non, sauf Gestion Interne payée en cours.
-function compteAvecGestion(a: any): boolean {
+function compteAvecGestion(a: CompteProfessionnel | null | undefined): boolean {
   if (a?.planType !== "visibility") return true;
   const fin = a?.gestionInterneValidUntil ? new Date(a.gestionInterneValidUntil) : null;
   return !!fin && fin.getTime() > Date.now();
@@ -47,21 +46,21 @@ export default function GestionInterne() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [accounts, setAccounts]         = useState<any[]>([]);
-  const [adminTenants, setAdminTenants] = useState<any[]>([]);
+  const [accounts, setAccounts]         = useState<CompteProfessionnel[]>([]);
+  const [adminTenants, setAdminTenants] = useState<TenantGestion[]>([]);
   const [loading, setLoading]           = useState(true);
   // Échec du chargement des comptes : ce n'est PAS « aucun compte » → on propose de réessayer.
   const [erreurComptes, setErreurComptes] = useState(false);
   const [search, setSearch]             = useState("");
-  const [accesGI, setAccesGI]           = useState<any>(null);
-  const [payGILoading, setPayGILoading] = useState(false);
+  const [accesGI, setAccesGI]           = useState<AccesGestionInterne | null>(null);
+  const [payGILoading] = useState(false);
   const [showGIPayment, setShowGIPayment] = useState(false);
   const [periodeGI, setPeriodeGI] = useState<"mois" | "troisMois" | "an" | "vie">("mois");
   const [regul, setRegul] = useState<{ moisDus: number; montant: number } | null>(null);
   const [showRegulPayment, setShowRegulPayment] = useState(false);
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
-  const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
+  const [connectModal, setConnectModal] = useState<{ accountId: string; name: string } | null>(null);
 
   // Modals publication et profil
   const [publishModal, setPublishModal] = useState<PublishModal | null>(null);
@@ -95,6 +94,7 @@ export default function GestionInterne() {
       : Promise.resolve();
 
     Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   function chargerComptes() {
@@ -103,7 +103,7 @@ export default function GestionInterne() {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       if (!data?.success) throw new Error(data?.message || "Chargement impossible");
-      setAccounts((data.accounts || []).filter((a: any) => a.status === "approved"));
+      setAccounts((data.accounts || []).filter((a: CompteProfessionnel) => a.status === "approved"));
     }).catch(() => { setErreurComptes(true); });
   }
 
@@ -115,6 +115,7 @@ export default function GestionInterne() {
         .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
         .catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [accesGI?.mode, accesGI?.proId]);
 
   // Formule complète : « Espace Pro » ouvre directement la gestion interne complète
@@ -134,6 +135,7 @@ export default function GestionInterne() {
     setOuvertureDirecte(true);
     // Si l'ouverture échoue (erreur déjà affichée), on montre la page normale.
     ouvrirGestion(cible, true).then(ok => { if (!ok) setOuvertureDirecte(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [loading, accounts, accesGI, location.search]);
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
@@ -158,7 +160,7 @@ export default function GestionInterne() {
     else window.location.href = url;
   }
 
-  async function ouvrirGestion(account: any, remplacer = false): Promise<boolean> {
+  async function ouvrirGestion(account: CompteProfessionnel, remplacer = false): Promise<boolean> {
     // Accès de CET établissement (formule et abonnement propres à chaque compte pro)
     let accesCompte = accesGI;
     if (!userIsAdmin && account?.tenant_code) {
@@ -187,7 +189,7 @@ export default function GestionInterne() {
 
   // ─── FONCTIONS PUBLICATION ───────────────────────────────────────────────────
 
-  async function fetchPubs(accountId: string): Promise<any[]> {
+  async function fetchPubs(accountId: string): Promise<PublicationPro[]> {
     try {
       const r = await fetch(`${API}/api/pro-vitrine/${accountId}/publications`);
       const d = await r.json();
@@ -195,7 +197,7 @@ export default function GestionInterne() {
     } catch { return []; }
   }
 
-  async function openPublishModal(params: { accountId?: string; tenantCode: string; name: string; currentData?: any }) {
+  async function openPublishModal(params: { accountId?: string; tenantCode: string; name: string; currentData?: ProfilAffiche }) {
     const { tenantCode, name } = params;
     let accountId = params.accountId;
 
@@ -254,7 +256,7 @@ export default function GestionInterne() {
 
   // ─── FONCTIONS PROFIL ────────────────────────────────────────────────────────
 
-  function openProfilModal(params: { accountId: string; tenantCode: string; name: string; currentData?: any }) {
+  function openProfilModal(params: { accountId: string; tenantCode: string; name: string; currentData?: ProfilAffiche }) {
     const { accountId, tenantCode, name, currentData } = params;
     setProfilModal({
       accountId, tenantCode, name,
@@ -430,9 +432,9 @@ export default function GestionInterne() {
   // ─── VUE ADMIN ───────────────────────────────────────────────────────────────
 
   if (userIsAdmin) {
-    const realTenants = adminTenants.filter((t: any) => !t.tenant_code?.startsWith("DEMO-REF-"));
-    const tenantsByType: Record<string, any[]> = {};
-    realTenants.forEach((t: any) => {
+    const realTenants = adminTenants.filter((t) => !t.tenant_code?.startsWith("DEMO-REF-"));
+    const tenantsByType: Record<string, TenantGestion[]> = {};
+    realTenants.forEach((t) => {
       if (!tenantsByType[t.type]) tenantsByType[t.type] = [];
       tenantsByType[t.type].push(t);
     });
@@ -485,7 +487,7 @@ export default function GestionInterne() {
                 <div style={{ fontSize:24, fontWeight:800, color:"white" }}>{totalReal}</div>
                 <div style={{ fontSize:11, color:"rgba(255,255,255,0.8)" }}>actifs</div>
               </div>
-              <button onClick={() => navigate(-1 as any)} style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:10, padding:"9px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap" }}>← Retour</button>
+              <button onClick={() => navigate(-1)} style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:10, padding:"9px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap" }}>← Retour</button>
             </div>
 
             {/* Actions rapides admin */}
@@ -529,8 +531,8 @@ export default function GestionInterne() {
                   return (
                     <div key={svc.type} style={{ borderRadius:16, overflow:"hidden", boxShadow:"0 3px 14px rgba(0,0,0,0.09)", border:`1px solid ${svc.border}`, animation:`fadeIn 0.2s ease ${i * 0.07}s both` }}>
                       {/* Illustration (secteurs prioritaires) */}
-                      {(svc as any).img && (
-                        <img src={(svc as any).img} alt={svc.label} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} />
+                      {svc.img && (
+                        <img src={svc.img} alt={svc.label} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} />
                       )}
                       {/* Header gradient */}
                       <div style={{ background:svc.gradient, padding:"18px 20px", display:"flex", alignItems:"center", gap:14 }}>
@@ -570,7 +572,7 @@ export default function GestionInterne() {
                         {realList.length > 0 && (
                           <div style={{ marginTop:12, display:"flex", flexDirection:"column", gap:5 }}>
                             <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:2 }}>Établissements réels</div>
-                            {realList.slice(0, 3).map((t: any) => (
+                            {realList.slice(0, 3).map((t) => (
                               <div key={t.tenant_code} style={{ background:svc.bgLight, border:`1px solid ${svc.border}`, borderRadius:8, overflow:"hidden" }}>
                                 <button onClick={() => navigate(`/${svc.path}/${t.tenant_code}`)}
                                   style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background:"transparent", border:"none", cursor:"pointer", fontSize:12, width:"100%", textAlign:"left" }}>
@@ -609,7 +611,7 @@ export default function GestionInterne() {
                   <p style={{ margin:"4px 0 0", fontSize:13, color:"#64748b" }}>Publier, modifier le profil ou accéder à la gestion de chaque établissement</p>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {realTenants.map((t: any, i: number) => {
+                  {realTenants.map((t, i) => {
                     const info = getTypeInfo(t.type);
                     return (
                       <div key={t.tenant_code} style={{ background:"white", border:"1px solid #e2e8f0", borderRadius:12, overflow:"hidden", animation:`fadeIn 0.15s ease ${i * 0.03}s both`, boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -800,7 +802,7 @@ export default function GestionInterne() {
               )}
 
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {filtered.map((a: any, i: number) => {
+                {filtered.map((a, i) => {
                   const info = getTypeInfo(a.type);
                   // Bloqué = rien ne fonctionne. Sinon, accès complet si essai/abonnement valide.
                   const estBloque = a.subscriptionStatus === 'blocked';

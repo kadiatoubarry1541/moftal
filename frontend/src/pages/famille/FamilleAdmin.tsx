@@ -85,6 +85,7 @@ export default function FamilleAdmin() {
     }
     load()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, user?.numeroH])
 
   const handleConfirmParentChild = async (linkId: string) => {
@@ -98,9 +99,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setParentChildLinks(prev => prev.map(l => l.id === linkId ? { ...l, status: 'active' } : l))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -118,9 +121,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setParentChildLinks(prev => prev.filter(l => l.id !== linkId))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -137,9 +142,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setCoupleLinks(prev => prev.map(l => l.id === linkId ? { ...l, status: 'active' } : l))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }
@@ -158,9 +165,11 @@ export default function FamilleAdmin() {
       })
       if (res.ok) {
         setCoupleLinks(prev => prev.filter(l => l.id !== linkId))
+      } else {
+        alert(tr("L'action n'a pas pu être enregistrée. Réessayez."))
       }
     } catch {
-      // silencieux
+      alert(tr("Connexion impossible : rien n'a été enregistré. Réessayez."))
     } finally {
       setActionLoading(null)
     }

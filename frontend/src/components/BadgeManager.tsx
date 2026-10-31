@@ -12,7 +12,8 @@ interface Badge {
   color: string;
   category: string;
   rarity: string;
-  requirements?: any;
+  /** Conditions d'attribution (JSON libre) */
+  requirements?: Record<string, unknown> | null;
   isActive: boolean;
   createdBy: string;
   createdAt: string;
@@ -30,17 +31,11 @@ interface UserBadge {
   badge: Badge;
 }
 
-interface BadgeManagerProps {
-  userData: any;
-}
-
-export default function BadgeManager({ userData }: BadgeManagerProps) {
+export default function BadgeManager() {
   const [badges, setBadges] = useState<Badge[]>([]);
-  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setUserBadges] = useState<UserBadge[]>([]);
   const [activeTab, setActiveTab] = useState<'create' | 'award' | 'manage' | 'stats'>('create');
-  const [selectedUser, setSelectedUser] = useState('');
-  const [selectedBadge, setSelectedBadge] = useState<number | null>(null);
+  const [selectedUser] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const { tr } = useTraduction();
 
@@ -63,6 +58,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
   useEffect(() => {
     loadBadges();
     loadUserBadges();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const loadBadges = async () => {
@@ -249,7 +245,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
               activeTab === tab.id
                 ? 'bg-white text-blue-600 shadow-sm'

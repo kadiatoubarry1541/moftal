@@ -28,7 +28,8 @@ function placeNamesForCountry(country: string): Set<string> {
   if (cached) return cached;
 
   const names = new Set<string>();
-  const collect = (node: { name: string; children?: any[] }) => {
+  type Noeud = { name: string; children?: Noeud[] };
+  const collect = (node: Noeud) => {
     names.add(normalizeText(node.name));
     (node.children || []).forEach(collect);
   };
@@ -49,16 +50,24 @@ function placeNamesForCountry(country: string): Set<string> {
 //  - son champ pays/country explicite correspond, OU
 //  - sa localisation (ville/quartier en texte libre) appartient à ce pays, OU
 //  - il n'a aucune info de localisation et le pays choisi est la Guinée (pays par défaut de la plateforme)
-export function matchesCountryFilter(item: Record<string, any>, pays: string): boolean {
+// Fiche quelconque (produit, fournisseur…) : ses champs de lieu sont lus en texte
+type FicheLieu = Record<string, unknown>;
+const texte = (o: FicheLieu, ...cles: string[]): string => {
+  for (const c of cles) { const v = o[c]; if (typeof v === 'string' && v) return v; }
+  return '';
+};
+
+export function matchesCountryFilter(item: FicheLieu, pays: string): boolean {
   if (!pays) return true;
   const target = normalizeText(pays);
 
-  const explicitCountry = item.country || item.pays || item.address?.country;
+  const adresse = item.address && typeof item.address === 'object' ? item.address as FicheLieu : {};
+  const explicitCountry = texte(item, 'country', 'pays') || texte(adresse, 'country');
   if (explicitCountry && normalizeText(explicitCountry) !== 'pays') {
     return normalizeText(explicitCountry) === target;
   }
 
-  const loc = item.location || item.city || item.ville || item.localisation || '';
+  const loc = texte(item, 'location', 'city', 'ville', 'localisation');
   if (loc) {
     const locNorm = normalizeText(loc);
     const places = placeNamesForCountry(pays);
@@ -174,18 +183,22 @@ export function sortByProximity<T extends { city?: string; country?: string; coo
 
 // ─── Tri universel : accepte n'importe quel champ de localisation ─
 // Normalise location / address / ville → city avant de trier
-export function sortAnyByProximity<T extends Record<string, any>>(
+export function sortAnyByProximity<T extends object>(
   items: T[],
   user: UserGeoContext
 ): T[] {
   if (!user.city && !user.region && !user.country && !user.coords) {
     return items;
   }
-  const normalize = (item: T) => ({
-    city:    item.city || item.location || item.ville || item.localisation || "",
-    country: item.country || item.pays || "",
-    coordinates: item.coordinates || item.coords || undefined,
-  });
+  const normalize = (item: T) => {
+    const f = item as FicheLieu;
+    const coords = (f.coordinates || f.coords) as GeoCoords | undefined;
+    return {
+      city:    texte(f, 'city', 'location', 'ville', 'localisation'),
+      country: texte(f, 'country', 'pays'),
+      coordinates: coords || undefined,
+    };
+  };
   return [...items].sort(
     (a, b) => proximityScore(normalize(a), user) - proximityScore(normalize(b), user)
   );
@@ -193,13 +206,13 @@ export function sortAnyByProximity<T extends Record<string, any>>(
 
 // ─── Badge universel (même logique, champ flexible) ─────────────
 export function anyProximityLabel(
-  item: Record<string, any>,
+  item: FicheLieu,
   user: UserGeoContext
 ): { text: string; color: string } | null {
   return proximityLabel(
     {
-      city:    item.city || item.location || item.ville || "",
-      country: item.country || item.pays || "",
+      city:    texte(item, 'city', 'location', 'ville'),
+      country: texte(item, 'country', 'pays'),
     },
     user
   );

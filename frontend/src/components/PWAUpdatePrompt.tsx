@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
 
-export default function PWAUpdatePrompt() {
+export default function PWAUpdatePrompt(): null {
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
@@ -33,6 +33,7 @@ export default function PWAUpdatePrompt() {
       updateServiceWorker(true);
     }, 3000);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [needRefresh]);
 
   return null;

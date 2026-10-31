@@ -10,7 +10,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PoorPerson {
@@ -32,7 +32,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -74,7 +74,7 @@ interface ReligiousCommunity {
   religion: string;
   description: string;
   members: string[];
-  posts: any[];
+  posts: unknown[];
   isActive: boolean;
   createdBy: string;
   createdAt: string;
@@ -109,12 +109,12 @@ interface Stage {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -274,12 +274,14 @@ export default function Zaka() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
   
   useEffect(() => {
     if (activeTab === 'formation-religieux' && userData) {
       loadFormationReligieuxData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [activeTab, userData]);
 
   const loadData = async () => {
@@ -353,19 +355,6 @@ export default function Zaka() {
     }
   };
   
-  const getDefaultCommunities = (): ReligiousCommunity[] => [
-    {
-      id: '1',
-      name: 'Communauté Musulmane de Conakry',
-      religion: 'Islam',
-      description: 'Communauté musulmane pour partager la foi et les enseignements',
-      members: ['USER001', 'USER002', 'USER003'],
-      posts: [],
-      isActive: true,
-      createdBy: 'admin',
-      createdAt: '2024-01-15T10:00:00Z'
-    }
-  ];
   
   const loadFormationReligieuxData = async () => {
     try {
@@ -677,80 +666,6 @@ export default function Zaka() {
     }
   };
 
-  const getDefaultPoorPeople = (): PoorPerson[] => [
-    {
-      id: '1',
-      numeroH: 'POOR001',
-      prenom: 'Fatou',
-      nomFamille: 'Camara',
-      age: 65,
-      location: 'Conakry',
-      situation: 'Veuve avec 5 enfants orphelins',
-      needs: ['Nourriture', 'Vêtements', 'Médicaments'],
-      urgency: 'critical',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 123 456 789',
-        address: 'Kaloum, Conakry'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-15T10:00:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 6,
-      occupation: 'Sans emploi',
-      healthCondition: 'Maladie chronique'
-    },
-    {
-      id: '2',
-      numeroH: 'POOR002',
-      prenom: 'Alpha',
-      nomFamille: 'Diallo',
-      age: 45,
-      location: 'Kindia',
-      situation: 'Handicapé, père de 3 enfants',
-      needs: ['Nourriture', 'Frais médicaux', 'Éducation enfants'],
-      urgency: 'high',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 987 654 321',
-        address: 'Centre-ville, Kindia'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-10T14:30:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 4,
-      occupation: 'Vendeur ambulant',
-      healthCondition: 'Handicap physique'
-    },
-    {
-      id: '3',
-      numeroH: 'POOR003',
-      prenom: 'Mariama',
-      nomFamille: 'Bah',
-      age: 35,
-      location: 'Kankan',
-      situation: 'Mère célibataire avec 4 enfants',
-      needs: ['Nourriture', 'Vêtements enfants', 'Loyer'],
-      urgency: 'medium',
-      religion: 'Islam',
-      contactInfo: {
-        phone: '+224 555 123 456',
-        address: 'Quartier populaire, Kankan'
-      },
-      verifiedBy: 'admin',
-      verifiedAt: '2024-01-05T09:15:00Z',
-      isActive: true,
-      donations: [],
-      totalDonations: 0,
-      familySize: 5,
-      occupation: 'Femme de ménage',
-      healthCondition: 'Bon'
-    }
-  ];
 
   const handleDonation = (poorPerson: PoorPerson) => {
     setSelectedPoorPerson(poorPerson);
@@ -914,7 +829,7 @@ export default function Zaka() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-green-500 text-white shadow-md'
@@ -1521,7 +1436,7 @@ export default function Zaka() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveCourseTab(tab.id as any)}
+                    onClick={() => setActiveCourseTab(tab.id as typeof activeCourseTab)}
                     className={`py-2 px-4 rounded-lg font-medium whitespace-nowrap ${
                       activeCourseTab === tab.id
                         ? 'bg-blue-600 text-white'
@@ -1775,7 +1690,7 @@ export default function Zaka() {
                 </label>
                 <select
                   value={donationForm.type}
-                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
+                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as typeof donationForm.type})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="money">{t('zaka.type_money')}</option>

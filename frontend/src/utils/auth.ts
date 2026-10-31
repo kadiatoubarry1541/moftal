@@ -4,7 +4,36 @@ export interface UserData {
   nomFamille: string;
   role?: string;
   isAdmin?: boolean;
-  [key: string]: any;
+  /** Nom seul (anciens comptes) */
+  nom?: string;
+  genre?: "HOMME" | "FEMME" | "AUTRE" | string;
+  photo?: string | null;
+  /** Photos de couple et de famille (Mes Amours, Noyau) */
+  manPhoto?: string | null;
+  familyPhoto?: string | null;
+  prenomPere?: string;
+  numeroHPere?: string;
+  prenomMere?: string;
+  numeroHMere?: string;
+  conjointPrenom?: string;
+  conjointNumeroH?: string;
+  conjointNomFamille?: string;
+  conjointGenre?: string;
+  conjointPhoto?: string;
+  /** Lieu de vie (Terre ADAM, quartier) */
+  quartier?: string;
+  ville?: string;
+  pays?: string;
+  specialite?: string;
+  /** Téléphone (selon l'ancienneté du compte) */
+  tel1?: string;
+  telephone?: string;
+  phone?: string;
+  email?: string;
+  /** NuméroH au format serveur (snake_case) */
+  numero_h?: string;
+  /** Autres champs du profil, lus après vérification */
+  [key: string]: unknown;
 }
 
 /**
@@ -66,7 +95,7 @@ export function getSessionUser(): UserData | null {
  * @param user - Les données de l'utilisateur
  * @returns true si admin, false sinon
  */
-export function isAdmin(user: UserData | null): boolean {
+export function isAdmin(user: Partial<Pick<UserData, "role" | "isAdmin" | "numeroH">> | null): boolean {
   if (!user) return false;
   
   const role = user.role?.toLowerCase() || '';

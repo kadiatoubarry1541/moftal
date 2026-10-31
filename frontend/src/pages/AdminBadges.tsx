@@ -8,7 +8,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   role: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Badge {
@@ -257,14 +257,21 @@ interface PageAdmin {
   };
 }
 
+
+interface UtilisateurListe {
+  activite1?: string | null;
+  nomFamille?: string | null;
+  numeroH?: string | null;
+  prenom?: string | null;
+}
 export default function AdminBadges() {
   const [searchParams] = useSearchParams();
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [, setUserData] = useState<UserData | null>(null);
   const tabParam = searchParams.get('tab');
   const initialTab = (tabParam === 'logos' ? 'logos' : tabParam === 'page-admins' ? 'page-admins' : 'badges') as 'badges' | 'logos' | 'page-admins';
   const [activeTab, setActiveTab] = useState<'badges' | 'logos' | 'page-admins'>(initialTab);
   const [pageAdmins, setPageAdmins] = useState<PageAdmin[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UtilisateurListe[]>([]);
   const [showPageAdminForm, setShowPageAdminForm] = useState(false);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [logos, setLogos] = useState<Logo[]>([]);
@@ -272,8 +279,6 @@ export default function AdminBadges() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
-  const [editingLogo, setEditingLogo] = useState<Logo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [importing, setImporting] = useState(false);
@@ -395,6 +400,7 @@ export default function AdminBadges() {
 
   useEffect(() => {
     filterLogos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [logos, searchTerm, selectedCategory]);
 
   const filterLogos = () => {
@@ -755,7 +761,7 @@ export default function AdminBadges() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                   // Mettre à jour l'URL avec le paramètre tab
                   const newSearchParams = new URLSearchParams(searchParams);
                   if (tab.id === 'badges') {

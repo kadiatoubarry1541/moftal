@@ -19,7 +19,7 @@ export function Home() {
         }
       }
     } catch {}
-  }, [])
+  }, [navigate])
 
   return (
     <div className="flex-1 flex flex-col">

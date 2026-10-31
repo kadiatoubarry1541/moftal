@@ -15,7 +15,7 @@ export function isContactPickerSupported(): boolean {
 export async function pickContactPhone(): Promise<string | null> {
   if (!isContactPickerSupported()) return null;
   try {
-    const contacts = await (navigator as any).contacts.select(['tel'], { multiple: false });
+    const contacts = await navigator.contacts.select(['tel'], { multiple: false });
     const tel = contacts?.[0]?.tel?.[0];
     return typeof tel === 'string' && tel.trim() ? tel.trim() : null;
   } catch {
@@ -32,7 +32,7 @@ export async function pickContactPhone(): Promise<string | null> {
 export async function pickContactPhones(): Promise<string[]> {
   if (!isContactPickerSupported()) return []
   try {
-    const contacts = await (navigator as any).contacts.select(['tel'], { multiple: true })
+    const contacts = await navigator.contacts.select(['tel'], { multiple: true })
     const phones: string[] = []
     for (const c of contacts || []) {
       for (const tel of c?.tel || []) {

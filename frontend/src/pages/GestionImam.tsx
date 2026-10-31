@@ -1,19 +1,22 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { ImamAnnouncement, ImamImam, ImamMosque, ImamPredication, TableauImam } from "../types/gestion-imam";
 
 const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -28,7 +31,7 @@ const VIOLET_BORDER = "#ede9fe";
 
 export default function GestionImam() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -38,12 +41,12 @@ export default function GestionImam() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [imams, setImams] = useState<any[]>([]);
-  const [predications, setPredications] = useState<any[]>([]);
-  const [mosques, setMosques] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauImam | null>(null);
+  const [imams, setImams] = useState<ImamImam[]>([]);
+  const [predications, setPredications] = useState<ImamPredication[]>([]);
+  const [mosques, setMosques] = useState<ImamMosque[]>([]);
+  const [announcements, setAnnouncements] = useState<ImamAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -62,6 +65,7 @@ export default function GestionImam() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export default function GestionImam() {
     else if (tab === "predications") loadPredications();
     else if (tab === "mosques") loadMosques();
     else if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab]);
 
   async function loadAll() {
@@ -267,7 +272,7 @@ export default function GestionImam() {
               <div>
                 <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>Prédications récentes</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {dash.recentPredications.map((p: any) => (
+                  {dash.recentPredications.map((p) => (
                     <div key={p.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📢</div>
                       <div style={{ flex: 1 }}>
@@ -323,7 +328,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {imams.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun imam enregistré</div>}
-              {filtrer(imams, recherche).map((imam: any) => (
+              {filtrer(imams, recherche).map((imam) => (
                 <div key={imam.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🕋</div>
                   <div style={{ flex: 1 }}>
@@ -357,9 +362,9 @@ export default function GestionImam() {
                   <div style={{ gridColumn: "1/-1" }}><label style={labelStyle}>Titre *</label><input value={pForm.titre} onChange={e => setPForm({...pForm, titre: e.target.value})} placeholder="Titre du sermon / khutba" style={inputStyle} /></div>
                   <div>
                     <label style={labelStyle}>Imam</label>
-                    <select value={pForm.imam_id} onChange={e => { const sel = imams.find((i:any) => String(i.id) === e.target.value); setPForm({...pForm, imam_id: e.target.value, imam_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : ""}); }} style={inputStyle}>
+                    <select value={pForm.imam_id} onChange={e => { const sel = imams.find((i) => String(i.id) === e.target.value); setPForm({...pForm, imam_id: e.target.value, imam_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : ""}); }} style={inputStyle}>
                       <option value="">— Imam non précisé —</option>
-                      {imams.map((i: any) => <option key={i.id} value={i.id}>{i.nom} {i.prenom}</option>)}
+                      {imams.map((i) => <option key={i.id} value={i.id}>{i.nom} {i.prenom}</option>)}
                     </select>
                   </div>
                   <div>
@@ -381,7 +386,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {predications.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune prédication enregistrée</div>}
-              {filtrer(predications, recherche).map((p: any) => (
+              {filtrer(predications, recherche).map((p) => (
                 <div key={p.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📢</div>
                   <div style={{ flex: 1 }}>
@@ -426,7 +431,7 @@ export default function GestionImam() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
               {mosques.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8", gridColumn: "1/-1" }}>Aucune mosquée partenaire</div>}
-              {filtrer(mosques, recherche).map((m: any) => (
+              {filtrer(mosques, recherche).map((m) => (
                 <div key={m.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 8, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🕌</div>
@@ -474,7 +479,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {filtrer(announcements, recherche).map((a: any) => (
+              {filtrer(announcements, recherche).map((a) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>

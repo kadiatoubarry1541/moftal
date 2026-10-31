@@ -717,9 +717,9 @@ export default function GuideEntrepreneur() {
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{tr(priorite.title)}</h3>
                     <p className="text-gray-700 mb-3">{tr(priorite.description)}</p>
-                    {(priorite as any).reassurance && (
+                    {priorite.reassurance && (
                       <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 mb-3">
-                        <p className="text-sm font-bold text-green-800">{tr((priorite as any).reassurance)}</p>
+                        <p className="text-sm font-bold text-green-800">{tr(priorite.reassurance)}</p>
                       </div>
                     )}
                     <div className="bg-blue-50 rounded-lg p-4 mb-3">

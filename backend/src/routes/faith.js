@@ -53,7 +53,7 @@ router.get('/content', async (req, res) => {
 // @access  Authentifié
 router.post('/content', async (req, res) => {
   try {
-    const { title, description, type, content, category, religion, createdBy } = req.body;
+    const { title, description, type, content, category, religion } = req.body;
     
     const faithContent = await FaithContent.create({
       title,
@@ -62,7 +62,7 @@ router.post('/content', async (req, res) => {
       content,
       category,
       religion,
-      createdBy: createdBy || req.user.numeroH
+      createdBy: req.user.numeroH
     });
     
     res.status(201).json({
@@ -116,15 +116,15 @@ router.get('/communities', async (req, res) => {
 // @access  Authentifié
 router.post('/communities', async (req, res) => {
   try {
-    const { name, description, religion, createdBy } = req.body;
+    const { name, description, religion } = req.body;
     
     const community = await FaithCommunity.create({
       name,
       description,
       religion,
-      members: [createdBy || req.user.numeroH],
+      members: [req.user.numeroH],
       posts: [],
-      createdBy: createdBy || req.user.numeroH
+      createdBy: req.user.numeroH
     });
     
     res.status(201).json({
@@ -146,7 +146,8 @@ router.post('/communities', async (req, res) => {
 // @access  Authentisé
 router.post('/communities/:id/join', async (req, res) => {
   try {
-    const { numeroH } = req.body;
+    // On rejoint toujours en son propre nom (jamais un NuméroH envoyé par le navigateur)
+    const numeroH = req.user.numeroH;
     const community = await FaithCommunity.findByPk(req.params.id);
     
     if (!community) {
@@ -180,7 +181,7 @@ router.post('/communities/:id/join', async (req, res) => {
 // @access  Authentisé
 router.post('/communities/:id/posts', async (req, res) => {
   try {
-    const { content, type, author, authorName } = req.body;
+    const { content, type, authorName } = req.body;
     const community = await FaithCommunity.findByPk(req.params.id);
     
     if (!community) {
@@ -193,7 +194,7 @@ router.post('/communities/:id/posts', async (req, res) => {
     const posts = community.posts || [];
     const newPost = {
       id: Date.now().toString(),
-      author,
+      author: req.user.numeroH,
       authorName,
       content,
       type,

@@ -88,7 +88,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
 export default function Racines() {
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const user = getSessionUser() as any;
+  const user = getSessionUser();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [ethnie, setEthnie] = useState<string | null>(null);
@@ -112,9 +112,10 @@ export default function Racines() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
-  const userIsAdmin = isAdmin(user as any);
+  const userIsAdmin = isAdmin(user);
   const myNumeroH = user?.numeroH || user?.numero_h || "";
 
   const filtered = members.filter(m => {

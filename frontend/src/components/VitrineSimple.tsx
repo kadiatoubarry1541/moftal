@@ -8,6 +8,7 @@ import { CouverturePhotoSite, GalerieVitrine } from "./PhotosVitrine";
 import { usePhotosSite } from "../utils/photosSite";
 import { getPhotoUrl } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
+import type { AnnonceVitrine, ArticleVitrine, DonneesVitrine, EtablissementPublic } from "../types/vitrine";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -32,17 +33,17 @@ export interface ModeleVitrine {
   objetDemande: string;    // « Demande de devis »
   boutonContact: string;   // « ✉️ Demander un devis »
   iconesCategories?: Record<string, string>;
-  chiffres: (stats: any, articles: any[], categories: string[]) => { icone: string; valeur: string | number; libelle: string }[];
+  chiffres: (stats: Record<string, number>, articles: ArticleVitrine[], categories: string[]) => { icone: string; valeur: string | number; libelle: string }[];
 }
 
-function prixDe(a: any) { return +(a.prix ?? a.prix_detail ?? a.prix_unitaire ?? 0) || 0; }
+function prixDe(a: ArticleVitrine) { return +(a.prix ?? a.prix_detail ?? a.prix_unitaire ?? 0) || 0; }
 const fmtMoney = (n: number) => `${(Number(n) || 0).toLocaleString("fr-FR")} GNF`;
 
 export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: string; modele: ModeleVitrine }) {
   const navigate = useNavigate();
   const { tr } = useTraduction();
-  const [pro, setPro] = useState<any>(null);
-  const [data, setData] = useState<any>(null);
+  const [pro, setPro] = useState<EtablissementPublic | null>(null);
+  const [data, setData] = useState<DonneesVitrine<{ products: ArticleVitrine[]; services: ArticleVitrine[]; works: ArticleVitrine[]; announcements: AnnonceVitrine[] }> | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [categorie, setCategorie] = useState("");
@@ -60,8 +61,8 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
       .finally(() => setChargement(false));
   }, [tenantCode, m.type, m.introuvable]);
 
-  const articles: any[] = useMemo(() => data?.products || data?.services || data?.works || [], [data]);
-  const annonces: any[] = data?.announcements || [];
+  const articles: ArticleVitrine[] = useMemo(() => data?.products || data?.services || data?.works || [], [data]);
+  const annonces: AnnonceVitrine[] = data?.announcements || [];
   const categories = useMemo(() => Array.from(new Set(articles.map(a => a.categorie).filter(Boolean))) as string[], [articles]);
   const visibles = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -90,7 +91,7 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
     </div>
   );
 
-  const iconeDe = (a: any) => m.iconesCategories?.[a.categorie] || m.emoji;
+  const iconeDe = (a: ArticleVitrine) => m.iconesCategories?.[a.categorie] || m.emoji;
   const boutonPlein = { background: m.couleur, color: "white", border: "none", borderRadius: 12, padding: "13px 24px", fontWeight: 700, fontSize: 15, cursor: "pointer" } as const;
   const boutonClair = { background: "white", color: m.couleur, border: `2px solid ${m.couleur}`, borderRadius: 12, padding: "11px 22px", fontWeight: 700, fontSize: 15, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 } as const;
 
@@ -133,9 +134,9 @@ export default function VitrineSimple({ tenantCode, modele: m }: { tenantCode: s
           </div>
           <span style={{ background: `${m.couleur}18`, color: m.couleurFoncee, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{m.emoji} {tr(m.metier)}</span>
           <h1 className="vs-titre" style={{ fontSize: 36, fontWeight: 800, margin: "12px 0 10px", lineHeight: 1.2 }}>{pro.name}</h1>
-          {(pro.specialite || pro.city || pro.address) && (
+          {(pro.city || pro.address) && (
             <p style={{ color: "#475569", fontSize: 14, margin: "0 0 10px" }}>
-              {[pro.specialite && `🛠 ${pro.specialite}`, (pro.city || pro.address) && `📍 ${pro.city || pro.address}`].filter(Boolean).join("  ·  ")}
+              📍 {pro.city || pro.address}
             </p>
           )}
           <p style={{ color: "#334155", fontSize: 16, lineHeight: 1.65, margin: "0 auto 24px", maxWidth: 560 }}>{pro.description || tr(m.descriptionParDefaut)}</p>

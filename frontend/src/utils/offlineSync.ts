@@ -171,8 +171,8 @@ function idb<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore)
   );
 }
 
-const cacheGet = (key: string) => idb<{ data: any; ts: number } | undefined>(STORE_CACHE, "readonly", (s) => s.get(key));
-const cachePut = (key: string, data: any) => idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts: Date.now() }, key));
+const cacheGet = (key: string) => idb<{ data: unknown; ts: number } | undefined>(STORE_CACHE, "readonly", (s) => s.get(key));
+const cachePut = (key: string, data: unknown) => idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts: Date.now() }, key));
 const cacheKeys = () => idb<IDBValidKey[]>(STORE_CACHE, "readonly", (s) => s.getAllKeys());
 const queueAll = () => idb<QueueItem[]>(STORE_QUEUE, "readonly", (s) => s.getAll());
 const queueAdd = (item: QueueItem) => idb(STORE_QUEUE, "readwrite", (s) => s.add(item));
@@ -253,7 +253,7 @@ function headersToObject(h?: HeadersInit): Record<string, string> {
   return out;
 }
 
-function jsonResponse(data: any, status = 200, extraHeaders: Record<string, string> = {}) {
+function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json", ...extraHeaders },
@@ -261,27 +261,32 @@ function jsonResponse(data: any, status = 200, extraHeaders: Record<string, stri
 }
 
 function isNetworkError(e: unknown) {
-  return e instanceof TypeError || (e as any)?.name === "AbortError";
+  return e instanceof TypeError || (typeof e === "object" && e !== null && "name" in e && e.name === "AbortError");
 }
 
+// Réponse JSON quelconque : un objet est lu champ par champ après vérification
+type Objet = Record<string, unknown>;
+const estObjet = (v: unknown): v is Objet => !!v && typeof v === "object" && !Array.isArray(v);
+const champsDe = (v: unknown): Objet => (estObjet(v) ? v : {});
+
 // Parcourt une réponse JSON et applique fn sur chaque tableau d'objets rencontré
-function mapArrays(data: any, fn: (arr: any[]) => any[]): any {
+function mapArrays(data: unknown, fn: (arr: unknown[]) => unknown[]): unknown {
   if (Array.isArray(data)) return fn(data.map((x) => mapArrays(x, fn)));
   if (data && typeof data === "object") {
-    const out: any = {};
+    const out: Objet = {};
     for (const [k, v] of Object.entries(data)) out[k] = mapArrays(v, fn);
     return out;
   }
   return data;
 }
 
-function findById(data: any, id: string): any {
+function findById(data: unknown, id: string): Objet | null {
   if (Array.isArray(data)) {
     for (const x of data) {
       const f = findById(x, id);
       if (f) return f;
     }
-  } else if (data && typeof data === "object") {
+  } else if (estObjet(data)) {
     if (data.id != null && String(data.id) === id) return data;
     for (const v of Object.values(data)) {
       const f = findById(v, id);
@@ -293,7 +298,7 @@ function findById(data: any, id: string): any {
 
 // ─── Mise à jour optimiste des copies locales ────────────────────────────────
 
-async function eachCachedUnder(base: string, fn: (key: string, data: any, path: string) => any) {
+async function eachCachedUnder(base: string, fn: (key: string, data: unknown, path: string) => unknown) {
   const scope = userScope() + "|";
   const keys = (await cacheKeys()).map(String).filter((k) => k.startsWith(scope + base));
   for (const key of keys) {
@@ -305,7 +310,7 @@ async function eachCachedUnder(base: string, fn: (key: string, data: any, path: 
   }
 }
 
-async function applyOptimistic(url: string, method: string, body: any, tempId?: string): Promise<any> {
+async function applyOptimistic(url: string, method: string, body: unknown, tempId?: string): Promise<Objet | null> {
   const full = absUrl(url);
   const m = full.match(TENANT_BASE);
   if (!m) return null;
@@ -314,7 +319,7 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   const segs = sub.split("/").filter(Boolean);
 
   if (method === "POST" && tempId) {
-    const item = { ...(body || {}), id: tempId, _horsLigne: true, created_at: new Date().toISOString() };
+    const item: Objet = { ...champsDe(body), id: tempId, _horsLigne: true, created_at: new Date().toISOString() };
     const collection = new URL(base).pathname + sub;
     await eachCachedUnder(base, (_k, data, path) => {
       if (path !== collection) return undefined;
@@ -329,10 +334,10 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   }
 
   if (sub === "/settings") {
-    let merged: any = null;
+    let merged: Objet | null = null;
     await eachCachedUnder(base, (_k, data) => {
-      if (!data?.tenant) return undefined;
-      merged = { ...data.tenant, ...(body || {}) };
+      if (!estObjet(data) || !estObjet(data.tenant)) return undefined;
+      merged = { ...data.tenant, ...champsDe(body) };
       return { ...data, tenant: merged };
     });
     return merged;
@@ -343,17 +348,17 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   const id = segs[1];
   const collectionPath = new URL(base).pathname + "/" + segs[0];
   const isPlainUpdate = segs.length === 2;
-  let found: any = null;
+  let found: Objet | null = null;
 
   await eachCachedUnder(base, (_k, data, path) => {
     const hit = findById(data, id);
     if (!hit) return undefined;
-    if (!found) found = { ...hit, ...(isPlainUpdate ? body || {} : {}) };
+    if (!found) found = { ...hit, ...(isPlainUpdate ? champsDe(body) : {}) };
     if (method === "DELETE" && path === collectionPath) {
-      return mapArrays(data, (arr) => arr.filter((x) => !(x && typeof x === "object" && String(x.id) === id)));
+      return mapArrays(data, (arr) => arr.filter((x) => !(estObjet(x) && String(x.id) === id)));
     }
     if (method === "PUT" && isPlainUpdate) {
-      return mapArrays(data, (arr) => arr.map((x) => (x && typeof x === "object" && String(x.id) === id ? { ...x, ...(body || {}) } : x)));
+      return mapArrays(data, (arr) => arr.map((x) => (estObjet(x) && String(x.id) === id ? { ...x, ...champsDe(body) } : x)));
     }
     return undefined;
   });
@@ -363,8 +368,8 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
 // Réponse renvoyée à l'écran pour une écriture mise en attente : { success: true }
 // et, pour toute autre propriété lue (d.patient, d.student, d.invoice…),
 // l'élément créé / modifié localement.
-function queuedResponse(item: any) {
-  const base: any = {
+function queuedResponse(item: unknown) {
+  const base: Objet = {
     success: true,
     queued: true,
     offline: true,
@@ -403,7 +408,7 @@ async function handleGet(original: typeof fetch, req: Request): Promise<Response
   });
 
   const fromCache = async (): Promise<Response | null> => {
-    const entry = await cacheGet(key).catch(() => undefined);
+    const entry = await cacheGet(key).catch((): undefined => undefined);
     return entry ? jsonResponse(entry.data, 200, { "X-Moftal-Offline": "cache" }) : null;
   };
 
@@ -467,7 +472,7 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
         503
       );
     }
-    let body: any = null;
+    let body: unknown = null;
     let form: ChampFormulaire[] | undefined;
     if (formulaire) {
       const champs = await lireFormulaire(formulaire);
@@ -515,10 +520,10 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
       createdAt: Date.now(),
       proprietaire: userScope(),
     });
-    const item = await applyOptimistic(req.url, method, body, tempId).catch(() => null);
+    const item = await applyOptimistic(req.url, method, body, tempId).catch((): null => null);
     setStatus({ online: false });
     await refreshPending();
-    return queuedResponse(item ?? (tempId ? { ...(body || {}), id: tempId, _horsLigne: true } : body));
+    return queuedResponse(item ?? (tempId ? { ...champsDe(body), id: tempId, _horsLigne: true } : body));
   };
 
   // Des opérations attendent encore ? Avec la connexion, on les envoie d'abord.
@@ -581,10 +586,10 @@ function replaceIds(text: string, map: Record<string, string>) {
   return out;
 }
 
-function findRealId(data: any): string | null {
-  if (!data || typeof data !== "object") return null;
+function findRealId(data: unknown): string | null {
+  if (!estObjet(data)) return null;
   for (const v of Object.values(data)) {
-    if (v && typeof v === "object" && !Array.isArray(v) && (v as any).id != null) return String((v as any).id);
+    if (estObjet(v) && v.id != null) return String(v.id);
   }
   return data.id != null ? String(data.id) : null;
 }
@@ -655,7 +660,7 @@ export function syncNow(): Promise<void> {
         continue;
       }
 
-      let data: any = null;
+      let data: { success?: boolean; message?: string; enCours?: boolean } | null = null;
       try {
         data = await res.json();
       } catch {

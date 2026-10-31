@@ -1,59 +1,12 @@
 import { useRef } from "react";
 import { normaliserLogo } from "../utils/logoImage";
 import { useTraduction } from "../i18n/traduction";
+import { PUB_TYPES, DEFAULT_PUB_FORM, DEFAULT_PROFIL_FORM } from "./espaceProTypes";
+import type { AccesGestionInterne, PublicationPro } from "../types/pro";
 
 // Outils de l'Espace Pro partagés entre la page « Activité » (GestionInterne) et
 // le panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement.
 
-// ─── CONSTANTES ───────────────────────────────────────────────────────────────
-
-export const ADMIN_SERVICES = [
-  { type: "clinic",          demoCode: "DEMO-REF-CLIN",   label: "Clinique / Hôpital",        emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic" },
-  { type: "school",          demoCode: "DEMO-REF-ECO",    label: "École / Université",         emoji: "🏫", color: "#1a8f1a", bg: "#f0fdf0", path: "gestion-ecole",         vitrinePath: "ecole",           reseauPath: "reseau/school" },
-  { type: "mosque",          demoCode: "DEMO-REF-MSQ",    label: "Réseau Imam",                emoji: "🕌", color: "#1a8f1a", bg: "#f0fdf0", path: "gestion-mosquee",       vitrinePath: "mosquee",         reseauPath: "reseau/mosque" },
-  { type: "reseau",          demoCode: "DEMO-REF-RESEAU", label: "Association / Réseau",       emoji: "🌐", color: "#2563eb", bg: "#eff6ff", path: "gestion-reseau",        vitrinePath: "reseau-vitrine",  reseauPath: "reseau/reseau" },
-  { type: "madrasa",         demoCode: "DEMO-REF-MDS",    label: "Madrasa / Daroul",           emoji: "📖", color: "#0891b2", bg: "#ecfeff", path: "gestion-madrasa",       vitrinePath: "madrasa",         reseauPath: "reseau/madrasa" },
-  { type: "commerce",        demoCode: "DEMO-REF-COM",    label: "Boutique / Commerce",        emoji: "🏪", color: "#d97706", bg: "#fffbeb", path: "gestion-commerce",      vitrinePath: "commerce",        reseauPath: "reseau/commerce" },
-  { type: "enterprise",      demoCode: "DEMO-REF-ENT",    label: "Entreprise",                 emoji: "🏢", color: "#4f46e5", bg: "#eef2ff", path: "gestion-entreprise",    vitrinePath: "entreprise",      reseauPath: "reseau/enterprise" },
-  { type: "ngo",             demoCode: "DEMO-REF-NGO",    label: "ONG & Associations",         emoji: "🤝", color: "#e11d48", bg: "#fff1f2", path: "gestion-ngo",           vitrinePath: "ngo",             reseauPath: "reseau/ngo" },
-  { type: "journalist",      demoCode: "DEMO-REF-JOUR",   label: "Journalistes / Médias",      emoji: "📰", color: "#dc2626", bg: "#fff1f2", path: "gestion-journaliste",   vitrinePath: "journaliste",     reseauPath: "reseau/journalist" },
-  { type: "scientist",       demoCode: "DEMO-REF-SCIEN",  label: "Scientifiques",              emoji: "🔬", color: "#4338ca", bg: "#eef2ff", path: "gestion-scientifique",  vitrinePath: "scientifique",    reseauPath: "reseau/scientist" },
-  { type: "supplier",        demoCode: "DEMO-REF-FOUR",   label: "Fournisseurs / Grossistes",  emoji: "🚚", color: "#0e7490", bg: "#ecfeff", path: "gestion-fournisseur",   vitrinePath: "fournisseur",     reseauPath: "reseau/supplier" },
-  { type: "security_agency", demoCode: "DEMO-REF-SECU",   label: "Agences de Sécurité",        emoji: "🛡️", color: "#475569", bg: "#f8fafc", path: "gestion-securite",      vitrinePath: "securite",        reseauPath: "reseau/security_agency" },
-  { type: "broker",          demoCode: "DEMO-REF-IMMO",   label: "Immobilier / Démarcheur",    emoji: "🏠", color: "#b45309", bg: "#fffbeb", path: "gestion-immobilier",    vitrinePath: "immobilier",      reseauPath: "reseau/broker" },
-  { type: "restaurant",      demoCode: "DEMO-REF-RESTO",  label: "Restaurant / Restauration",  emoji: "🍽️", color: "#ea580c", bg: "#fff7ed", path: "gestion-restaurant",    vitrinePath: "restaurant",      reseauPath: "reseau/restaurant" },
-  { type: "transport",       demoCode: "DEMO-REF-TRANS",  label: "Transport & Livraison",      emoji: "🚌", color: "#1d4ed8", bg: "#eff6ff", path: "gestion-transport",     vitrinePath: "transport",       reseauPath: "reseau/transport" },
-  { type: "mairie",          demoCode: "DEMO-REF-MAIR",   label: "Mairie / État Civil",        emoji: "🏛️", color: "#1d4ed8", bg: "#eff6ff", path: "gestion-mairie",        vitrinePath: "mairie",          reseauPath: "" },
-  { type: "vendor",          demoCode: "DEMO-REF-VENT",   label: "Vendeur / Détaillant",       emoji: "🛒", color: "#0891b2", bg: "#ecfeff", path: "gestion-vendeur",       vitrinePath: "vendeur",         reseauPath: "reseau/vendor" },
-  { type: "producer",        demoCode: "DEMO-REF-PROD",   label: "Entreprise de Production",   emoji: "🏭", color: "#7c3aed", bg: "#f5f3ff", path: "gestion-producer",      vitrinePath: "producteur",      reseauPath: "reseau/producer" },
-  { type: "beauty",          demoCode: "DEMO-REF-BEAU",   label: "Beauté & Bien-être",         emoji: "💈", color: "#db2777", bg: "#fdf2f8", path: "gestion-beauty",        vitrinePath: "beaute-vitrine",  reseauPath: "reseau/beauty" },
-  { type: "artisan",         demoCode: "DEMO-REF-ARTI",   label: "Artisanat & Services",       emoji: "🔧", color: "#d97706", bg: "#fffbeb", path: "gestion-artisan",       vitrinePath: "artisan",         reseauPath: "reseau/artisan" },
-  { type: "lawyer",          demoCode: "DEMO-REF-JURI",   label: "Avocats / Cabinets",         emoji: "⚖️", color: "#7f1d1d", bg: "#fef2f2", path: "gestion-juridique",     vitrinePath: "juridique-vitrine", reseauPath: "" },
-  { type: "legal_advisor",   demoCode: "DEMO-REF-JURI",   label: "Conseil juridique",          emoji: "📜", color: "#7f1d1d", bg: "#fef2f2", path: "gestion-juridique",     vitrinePath: "juridique-vitrine", reseauPath: "" },
-  { type: "health_worker",   demoCode: "DEMO-REF-HLTH",   label: "Médecin / Agent de santé",   emoji: "👨‍⚕️", color: "#1a8f1a", bg: "#f0fdfa", path: "gestion-clinique",    vitrinePath: "clinique",        reseauPath: "reseau/clinic" },
-];
-
-export const PUB_TYPES = [
-  { value: "annonce",    label: "Annonce",    emoji: "📢" },
-  { value: "produit",    label: "Produit",    emoji: "🛍️" },
-  { value: "service",    label: "Service",    emoji: "⚙️" },
-  { value: "promotion",  label: "Promotion",  emoji: "🏷️" },
-  { value: "evenement",  label: "Événement",  emoji: "📅" },
-  { value: "info",       label: "Info",       emoji: "ℹ️" },
-];
-
-export const DEFAULT_PUB_FORM = { type: "annonce", titre: "", contenu: "", prix: "", image: "" };
-export const DEFAULT_PROFIL_FORM = { name: "", description: "", address: "", city: "", phone: "", email: "", photo: "" };
-
-// Types enregistrés sous un autre nom que celui du modèle de gestion
-const ALIAS_TYPES: Record<string, string> = { imam: "mosque", immobilier: "broker", immo: "broker", retailer: "vendor" };
-
-export function getTypeInfo(type: string) {
-  const t = ALIAS_TYPES[type] || type;
-  const found = ADMIN_SERVICES.find(s => s.type === t);
-  if (found) return { label: found.label, path: found.path, vitrinePath: found.vitrinePath || "", color: found.color, bg: found.bg, emoji: found.emoji };
-  return { label: type || "Service", path: "gestion-commerce", vitrinePath: "", color: "#64748b", bg: "#f8fafc", emoji: "🏢" };
-}
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +15,7 @@ export interface PublishModal {
   tenantCode: string;
   name: string;
   form: typeof DEFAULT_PUB_FORM;
-  pubs: any[];
+  pubs: PublicationPro[];
   step: "ready" | "saving" | "loading";
 }
 
@@ -76,7 +29,7 @@ export interface ProfilModal {
 
 // ─── COMPOSANT MODAL PUBLICATION ──────────────────────────────────────────────
 
-export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClose }: {
+export function PublierModal({ modal, onChange, onSubmit, onDelete, onClose }: {
   modal: PublishModal;
   token: string;
   onChange: (form: typeof DEFAULT_PUB_FORM) => void;
@@ -191,7 +144,7 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
               <div style={{ marginTop:24, borderTop:"1.5px solid #f1f5f9", paddingTop:16 }}>
                 <h3 style={{ margin:"0 0 12px", fontSize:13, fontWeight:800, color:"#0f172a", textTransform:"uppercase", letterSpacing:"0.05em" }}>{tr("Publications récentes ({n})", { n: modal.pubs.length })}</h3>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {modal.pubs.slice(0, 5).map((p: any) => (
+                  {modal.pubs.slice(0, 5).map((p) => (
                     <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f8fafc", borderRadius:10, border:"1px solid #e2e8f0" }}>
                       <span style={{ fontSize:16 }}>{PUB_TYPES.find(pt => pt.value === p.type)?.emoji || "📢"}</span>
                       <div style={{ flex:1, minWidth:0 }}>
@@ -307,10 +260,9 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
             <input type="file" accept="image/*" ref={fileRef} onChange={handlePhoto} style={{ display:"none" }} />
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               {modal.form.photo ? (
+                // Logo obligatoire : il se remplace, il ne se retire pas
                 <div style={{ position:"relative" }}>
-                  <img src={modal.form.photo} alt="logo" style={{ width:64, height:64, borderRadius:12, objectFit:"cover", border:"1.5px solid #e2e8f0" }} />
-                  <button onClick={() => onChange({ ...modal.form, photo: "" })}
-                    style={{ position:"absolute", top:-8, right:-8, width:22, height:22, borderRadius:"50%", background:"#ef4444", color:"white", border:"none", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                  <img src={modal.form.photo} alt="logo" style={{ width:64, height:64, borderRadius:12, objectFit:"contain", background:"white", border:"1.5px solid #e2e8f0" }} />
                 </div>
               ) : (
                 <div style={{ width:64, height:64, borderRadius:12, background:"#f1f5f9", border:"1.5px dashed #cbd5e1", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>🏢</div>
@@ -344,7 +296,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 export type PeriodeGI = "mois" | "troisMois" | "an" | "vie";
 
 export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite }: {
-  accesGI: any;
+  accesGI: AccesGestionInterne | null;
   disabled?: boolean;
   onChoisir: (periode: PeriodeGI) => void;
   onVisibilite: () => void;

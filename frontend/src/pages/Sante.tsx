@@ -7,7 +7,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Hospital {
@@ -28,7 +28,7 @@ interface Hospital {
   isActive: boolean;
   isEmergency: boolean;
   rating: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -44,12 +44,12 @@ interface Doctor {
   email?: string;
   consultationFee: number;
   currency: string;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -57,7 +57,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 export default function Sante() {
   const { t } = useI18n();
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'hopitaux' | 'medecins'>('hopitaux');
   const [rawHospitals, setRawHospitals] = useState<Hospital[]>([]);
   const [rawDoctors, setRawDoctors] = useState<Doctor[]>([]);
@@ -94,6 +94,7 @@ export default function Sante() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   // Demande GPS silencieuse
@@ -174,125 +175,7 @@ export default function Sante() {
 
 
 
-  const getDefaultHospitals = (): Hospital[] => [
-    {
-      id: '1',
-      name: 'Hôpital National Ignace Deen',
-      type: 'public',
-      region: 'Conakry',
-      city: 'Conakry',
-      address: 'Kaloum, Conakry',
-      phone: '+224 30 45 12 34',
-      emergencyPhone: '+224 30 45 12 35',
-      services: ['Urgences', 'Chirurgie', 'Médecine interne', 'Pédiatrie'],
-      specialties: ['Cardiologie', 'Neurologie', 'Orthopédie'],
-      coordinates: { lat: 9.6412, lng: -13.5784 },
-      isActive: true,
-      isEmergency: true,
-      rating: 4.2,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      name: 'Clinique Pasteur',
-      type: 'privé',
-      region: 'Conakry',
-      city: 'Conakry',
-      address: 'Hamdallaye, Conakry',
-      phone: '+224 30 45 67 89',
-      emergencyPhone: '+224 30 45 67 90',
-      services: ['Consultations', 'Analyses', 'Imagerie'],
-      specialties: ['Gynécologie', 'Pédiatrie', 'Médecine générale'],
-      coordinates: { lat: 9.6412, lng: -13.5784 },
-      isActive: true,
-      isEmergency: false,
-      rating: 4.5,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '3',
-      name: 'Hôpital Régional de Kindia',
-      type: 'public',
-      region: 'Kindia',
-      city: 'Kindia',
-      address: 'Centre-ville, Kindia',
-      phone: '+224 30 45 23 45',
-      emergencyPhone: '+224 30 45 23 46',
-      services: ['Urgences', 'Médecine générale', 'Chirurgie'],
-      specialties: ['Médecine interne', 'Chirurgie générale'],
-      coordinates: { lat: 10.0569, lng: -12.8652 },
-      isActive: true,
-      isEmergency: true,
-      rating: 3.8,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
-  const getDefaultDoctors = (): Doctor[] => [
-    {
-      id: '1',
-      name: 'Dr. Alpha Diallo',
-      specialties: ['Cardiologie', 'Médecine interne'],
-      qualifications: ['MD Cardiologie', 'Spécialiste en Médecine interne'],
-      experience: 15,
-      city: 'Conakry',
-      address: 'Kaloum, Conakry',
-      phone: '+224 123 456 789',
-      email: 'alpha.diallo@email.com',
-      consultationFee: 50000,
-      currency: 'FG',
-      availability: { monday: true, tuesday: true, wednesday: true },
-      languages: ['Français', 'Soussou'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.8,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '2',
-      name: 'Dr. Fatou Camara',
-      specialties: ['Gynécologie', 'Obstétrique'],
-      qualifications: ['MD Gynécologie', 'Spécialiste en Obstétrique'],
-      experience: 12,
-      city: 'Conakry',
-      address: 'Hamdallaye, Conakry',
-      phone: '+224 987 654 321',
-      email: 'fatou.camara@email.com',
-      consultationFee: 45000,
-      currency: 'FG',
-      availability: { tuesday: true, thursday: true, friday: true },
-      languages: ['Français', 'Malinké'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.6,
-      reviews: [],
-      createdBy: 'admin'
-    },
-    {
-      id: '3',
-      name: 'Dr. Mamadou Bah',
-      specialties: ['Pédiatrie', 'Médecine générale'],
-      qualifications: ['MD Pédiatrie', 'Médecine générale'],
-      experience: 8,
-      city: 'Kindia',
-      address: 'Centre-ville, Kindia',
-      phone: '+224 555 123 456',
-      email: 'mamadou.bah@email.com',
-      consultationFee: 35000,
-      currency: 'FG',
-      availability: { monday: true, wednesday: true, friday: true },
-      languages: ['Français', 'Peul'],
-      isActive: true,
-      isAvailable: true,
-      ratings: 4.4,
-      reviews: [],
-      createdBy: 'admin'
-    }
-  ];
 
 
   const filteredHospitals = hospitals.filter(hospital => {
@@ -364,7 +247,7 @@ export default function Sante() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-emerald-500 text-white shadow-md'

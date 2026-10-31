@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
+import type { MessageGroupe, PermissionPublication } from "../types/groupes";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -11,7 +12,7 @@ interface UserData {
   nomFamille: string;
   regionOrigine?: string;
   pays?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface RegionGroup {
@@ -57,13 +58,13 @@ export default function GuineeForestiere() {
   const [selectedGroup, setSelectedGroup] = useState<RegionGroup | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<MessageGroupe[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [showPermissionForm, setShowPermissionForm] = useState(false);
   const [permissionNumeroH, setPermissionNumeroH] = useState('');
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<PermissionPublication[]>([]);
   const [showMembersList, setShowMembersList] = useState(false);
   const navigate = useNavigate();
 
@@ -121,12 +122,14 @@ export default function GuineeForestiere() {
         loadPermissions();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup]);
 
   useEffect(() => {
     if (selectedGroup && (isAdmin || isCreator)) {
       loadPermissions();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup, isAdmin, isCreator]);
 
   const loadGroups = async () => {
@@ -248,9 +251,9 @@ export default function GuineeForestiere() {
         const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi du message' }));
         alert(error.message || 'Erreur lors de l\'envoi du message');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      alert(error.message || 'Erreur lors de l\'envoi du message');
+      alert((error as Error).message || 'Erreur lors de l\'envoi du message');
     }
   };
 
@@ -276,9 +279,9 @@ export default function GuineeForestiere() {
       setPermissionNumeroH('');
       setShowPermissionForm(false);
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'attribution de la permission:', error);
-      alert(error.message || 'Erreur lors de l\'attribution de la permission');
+      alert((error as Error).message || 'Erreur lors de l\'attribution de la permission');
     }
   };
 
@@ -300,77 +303,14 @@ export default function GuineeForestiere() {
       
       alert('Permission révoquée avec succès');
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la révocation de la permission:', error);
-      alert(error.message || 'Erreur lors de la révocation de la permission');
+      alert((error as Error).message || 'Erreur lors de la révocation de la permission');
     }
   };
 
-  const getDefaultGroups = (): RegionGroup[] => [
-    {
-      id: '1',
-      name: 'Conakry Connect',
-      description: 'Communauté des habitants de Conakry pour échanger et s\'entraider',
-      region: 'Guinée forestière',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Conakry',
-      district: 'Kaloum'
-    },
-    {
-      id: '2',
-      name: 'Kindia United',
-      description: 'Organisation de la région de Kindia pour partager nos traditions et cultures',
-      region: 'Guinée forestière',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Kindia',
-      district: 'Kindia'
-    },
-    {
-      id: '3',
-      name: 'Boké Solidarité',
-      description: 'Communauté de Boké pour le développement et l\'entraide',
-      region: 'Guinée forestière',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      city: 'Boké',
-      district: 'Boké'
-    }
-  ];
 
 
-  const joinGroup = async (groupId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/groups/${groupId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ numeroH: userData?.numeroH })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Erreur lors de l\'adhésion au Organisation');
-      }
-      alert(data.message || 'Vous avez rejoint le Organisation !');
-      loadGroups();
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de l\'adhésion au Organisation');
-    }
-  };
 
 
   const createEvent = async () => {
@@ -397,9 +337,9 @@ export default function GuineeForestiere() {
       setShowEventForm(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'événement');
+      alert((error as Error).message || 'Erreur lors de la création de l\'événement');
     }
   };
 
@@ -427,9 +367,9 @@ export default function GuineeForestiere() {
       setShowAnnouncementForm(false);
       setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'annonce');
+      alert((error as Error).message || 'Erreur lors de la création de l\'annonce');
     }
   };
 
@@ -902,7 +842,7 @@ export default function GuineeForestiere() {
                   <div className="flex gap-2 flex-1">
                     <select
                       value={newMessage.messageType}
-                      onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
+                      onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as typeof newMessage.messageType, mediaFile: null})}
                       className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                     >
                       <option value="text">📝</option>

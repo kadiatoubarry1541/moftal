@@ -667,7 +667,7 @@ const en: Record<string, string> = {
   // Footer
   'footer.copy': '© {year} Moftal',
   'footer.tagline': "Together for Adam's children",
-  'footer.system': "Genealogical registration system",
+  'footer.system': "Family & Services",
   'footer.conditions': "Terms of Use",
   'footer.privacy': "Privacy Policy",
   'footer.pro_space': 'Moftal · Professional Space',

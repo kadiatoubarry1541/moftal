@@ -61,6 +61,15 @@ export function appSiteInstallee(): boolean {
   return !!s && Date.now() - (s.at || 0) < VALIDITE_MS;
 }
 
+// Paquet publié sur le Play Store : sur Android, on installe Moftal par le Play Store
+// (chaque installation y compte), jamais depuis le site.
+export const PAQUET_PLAY = "com.moftal.twa";
+
+/** Page Play Store de Moftal (ouvre l'app Play Store sur Android). */
+export function lienPlayStore() {
+  return `https://play.google.com/store/apps/details?id=${PAQUET_PLAY}`;
+}
+
 /** Lien Android qui ouvre l'app du Play Store sur la page actuelle. */
 export function lienOuvrirAppPlay(pkg: string) {
   const { host, pathname, search } = window.location;

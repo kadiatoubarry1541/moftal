@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import './Education.css'
 import { useTraduction } from '../i18n/traduction'
+import type { UserData } from '../utils/auth'
 
 interface Course {
   id: string
@@ -28,11 +28,10 @@ interface Lesson {
 }
 
 interface EducationProps {
-  userData: any
+  userData: UserData
 }
 
 export function Education({ userData }: EducationProps) {
-  const navigate = useNavigate()
   const { tr } = useTraduction()
   const [activeTab, setActiveTab] = useState('courses')
   const [courses, setCourses] = useState<Course[]>([])

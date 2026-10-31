@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
 import EditProfileModal from "../components/EditProfileModal";
 import { AdminPanel } from "../components/AdminPanel";
@@ -37,6 +36,15 @@ interface UserLogo {
   };
 }
 
+
+interface EtablissementMembre {
+  id?: number | string;
+  /** Compte professionnel de l'établissement */
+  professional_account_id?: string;
+  name?: string | null;
+  photo?: string | null;
+  role?: string | null;
+}
 export default function MonProfil() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<{
@@ -51,10 +59,10 @@ export default function MonProfil() {
     dateNaissance?: string;
     age?: number;
     generation?: string;
-    [key: string]: string | number | boolean | undefined;
+    [key: string]: unknown;
   } | null>(null);
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
-  const [memberships, setMemberships] = useState<any[]>([]);
+  const [memberships, setMemberships] = useState<EtablissementMembre[]>([]);
   const [open, setOpen] = useState(false);
   // ?modifier=1 : page unique « Mettre à jour mon profil » (bannière, espaces pro…)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -112,6 +120,7 @@ export default function MonProfil() {
     const handleSessionUpdate = () => loadUserData();
     window.addEventListener("session-updated", handleSessionUpdate);
     return () => window.removeEventListener("session-updated", handleSessionUpdate);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadUserLogos = async (numeroH?: string) => {
@@ -150,7 +159,7 @@ export default function MonProfil() {
     }
   };
 
-  const quitterEtablissement = async (membership: any) => {
+  const quitterEtablissement = async (membership: EtablissementMembre) => {
     if (!window.confirm(`${t('toast.leave_confirm')} "${membership.name}" ?`)) return;
     try {
       const token = localStorage.getItem("token");
@@ -441,7 +450,7 @@ export default function MonProfil() {
           setOpen(false);
           setShowEditProfile(true);
         }}
-        freshUserData={userData}
+        freshUserData={userData as React.ComponentProps<typeof IdentiteModal>["freshUserData"]}
       />
 
       <EditProfileModal

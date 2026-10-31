@@ -55,16 +55,34 @@ function getMyNumeroH(): string | null {
   } catch { return null; }
 }
 
+
+/** Personne autorisée à publier les actualités de l'État */
+interface Editeur { id: string; numeroH: string; name?: string | null; role?: string | null }
+
+/** Actualité publiée (développement gouvernemental) */
+interface Actualite {
+  id: string;
+  titre?: string | null;
+  content?: string | null;
+  domaine?: string | null;
+  numeroH?: string;
+  authorName?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  createdAt?: string;
+  created_at?: string;
+}
+
 export default function DeveloppementGouvernemental({ scope, location, locationName, isJournalist, isAdmin, higherLevels = [] }: Props) {
   const canPublish = isJournalist || isAdmin;
   const myNumeroH = getMyNumeroH();
   const [canPublishActu, setCanPublishActu] = useState(canPublish);
   const [showPublishers, setShowPublishers] = useState(false);
-  const [publishers, setPublishers] = useState<any[]>([]);
+  const [publishers, setPublishers] = useState<Editeur[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
 
   // Actualités
-  const [actualites, setActualites] = useState<any[]>([]);
+  const [actualites, setActualites] = useState<Actualite[]>([]);
   const [loadingActu, setLoadingActu] = useState(true);
   const [showActuForm, setShowActuForm] = useState(false);
   const [actuForm, setActuForm] = useState({ titre: '', content: '', domaine: '' });
@@ -101,6 +119,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
     loadLogo();
     checkCanPublishActu();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [scope, location]);
 
   // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
@@ -124,6 +143,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       if (!cancelled) setAllowedHigherLevels(results.filter((l): l is HigherLevel => !!l));
     });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [showActuForm]);
 
   const togglePartage = (lvl: HigherLevel) => {
@@ -170,9 +190,10 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
 
   const removePublisher = async (id: string) => {
     try {
-      await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+      const res = await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.message || 'Erreur.'); return; }
       loadPublishers();
-    } catch {}
+    } catch { alert('Erreur.'); }
   };
 
   const loadLogo = async () => {
@@ -211,7 +232,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         const d = await res.json();
         // Les alertes sécurité remontent toujours en premier, puis la sensibilisation.
         const priorite = (dom?: string) => dom === 'securite' ? 2 : dom === 'sensibilisation' ? 1 : 0;
-        const list = (d.actualites || []).sort((a: any, b: any) => priorite(b.domaine) - priorite(a.domaine));
+        const list = (d.actualites || []).sort((a: Actualite, b: Actualite) => priorite(b.domaine) - priorite(a.domaine));
         setActualites(list);
       }
     } catch {} finally { setLoadingActu(false); }
@@ -441,7 +462,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
               <div className="space-y-2">
                 {publishers.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-4">Personne d'autre autorisé pour l'instant</p>
-                ) : publishers.map((p: any) => (
+                ) : publishers.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg p-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{p.name || p.numeroH}</p>

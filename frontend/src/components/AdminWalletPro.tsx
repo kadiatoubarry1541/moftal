@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { useTraduction } from '../i18n/traduction';
+import type { PortefeuillePro, TotauxPortefeuilles } from "../types/moftalPay";
 
 interface Props {
   token: string;
@@ -18,8 +19,8 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export function AdminWalletPro({ token, apiBase }: Props) {
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [totaux, setTotaux] = useState<any>(null);
+  const [wallets, setWallets] = useState<PortefeuillePro[]>([]);
+  const [totaux, setTotaux] = useState<TotauxPortefeuilles | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [testWalletId, setTestWalletId] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
   const [testMsg, setTestMsg] = useState('');
   const { tr } = useTraduction();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   async function depotTest(walletId: string) {

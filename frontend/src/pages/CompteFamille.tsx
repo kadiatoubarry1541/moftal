@@ -1,13 +1,15 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils/currency';
-import { ReçuTransaction } from '../components/ReçuTransaction';
+import { ReçuTransaction, type DonneesReçu } from '../components/ReçuTransaction';
 import PaymentModal from '../components/PaymentModal';
 import LogoEtablissement from "../components/LogoEtablissement";
+import type { CompteFamille, InfosRiz, SoldesFamille, TransactionFamille } from '../types/compteFamille';
+import type { CompteProfessionnel } from '../types/pro';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-const CATEGORIES = [
+const CATEGORIES: { key: keyof SoldesFamille; label: string; pct: number; color: string; icon: string }[] = [
   { key: 'reserve',    label: 'Réserve bloquée',  pct: 20, color: '#1e3a5f', icon: '🔒' },
   { key: 'sante',      label: 'Santé',             pct: 40, color: '#1a8f1a', icon: '🏥' },
   { key: 'nourriture', label: 'Nourriture',        pct: 20, color: '#d97706', icon: '🌾' },
@@ -35,8 +37,8 @@ export default function CompteFamille() {
   const navigate = useNavigate();
   const devise: DeviseInfo = getDeviseUtilisateur();
 
-  const [compte, setCompte] = useState<any>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [compte, setCompte] = useState<CompteFamille | null>(null);
+  const [transactions, setTransactions] = useState<TransactionFamille[]>([]);
   const [loading, setLoading] = useState(true);
   const [existe, setExiste] = useState(false);
   const [nbMembres, setNbMembres] = useState(0);
@@ -54,20 +56,20 @@ export default function CompteFamille() {
   // Paiement direct vers une clinique/hôpital vérifié (Moftal Pay interne, santé uniquement)
   const [showPayerPro, setShowPayerPro] = useState(false);
   const [rechercheProQ, setRechercheProQ] = useState('');
-  const [proResults, setProResults] = useState<any[]>([]);
-  const [proSelectionne, setProSelectionne] = useState<any>(null);
+  const [proResults, setProResults] = useState<CompteProfessionnel[]>([]);
+  const [proSelectionne, setProSelectionne] = useState<CompteProfessionnel | null>(null);
   const [montantPayerPro, setMontantPayerPro] = useState('');
   const [descriptionPayerPro, setDescriptionPayerPro] = useState('');
   const [loadingPayerPro, setLoadingPayerPro] = useState(false);
 
   // Achat de riz auprès de l'admin (budget nourriture)
-  const [rizInfo, setRizInfo] = useState<any>(null);
+  const [rizInfo, setRizInfo] = useState<InfosRiz | null>(null);
   const [showAcheterRiz, setShowAcheterRiz] = useState(false);
   const [nombreSacs, setNombreSacs] = useState('');
   const [loadingRiz, setLoadingRiz] = useState(false);
 
   // Reçu à afficher après opération
-  const [reçu, setReçu] = useState<any>(null);
+  const [reçu, setReçu] = useState<DonneesReçu | null>(null);
 
   const token = localStorage.getItem('token');
 
@@ -80,6 +82,7 @@ export default function CompteFamille() {
   }, []);
 
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   useEffect(() => {
@@ -87,6 +90,7 @@ export default function CompteFamille() {
       .then(r => r.json())
       .then(d => { if (d.success) setRizInfo(d); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function charger() {
@@ -185,7 +189,7 @@ export default function CompteFamille() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const d = await r.json();
-      const filtres = (d.accounts || []).filter((a: any) =>
+      const filtres = (d.accounts || []).filter((a: CompteProfessionnel) =>
         a.type === 'clinic' && a.status === 'approved'
       );
       setProResults(filtres);
@@ -282,6 +286,8 @@ export default function CompteFamille() {
           description={reçu.description}
           nomFamille={reçu.nomFamille}
           repartition={reçu.repartition}
+          proNom={reçu.proNom}
+          logoUrl={reçu.logoUrl}
           onClose={() => setReçu(null)}
         />
       )}

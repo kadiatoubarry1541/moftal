@@ -1,19 +1,22 @@
 ﻿import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
-import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
+import BarreRecherche from "../components/BarreRecherche";
+import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { EtablissementGestion } from "../types/pro";
+import type { JournalAnnouncement, JournalArticle, JournalReporter, JournalSubscriber, TableauJournal } from "../types/gestion-journalist";
 
 const BASE = (code: string) => `/api/journalist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -35,7 +38,7 @@ const STATUT_ARTICLE: Record<string, { bg: string; color: string; label: string 
 
 export default function GestionJournaliste() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -45,12 +48,12 @@ export default function GestionJournaliste() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [reporters, setReporters] = useState<any[]>([]);
-  const [articles, setArticles] = useState<any[]>([]);
-  const [subscribers, setSubscribers] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauJournal | null>(null);
+  const [reporters, setReporters] = useState<JournalReporter[]>([]);
+  const [articles, setArticles] = useState<JournalArticle[]>([]);
+  const [subscribers, setSubscribers] = useState<JournalSubscriber[]>([]);
+  const [announcements, setAnnouncements] = useState<JournalAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -69,6 +72,7 @@ export default function GestionJournaliste() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -77,6 +81,7 @@ export default function GestionJournaliste() {
     else if (tab === "articles") loadArticles();
     else if (tab === "subscribers") loadSubscribers();
     else if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab]);
 
   async function loadAll() {
@@ -117,7 +122,7 @@ export default function GestionJournaliste() {
   async function addArticle() {
     if (!aForm.titre.trim()) return;
     setSaving(true);
-    const sel = reporters.find((r: any) => String(r.id) === aForm.reporter_id);
+    const sel = reporters.find((r) => String(r.id) === aForm.reporter_id);
     const payload = { ...aForm, reporter_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : aForm.reporter_nom };
     if (!(await envoyerGestion(`${BASE(tenantCode!)}/articles`, { method: "POST", headers: auth(), body: JSON.stringify(payload) }))) { setSaving(false); return; }
     setSaving(false); setShowAddArticle(false);
@@ -285,7 +290,7 @@ export default function GestionJournaliste() {
                   <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Articles récents</span>
                   <button onClick={() => setTab("articles")} style={{ fontSize: 12, color: RED, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir tous →</button>
                 </div>
-                {dash.recentArticles.map((a: any) => {
+                {dash.recentArticles.map((a) => {
                   const sc = STATUT_ARTICLE[a.statut] || STATUT_ARTICLE.brouillon;
                   return (
                     <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #f8fafc" }}>
@@ -347,7 +352,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {reporters.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun journaliste enregistré</div>}
-              {filtrer(reporters, recherche).map((r: any) => (
+              {filtrer(reporters, recherche).map((r) => (
                 <div key={r.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: RED_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📰</div>
                   <div style={{ flex: 1 }}>
@@ -383,7 +388,7 @@ export default function GestionJournaliste() {
                     <label style={labelStyle}>Journaliste</label>
                     <select value={aForm.reporter_id} onChange={e => setAForm({...aForm, reporter_id: e.target.value})} style={inputStyle}>
                       <option value="">— Non précisé —</option>
-                      {reporters.map((r: any) => <option key={r.id} value={r.id}>{r.nom} {r.prenom}</option>)}
+                      {reporters.map((r) => <option key={r.id} value={r.id}>{r.nom} {r.prenom}</option>)}
                     </select>
                   </div>
                   <div>
@@ -409,7 +414,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {articles.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun article enregistré</div>}
-              {filtrer(articles, recherche).map((a: any) => {
+              {filtrer(articles, recherche).map((a) => {
                 const sc = STATUT_ARTICLE[a.statut] || STATUT_ARTICLE.brouillon;
                 return (
                   <div key={a.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
@@ -465,7 +470,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {subscribers.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun abonné enregistré</div>}
-              {filtrer(subscribers, recherche).map((s: any) => (
+              {filtrer(subscribers, recherche).map((s) => (
                 <div key={s.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: RED_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>👤</div>
                   <div style={{ flex: 1 }}>
@@ -512,7 +517,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {filtrer(announcements, recherche).map((a: any) => (
+              {filtrer(announcements, recherche).map((a) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>

@@ -45,7 +45,7 @@ export default function AdminAmitieMessages() {
       })
       .catch(() => setError(tr("Erreur de connexion")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [tr]);
 
   const label = (u: LinkUser) => `${u.prenom || ""} ${u.nomFamille || ""}`.trim() || u.numeroH;
 

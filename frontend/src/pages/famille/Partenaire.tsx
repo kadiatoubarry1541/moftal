@@ -4,20 +4,20 @@ import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import ChampPersonne from '../../components/ChampPersonne'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-  genre: 'HOMME' | 'FEMME' | 'AUTRE'
-  dateNaissance?: string
-  date_naissance?: string
-  role?: string
-  isAdmin?: boolean
-}
 
+
+/** Lien de couple rompu ou archivé */
+interface LienRompu {
+  id: string
+  status: string
+  brokenAt?: string | null
+  brokenByNumeroH?: string | null
+  archivedAt?: string | null
+}
 
 interface PartnerInfo {
   numeroH: string
@@ -30,6 +30,8 @@ interface PartnerInfo {
 interface LinkInfo {
   id: string
   numeroMariageMairie: string
+  /** « pending », « active »… */
+  status?: string
 }
 
 interface PendingInvitation {
@@ -76,10 +78,10 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const [wives, setWives] = useState<Array<{ link: { id: string; status: string; numeroMariageMairie?: string; confirmedAt?: string }; wife: PartnerInfo | null }>>([])
   const [selectedWifeIndex, setSelectedWifeIndex] = useState(0)
   // Liens rompus (récupérables — se remettre ensemble possible)
-  const [brokenLinks, setBrokenLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
+  const [brokenLinks, setBrokenLinks] = useState<Array<{ link: LienRompu; partner: PartnerInfo | null }>>([])
   const [showBroken, setShowBroken] = useState(false)
   // Historique archivé (séparation définitive — contenu supprimé côté demandeur)
-  const [archivedLinks, setArchivedLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
+  const [archivedLinks, setArchivedLinks] = useState<Array<{ link: LienRompu; partner: PartnerInfo | null }>>([])
   const [linkForm, setLinkForm] = useState({
     partnerNumeroH: '',
     numeroMariageMairie: ''
@@ -289,7 +291,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         loadActivities()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -311,7 +313,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         loadPendingInvitations()
         loadPendingSent()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -356,7 +358,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         setPartner(null); setLinkInfo(null)
         reloadAll()
       } else alert(data.message || 'Erreur')
-    } catch (e) { alert('Erreur réseau') }
+    } catch { alert('Erreur réseau') }
     finally { setSubmitting(false) }
   }
 
@@ -382,7 +384,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       const data = await res.json()
       if (data.success) { reloadAll(); alert(data.message) }
       else alert(data.message || 'Erreur')
-    } catch (e) { alert('Erreur réseau') }
+    } catch { alert('Erreur réseau') }
     finally { setSubmitting(false) }
   }
 
@@ -420,6 +422,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
     } else {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, location.pathname])
 
   // Auto-ouvrir la section liens rompus si l'autre personne est à l'origine
@@ -459,7 +462,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur lors de la liaison')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -489,7 +492,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -506,10 +509,16 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       [session]: [...(prev[session] || []), newItem]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaBySession((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== newItem.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         // Convertir l'URL (blob: ou data:) en File pour upload multipart
         const response = await fetch(mediaData.url)
         const blob = await response.blob()
@@ -528,11 +537,13 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média couple:', data)
+          annuler()
         } else {
           await loadActivities()
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média couple:', e)
+        annuler()
       }
     }
 
@@ -564,7 +575,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       } else {
         alert(data.message || 'Erreur')
       }
-    } catch (e) {
+    } catch {
       alert('Erreur réseau')
     } finally {
       setSubmitting(false)
@@ -588,7 +599,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const focusedOnPartner = !!focusNumeroH && partner?.numeroH === focusNumeroH
 
   // Pour les femmes : un seul mari possible — on dérive husbands depuis partner + linkInfo
-  const husbands: Array<{ link: any; husband: PartnerInfo | null }> =
+  const husbands: Array<{ link: LinkInfo; husband: PartnerInfo | null }> =
     !isHomme && partner && linkInfo
       ? [{ link: linkInfo, husband: partner }]
       : []
@@ -612,7 +623,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
               </p>
               <p className="text-xs text-rose-600 mt-1">Ce lien est définitivement rompu. Vous pouvez supprimer cet historique de votre côté.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {brokenByOther.map(({ link, partner: p }) => (
+                {brokenByOther.map(({ link }) => (
                   <div key={link.id} className="flex gap-2">
                     <button
                       onClick={() => handleSeparate(link.id)}

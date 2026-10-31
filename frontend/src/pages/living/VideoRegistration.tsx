@@ -366,22 +366,22 @@ export function VideoRegistration() {
       specialite: normalizedData.specialite?.trim() || '',
       photo: photoUrl,
       photoPreview: photoUrl,
-      activitePreuve: null,
-      activiteDoc: null,
+      activitePreuve: null as string | null,
+      activiteDoc: null as string | null,
       lieu1: normalizedData.quartier?.trim() || normalizedData.lieu1 || '',
       video: videoUrl,
     }
 
     try {
-      const result = await api.registerLiving(completeData as any)
-      const saveAndGo = (user: any, source: string) => {
-        const userDataWithPassword = { ...user }
-        localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
+      const result = await api.registerLiving(completeData)
+      const saveAndGo = (user: { numeroH?: string; [champ: string]: unknown } | null | undefined, source: string) => {
+        const userSafe = { ...user } // le serveur renvoie le compte sans mot de passe
+        localStorage.setItem('dernier_vivant', JSON.stringify(userSafe))
         // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
         const numeroFinal = user?.numeroH || numeroH
         localStorage.setItem('session_user', JSON.stringify({
           numeroH: numeroFinal,
-          userData: userDataWithPassword,
+          userData: userSafe,
           token: result?.token || null,
           type: 'vivant',
           source,
@@ -402,12 +402,12 @@ export function VideoRegistration() {
         // connecté automatiquement au lieu de voir un message de rejet.
         const identifiant = normalizedData.email?.trim() || normalizedData.telephone?.trim() || ''
         const loginResult = identifiant
-          ? await api.login(identifiant, normalizedData.password).catch(() => null)
+          ? await api.login(identifiant, normalizedData.password).catch((): null => null)
           : null
 
         if (loginResult?.success) {
           // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
-          showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, normalizedData.password)
+          showCredentialsReminder(loginResult.user?.numeroH || numeroH, normalizedData.password)
           navigate('/compte')
         } else {
           alert(result.message || 'Une erreur est survenue lors de l\'inscription. Réessayez.')

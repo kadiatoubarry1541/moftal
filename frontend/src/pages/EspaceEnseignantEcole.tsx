@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
-import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
+import { heure, duree } from "../components/ecole/formatEcole";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
-import { cheminAppEcole } from "../utils/appEcole";
 import { cheminConnexion } from "../utils/connexionRetour";
 
 // Espace de l'enseignant : il marque le début et la fin de chacun de ses cours.

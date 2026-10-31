@@ -4,6 +4,18 @@ import { getSessionUser } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
 import { useI18n } from '../i18n/useI18n'
 
+
+interface MonAnnonce {
+  /** Calculé par le serveur : publié et pas encore expiré (vrai, ou « t » selon la base) */
+  en_ligne?: boolean | string;
+  expire_le?: string | null;
+  id: string;
+  lieu?: string | null;
+  matiere?: string | null;
+  niveau?: string | null;
+  prix_info?: number | string;
+  titre?: string | null;
+}
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
 function getNiveaux(t: (key: string) => string) {
@@ -34,7 +46,7 @@ export default function PublierFormation() {
   const [prix, setPrix] = useState<number | null>(null)
   const [zone, setZone] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mesAnnonces, setMesAnnonces] = useState<any[]>([])
+  const [mesAnnonces, setMesAnnonces] = useState<MonAnnonce[]>([])
   const [onglet, setOnglet] = useState<'publier' | 'mes-annonces'>('publier')
   const [showPayment, setShowPayment] = useState(false)
   const [annonceId, setAnnonceId] = useState('')
@@ -64,6 +76,7 @@ export default function PublierFormation() {
         .then(r => r.json()).then(d => { if (d.success) { setPrix(d.prix); setZone(d.zone); } }),
       chargerMesAnnonces(),
     ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   async function chargerMesAnnonces() {

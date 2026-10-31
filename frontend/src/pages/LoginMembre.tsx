@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
-import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
+import { TermsModal } from '../components/TermsModal';
+import { hasAcceptedTerms } from '../utils/conditionsUtilisation';
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -19,7 +20,7 @@ export function LoginMembre() {
   // Page d'où l'on vient (espace patient, application de l'établissement…) :
   // on y revient après la connexion (seulement une adresse de ce site)
   const redirectParam = new URLSearchParams(location.search).get('redirect')
-  const retour = (location.state as any)?.from
+  const retour = (location.state as { from?: string } | null)?.from
     || (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null)
     || '/compte'
 
@@ -38,6 +39,7 @@ export function LoginMembre() {
       }
     } catch {}
     if (!hasAcceptedTerms()) setShowTerms(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   const onSubmit = async () => {
