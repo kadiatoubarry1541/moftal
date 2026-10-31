@@ -157,9 +157,9 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
       qrScannerRef.current = scanner;
       await scanner.start();
       setPermState('granted');
-    } catch (err: any) {
+    } catch (err) {
       setQrActive(false);
-      const name = err?.name || String(err) || '';
+      const name = (err as Error)?.name || String(err) || '';
       if (name.includes('NotAllowed') || name.includes('Permission')) { setPermState('denied'); setQrError('denied'); }
       else if (name.includes('NotFound') || name.includes('Devices')) setQrError('not_found');
       else if (name.includes('NotReadable') || name.includes('TrackStart')) setQrError('busy');

@@ -250,8 +250,8 @@ export default function ARetenir() {
       } else {
         throw new Error('Erreur lors de la sauvegarde');
       }
-    } catch (error: any) {
-      if (error.message !== 'session_expired') {
+    } catch (error) {
+      if ((error as Error).message !== 'session_expired') {
         console.error('Erreur lors de la sauvegarde:', error);
         toast.error('Erreur lors de la sauvegarde. Vérifiez que le serveur est démarré.');
       }
@@ -301,11 +301,11 @@ export default function ARetenir() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de la publication');
       }
-    } catch (error: any) {
-      if (error.message?.includes('fetch') || error.name === 'TypeError') {
+    } catch (error) {
+      if ((error as Error).message?.includes('fetch') || (error as Error).name === 'TypeError') {
         toast.error('Impossible de contacter le serveur. Vérifiez que le backend est démarré.');
       } else {
-        toast.error(error.message || 'Erreur lors de la publication');
+        toast.error((error as Error).message || 'Erreur lors de la publication');
       }
     } finally {
       setSaving(false);
@@ -387,9 +387,9 @@ export default function ARetenir() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de l\'upload');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      toast.error(error.message || 'Erreur lors de l\'upload');
+      toast.error((error as Error).message || 'Erreur lors de l\'upload');
     } finally {
       setUploading({ ...uploading, [`${sectionId}-${type}`]: false });
     }

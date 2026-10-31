@@ -456,8 +456,8 @@ export default function Identite() {
                     } else {
                       setDeleteError(result.message || "Erreur lors de la suppression du compte.");
                     }
-                  } catch (err: any) {
-                    setDeleteError(err?.message || "Le serveur n'a pas pu supprimer le compte. Vérifiez votre connexion et réessayez.");
+                  } catch (err) {
+                    setDeleteError((err as Error)?.message || "Le serveur n'a pas pu supprimer le compte. Vérifiez votre connexion et réessayez.");
                   } finally {
                     setDeleteLoading(false);
                   }

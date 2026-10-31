@@ -440,9 +440,9 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
       );
       qrScannerRef.current = scanner;
       await scanner.start();
-    } catch (err: any) {
+    } catch (err) {
       setQrScannerActive(false);
-      const name = err?.name || String(err) || '';
+      const name = (err as Error)?.name || String(err) || '';
       if (name.includes('NotAllowed') || name.includes('Permission')) setQrScanError('denied');
       else if (name.includes('NotFound') || name.includes('Devices')) setQrScanError('not_found');
       else if (name.includes('NotReadable') || name.includes('TrackStart')) setQrScanError('busy');

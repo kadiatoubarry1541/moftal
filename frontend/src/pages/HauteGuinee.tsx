@@ -278,9 +278,9 @@ export default function HauteGuinee() {
       setPermissionNumeroH('');
       setShowPermissionForm(false);
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'attribution de la permission:', error);
-      alert(error.message || 'Erreur lors de l\'attribution de la permission');
+      alert((error as Error).message || 'Erreur lors de l\'attribution de la permission');
     }
   };
 
@@ -302,9 +302,9 @@ export default function HauteGuinee() {
       
       alert('Permission révoquée avec succès');
       loadPermissions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la révocation de la permission:', error);
-      alert(error.message || 'Erreur lors de la révocation de la permission');
+      alert((error as Error).message || 'Erreur lors de la révocation de la permission');
     }
   };
 
@@ -335,9 +335,9 @@ export default function HauteGuinee() {
       setShowEventForm(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'événement');
+      alert((error as Error).message || 'Erreur lors de la création de l\'événement');
     }
   };
 
@@ -365,9 +365,9 @@ export default function HauteGuinee() {
       setShowAnnouncementForm(false);
       setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });
       loadGroups();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création de l\'annonce');
+      alert((error as Error).message || 'Erreur lors de la création de l\'annonce');
     }
   };
 

@@ -72,9 +72,9 @@ export const api = {
       }
 
       return { ...result, user: userSafe }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur enregistrement vivant:', error)
-      const isTimeout = error?.name === 'AbortError'
+      const isTimeout = (error as Error)?.name === 'AbortError'
       return {
         success: false,
         user: null,
@@ -218,10 +218,10 @@ export const api = {
           numeroHExists: result.numeroHExists
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(timeoutId)
-      console.error('[LOGIN] Erreur fetch:', error?.name, error?.message)
-      const isAbort = error?.name === 'AbortError'
+      console.error('[LOGIN] Erreur fetch:', (error as Error)?.name, (error as Error)?.message)
+      const isAbort = (error as Error)?.name === 'AbortError'
       return {
         success: false,
         networkError: true,

@@ -448,8 +448,8 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       setMediaRecorder(recorder);
       setIsRecording(true);
       addLog('system', `Enregistrement ${type === 'audio' ? 'audio' : 'vidéo'} démarré`);
-    } catch (error: any) {
-      addLog('system', `Erreur: ${error.message || 'Impossible d\'accéder au microphone/caméra'}`);
+    } catch (error) {
+      addLog('system', `Erreur: ${(error as Error).message || 'Impossible d\'accéder au microphone/caméra'}`);
     }
   };
 

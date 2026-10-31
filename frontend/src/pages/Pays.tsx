@@ -646,15 +646,15 @@ export default function Pays() {
         console.error('Erreur serveur:', errorData);
         alert(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      console.error('Type d\'erreur:', error.name);
-      console.error('Message d\'erreur:', error.message);
+      console.error('Type d\'erreur:', (error as Error).name);
+      console.error('Message d\'erreur:', (error as Error).message);
       
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
+      if ((error as Error).message === 'Failed to fetch' || (error as Error).name === 'TypeError' || (error as Error).message?.includes('fetch')) {
         alert(`❌ Erreur de connexion: Impossible de se connecter au serveur.\n\nVérifiez que:\n1. Le backend est démarré sur le port 5002\n2. L'URL ${API_BASE_URL} est correcte\n3. Votre connexion internet fonctionne\n\nPour démarrer le backend:\ncd backend\nnpm run dev`);
       } else {
-        alert(`Erreur: ${error.message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
+        alert(`Erreur: ${(error as Error).message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
       }
     }
   };
@@ -907,15 +907,15 @@ export default function Pays() {
         console.error('Erreur serveur:', errorData);
         alert(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      console.error('Type d\'erreur:', error.name);
-      console.error('Message d\'erreur:', error.message);
+      console.error('Type d\'erreur:', (error as Error).name);
+      console.error('Message d\'erreur:', (error as Error).message);
       
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
+      if ((error as Error).message === 'Failed to fetch' || (error as Error).name === 'TypeError' || (error as Error).message?.includes('fetch')) {
         alert(`❌ Erreur de connexion: Impossible de se connecter au serveur.\n\nVérifiez que:\n1. Le backend est démarré sur le port 5002\n2. L'URL ${API_BASE_URL} est correcte\n3. Votre connexion internet fonctionne\n\nPour démarrer le backend:\ncd backend\nnpm run dev`);
       } else {
-        alert(`Erreur: ${error.message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
+        alert(`Erreur: ${(error as Error).message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
       }
     }
   };

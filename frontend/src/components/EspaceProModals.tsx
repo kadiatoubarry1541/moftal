@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { normaliserLogo } from "../utils/logoImage";
 import { useTraduction } from "../i18n/traduction";
 import { PUB_TYPES, DEFAULT_PUB_FORM, DEFAULT_PROFIL_FORM } from "./espaceProTypes";
+import type { AccesGestionInterne, PublicationPro } from "../types/pro";
 
 // Outils de l'Espace Pro partagés entre la page « Activité » (GestionInterne) et
 // le panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement.
@@ -14,7 +15,7 @@ export interface PublishModal {
   tenantCode: string;
   name: string;
   form: typeof DEFAULT_PUB_FORM;
-  pubs: any[];
+  pubs: PublicationPro[];
   step: "ready" | "saving" | "loading";
 }
 
@@ -143,7 +144,7 @@ export function PublierModal({ modal, onChange, onSubmit, onDelete, onClose }: {
               <div style={{ marginTop:24, borderTop:"1.5px solid #f1f5f9", paddingTop:16 }}>
                 <h3 style={{ margin:"0 0 12px", fontSize:13, fontWeight:800, color:"#0f172a", textTransform:"uppercase", letterSpacing:"0.05em" }}>{tr("Publications récentes ({n})", { n: modal.pubs.length })}</h3>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {modal.pubs.slice(0, 5).map((p: any) => (
+                  {modal.pubs.slice(0, 5).map((p) => (
                     <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f8fafc", borderRadius:10, border:"1px solid #e2e8f0" }}>
                       <span style={{ fontSize:16 }}>{PUB_TYPES.find(pt => pt.value === p.type)?.emoji || "📢"}</span>
                       <div style={{ flex:1, minWidth:0 }}>
@@ -296,7 +297,7 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 export type PeriodeGI = "mois" | "troisMois" | "an" | "vie";
 
 export function OffreGestionInterne({ accesGI, disabled, onChoisir, onVisibilite }: {
-  accesGI: any;
+  accesGI: AccesGestionInterne | null;
   disabled?: boolean;
   onChoisir: (periode: PeriodeGI) => void;
   onVisibilite: () => void;

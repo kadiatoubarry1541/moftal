@@ -99,9 +99,9 @@ export default function GestionImmobilier() {
       try {
         const url = await uploadMedia(video, "videos");
         setMedia(m => ({ ...m, video_url: url, envoi: false }));
-      } catch (e: any) {
+      } catch (e) {
         setMedia(m => ({ ...m, envoi: false }));
-        alert(`La vidéo n'a pas été envoyée : ${e?.message || "vérifiez la connexion"}. Réessayez.`);
+        alert(`La vidéo n'a pas été envoyée : ${(e as Error)?.message || "vérifiez la connexion"}. Réessayez.`);
       }
     }
     const photos = fichiers.filter(f => f.type.startsWith("image/"));

@@ -496,8 +496,8 @@ export default function EditProfileModal({
       } else {
         setTimeout(() => onClose(), 1500);
       }
-    } catch (err: any) {
-      const msg = err.message || "";
+    } catch (err) {
+      const msg = (err as Error).message || "";
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed")) {
         setError("La connexion a été coupée pendant l'envoi. Vérifiez votre connexion internet puis réessayez.");
       } else {

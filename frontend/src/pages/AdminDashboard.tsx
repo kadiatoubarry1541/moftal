@@ -561,8 +561,8 @@ export default function AdminDashboard() {
       });
       setSectorAdminNumeroH("");
       loadPageAdmins();
-    } catch (e: any) {
-      alert(e?.message || "Erreur lors de l'ajout.");
+    } catch (e) {
+      alert((e as Error)?.message || "Erreur lors de l'ajout.");
     }
   };
 
@@ -571,8 +571,8 @@ export default function AdminDashboard() {
     try {
       await removePageAdmin(id);
       loadPageAdmins();
-    } catch (e: any) {
-      alert(e?.message || "Erreur.");
+    } catch (e) {
+      alert((e as Error)?.message || "Erreur.");
     }
   };
 

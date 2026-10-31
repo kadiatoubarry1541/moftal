@@ -68,7 +68,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
         (u: User) => u.numeroH !== HIDDEN_MASTER_NUMEROH
       )
       setUsers(safeUsers)
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur lors du chargement des utilisateurs:', err)
       setUsers([])
     } finally {
@@ -127,9 +127,9 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
       await loadStats()
       
       alert(`✅ Utilisateur ${userToDelete.prenom} ${userToDelete.nomFamille} supprimé avec succès`)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la suppression:', error)
-      alert(`❌ Erreur: ${error.message || 'Impossible de supprimer l\'utilisateur'}`)
+      alert(`❌ Erreur: ${(error as Error).message || 'Impossible de supprimer l\'utilisateur'}`)
     }
   }
 
@@ -145,9 +145,9 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
       ))
       
       await loadStats()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la modification:', error)
-      alert(`❌ Erreur: ${error.message || 'Impossible de modifier le statut'}`)
+      alert(`❌ Erreur: ${(error as Error).message || 'Impossible de modifier le statut'}`)
     }
   }
 

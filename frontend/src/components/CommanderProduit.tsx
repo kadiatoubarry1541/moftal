@@ -52,8 +52,8 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || tr("La commande n'a pas pu être envoyée."));
       setEnvoyee(true);
-    } catch (e: any) {
-      setErreur(e.message || tr("La commande n'a pas pu être envoyée."));
+    } catch (e) {
+      setErreur((e as Error).message || tr("La commande n'a pas pu être envoyée."));
     } finally { setEnvoi(false); }
   };
 
@@ -142,7 +142,7 @@ export function CommandesRecues({ tout = false, toujoursVisible = false }: { tou
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || tr("La commande n'a pas pu être mise à jour."));
       setCommandes(cs => (cs || []).map(c => c.id === id ? { ...c, statut } : c));
-    } catch (e: any) { alert(e.message); }
+    } catch (e) { alert((e as Error).message); }
   };
 
   if (commandes === null) return null;

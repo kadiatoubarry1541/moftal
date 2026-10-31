@@ -236,10 +236,10 @@ export default function EchangePublier() {
         const data = await res.json().catch(() => ({}));
         showToast(data.message || t('echange_publier.toast_error_publish'), 'error');
       }
-    } catch (err: any) {
+    } catch (err) {
       clearTimeout(timeoutId);
       showToast(
-        err?.name === 'AbortError'
+        (err as Error)?.name === 'AbortError'
           ? t('echange_publier.toast_timeout')
           : t('echange_publier.toast_network_error'),
         'error'

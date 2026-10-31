@@ -77,9 +77,9 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     }
 
     return response.json();
-  } catch (error: any) {
+  } catch (error) {
     // Erreur réseau : le backend n'est pas joignable
-    if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+    if ((error as Error).name === 'TypeError' && (error as Error).message === 'Failed to fetch') {
       let port = '5002';
       try {
         port = new URL(API_URL.startsWith('http') ? API_URL : `http://${API_URL}`).port || port;

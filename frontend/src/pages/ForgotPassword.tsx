@@ -52,8 +52,8 @@ export function ForgotPassword() {
       } else {
         setError(result.message || 'Vérification échouée.')
       }
-    } catch (e: any) {
-      setError(e?.message || 'Erreur de connexion.')
+    } catch (e) {
+      setError((e as Error)?.message || 'Erreur de connexion.')
     } finally {
       setLoading(false)
     }
@@ -74,8 +74,8 @@ export function ForgotPassword() {
       } else {
         setError(result.message || 'Code incorrect.')
       }
-    } catch (e: any) {
-      setError(e?.message || 'Erreur de connexion.')
+    } catch (e) {
+      setError((e as Error)?.message || 'Erreur de connexion.')
     } finally {
       setLoading(false)
     }
@@ -99,8 +99,8 @@ export function ForgotPassword() {
       } else {
         setError(result.message || 'Réinitialisation échouée.')
       }
-    } catch (e: any) {
-      setError(e?.message || 'Erreur de connexion.')
+    } catch (e) {
+      setError((e as Error)?.message || 'Erreur de connexion.')
     } finally {
       setLoading(false)
     }

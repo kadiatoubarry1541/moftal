@@ -1160,7 +1160,7 @@ export default function EspacePro() {
     try {
       // Converti en PNG 512 px : s'affiche partout et sert d'icône d'application
       base64 = await normaliserLogo(file);
-    } catch (err: any) { alert(err.message); return; }
+    } catch (err) { alert((err as Error).message); return; }
     setLogoUploading(true);
     setLogoSuccess(false);
     try {
