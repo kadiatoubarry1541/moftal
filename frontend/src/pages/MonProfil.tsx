@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
 import EditProfileModal from "../components/EditProfileModal";
 import { AdminPanel } from "../components/AdminPanel";

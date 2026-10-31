@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Route, Routes, useNavigate } from 'react-router-dom'
-import { FAMILLES, ETHNIES, REGIONS, CONTINENT_CODE, PAYS, REGION_CODES, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
+import { FAMILLES, ETHNIES, REGIONS, PAYS, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
 import { Field, FilePicker, Select, SelectCode } from '../../components/inputs'
 import { useI18n } from '../../i18n/useI18n'
 import { anneesEcoulees } from '../../utils/calculs'
@@ -9,15 +9,6 @@ import { DeceasedChoice } from './DeceasedChoice'
 import { DeceasedVideoRegistration } from './DeceasedVideoRegistration'
 import { DeceasedWrittenForm } from './DeceasedWrittenForm'
 import { api } from '../../utils/api'
-import {
-  getContinents,
-  getCountriesByContinent,
-  getRegionsByCountry,
-  getPrefecturesByRegion,
-  getSousPrefecturesByPrefecture,
-  getQuartiersBySousPrefecture,
-  type GeographicLocation
-} from '../../utils/worldGeography'
 
 type EtatDefunt = {
   // page 1

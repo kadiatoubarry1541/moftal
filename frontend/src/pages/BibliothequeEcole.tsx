@@ -4,7 +4,6 @@ import { config } from "../config/api";
 import { CarteLivre, type Livre } from "../components/ecole/CoursEtBibliotheque";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
-import { cheminAppEcole } from "../utils/appEcole";
 import { cheminConnexion } from "../utils/connexionRetour";
 
 // Bibliothèque de l'école, pour ses membres (enseignants, élèves, parents) :

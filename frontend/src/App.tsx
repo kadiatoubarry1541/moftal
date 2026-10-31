@@ -11,7 +11,6 @@ import NotificationBell, { InvitationNotifications } from "./components/Notifica
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
-import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";

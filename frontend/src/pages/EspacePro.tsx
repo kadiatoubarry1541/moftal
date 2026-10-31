@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
-import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
+import { getSessionUser, isAdmin } from "../utils/auth";
 import { ReçuTransaction } from "../components/ReçuTransaction";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";

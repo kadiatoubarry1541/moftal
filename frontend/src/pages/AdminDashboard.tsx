@@ -4,7 +4,7 @@ import { AdminPanel } from "../components/AdminPanel";
 import { AdminCompteFamille } from "../components/AdminCompteFamille";
 import { AdminWalletPro } from "../components/AdminWalletPro";
 import { getSessionUser, isAdmin, isMasterAdmin } from "../utils/auth";
-import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
+import { getStats, getAllUsers, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
 import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";

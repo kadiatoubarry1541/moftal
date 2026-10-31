@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { useTraduction, trHors } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
-import { cheminAppEcole } from "../utils/appEcole";
 import { MoftalMark } from "../components/GestionBrand";
 import { cheminConnexion } from "../utils/connexionRetour";
 

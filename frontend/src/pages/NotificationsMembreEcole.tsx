@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import NotificationsApp from "../components/ecole/NotificationsApp";
-import { cheminAppEcole, type ModeEcole } from "../utils/appEcole";
+import { type ModeEcole } from "../utils/appEcole";
 import { cheminConnexion } from "../utils/connexionRetour";
 
 // Application de l'école → « Notifications » pour un parent ou un enseignant :

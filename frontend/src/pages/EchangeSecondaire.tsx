@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';

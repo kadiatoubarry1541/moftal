@@ -1,11 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  WORLD_GEOGRAPHY,
-  findLocationByCode,
-  getLocationGroupTitle,
-  type GeographicLocation
-} from '../utils/worldGeography';
+import { WORLD_GEOGRAPHY, findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
