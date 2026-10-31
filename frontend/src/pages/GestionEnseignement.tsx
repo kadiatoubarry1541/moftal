@@ -21,6 +21,11 @@ import ParametreLangue from "../components/ParametreLangue";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type {
+  Apprenant, AvisEnseignement, Bulletin, ChampTexte, DemandeInscription, EtablissementEnseignement, FormEnseignement,
+  Frais, Groupe, LignePresence, ResumePresence, MembreEcole, MembreEquipe, Note, ParametresEnseignement, PresenceEnregistree,
+  ReponseAjoutEquipe, ReponseEnseignement, StatsEnseignement,
+} from "../types/enseignement";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -31,9 +36,9 @@ type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString(localeCourante()) : "—"; }
-function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString(localeCourante()) + " GNF"; }
+function fmtMoney(n: number | string) { return (Number(n) || 0).toLocaleString(localeCourante()) + " GNF"; }
 
-function printFeeReceipt(f: any, tenant: any, color: string) {
+function printFeeReceipt(f: Frais, tenant: EtablissementEnseignement | null, color: string) {
   imprimerRecu({
     titre: trHors("Reçu de paiement"), numero: f.id, date: f.date_paiement || new Date(), etablissement: tenant || {}, couleur: color,
     client: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim(),
@@ -45,7 +50,7 @@ function printFeeReceipt(f: any, tenant: any, color: string) {
 
 const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
-function printBulletin(b: any, orgName: string, color: string, logoUrl?: string | null) {
+function printBulletin(b: Bulletin, orgName: string, color: string, logoUrl?: string | null) {
   const ar = langueCourante() === "ar";
   const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${trHors("Bulletin {nom}", { nom: b.student_nom })}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
@@ -158,55 +163,55 @@ export default function GestionEnseignement({ mode }: Props) {
 
   const [section, setSection]     = useState<Section>("dashboard");
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
-  const [tenant, setTenant]       = useState<any>(null);
-  const [stats, setStats]         = useState<any>(null);
-  const [students, setStudents]   = useState<any[]>([]);
-  const [staff, setStaff]         = useState<any[]>([]);
-  const [groupes, setGroupes]     = useState<any[]>([]);
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [grades, setGrades]       = useState<any[]>([]);
-  const [fees, setFees]           = useState<any[]>([]);
-  const [bulletins, setBulletins] = useState<any[]>([]);
-  const [enrollRequests, setEnrollRequests] = useState<any[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [tenant, setTenant]       = useState<EtablissementEnseignement | null>(null);
+  const [stats, setStats]         = useState<StatsEnseignement | null>(null);
+  const [students, setStudents]   = useState<Apprenant[]>([]);
+  const [staff, setStaff]         = useState<MembreEquipe[]>([]);
+  const [groupes, setGroupes]     = useState<Groupe[]>([]);
+  const [attendance, setAttendance] = useState<LignePresence[]>([]);
+  const [grades, setGrades]       = useState<Note[]>([]);
+  const [fees, setFees]           = useState<Frais[]>([]);
+  const [bulletins, setBulletins] = useState<Bulletin[]>([]);
+  const [enrollRequests, setEnrollRequests] = useState<DemandeInscription[]>([]);
+  const [reviews, setReviews] = useState<AvisEnseignement[]>([]);
   const [search, setSearch]       = useState("");
   const [niveauFilter, setNiveauFilter] = useState("");
   const [attendDate, setAttendDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [attendanceView, setAttendanceView] = useState<"appel"|"historique">("appel");
-  const [attendanceSummary, setAttendanceSummary] = useState<any[]>([]);
+  const [attendanceSummary, setAttendanceSummary] = useState<ResumePresence[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [modal, setModal]         = useState<string | null>(null);
-  const [form, setForm]           = useState<any>({});
+  const [form, setForm]           = useState<FormEnseignement>({});
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
-  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsForm, setSettingsForm] = useState<ParametresEnseignement>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
   // Parents reliés à un élève (un parent peut suivre plusieurs enfants)
-  const [parentsDe, setParentsDe] = useState<any | null>(null);
-  const [membres, setMembres]     = useState<any[]>([]);
+  const [parentsDe, setParentsDe] = useState<Apprenant | null>(null);
+  const [membres, setMembres]     = useState<MembreEcole[]>([]);
   const [nhParent, setNhParent]   = useState("");
   const [parentsBusy, setParentsBusy] = useState(false);
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
-  const get = useCallback(async (path: string) => {
+  const get = useCallback(async (path: string): Promise<ReponseEnseignement> => {
     const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
 
-  const post = useCallback(async (path: string, body: any) => {
+  const post = useCallback(async <T = ReponseEnseignement>(path: string, body: unknown): Promise<T> => {
     const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
-  const put = useCallback(async (path: string, body: any) => {
+  const put = useCallback(async (path: string, body: unknown): Promise<ReponseEnseignement> => {
     const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
-  const del = useCallback(async (path: string) => {
+  const del = useCallback(async (path: string): Promise<ReponseEnseignement> => {
     const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
@@ -259,7 +264,7 @@ export default function GestionEnseignement({ mode }: Props) {
     const g = groupes.find(x => String(x.id) === groupId);
     if (!g) return;
     get(`/attendance?date=${date}`).then(d => {
-      const existing: any[] = d.attendance || [];
+      const existing: PresenceEnregistree[] = d.attendance || [];
       const gs = students.filter(s => s.niveau === g.niveau && s.is_active !== false);
       setAttendance(gs.map(s => {
         const rec = existing.find(r => r.student_id === s.id);
@@ -275,7 +280,7 @@ export default function GestionEnseignement({ mode }: Props) {
     e.target.value = "";
     if (!file) return;
     normaliserLogo(file)
-      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .then(logo => setSettingsForm((f) => ({ ...f, logo_url: logo })))
       .catch(err => alert(tr(err.message)));
   };
 
@@ -313,13 +318,13 @@ export default function GestionEnseignement({ mode }: Props) {
           if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
-          const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
+          const d = await post<ReponseAjoutEquipe>("/staff", { ...form, role: form.role || V.roles[1] });
           if (d.staff) { setStaff(p => [{ ...d.staff, acces_gestion: form.acces_gestion || "aucun" }, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)")); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast(tr("Nom obligatoire"), false); return; }
-        const body: any = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
+        const body: Partial<Groupe> = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
         if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
         // Photo de la salle (facultative) : montrée sur le site
         if (typeof form.photo_url === "string" && form.photo_url.startsWith("data:")) body.photo_url = form.photo_url;
@@ -339,7 +344,7 @@ export default function GestionEnseignement({ mode }: Props) {
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "add-note") {
         if (!form.student_id || !form.matiere || form.note === "") { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
-        const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
+        const body = { ...form, note: parseFloat(String(form.note)), note_max: parseFloat(String(form.note_max || 20)) };
         if (form.id) {
           const d = await put(`/grades/${form.id}`, body);
           if (d.success) { setGrades(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(tr("Note modifiée")); }
@@ -351,7 +356,7 @@ export default function GestionEnseignement({ mode }: Props) {
         }
       } else if (modal === "add-frais") {
         if (!form.student_id || !form.montant) { showToast(tr("Apprenant et montant obligatoires"), false); return; }
-        const d = await post("/fees", { ...form, montant: parseInt(form.montant), type_frais: form.type_frais || V.fraisTypes[1] });
+        const d = await post("/fees", { ...form, montant: parseInt(String(form.montant)), type_frais: form.type_frais || V.fraisTypes[1] });
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast(tr("Frais ajouté")); }
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "save-presence") {
@@ -403,15 +408,15 @@ export default function GestionEnseignement({ mode }: Props) {
   };
 
   const chargerMembres = async () => {
-    const d = await get("/members").catch(() => ({}));
+    const d = await get("/members").catch((): ReponseEnseignement => ({}));
     if (d?.success) setMembres(d.members || []);
     else showToast(tr(d?.message || "Impossible de charger les parents."), false);
   };
 
-  const ouvrirParents = (s: any) => { setParentsDe(s); setNhParent(""); chargerMembres(); };
+  const ouvrirParents = (s: Apprenant) => { setParentsDe(s); setNhParent(""); chargerMembres(); };
 
   const parentsDeLEleve = parentsDe
-    ? membres.filter((m) => (Array.isArray(m.enfants) ? m.enfants : []).some((e: any) => Number(e.id) === Number(parentsDe.id)))
+    ? membres.filter((m) => (Array.isArray(m.enfants) ? m.enfants : []).some((e) => Number(e.id) === Number(parentsDe.id)))
     : [];
 
   const lierParent = async () => {
@@ -429,7 +434,7 @@ export default function GestionEnseignement({ mode }: Props) {
   };
 
   // Retirer en tapant le NuméroH ou le numéro de téléphone du parent
-  const chiffres9 = (v: any) => String(v || "").replace(/[^0-9]/g, "").slice(-9);
+  const chiffres9 = (v: string | null | undefined) => String(v || "").replace(/[^0-9]/g, "").slice(-9);
   const retirerParIdentifiant = () => {
     const v = nhParent.trim();
     if (!v) return;
@@ -444,7 +449,7 @@ export default function GestionEnseignement({ mode }: Props) {
     void delierParent(m).then(() => setNhParent(""));
   };
 
-  const delierParent = async (m: any) => {
+  const delierParent = async (m: MembreEcole) => {
     if (!parentsDe) return;
     const nomParent = [m.prenom, m.nom].filter(Boolean).join(" ") || m.nom_display || m.numero_h;
     if (!confirm(tr("Retirer {eleve} du suivi de {parent} ? Ses autres enfants restent reliés.", { eleve: `${parentsDe.prenom} ${parentsDe.nom}`, parent: nomParent }))) return;
@@ -510,7 +515,7 @@ export default function GestionEnseignement({ mode }: Props) {
             try {
               const petite = await compressImage(file, 600, 0.8);
               const reader = new FileReader();
-              reader.onload = () => setForm((f: any) => ({ ...f, photo_url: reader.result as string }));
+              reader.onload = () => setForm((f) => ({ ...f, photo_url: reader.result as string }));
               reader.readAsDataURL(petite);
             } catch { showToast(tr("Cette photo n'a pas pu être lue. Essayez une autre image."), false); }
           }} />
@@ -529,20 +534,20 @@ export default function GestionEnseignement({ mode }: Props) {
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'apprenant", "Modifier l'élève") : M("Nouvel apprenant", "Nouvel élève")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {(["Prénom *|prenom|text","Nom *|nom|text","Date de naissance|date_naissance|date","Sexe|sexe|sexe","Tél. parent|telephone_parent|text","Niveau|niveau|niveau","NuméroH|numero_h|text","NuméroH parent|parent_numero_h|text"] as string[]).map(raw => {
-              const [label, key, type] = raw.split("|");
+              const [label, key, type] = raw.split("|") as [string, ChampTexte, string];
               return (
                 <div key={key}>
                   <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(label)}</label>
                   {type === "sexe" ? (
-                    <select value={form[key]||"M"} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                    <select value={form[key]||"M"} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
                       <option value="M">{tr("Masculin")}</option><option value="F">{tr("Féminin")}</option>
                     </select>
                   ) : type === "niveau" ? (
-                    <select value={form[key]||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                    <select value={form[key]||niveaux[0]} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
                       {optionsNiveaux(form[key])}
                     </select>
                   ) : (
-                    <input type={type} value={form[key]||""} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
+                    <input type={type} value={form[key]||""} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
                   )}
                 </div>
               );
@@ -555,20 +560,20 @@ export default function GestionEnseignement({ mode }: Props) {
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'enseignant", "Modifier le professeur") : M("Nouvel enseignant", "Nouveau professeur")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {(["Téléphone|telephone|tel","E-mail|email|email","Prénom|prenom|text","Nom|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","NuméroH|numero_h|text"] as string[]).map(raw => {
-              const [label, key, type] = raw.split("|");
+              const [label, key, type] = raw.split("|") as [string, ChampTexte, string];
               return (
                 <div key={key}>
                   <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(label)}</label>
                   {type === "role" ? (
-                    <select value={form[key]||V.roles[1]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                    <select value={form[key]||V.roles[1]} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
                       {V.roles.map(r=><option key={r} value={r}>{tr(r)}</option>)}
                     </select>
                   ) : type === "mat" ? (
-                    <select value={form[key]||V.matieres[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                    <select value={form[key]||V.matieres[0]} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
                       {V.matieres.map(m=><option key={m} value={m}>{tr(m)}</option>)}
                     </select>
                   ) : (
-                    <input type={type} value={form[key]||""} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
+                    <input type={type} value={form[key]||""} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
                   )}
                 </div>
               );
@@ -576,17 +581,17 @@ export default function GestionEnseignement({ mode }: Props) {
           </div>
           <div style={{ marginTop: 12 }}>
             <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Profil affiché sur le site")}</label>
-            <textarea value={form.profil || ""} maxLength={600} rows={3} onChange={e=>setForm((f:any)=>({...f,profil:e.target.value}))}
+            <textarea value={form.profil || ""} maxLength={600} rows={3} onChange={e=>setForm((f) =>({...f,profil:e.target.value}))}
               placeholder={tr("Ex. Professeur de mathématiques, licence de l'Université de Conakry, 8 ans d'expérience.")} className={inp} style={{ ...inpSt, resize: "vertical", fontFamily: "inherit" }} />
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-            <input type="checkbox" checked={form.sur_site !== false} onChange={e=>setForm((f:any)=>({...f,sur_site:e.target.checked}))} />
+            <input type="checkbox" checked={form.sur_site !== false} onChange={e=>setForm((f) =>({...f,sur_site:e.target.checked}))} />
             {tr("Afficher sur le site (photo, nom, matière et profil)")}
           </label>
           {peutDonnerAcces && (
             <div style={{ marginTop: 12 }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Accès à la gestion")}</label>
-              <select value={form.acces_gestion || "aucun"} onChange={e=>setForm((f:any)=>({...f,acces_gestion:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.acces_gestion || "aucun"} onChange={e=>setForm((f) =>({...f,acces_gestion:e.target.value}))} className={inp} style={inpSt}>
                 {ACCES_GESTION.map(a=><option key={a.v} value={a.v}>{tr(a.label)}</option>)}
               </select>
             </div>
@@ -602,21 +607,21 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Nom *")}</label>
-              <input value={form.nom||""} onChange={e=>setForm((f:any)=>({...f,nom:e.target.value}))} placeholder={M("Ex : Halaqa Al-Fajr", "Ex : CM2-A")} className={inp} style={inpSt} />
+              <input value={form.nom||""} onChange={e=>setForm((f) =>({...f,nom:e.target.value}))} placeholder={M("Ex : Halaqa Al-Fajr", "Ex : CM2-A")} className={inp} style={inpSt} />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Niveau")}</label>
-              <select value={form.niveau||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,niveau:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.niveau||niveaux[0]} onChange={e=>setForm((f) =>({...f,niveau:e.target.value}))} className={inp} style={inpSt}>
                 {optionsNiveaux(form.niveau)}
               </select>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Capacité")}</label>
-              <input type="number" value={form.capacite||"20"} onChange={e=>setForm((f:any)=>({...f,capacite:e.target.value}))} className={inp} style={inpSt} />
+              <input type="number" value={form.capacite||"20"} onChange={e=>setForm((f) =>({...f,capacite:e.target.value}))} className={inp} style={inpSt} />
             </div>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{M("Enseignant responsable", "Professeur responsable")}</label>
-              <select value={form.enseignant_id||""} onChange={e=>setForm((f:any)=>({...f,enseignant_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.enseignant_id||""} onChange={e=>setForm((f) =>({...f,enseignant_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Aucun —")}</option>
                 {staff.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} ({tr(s.specialite||s.role||"")})</option>)}
               </select>
@@ -630,30 +635,30 @@ export default function GestionEnseignement({ mode }: Props) {
           <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700 }}>{tr("Emploi du temps — {nom}", { nom: form.nom })}</h3>
           <p style={{ margin: "0 0 16px", fontSize: 12, color: "#94a3b8" }}>{tr("Ajoutez les créneaux de cours de la semaine et l’enseignant de chacun : il pourra marquer le début et la fin de son cours.")}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {(form.emploi_du_temps || []).map((slot: any, i: number) => (
+            {(form.emploi_du_temps || []).map((slot, i) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 0.8fr 1.3fr 28px", gap: 6, alignItems: "center" }}>
-                <select value={slot.jour||"Lundi"} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],jour:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                <select value={slot.jour||"Lundi"} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],jour:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }}>
                   {["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"].map(j=><option key={j} value={j}>{tr(j)}</option>)}
                 </select>
-                <input type="time" value={slot.heure_debut||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_debut:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                <input type="time" value={slot.heure_debut||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_debut:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
-                <input type="time" value={slot.heure_fin||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_fin:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                <input type="time" value={slot.heure_fin||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_fin:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
-                <input value={slot.matiere||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],matiere:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                <input value={slot.matiere||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],matiere:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   placeholder={tr("Matière")} style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
-                <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:f.emploi_du_temps.filter((_:any,idx:number)=>idx!==i)}))}
+                <button onClick={()=>setForm((f) =>({...f,emploi_du_temps:f.emploi_du_temps.filter((_, idx) =>idx!==i)}))}
                   style={{ width:28,height:28,border:"none",background:"#fef2f2",color:"#ef4444",borderRadius:6,cursor:"pointer",fontWeight:700 }}>×</button>
                 {(
-                  <select value={slot.enseignant_id ? String(slot.enseignant_id) : ""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],enseignant_id:e.target.value?Number(e.target.value):null}; return {...f,emploi_du_temps:edt}; })}
+                  <select value={slot.enseignant_id ? String(slot.enseignant_id) : ""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],enseignant_id:e.target.value?Number(e.target.value):null}; return {...f,emploi_du_temps:edt}; })}
                     style={{ gridColumn:"1 / -2", border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12, marginBottom:6 }}>
                     <option value="">{tr("— Enseignant de ce cours —")}</option>
-                    {staff.map((p:any)=><option key={p.id} value={String(p.id)}>{p.prenom} {p.nom}{p.numero_h ? "" : ` ${tr("(sans NuméroH)")}`}</option>)}
+                    {staff.map((p) =><option key={p.id} value={String(p.id)}>{p.prenom} {p.nom}{p.numero_h ? "" : ` ${tr("(sans NuméroH)")}`}</option>)}
                   </select>
                 )}
               </div>
             ))}
-            <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:[...(f.emploi_du_temps||[]),{jour:"Lundi",heure_debut:"08:00",heure_fin:"09:00",matiere:""}]}))}
+            <button onClick={()=>setForm((f) =>({...f,emploi_du_temps:[...(f.emploi_du_temps||[]),{jour:"Lundi",heure_debut:"08:00",heure_fin:"09:00",matiere:""}]}))}
               style={{ padding:"8px", border:"1.5px dashed #cbd5e1", borderRadius:8, background:"transparent", color:V.color, cursor:"pointer", fontSize:12, fontWeight:600, marginTop:4 }}>
               {tr("+ Ajouter un créneau")}
             </button>
@@ -665,40 +670,40 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} — {tr(s.niveau || "")}</option>)}
               </select>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Matière *")}</label>
-              <select value={form.matiere||V.matieres[0]} onChange={e=>setForm((f:any)=>({...f,matiere:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.matiere||V.matieres[0]} onChange={e=>setForm((f) =>({...f,matiere:e.target.value}))} className={inp} style={inpSt}>
                 {V.matieres.map(m=><option key={m} value={m}>{tr(m)}</option>)}
               </select>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Période")}</label>
-              <select value={form.periode||"Trim 1"} onChange={e=>setForm((f:any)=>({...f,periode:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.periode||"Trim 1"} onChange={e=>setForm((f) =>({...f,periode:e.target.value}))} className={inp} style={inpSt}>
                 {PERIODES.map(p=><option key={p} value={p}>{tr(p)}</option>)}
               </select>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note *")}</label>
-              <input type="number" min="0" max="20" step="0.25" value={form.note||""} onChange={e=>setForm((f:any)=>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
+              <input type="number" min="0" max="20" step="0.25" value={form.note||""} onChange={e=>setForm((f) =>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note max")}</label>
-              <input type="number" value={form.note_max||"20"} onChange={e=>setForm((f:any)=>({...f,note_max:e.target.value}))} className={inp} style={inpSt} />
+              <input type="number" value={form.note_max||"20"} onChange={e=>setForm((f) =>({...f,note_max:e.target.value}))} className={inp} style={inpSt} />
             </div>
             {V.sourate && (form.matiere === "Coran" || !form.matiere) && (
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Sourate mémorisée")}</label>
-                <input value={form.sourate||""} onChange={e=>setForm((f:any)=>({...f,sourate:e.target.value}))} placeholder={tr("Ex : Al-Baqara v. 1-50")} className={inp} style={inpSt} />
+                <input value={form.sourate||""} onChange={e=>setForm((f) =>({...f,sourate:e.target.value}))} placeholder={tr("Ex : Al-Baqara v. 1-50")} className={inp} style={inpSt} />
               </div>
             )}
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Commentaire")}</label>
-              <input value={form.commentaire||""} onChange={e=>setForm((f:any)=>({...f,commentaire:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.commentaire||""} onChange={e=>setForm((f) =>({...f,commentaire:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
         </>)}
@@ -708,7 +713,7 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}
               </select>
@@ -716,18 +721,18 @@ export default function GestionEnseignement({ mode }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Type")}</label>
-                <select value={form.type_frais||V.fraisTypes[1]} onChange={e=>setForm((f:any)=>({...f,type_frais:e.target.value}))} className={inp} style={inpSt}>
+                <select value={form.type_frais||V.fraisTypes[1]} onChange={e=>setForm((f) =>({...f,type_frais:e.target.value}))} className={inp} style={inpSt}>
                   {V.fraisTypes.map(t=><option key={t} value={t}>{tr(t)}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Montant (GNF) *")}</label>
-                <input type="number" value={form.montant||""} onChange={e=>setForm((f:any)=>({...f,montant:e.target.value}))} className={inp} style={inpSt} />
+                <input type="number" value={form.montant||""} onChange={e=>setForm((f) =>({...f,montant:e.target.value}))} className={inp} style={inpSt} />
               </div>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Date d'échéance")}</label>
-              <input type="date" value={form.echeance||""} onChange={e=>setForm((f:any)=>({...f,echeance:e.target.value}))} className={inp} style={inpSt} />
+              <input type="date" value={form.echeance||""} onChange={e=>setForm((f) =>({...f,echeance:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
         </>)}
@@ -744,18 +749,18 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Période *")}</label>
-              <select value={form.periode||""} onChange={e=>setForm((f:any)=>({...f,periode:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.periode||""} onChange={e=>setForm((f) =>({...f,periode:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
                 {PERIODES.map(p=><option key={p} value={p}>{tr(p)}</option>)}
               </select>
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Année scolaire")}</label>
-              <input value={form.annee||anneeScolaireEnCours()} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.annee||anneeScolaireEnCours()} onChange={e=>setForm((f) =>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
-            <input type="checkbox" checked={!!form.publish} onChange={e=>setForm((f:any)=>({...f,publish:e.target.checked}))} />
+            <input type="checkbox" checked={!!form.publish} onChange={e=>setForm((f) =>({...f,publish:e.target.checked}))} />
             {tr("Publier et notifier les familles")}
           </label>
         </>)}
@@ -1062,7 +1067,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         {teacher && <div style={{ fontSize:12,color:"#475569",marginBottom:10 }}>👤 {M("Cheikh", "Prof.")} {teacher.prenom} {teacher.nom}</div>}
                         {Array.isArray(g.emploi_du_temps) && g.emploi_du_temps.length > 0 && (
                           <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
-                            {g.emploi_du_temps.slice(0,3).map((s:any,i:number)=>(
+                            {g.emploi_du_temps.slice(0,3).map((s, i) =>(
                               <span key={i} style={{ padding:"2px 8px", background:"#eff6ff", color:"#0369a1", borderRadius:10, fontSize:10, fontWeight:600 }}>{isAr ? tr(s.jour || "") : s.jour?.slice(0,3)} {s.heure_debut} {tr(s.matiere || "")}</span>
                             ))}
                             {g.emploi_du_temps.length>3 && <span style={{ fontSize:10, color:"#94a3b8" }}>+{g.emploi_du_temps.length-3}</span>}
@@ -1119,7 +1124,7 @@ export default function GestionEnseignement({ mode }: Props) {
                     <tbody>
                       {attendanceSummary.length===0 ? (
                         <tr><td colSpan={4} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{M("Aucun historique pour cette halaqa", "Aucun historique pour cette classe")}</td></tr>
-                      ) : attendanceSummary.map((s:any)=>{
+                      ) : attendanceSummary.map((s) =>{
                         const total = +s.presences + +s.absences;
                         const pct = total>0 ? Math.round((+s.presences/total)*100) : 0;
                         return (
@@ -1147,13 +1152,13 @@ export default function GestionEnseignement({ mode }: Props) {
                   </div>
                   {attendance.length===0 ? (
                     <div style={{ padding:"40px 20px",textAlign:"center",color:"#94a3b8",fontSize:13 }}>{M("Aucun apprenant dans ce groupe", "Aucun élève dans ce groupe")}</div>
-                  ) : attendance.map((r:any,i:number)=>(
+                  ) : attendance.map((r, i) =>(
                     <div key={r.student_id} style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 20px",borderBottom:"1px solid #f8fafc" }}>
                       <div style={{ width:32,height:32,borderRadius:"50%",background:r.statut==="present"?isMadrasa?"#ecfeff":"#f0fdf0":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:r.statut==="present"?V.color:"#ef4444",flexShrink:0 }}>{r.prenom?.charAt(0)}</div>
                       <div style={{ flex:1,fontWeight:600,color:"#0f172a",fontSize:13 }}>{r.prenom} {r.nom}</div>
                       <div style={{ display:"flex",gap:6 }}>
                         {["present","absent","retard"].map(s=>(
-                          <button key={s} onClick={()=>setAttendance(at=>at.map((x:any,j:number)=>j===i?{...x,statut:s}:x))}
+                          <button key={s} onClick={()=>setAttendance(at=>at.map((x, j) =>j===i?{...x,statut:s}:x))}
                             style={{ padding:"5px 12px",borderRadius:6,border:"1.5px solid",fontSize:12,fontWeight:600,cursor:"pointer",
                               borderColor:r.statut===s?(s==="present"?V.color:s==="absent"?"#ef4444":"#f59e0b"):"#e2e8f0",
                               background:r.statut===s?(s==="present"?V.color:s==="absent"?"#ef4444":"#f59e0b"):"white",
@@ -1245,7 +1250,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px" }}>
                           <div style={{ display:"flex", gap:6 }}>
                             {!f.est_paye && (
-                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
+                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x) =>x.id===f.id?{...x,est_paye:true}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
                             )}
                             {!f.est_paye && (
                               <button onClick={() => envoyerRappel(f.telephone_parent, tr(f.echeance
@@ -1306,7 +1311,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         </div>
                         <div style={{ display:"flex", gap:8, marginTop:12 }}>
                           {!b.is_published && (
-                            <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast(tr("Bulletin publié"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>{tr("Publier & notifier")}</button>
+                            <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x) =>x.id===b.id?{...x,is_published:true}:x));showToast(tr("Bulletin publié"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>{tr("Publier & notifier")}</button>
                           )}
                           <button onClick={() => printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
                         </div>
@@ -1323,7 +1328,7 @@ export default function GestionEnseignement({ mode }: Props) {
             <div style={{ display:"flex",flexDirection:"column",gap:12,animation:"fadeIn 0.2s ease" }}>
               {enrollRequests.length===0 ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune demande de pré-inscription reçue depuis la vitrine")}</div>
-              ) : enrollRequests.map((r:any) => (
+              ) : enrollRequests.map((r) => (
                 <div key={r.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",opacity:r.statut==="nouvelle"?1:0.6 }}>
                   <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
                     <div>
@@ -1355,7 +1360,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
                   {[
                     { icone: "👨‍🏫", titre: tr(V.staffLabel), detail: tr("{n} sur le site, dont {p} avec photo", { n: staff.filter(x => x.sur_site !== false).length, p: staff.filter(x => x.sur_site !== false && x.photo_url).length }), aller: "staff" as Section },
-                    { icone: "🏫", titre: tr(V.groupes), detail: tr("{n} proposée(s), {p} avec photo", { n: groupes.length, p: groupes.filter((g: any) => g.photo_url).length }), aller: "groupes" as Section },
+                    { icone: "🏫", titre: tr(V.groupes), detail: tr("{n} proposée(s), {p} avec photo", { n: groupes.length, p: groupes.filter((g) => g.photo_url).length }), aller: "groupes" as Section },
                     { icone: "📚", titre: tr("Matières"), detail: tr("Celles de vos enseignants (fiche Personnel → Matière)"), aller: "staff" as Section },
                   ].map(c => (
                     <button key={c.titre} onClick={() => loadSection(c.aller)}
@@ -1374,17 +1379,17 @@ export default function GestionEnseignement({ mode }: Props) {
           {section === "notifications" && tenantCode && <NotificationsApp tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
 
           {section === "avis" && (() => {
-            const approved = reviews.filter((r:any) => r.statut === "approuve");
-            const moyenne = approved.length ? (approved.reduce((s:number,r:any) => s + r.note, 0) / approved.length).toFixed(1) : "—";
+            const approved = reviews.filter((r) => r.statut === "approuve");
+            const moyenne = approved.length ? (approved.reduce((s:number,r) => s + r.note, 0) / approved.length).toFixed(1) : "—";
             return (
               <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",display:"flex",alignItems:"center",gap:16 }}>
                   <div style={{ fontSize:28,fontWeight:800,color:V.colorDark }}>{moyenne}<span style={{ fontSize:14,color:"#94a3b8",fontWeight:500 }}> / 5</span></div>
-                  <div style={{ fontSize:13,color:"#64748b" }}>{tr(approved.length>1 ? "{n} avis publiés · {m} en attente" : "{n} avis publié · {m} en attente", { n: approved.length, m: reviews.filter((r:any)=>r.statut==="en_attente").length })}</div>
+                  <div style={{ fontSize:13,color:"#64748b" }}>{tr(approved.length>1 ? "{n} avis publiés · {m} en attente" : "{n} avis publié · {m} en attente", { n: approved.length, m: reviews.filter((r) =>r.statut==="en_attente").length })}</div>
                 </div>
                 {reviews.length===0 ? (
                   <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucun avis reçu")}</div>
-                ) : reviews.map((r:any) => (
+                ) : reviews.map((r) => (
                   <div key={r.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:18,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                     <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
                       <div>
@@ -1393,8 +1398,8 @@ export default function GestionEnseignement({ mode }: Props) {
                         {r.commentaire && <p style={{ fontSize:13,color:"#475569",marginTop:8 }}>{r.commentaire}</p>}
                       </div>
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success) setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
-                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success) setReviews(rs=>rs.filter((x:any)=>x.id!==r.id)); else showToast(d.message||"Erreur",false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
+                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success) setReviews(rs=>rs.map((x) =>x.id===r.id?{...x,statut:"approuve"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
+                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success) setReviews(rs=>rs.filter((x) =>x.id!==r.id)); else showToast(d.message||"Erreur",false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
                       </div>
                     </div>
                   </div>
@@ -1429,23 +1434,23 @@ export default function GestionEnseignement({ mode }: Props) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <label style={lbl}>{tr("Nom")}</label>
-                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} />
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f) => ({ ...f, name: e.target.value }))} />
                   </div>
                   <div>
                     <label style={lbl}>{tr("Description")}</label>
-                    <textarea className={inp} style={{ ...inpSt, marginTop: 4, height: 80, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} />
+                    <textarea className={inp} style={{ ...inpSt, marginTop: 4, height: 80, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f) => ({ ...f, description: e.target.value }))} />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div><label style={lbl}>{tr("Téléphone")}</label><input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
-                    <div><label style={lbl}>{tr("Email")}</label><input type="email" className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+                    <div><label style={lbl}>{tr("Téléphone")}</label><input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone: e.target.value }))} /></div>
+                    <div><label style={lbl}>{tr("Email")}</label><input type="email" className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f) => ({ ...f, email: e.target.value }))} /></div>
                   </div>
                   <div>
                     <label style={lbl}>{tr("Adresse")}</label>
-                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} />
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f) => ({ ...f, address: e.target.value }))} />
                   </div>
                   <div>
                     <label style={lbl}>{tr("Horaires")}</label>
-                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} placeholder={tr("Ex : Lun-Ven 7h30-17h")} value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} />
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} placeholder={tr("Ex : Lun-Ven 7h30-17h")} value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f) => ({ ...f, horaires: e.target.value }))} />
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>{tr("Affiché sur votre page vitrine publique.")}</p>
                   </div>
                 </div>
