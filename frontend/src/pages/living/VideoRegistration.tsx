@@ -375,13 +375,13 @@ export function VideoRegistration() {
     try {
       const result = await api.registerLiving(completeData as any)
       const saveAndGo = (user: any, source: string) => {
-        const userDataWithPassword = { ...user }
-        localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
+        const userSafe = { ...user } // le serveur renvoie le compte sans mot de passe
+        localStorage.setItem('dernier_vivant', JSON.stringify(userSafe))
         // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
         const numeroFinal = user?.numeroH || numeroH
         localStorage.setItem('session_user', JSON.stringify({
           numeroH: numeroFinal,
-          userData: userDataWithPassword,
+          userData: userSafe,
           token: result?.token || null,
           type: 'vivant',
           source,

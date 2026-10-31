@@ -1,7 +1,7 @@
 {
   "name": "enfants-adam-eve-backend",
   "version": "1.0.0",
-  "description": "Backend pour le système d'enregistrement des Enfants d'Adam et Eve",
+  "description": "Serveur API de Moftal — Famille & Services",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -20,7 +20,7 @@
     "migrate-ia-db": "node scripts/migrate-ia-db-to-main.js",
     "seed-ia": "node scripts/seedIaKnowledge.js",
     "db:drop-unused": "node scripts/drop-unused-databases.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test \"tests/*.test.js\""
   },
   "keywords": [
     "nodejs",

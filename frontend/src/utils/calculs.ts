@@ -53,13 +53,3 @@ export function anneesEcoulees(debut: string | Date, fin: string | Date = new Da
   if (m < 0 || (m === 0 && d2.getDate() < d1.getDate())) diff--
   return diff
 }
-
-// Génération NumeroH / NumeroHD en concaténant les codes, avec compteur local incremente
-export function genererNumeroUnique(prefix: string, compteurCle: string): string {
-  const actuel = Number(localStorage.getItem(compteurCle) || '0')
-  const suivant = actuel + 1
-  localStorage.setItem(compteurCle, String(suivant))
-  return `${prefix}${suivant}`
-}
-
-

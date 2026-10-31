@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Service worker généré par « npm run dev » (vite-plugin-pwa)
+dev-dist

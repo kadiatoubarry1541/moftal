@@ -25,6 +25,21 @@ const MESSAGES = [
   [/violates foreign key constraint/i, 'Élément lié introuvable (peut-être supprimé).'],
 ];
 
+// Message brut d'une panne (base de données, code) : jamais montré à l'utilisateur.
+// Les messages écrits en français pour lui (« Solde insuffisant »…) restent tels quels.
+const MESSAGE_TECHNIQUE = [
+  /relation "|column "|table "|syntax error|does not exist|operator does not|duplicate key/i,
+  /\bSequelize|\bSQL\b|ECONN|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up/i,
+  /Cannot (read|set) propert|is not (a function|defined|iterable)|undefined|\bnull\b|Unexpected token/i,
+  /\b(the|is|of|not|cannot|failed|could|must|does|invalid|timeout|error)\b/i,
+];
+const ACCENTS = /[àâäçéèêëîïôöùûüÿœæ]/i;
+
+export function estMessageTechnique(message) {
+  if (typeof message !== 'string' || !message.trim()) return true;
+  return MESSAGE_TECHNIQUE.some((r) => r.test(message)) && !ACCENTS.test(message);
+}
+
 export function erreursDonnees(req, res, next) {
   const json = res.json.bind(res);
   res.json = (corps) => {
@@ -33,6 +48,13 @@ export function erreursDonnees(req, res, next) {
       res.status(400);
       const clair = MESSAGES.find(([r]) => r.test(corps.message));
       if (clair) corps = { ...corps, message: clair[1], detail: corps.message };
+    }
+    // Panne du serveur : le détail va dans le journal, l'utilisateur lit « Erreur serveur »
+    if (res.statusCode >= 500 && corps && typeof corps === 'object' && 'message' in corps
+        && estMessageTechnique(corps.message)) {
+      console.error(`❌ ${req.method} ${req.originalUrl} → ${res.statusCode} :`, corps.message);
+      const { error: _e, details: _d, ...reste } = corps;
+      corps = { ...reste, message: 'Erreur serveur' };
     }
     return json(corps);
   };
