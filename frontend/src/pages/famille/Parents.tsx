@@ -302,10 +302,16 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
       [chapter]: [...prev[chapter], optimistic]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaByChapter((prev) => ({ ...prev, [chapter]: (prev[chapter] || []).filter((m) => m.id !== optimistic.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         const dataUrl = await toDataUrl(mediaData.url)
         const toNumeroH =
           user.numeroH === selectedParent.parentNumeroH ? selectedParent.childNumeroH : selectedParent.parentNumeroH
@@ -325,12 +331,14 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média parent:', data)
+          annuler()
         } else {
           // Recharger depuis le serveur pour récupérer les IDs réels
           await loadActivitiesForParent(selectedParent)
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média parent:', e)
+        annuler()
       }
     }
 

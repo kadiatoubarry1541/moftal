@@ -354,10 +354,16 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
       [session]: [...prev[session], optimistic]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaByChapter((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== optimistic.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         const toNumeroH =
           user.numeroH === selectedChild.parentNumeroH ? selectedChild.childNumeroH : selectedChild.parentNumeroH
         const response = await fetch(mediaData.url)
@@ -380,11 +386,13 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média enfant:', data)
+          annuler()
         } else {
           await loadActivitiesForChild(selectedChild)
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média enfant:', e)
+        annuler()
       }
     }
 

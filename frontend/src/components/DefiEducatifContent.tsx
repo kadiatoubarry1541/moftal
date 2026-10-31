@@ -158,7 +158,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${gameId}`, {
         headers
@@ -182,132 +181,33 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
     }
   };
 
-  // Créer un nouveau jeu (avec mode simulation si backend inaccessible)
+  // Créer un nouveau jeu sur le serveur. S'il ne répond pas, on le dit :
+  // jamais de jeu « simulé » dans le téléphone (règle : pas de faux succès).
   const createGame = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Pour l'admin principal G0C0P0R0E0F0 0, utiliser directement ce numéro
-      let userNumeroH = 'G0C0P0R0E0F0 0';
-      
-      const session = localStorage.getItem('session_user');
-      if (session) {
-        try {
-          const parsed = JSON.parse(session);
-          userNumeroH = parsed.numeroH || parsed.userData?.numeroH || 'G0C0P0R0E0F0 0';
-        } catch {
-          // Utiliser la valeur par défaut
-        }
-      }
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'X-Admin-Numero-H': userNumeroH
-      };
-      
-      const token = getToken();
-      if (token && token.trim() !== '') {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Essayer de créer le jeu via l'API
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+      let userNumeroH = '';
       try {
-        const response = await fetch(`${API_BASE_URL}/defi-educatif/games`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ juryNumeroH: null }),
-          mode: 'cors',
-          credentials: 'omit',
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          const gameData = data.game || data;
-          
-          if (gameData && gameData.id) {
-            setGame(gameData);
-            setCurrentView('player');
-            setLoading(false);
-            addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
-            return;
-          }
-        }
-      } catch {
-        clearTimeout(timeoutId);
-        // Si le backend n'est pas accessible, créer un jeu en mode simulation
-        console.log('Mode simulation activé - backend non accessible');
+        const parsed = JSON.parse(localStorage.getItem('session_user') || '{}');
+        userNumeroH = parsed.numeroH || parsed.userData?.numeroH || '';
+      } catch { /* session illisible */ }
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/defi-educatif/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ juryNumeroH: null }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const gameData = data.game || data;
+      if (response.ok && gameData?.id) {
+        setGame(gameData);
+        setCurrentView('player');
+        addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
+        return;
       }
-
-      // MODE SIMULATION - Créer un jeu localement sans backend
-      const simulatedGame: Game = {
-        id: Date.now(), // ID temporaire
-        status: 'waiting',
-        currentPlayerTurn: userNumeroH,
-        currentCycle: 1,
-        depositAmount: 50000.00,
-        juryNumeroH: null,
-        createdBy: userNumeroH,
-        players: [{
-          id: 1,
-          numeroH: userNumeroH,
-          role: 'player1',
-          balance: 0.00,
-          debtCount: 0,
-          isActive: true
-        }],
-        deposit: {
-          id: 1,
-          gameId: Date.now(),
-          initialAmount: 50000.00,
-          currentAmount: 50000.00,
-          totalGainsPaid: 0.00,
-          totalPenaltiesReceived: 0.00
-        },
-        questions: []
-      };
-
-      setGame(simulatedGame);
-      setCurrentView('player');
-      addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
-      
+      alert(data.message || "Le jeu n'a pas pu être créé. Réessayez.");
     } catch {
-      // En cas d'erreur totale, créer quand même un jeu en simulation
-      const userNumeroH = 'G0C0P0R0E0F0 0';
-      const simulatedGame: Game = {
-        id: Date.now(),
-        status: 'waiting',
-        currentPlayerTurn: userNumeroH,
-        currentCycle: 1,
-        depositAmount: 50000.00,
-        juryNumeroH: null,
-        createdBy: userNumeroH,
-        players: [{
-          id: 1,
-          numeroH: userNumeroH,
-          role: 'player1',
-          balance: 0.00,
-          debtCount: 0,
-          isActive: true
-        }],
-        deposit: {
-          id: 1,
-          gameId: Date.now(),
-          initialAmount: 50000.00,
-          currentAmount: 50000.00,
-          totalGainsPaid: 0.00,
-          totalPenaltiesReceived: 0.00
-        },
-        questions: []
-      };
-      setGame(simulatedGame);
-      setCurrentView('player');
-      addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
+      alert("Connexion impossible : le jeu n'a pas été créé. Vérifiez votre connexion et réessayez.");
     } finally {
       setLoading(false);
     }
@@ -335,43 +235,24 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
-      // Simuler l'ajout d'un invité (en mode simulation, on l'ajoute localement)
-      if (game.id && game.id > 1000000000) {
-        // Mode simulation - ajouter localement
-        const newPlayer: GamePlayer = {
-          id: Date.now(),
-          numeroH: guestNumeroH.trim(),
-          role: 'guest',
-          balance: 0.00,
-          debtCount: 0,
-          isActive: true
-        };
-        
-        setGame({
-          ...game,
-          players: [...(game.players || []), newPlayer]
-        });
-        
+      // Ajout d'un invité : toujours sur le serveur
+      const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/join`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ numeroH: guestNumeroH.trim() })
+      });
+
+      if (response.ok) {
+        await loadGame(game.id);
         addLog('system', `Un invité a rejoint le jeu : ${guestNumeroH.trim()}`);
         setGuestNumeroH('');
       } else {
-        // Mode API - utiliser l'endpoint join
-        const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/join`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ numeroH: guestNumeroH.trim() })
-        });
-
-        if (response.ok) {
-          await loadGame(game.id);
-          addLog('system', `Un invité a rejoint le jeu : ${guestNumeroH.trim()}`);
-          setGuestNumeroH('');
-        }
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -391,7 +272,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${gameId}/join`, {
         method: 'POST',
@@ -401,9 +281,12 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       if (response.ok) {
         await loadGame(gameId);
         setCurrentView('player');
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -480,7 +363,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
 
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/upload-media`, {
         method: 'POST',
@@ -533,7 +415,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/questions`, {
         method: 'POST',
@@ -552,9 +433,12 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         setRecordedBlob(null);
         setRecordedUrl('');
         addLog(userNumeroH || 'Joueur', 'A posé une question');
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -597,7 +481,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/answers`, {
         method: 'POST',
@@ -618,9 +501,12 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
         setRecordedBlob(null);
         setRecordedUrl('');
         addLog(userNumeroH || 'Joueur', isRefusal ? 'A refusé de répondre' : 'A répondu à la question');
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -641,7 +527,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/validate-answer`, {
         method: 'POST',
@@ -660,9 +545,12 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           refuse: 'Réponse refusée !'
         };
         addLog('system', messages[validation]);
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -683,7 +571,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (userNumeroH) headers['X-Admin-Numero-H'] = userNumeroH;
 
       const response = await fetch(`${API_BASE_URL}/defi-educatif/games/${game.id}/recharge-points`, {
         method: 'POST',
@@ -696,9 +583,12 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       if (response.ok) {
         await loadGame(game.id);
         setRechargeAmount('');
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     } finally {
       setLoading(false);
     }

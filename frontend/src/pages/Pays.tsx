@@ -725,9 +725,12 @@ export default function Pays() {
       
       if (response.ok) {
         loadResidenceGroups();
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.message || "L'action n'a pas été enregistrée. Réessayez.");
       }
     } catch {
-      // Erreur silencieuse
+      alert("Connexion impossible : l'action n'a pas été enregistrée. Réessayez.");
     }
   };
 

@@ -509,10 +509,16 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       [session]: [...(prev[session] || []), newItem]
     }))
 
+    // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
+    const annuler = () => {
+      setMediaBySession((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== newItem.id) }))
+      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+    }
+
     const persist = async () => {
       try {
         const token = getToken()
-        if (!token) return
+        if (!token) { annuler(); return }
         // Convertir l'URL (blob: ou data:) en File pour upload multipart
         const response = await fetch(mediaData.url)
         const blob = await response.blob()
@@ -531,11 +537,13 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média couple:', data)
+          annuler()
         } else {
           await loadActivities()
         }
       } catch (e) {
         console.error('Erreur réseau sauvegarde média couple:', e)
+        annuler()
       }
     }
 
