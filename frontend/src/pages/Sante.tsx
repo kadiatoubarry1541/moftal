@@ -28,7 +28,7 @@ interface Hospital {
   isActive: boolean;
   isEmergency: boolean;
   rating: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -44,12 +44,12 @@ interface Doctor {
   email?: string;
   consultationFee: number;
   currency: string;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 

@@ -4,6 +4,7 @@ import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
 import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
+import type { DonServeur } from '../types/compteFamille';
 
 interface UserData {
   numeroH: string;
@@ -30,7 +31,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -65,6 +66,8 @@ interface HolyBook {
   createdBy: string;
   createdAt: string;
   reflexions?: string; // Réflexions spécifiques à ce livre
+  /** Version PDF du livre, si disponible */
+  pdfUrl?: string;
 }
 
 export default function Solidarite() {
@@ -226,13 +229,13 @@ export default function Solidarite() {
 
       if (response.ok) {
         const data = await response.json();
-        const dons: Donation[] = (data.dons || []).map((d: any, i: number) => ({
+        const dons: Donation[] = (data.dons || []).map((d: DonServeur, i: number) => ({
           id: String(i),
           donor: userData?.numeroH || '',
           donorName: d.de_nom,
           recipient: '',
           recipientName: d.vers_nom,
-          amount: parseFloat(d.montant),
+          amount: parseFloat(String(d.montant)),
           currency: d.currency,
           type: 'money',
           description: d.description,
@@ -830,8 +833,8 @@ export default function Solidarite() {
                         >
                           📖 Lire
                         </button>
-                        {(book as any).pdfUrl && (
-                          <a href={(book as any).pdfUrl} target="_blank" rel="noopener noreferrer"
+                        {book.pdfUrl && (
+                          <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer"
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors text-sm text-center">
                             📥 PDF
                           </a>

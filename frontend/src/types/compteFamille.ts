@@ -58,3 +58,15 @@ export interface InfosRiz {
   disponible: boolean;
   prixParSac?: number;
 }
+
+/** Don enregistré (historique des dons de l'utilisateur) */
+export interface DonServeur {
+  de_nom?: string | null;
+  vers_nom?: string | null;
+  montant: number | string;
+  currency?: string | null;
+  description?: string | null;
+  /** « confirme » ou en attente */
+  statut?: string | null;
+  created_at: string;
+}

@@ -26,7 +26,7 @@ interface Professor {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
@@ -34,7 +34,7 @@ interface Professor {
   // Renvoyés par le serveur (modèle Professor)
   specialty?: string;
   bio?: string;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
@@ -90,12 +90,12 @@ interface Stage {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 

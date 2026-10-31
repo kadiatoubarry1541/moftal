@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { DonServeur } from '../types/compteFamille';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 interface UserData {
@@ -27,7 +28,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -147,13 +148,13 @@ export default function Solidarite() {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
-        setDonations((data.dons || []).map((d: any, i: number): Donation => ({
+        setDonations((data.dons || []).map((d: DonServeur, i: number): Donation => ({
           id: `${d.created_at || ''}-${i}`,
           donor: userData?.numeroH || '',
           donorName: d.de_nom || '',
           recipient: '',
           recipientName: d.vers_nom || '',
-          amount: parseFloat(d.montant) || 0,
+          amount: parseFloat(String(d.montant)) || 0,
           currency: d.currency || 'GNF',
           type: 'money',
           description: d.description || '',

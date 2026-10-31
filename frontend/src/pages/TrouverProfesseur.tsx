@@ -22,12 +22,12 @@ interface Professor {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
-  ratings: any[];
-  reviews: any[];
+  ratings: unknown[];
+  reviews: unknown[];
   createdBy: string;
   bio?: string;
   education?: string[];

@@ -20,6 +20,10 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
+  activite1?: string;
+  vitrinePhoto1?: string;
+  vitrinePhoto2?: string;
+  vitrineVideo?: string;
   continent?: string;
   continentCode?: string;
   isAdmin?: boolean;
@@ -55,8 +59,9 @@ interface ResidenceGroup {
   description?: string;
   location: string;
   displayPath?: string;
-  members: UserData[] | string[];
-  posts?: any[];
+  /** Fiches des membres, ou seulement leur NuméroH */
+  members: (UserData | string)[];
+  posts?: unknown[];
   isActive?: boolean;
   admin?: string;
   logoUrl?: string | null;
@@ -360,7 +365,7 @@ export default function TerreAdam() {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         const data = await response.json();
-        const mapped = (data.groups || []).map((g: any) => {
+        const mapped = (data.groups || []).map((g: ResidenceGroup) => {
           const displayName = findLocationByCode(g.location) ? getLocationGroupTitle(g.location) : (g.title || g.name);
           return { ...g, name: displayName, title: displayName, members: g.members || [] };
         });
@@ -380,7 +385,7 @@ export default function TerreAdam() {
         return;
       }
 
-      const allGroups: any[] = [];
+      const allGroups: ResidenceGroup[] = [];
       const seenIds = new Set<string>();
       for (const loc of quartiersToLoad) {
         const normalizedLoc = normalizeLoc(loc);
@@ -724,7 +729,7 @@ export default function TerreAdam() {
                               </div>
                               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
                                 <div className="flex -space-x-2 flex-shrink-0">
-                                  {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
+                                  {selectedGroup.members.slice(0, 4).map((member, index) => {
                                     const isObject = member && typeof member === 'object';
                                     const prenom = isObject ? (member.prenom as string | undefined) : undefined;
                                     const photo = isObject ? (member.photo as string | undefined) : undefined;
@@ -1042,7 +1047,7 @@ export default function TerreAdam() {
             </div>
             <div className="overflow-y-auto flex-1 p-3 space-y-3">
               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 ? (
-                selectedGroup.members.map((member: any, index: number) => {
+                selectedGroup.members.map((member, index) => {
                   const isObject = member && typeof member === 'object';
                   if (!isObject) return null;
                   const prenom = member.prenom as string | undefined;

@@ -36,7 +36,7 @@ interface SecurityAgent {
   isActive: boolean;
   isAvailable: boolean;
   rating?: number;
-  reviews?: any[];
+  reviews?: unknown[];
   hourlyRate?: number;
 }
 

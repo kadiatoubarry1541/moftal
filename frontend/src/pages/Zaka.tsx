@@ -32,7 +32,7 @@ interface PoorPerson {
   verifiedBy: string;
   verifiedAt: string;
   isActive: boolean;
-  donations: any[];
+  donations: unknown[];
   totalDonations: number;
   profilePicture?: string;
   familySize?: number;
@@ -74,7 +74,7 @@ interface ReligiousCommunity {
   religion: string;
   description: string;
   members: string[];
-  posts: any[];
+  posts: unknown[];
   isActive: boolean;
   createdBy: string;
   createdAt: string;
@@ -109,12 +109,12 @@ interface Stage {
   phone: string;
   email: string;
   consultationFee: number;
-  availability: any;
+  availability: unknown;
   languages: string[];
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
-  reviews: any[];
+  reviews: unknown[];
   createdBy: string;
 }
 
