@@ -16,6 +16,7 @@ const GMAIL_APP_PASS     = process.env.GMAIL_APP_PASS     || '';
 const BREVO_SMTP_USER    = process.env.BREVO_SMTP_USER    || '';
 const BREVO_SMTP_PASS    = process.env.BREVO_SMTP_PASS    || '';
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY || '';
+const BREVO_API_KEY      = process.env.BREVO_API_KEY      || '';
 
 const FROM_EMAIL   = process.env.FROM_EMAIL   || 'noreply@moftal.com';
 const FROM_NAME    = process.env.FROM_NAME    || 'Moftal';
@@ -120,7 +121,40 @@ function getBrevoTransporter() {
   return brevoTransporter;
 }
 
+// Brevo par clé API (HTTPS) : marche même quand les ports d'envoi d'emails
+// sont fermés chez l'hébergeur. Utilisée en premier si BREVO_API_KEY existe.
+async function sendBrevoApi({ to, toName = '', subject, htmlContent }) {
+  if (!BREVO_API_KEY) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { email: FROM_EMAIL, name: FROM_NAME },
+        to: [toName ? { email: to, name: toName } : { email: to }],
+        subject,
+        htmlContent,
+      }),
+    });
+    clearTimeout(timer);
+    if (res.ok) {
+      console.log(`✅ [Brevo API] → ${to}`);
+      return true;
+    }
+    const err = await res.json().catch(() => ({}));
+    console.error('❌ [Brevo API]', res.status, err?.message || '');
+    return false;
+  } catch (e) {
+    console.error('❌ [Brevo API]', e.message);
+    return false;
+  }
+}
+
 async function sendBrevo({ to, toName = '', subject, htmlContent }) {
+  if (await sendBrevoApi({ to, toName, subject, htmlContent })) return true;
   const transporter = getBrevoTransporter();
   if (!transporter) {
     console.warn('⚠️  Brevo SMTP non configuré');
