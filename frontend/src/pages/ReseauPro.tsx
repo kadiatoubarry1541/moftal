@@ -148,6 +148,57 @@ const DEFAULT_CONFIG: TypeConfig = {
 
 type Tab = "profile" | "connections" | "community" | "announcements";
 
+
+interface ProfilReseauPro {
+  adresse?: string | null;
+  bio?: string | null;
+  nom_famille?: string | null;
+  nom_structure?: string | null;
+  pays?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  ville?: string | null;
+}
+
+interface ConnexionPro {
+  nom_famille?: string | null;
+  nom_structure?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  to_numero_h?: string | null;
+  ville?: string | null;
+}
+
+interface DemandeConnexionPro {
+  from_numero_h?: string | null;
+  nom_famille?: string | null;
+  nom_structure?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  to_numero_h?: string | null;
+  ville?: string | null;
+}
+
+interface MembreCommunaute {
+  joined_at?: string | null;
+  member_numero_h?: string | null;
+  nom_famille?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+}
+
+interface AnnonceEnvoyee {
+  contenu?: string | null;
+  date_annonce?: string | null;
+  id?: number | string;
+  is_sent?: boolean;
+  nb_notifies?: number;
+  titre?: string | null;
+}
 export default function ReseauPro() {
   const navigate = useNavigate();
   const { type = "imam" } = useParams<{ type: string }>();
@@ -156,11 +207,11 @@ export default function ReseauPro() {
   const BASE = `${API}/api/pro-network`;
 
   const [tab, setTab]             = useState<Tab>("profile");
-  const [profile, setProfile]     = useState<any>(null);
-  const [connections, setConns]   = useState<any[]>([]);
-  const [pending, setPending]     = useState<any[]>([]);
-  const [community, setCommunity] = useState<any[]>([]);
-  const [history, setHistory]     = useState<any[]>([]);
+  const [profile, setProfile]     = useState<ProfilReseauPro | null>(null);
+  const [connections, setConns]   = useState<ConnexionPro[]>([]);
+  const [pending, setPending]     = useState<DemandeConnexionPro[]>([]);
+  const [community, setCommunity] = useState<MembreCommunaute[]>([]);
+  const [history, setHistory]     = useState<AnnonceEnvoyee[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [editMode, setEditMode]   = useState(false);
@@ -357,7 +408,7 @@ export default function ReseauPro() {
           {pending.length > 0 && (
             <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 16, marginBottom: 20 }}>
               <div style={{ fontWeight: 700, marginBottom: 10, color: "#92400e" }}>⏳ Demandes en attente ({pending.length})</div>
-              {pending.map((c: any) => (
+              {pending.map((c) => (
                 <div key={c.from_numero_h} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #fef3c7" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{c.prenom} {c.nom_famille}</div>
@@ -370,7 +421,7 @@ export default function ReseauPro() {
           )}
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Mes connexions ({connections.length})</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
-            {connections.map((c: any) => (
+            {connections.map((c) => (
               <div key={c.to_numero_h} style={{ background: "white", borderRadius: 10, padding: 14, border: `1px solid ${cfg.color}22` }}>
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
                   {c.photo ? <img src={c.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span style={{ fontSize: 18 }}>{cfg.emoji}</span>}
@@ -400,7 +451,7 @@ export default function ReseauPro() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {community.map((m: any) => (
+              {community.map((m) => (
                 <div key={m.member_numero_h} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: `1px solid ${cfg.color}22`, display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: cfg.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                     {m.photo ? <img src={m.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span>👤</span>}
@@ -456,7 +507,7 @@ export default function ReseauPro() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {history.map((a: any) => (
+            {history.map((a) => (
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: `1px solid ${a.is_sent ? cfg.color + "33" : "#f1f5f9"}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ fontWeight: 700 }}>{a.titre || cfg.announcementLabel} — {fmtDate(a.date_annonce)}</div>
