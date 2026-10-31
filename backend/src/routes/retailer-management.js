@@ -5,6 +5,7 @@
  */
 
 import express from 'express';
+import { suivreProduitsDansEchange } from '../services/syncEchange.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
@@ -13,6 +14,8 @@ import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmp
 import { ajouterRouteParametres } from '../utils/routeParametres.js';
 
 const router = express.Router();
+// Produits ajoutés ici → visibles aussi dans la page Échange
+router.use('/:tenantCode/products', suivreProduitsDansEchange('retailer_products'));
 
 // Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
 const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);

@@ -1,4 +1,5 @@
 import express from 'express';
+import { publicationsEchangeDuSite } from '../services/syncEchange.js';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
@@ -41,7 +42,11 @@ router.get('/:tenantCode/products', async (req, res) => {
        ORDER BY categorie, nom`,
       { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
-    res.json({ success: true, products });
+    // + les publications faites depuis le bouton « Publier » d'Échange
+    const echange = (await publicationsEchangeDuSite(tenantCode)).map((e) => ({
+      id: e.id, nom: e.nom, categorie: e.categorie, prix_vente: e.prix, unite: e.unite, stock: e.stock, photo_url: e.photo,
+    }));
+    res.json({ success: true, products: [...products, ...echange] });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

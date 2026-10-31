@@ -2721,6 +2721,8 @@ connectDB()
   .then(() => creerTablesManquantesSecondaires())
   .then(() => initAllTables())
   .then(() => ensureAdmin())
+  // Produits déjà présents dans les gestions des commerçants → visibles dans Échange
+  .then(() => import('./services/syncEchange.js').then((m) => { m.synchroniserTout(); }))
   .then(() => {
     console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
     initSocket(httpServer, rawOrigins);
