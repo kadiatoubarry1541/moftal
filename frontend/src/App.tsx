@@ -411,7 +411,7 @@ function App() {
     const avant = pagePrecedente.current;
     pagePrecedente.current = pathname + location.search;
     if (isVitrineMode) {
-      if ((location.state as any)?.sansRetourGestion) {
+      if ((location.state as { sansRetourGestion?: boolean } | null)?.sansRetourGestion) {
         // Client renvoyé sur le site : il n'a pas accès à la gestion
         ecrireRetourGestion(null);
         setRetourGestion(null);
@@ -649,7 +649,7 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
               {!isEspaceTenant && (
                 <button
-                  onClick={() => navigate(-1 as any)}
+                  onClick={() => navigate(-1)}
                   style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
@@ -683,19 +683,19 @@ function App() {
                   to="/moi/profil"
                   style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "3px 7px 3px 3px", textDecoration: "none", minWidth: 0 }}
                 >
-                  {getPhotoUrl((currentUser as any).photo) ? (
-                    <img src={getPhotoUrl((currentUser as any).photo)!} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }} />
+                  {getPhotoUrl(currentUser.photo) ? (
+                    <img src={getPhotoUrl(currentUser.photo)!} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }} />
                   ) : (
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, border: "2px solid #34d399", flexShrink: 0 }}>
-                      {((currentUser as any).prenom?.[0] || (currentUser as any).nom?.[0] || '?').toUpperCase()}
+                      {(currentUser.prenom?.[0] || currentUser.nom?.[0] || '?').toUpperCase()}
                     </div>
                   )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: "rgba(255,255,255,0.95)", fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
-                      {(currentUser as any).prenom || (currentUser as any).nom || "Profil"}
+                      {currentUser.prenom || currentUser.nom || "Profil"}
                     </div>
                     <div style={{ color: "#34d399", fontSize: 9, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
-                      {getNumeroHForDisplay((currentUser as any).numeroH, true, false)}
+                      {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </div>
                   </div>
                 </Link>

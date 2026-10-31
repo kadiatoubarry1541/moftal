@@ -3,14 +3,10 @@ import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { RejoindreMaFiche } from '../../components/FicheEnfantActions'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-}
 
 interface ParentLink {
   id: string

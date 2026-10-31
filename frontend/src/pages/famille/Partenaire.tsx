@@ -4,19 +4,10 @@ import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import ChampPersonne from '../../components/ChampPersonne'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-  genre: 'HOMME' | 'FEMME' | 'AUTRE'
-  dateNaissance?: string
-  date_naissance?: string
-  role?: string
-  isAdmin?: boolean
-}
 
 
 interface PartnerInfo {

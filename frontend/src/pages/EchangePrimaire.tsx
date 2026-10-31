@@ -10,13 +10,14 @@ import { useI18n } from '../i18n/useI18n';
 import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 import ErreurChargement from "../components/ErreurChargement";
+import type { AdresseEchange, ContactEchange } from "../types/echange";
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExchangeProduct {
@@ -30,10 +31,12 @@ interface ExchangeProduct {
   images: string[];
   videos: string[];
   condition: 'neuf' | 'bon' | 'moyen' | 'usé';
+  /** Message vocal (publication « photo + audio ») */
+  audio?: string[];
   location: string;
   seller: string;
   sellerName: string;
-  contactInfo: any;
+  contactInfo: ContactEchange;
   isActive: boolean;
   isApproved: boolean;
   createdAt: string;
@@ -46,9 +49,9 @@ interface Supplier {
   businessType: string;
   description: string;
   categories: string[];
-  contactInfo: any;
-  address: any;
-  documents: any[];
+  contactInfo: ContactEchange;
+  address: AdresseEchange;
+  documents: string[];
   isActive: boolean;
   isApproved: boolean;
   rating: number;
@@ -455,7 +458,7 @@ export default function EchangePrimaire() {
             {PRIMAIRE_TABS.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveSubTab(tab.key as any)}
+                onClick={() => setActiveSubTab(tab.key as typeof activeSubTab)}
                 className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
                   activeSubTab === tab.key
                     ? 'bg-green-600 text-white shadow-lg scale-105'
@@ -544,7 +547,7 @@ export default function EchangePrimaire() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_quaternaire.condition_label')}</label>
-                  <select value={newProduct.condition} onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
+                  <select value={newProduct.condition} onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as ExchangeProduct['condition']})}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500">
                     <option value="neuf">{t('echange_primaire.condition_new')}</option>
                     <option value="bon">{t('echange_quaternaire.condition_good')}</option>
@@ -690,7 +693,7 @@ export default function EchangePrimaire() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_primaire.business_type_label')}</label>
               <select
                 value={newSupplier.businessType}
-                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as any})}
+                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as typeof newSupplier.businessType})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               >
                 <option value="individuel">{t('echange_primaire.biztype_individual')}</option>
@@ -819,11 +822,11 @@ export default function EchangePrimaire() {
                 autoPlay muted loop playsInline
                 onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
               />
-            ) : (product as any).audio && (product as any).audio.length > 0 ? (
+            ) : product.audio && product.audio.length > 0 ? (
               <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
                 <span className="text-4xl">🎙️</span>
                 <p className="text-xs text-amber-700 font-medium text-center">{t('echange_tertiaire.voice_message_vendor')}</p>
-                <audio src={buildImageUrl((product as any).audio[0])} controls className="w-full" />
+                <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
               </div>
             ) : (
               <div className="w-full h-48 bg-green-50 flex flex-col items-center justify-center gap-2">

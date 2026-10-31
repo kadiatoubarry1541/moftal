@@ -5,14 +5,10 @@ import { AddPersonModal } from '../../components/AddPersonModal'
 import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import { FicheEnfantActions, AnnulerFusionFiche } from '../../components/FicheEnfantActions'
+import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-interface UserData {
-  numeroH: string
-  prenom: string
-  nomFamille: string
-}
 
 interface ChildLink {
   id: string

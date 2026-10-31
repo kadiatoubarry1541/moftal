@@ -4,7 +4,24 @@ export interface UserData {
   nomFamille: string;
   role?: string;
   isAdmin?: boolean;
-  [key: string]: any;
+  /** Nom seul (anciens comptes) */
+  nom?: string;
+  genre?: "HOMME" | "FEMME" | "AUTRE" | string;
+  photo?: string | null;
+  /** Photos de couple et de famille (Mes Amours, Noyau) */
+  manPhoto?: string | null;
+  familyPhoto?: string | null;
+  prenomPere?: string;
+  numeroHPere?: string;
+  prenomMere?: string;
+  numeroHMere?: string;
+  conjointPrenom?: string;
+  conjointNumeroH?: string;
+  conjointNomFamille?: string;
+  conjointGenre?: string;
+  conjointPhoto?: string;
+  /** Autres champs du profil, lus après vérification */
+  [key: string]: unknown;
 }
 
 /**

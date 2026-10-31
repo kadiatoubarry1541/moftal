@@ -10,13 +10,14 @@ import { useI18n } from '../i18n/useI18n';
 import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 import ErreurChargement from "../components/ErreurChargement";
+import type { AdresseEchange, ContactEchange } from "../types/echange";
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExchangeProduct {
@@ -35,7 +36,7 @@ interface ExchangeProduct {
   location: string;
   seller: string;
   sellerName: string;
-  contactInfo: any;
+  contactInfo: ContactEchange;
   isActive: boolean;
   isApproved: boolean;
   createdAt: string;
@@ -48,9 +49,9 @@ interface Supplier {
   businessType: string;
   description: string;
   categories: string[];
-  contactInfo: any;
-  address: any;
-  documents: any[];
+  contactInfo: ContactEchange;
+  address: AdresseEchange;
+  documents: string[];
   isActive: boolean;
   isApproved: boolean;
   rating: number;
@@ -467,8 +468,8 @@ export default function EchangeSecondaire() {
               {products.slice(0, 3).map((p) => (
                 <div key={p.id} className="flex gap-2 rounded-lg overflow-hidden bg-white/20 border border-white/30 backdrop-blur-sm">
                   <div className="w-16 h-16 flex-shrink-0 bg-white/20 flex items-center justify-center text-2xl rounded-l-lg overflow-hidden">
-                    {(p.images as any)?.[0] ? (
-                      <img src={buildImageUrl((p.images as any)[0])} alt={p.title} className="w-full h-full object-cover" />
+                    {p.images?.[0] ? (
+                      <img src={buildImageUrl(p.images[0])} alt={p.title} className="w-full h-full object-cover" />
                     ) : '🛍️'}
                   </div>
                   <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
@@ -490,7 +491,7 @@ export default function EchangeSecondaire() {
             {SECONDAIRE_TABS.map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveStyleTab(tab.key as any)}
+                onClick={() => setActiveStyleTab(tab.key as typeof activeStyleTab)}
                 className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
                   activeStyleTab === tab.key
                     ? 'bg-blue-600 text-white shadow-lg scale-105'
@@ -615,7 +616,7 @@ export default function EchangeSecondaire() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_quaternaire.condition_label')}</label>
               <select
                 value={newProduct.condition}
-                onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
+                onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as ExchangeProduct['condition']})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200"
               >
                 <option value="neuf">{t('echange_primaire.condition_new')}</option>
@@ -764,7 +765,7 @@ export default function EchangeSecondaire() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_primaire.business_type_label')}</label>
               <select
                 value={newSupplier.businessType}
-                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as any})}
+                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as typeof newSupplier.businessType})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
               >
                 <option value="individuel">{t('echange_primaire.biztype_individual')}</option>

@@ -8,13 +8,14 @@ import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { useI18n } from '../i18n/useI18n';
 import { CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
+import type { ContactEchange } from "../types/echange";
 
 interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExchangeProduct {
@@ -28,10 +29,12 @@ interface ExchangeProduct {
   images: string[];
   videos: string[];
   condition: 'neuf' | 'bon' | 'moyen' | 'usé';
+  /** Message vocal (publication « photo + audio ») */
+  audio?: string[];
   location: string;
   seller: string;
   sellerName: string;
-  contactInfo: any;
+  contactInfo: ContactEchange;
   isActive: boolean;
   isApproved: boolean;
   createdAt: string;
@@ -375,7 +378,7 @@ export default function EchangeNourriture() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_quaternaire.condition_label')}</label>
               <select
                 value={newProduct.condition}
-                onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
+                onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as ExchangeProduct['condition']})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
               >
                 <option value="neuf">{t('echange_primaire.condition_new')}</option>
@@ -659,11 +662,11 @@ export default function EchangeNourriture() {
                     autoPlay muted loop playsInline
                     onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
                   />
-                ) : (product as any).audio && (product as any).audio.length > 0 ? (
+                ) : product.audio && product.audio.length > 0 ? (
                   <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
                     <span className="text-4xl">🎙️</span>
                     <p className="text-xs text-amber-700 font-medium text-center">{t('echange_tertiaire.voice_message_vendor')}</p>
-                    <audio src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${(product as any).audio[0].startsWith('/') ? '' : '/'}${(product as any).audio[0]}`} controls className="w-full" />
+                    <audio src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${product.audio[0].startsWith('/') ? '' : '/'}${product.audio[0]}`} controls className="w-full" />
                   </div>
                 ) : (
                   <div className="w-full h-48 bg-green-50 flex flex-col items-center justify-center gap-2">

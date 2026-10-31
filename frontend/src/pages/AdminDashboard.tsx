@@ -12,6 +12,7 @@ import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
+import type { UserData } from "../utils/auth";
 
 interface ProfessionalAccount {
   id: string;
@@ -46,14 +47,6 @@ interface ProfessionalAccount {
 
 const isFormuleRdv = (p: { planType?: string | null }) => p.planType === "visibility";
 
-interface UserData {
-  numeroH: string;
-  prenom: string;
-  nomFamille: string;
-  role?: string;
-  isAdmin?: boolean;
-  [key: string]: string | number | boolean | undefined;
-}
 
 interface Stats {
   totalUsers: number;
