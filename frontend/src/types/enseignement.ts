@@ -293,3 +293,17 @@ export interface ReponseEnseignement {
 }
 
 export interface ReponseAjoutEquipe { success?: boolean; message?: string; staff?: MembreEquipe }
+
+/** Ce que voit un parent (/my-access) : ses enfants et le suivi de l'enfant choisi */
+export interface SuiviParent {
+  success?: boolean;
+  status?: string;
+  role?: string;
+  tenant?: { name: string; logo_url?: string | null; address?: string | null; phone?: string | null };
+  children?: { id: number; prenom: string; nom: string }[];
+  student?: (Apprenant & { classe?: string | null }) | null;
+  grades?: Note[];
+  attendance?: (PresenceEnregistree & { est_present?: boolean })[];
+  fees?: Frais[];
+  bulletins?: Bulletin[];
+}

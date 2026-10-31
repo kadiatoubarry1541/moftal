@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { nomMedicament, type Consultation, type Ordonnance, type Patient, type RendezVous } from "../types/clinique";
+import type { EtablissementPublic } from "../types/vitrine";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 const TEAL = "#1a8f1a";
@@ -36,11 +38,11 @@ export default function EspacePatientClinique() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notRegistered, setNotRegistered] = useState(false);
-  const [clinic, setClinic] = useState<any>(null);
-  const [patient, setPatient] = useState<any>(null);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [prescriptions, setPrescriptions] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
+  const [clinic, setClinic] = useState<EtablissementPublic | null>(null);
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [appointments, setAppointments] = useState<RendezVous[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Ordonnance[]>([]);
+  const [records, setRecords] = useState<Consultation[]>([]);
   const [rdvForm, setRdvForm] = useState({ service: "", date_rdv: "", heure: "", motif: "" });
   const [rdvSaving, setRdvSaving] = useState(false);
   const [rdvSuccess, setRdvSuccess] = useState(false);
@@ -316,7 +318,7 @@ export default function EspacePatientClinique() {
                 <div style={{ fontSize: 13, color: "#94a3b8" }}>Vos ordonnances apparaîtront ici après vos consultations.</div>
               </div>
             ) : prescriptions.map(p => {
-              const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
+              const meds: Ordonnance["medicaments"] = Array.isArray(p.medicaments) ? p.medicaments : [];
               return (
                 <div key={p.id} style={{ background: "white", borderRadius: 14, border: "1px solid #e2e8f0", padding: "20px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
@@ -339,10 +341,10 @@ export default function EspacePatientClinique() {
                   )}
                   {meds.length > 0 && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {meds.map((m: any, i: number) => (
+                      {meds.map((m, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f8fafc", borderRadius: 8, borderLeft: `3px solid ${TEAL}`, fontSize: 13 }}>
                           <span style={{ color: TEAL }}>◆</span>
-                          <span style={{ color: "#0f172a", fontWeight: 500 }}>{m.medicament || m}</span>
+                          <span style={{ color: "#0f172a", fontWeight: 500 }}>{nomMedicament(m)}</span>
                         </div>
                       ))}
                     </div>

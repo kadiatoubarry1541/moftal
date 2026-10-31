@@ -5,6 +5,7 @@ import { useTraduction, trHors } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { MoftalMark } from "../components/GestionBrand";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { SuiviParent } from "../types/enseignement";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -24,7 +25,7 @@ export default function EspaceParentEcole({ mode }: Props) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<SuiviParent | null>(null);
   const [tab, setTab] = useState<"grades" | "attendance" | "fees" | "bulletins">("grades");
   const [payingFeeId, setPayingFeeId] = useState<number | null>(null);
   const [payMethod, setPayMethod] = useState("OM");
@@ -128,13 +129,13 @@ export default function EspaceParentEcole({ mode }: Props) {
   const attendance = data.attendance || [];
   const fees = data.fees || [];
   const bulletins = data.bulletins || [];
-  const presentCount = attendance.filter((a: any) => a.est_present !== false && a.statut !== "absent").length;
+  const presentCount = attendance.filter((a) => a.est_present !== false && a.statut !== "absent").length;
   const absentCount = attendance.length - presentCount;
 
   const TABS: { id: typeof tab; label: string; icon: string; count?: number }[] = [
     { id: "grades", label: tr("Notes"), icon: "📊", count: grades.length },
     { id: "attendance", label: tr("Présences"), icon: "📋", count: attendance.length },
-    { id: "fees", label: tr("Frais"), icon: "💰", count: fees.filter((f: any) => !f.est_paye).length },
+    { id: "fees", label: tr("Frais"), icon: "💰", count: fees.filter((f) => !f.est_paye).length },
     { id: "bulletins", label: tr("Bulletins"), icon: "📄", count: bulletins.length },
   ];
 
@@ -189,7 +190,7 @@ export default function EspaceParentEcole({ mode }: Props) {
                 {grades.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucune note enregistrée")}</div> : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <tbody>
-                      {grades.map((g: any) => (
+                      {grades.map((g) => (
                         <tr key={g.id} style={{ borderBottom: "1px solid #f8fafc" }}>
                           <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{tr(g.matiere)}</td>
                           <td style={{ padding: "11px 16px", color: "#64748b" }}>{tr(g.periode)}</td>
@@ -215,7 +216,7 @@ export default function EspaceParentEcole({ mode }: Props) {
                   </div>
                 </div>
                 <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                  {attendance.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun historique de présence")}</div> : attendance.map((a: any) => {
+                  {attendance.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun historique de présence")}</div> : attendance.map((a) => {
                     const present = a.est_present !== false && a.statut !== "absent";
                     return (
                       <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #f8fafc", fontSize: 13 }}>
@@ -232,12 +233,12 @@ export default function EspaceParentEcole({ mode }: Props) {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {fees.length === 0 ? (
                   <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun frais enregistré")}</div>
-                ) : fees.map((f: any) => (
+                ) : fees.map((f) => (
                   <div key={f.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                       <div>
                         <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{tr(f.type_frais)}</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: colorDark, marginTop: 2 }}>{fmtMoney(f.montant, locale)}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: colorDark, marginTop: 2 }}>{fmtMoney(+f.montant, locale)}</div>
                       </div>
                       {f.est_paye ? (
                         <span style={{ padding: "4px 12px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{tr("✓ Payé")}</span>
@@ -257,7 +258,7 @@ export default function EspaceParentEcole({ mode }: Props) {
                         <input value={payPhone} onChange={e => setPayPhone(e.target.value)} placeholder={tr("Numéro de téléphone (622 00 00 00)")} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                         {payMsg && <p style={{ fontSize: 12, color: "#d97706", margin: 0 }}>{payMsg}</p>}
                         <button onClick={() => payFee(f.id)} disabled={paying} style={{ padding: "10px", background: paying ? "#94a3b8" : color, color: "white", border: "none", borderRadius: 8, cursor: paying ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700 }}>
-                          {paying ? tr("Traitement...") : tr("Payer {montant}", { montant: fmtMoney(f.montant, locale) })}
+                          {paying ? tr("Traitement...") : tr("Payer {montant}", { montant: fmtMoney(+f.montant, locale) })}
                         </button>
                       </div>
                     )}
@@ -270,7 +271,7 @@ export default function EspaceParentEcole({ mode }: Props) {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {bulletins.length === 0 ? (
                   <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun bulletin publié pour le moment")}</div>
-                ) : bulletins.map((b: any, i: number) => (
+                ) : bulletins.map((b, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{tr(b.periode)} — {b.annee_scolaire}</div>

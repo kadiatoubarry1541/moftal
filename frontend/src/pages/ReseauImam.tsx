@@ -3,6 +3,59 @@ import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 
+
+interface ProfilReseauImam {
+  adresse?: string | null;
+  bio?: string | null;
+  nom_famille?: string | null;
+  nom_mosquee?: string | null;
+  pays?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  ville?: string | null;
+}
+
+interface ConnexionImam {
+  connected_numero_h?: string | null;
+  nom_famille?: string | null;
+  nom_mosquee?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  ville?: string | null;
+}
+
+interface DemandeConnexionImam {
+  connected_numero_h?: string | null;
+  imam_numero_h?: string | null;
+  nom_famille?: string | null;
+  nom_mosquee?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+  ville?: string | null;
+}
+
+interface MembreCommunauteImam {
+  fidele_numero_h?: string | null;
+  joined_at?: string | null;
+  nom_famille?: string | null;
+  photo?: string | null;
+  prenom?: string | null;
+  quartier?: string | null;
+}
+
+interface AnnonceImamEnvoyee {
+  date_vendredi?: string | null;
+  id?: number | string;
+  is_sent?: boolean;
+  message_imam?: string | null;
+  nb_fideles_notifies?: number;
+  sourate_nom?: string | null;
+  texte_arabe?: string | null;
+  traduction?: string | null;
+}
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = `${API}/api/imam-network`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -14,11 +67,11 @@ export default function ReseauImam() {
   const navigate = useNavigate();
   const user = getSessionUser();
   const [tab, setTab] = useState<Tab>("profile");
-  const [profile, setProfile] = useState<any>(null);
-  const [connections, setConnections] = useState<any[]>([]);
-  const [pending, setPending] = useState<any[]>([]);
-  const [community, setCommunity] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [profile, setProfile] = useState<ProfilReseauImam | null>(null);
+  const [connections, setConnections] = useState<ConnexionImam[]>([]);
+  const [pending, setPending] = useState<DemandeConnexionImam[]>([]);
+  const [community, setCommunity] = useState<MembreCommunauteImam[]>([]);
+  const [history, setHistory] = useState<AnnonceImamEnvoyee[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -154,7 +207,7 @@ export default function ReseauImam() {
           {pending.length > 0 && (
             <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 16, marginBottom: 20 }}>
               <div style={{ fontWeight: 700, marginBottom: 10, color: "#92400e" }}>⏳ Demandes en attente ({pending.length})</div>
-              {pending.map((c: any) => (
+              {pending.map((c) => (
                 <div key={c.imam_numero_h} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #fef3c7" }}>
                   <div><div style={{ fontWeight: 600, fontSize: 14 }}>{c.prenom} {c.nom_famille}</div><div style={{ fontSize: 12, color: "#64748b" }}>{c.nom_mosquee} · {c.ville}</div></div>
                   <button onClick={() => acceptConn(c.imam_numero_h)} style={{ padding: "6px 14px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Accepter</button>
@@ -164,7 +217,7 @@ export default function ReseauImam() {
           )}
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>Mes connexions ({connections.length})</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
-            {connections.map((c: any) => (
+            {connections.map((c) => (
               <div key={c.connected_numero_h} style={{ background: "white", borderRadius: 10, padding: 14, border: "1px solid #f1f5f9" }}>
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: CBG, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
                   {c.photo ? <img src={c.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span style={{ fontSize: 18 }}>👨‍✈️</span>}
@@ -191,7 +244,7 @@ export default function ReseauImam() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {community.map((m: any) => (
+              {community.map((m) => (
                 <div key={m.fidele_numero_h} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: CBG, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                     {m.photo ? <img src={m.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span>👤</span>}
