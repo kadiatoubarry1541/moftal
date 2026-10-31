@@ -1,4 +1,5 @@
 import GalerieAlbum from '../components/GalerieAlbum';
+import BarreMessage from '../components/BarreMessage';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNumeroHForDisplay } from '../utils/auth';
@@ -541,47 +542,29 @@ export default function Famille() {
     }
   };
 
-  const submitFamilyMessage = async () => {
-    if (newMessage.type === 'text' && !newMessage.content.trim()) return;
-    if (newMessage.type !== 'text' && !newMessage.mediaFile) return;
-
+  // Texte seul, ou fichier (photo, vidéo, audio) avec son texte éventuel
+  const envoyerMessageFamille = async ({ texte, fichier }: { texte: string; fichier: File | null }): Promise<boolean> => {
     try {
       const token = localStorage.getItem("token");
-
-      if (newMessage.type === 'text') {
-        const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ content: newMessage.content, messageType: 'text' })
-        });
-        if (response.ok) {
-          setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
-          loadFamilyMessages();
-        } else {
-          alert("Le message n'a pas pu être envoyé. Réessayez.");
-        }
-      } else {
-        const formData = new FormData();
-        if (newMessage.content) formData.append('content', newMessage.content);
-        if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
-        const response = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
-        if (response.ok) {
-          setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
-          loadFamilyMessages();
-        } else {
-          alert("Le message n'a pas pu être envoyé. Réessayez.");
-        }
-      }
+      const response = fichier
+        ? await (() => {
+            const formData = new FormData();
+            if (texte) formData.append('content', texte);
+            formData.append('media', fichier);
+            return fetch(`${API_BASE}/api/family-tree/messages/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+          })()
+        : await fetch(`${API_BASE}/api/family-tree/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: texte, messageType: 'text' })
+          });
+      if (!response.ok) { alert("Le message n'a pas pu être envoyé. Réessayez."); return false; }
+      loadFamilyMessages();
+      return true;
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
       alert("Connexion impossible : le message n'a pas été envoyé. Réessayez.");
+      return false;
     }
   };
 
@@ -1423,64 +1406,9 @@ export default function Famille() {
                   <option value="reunion">👥 Réunion</option>
                   <option value="rencontre">🤝 Rencontre</option>
                 </select>
-                <select
-                  value={newMessage.type}
-                  onChange={e => setNewMessage({...newMessage, type: e.target.value as typeof newMessage.type, mediaFile: null})}
-                  className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="text">📝 Texte</option>
-                  <option value="image">🖼️ Photo</option>
-                  <option value="video">🎥 Vidéo</option>
-                  <option value="audio">🎙️ Audio</option>
-                </select>
               </div>
-              {/* Zone saisie selon le type */}
-              <div className="flex gap-2 items-end">
-                {newMessage.type === 'text' ? (
-                  <input
-                    type="text"
-                    value={newMessage.content}
-                    onChange={e => setNewMessage({...newMessage, content: e.target.value})}
-                    onKeyPress={e => e.key === 'Enter' && submitFamilyMessage()}
-                    placeholder="Écrivez un message familial..."
-                    className="flex-1 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                ) : newMessage.type === 'audio' ? (
-                  <div className="flex-1 flex items-center gap-2">
-                    {newMessage.mediaFile ? (
-                      <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
-                        <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                        <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs">✕</button>
-                      </div>
-                    ) : (
-                      <label className="flex-1 cursor-pointer">
-                        <input type="file" accept="audio/*" className="hidden"
-                          onChange={e => setNewMessage({...newMessage, mediaFile: e.target.files?.[0] || null})} />
-                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-600 border border-gray-200">
-                          🎙️ Choisir un fichier audio
-                        </span>
-                      </label>
-                    )}
-                  </div>
-                ) : (
-                  <label className="flex-1 cursor-pointer">
-                    <input type="file"
-                      accept={newMessage.type === 'image' ? 'image/*' : 'video/*'}
-                      className="hidden"
-                      onChange={e => setNewMessage({...newMessage, mediaFile: e.target.files?.[0] || null})} />
-                    <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-600 border border-gray-200">
-                      {newMessage.type === 'image' ? '🖼️' : '🎥'} {newMessage.mediaFile ? newMessage.mediaFile.name : 'Choisir un fichier'}
-                    </span>
-                  </label>
-                )}
-                <button
-                  onClick={submitFamilyMessage}
-                  disabled={newMessage.type === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
-                  className="w-10 h-10 flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-full text-lg transition-colors flex-shrink-0"
-                >
-                  ➤
-                </button>
-              </div>
+              {/* Une seule barre : écrire, joindre (📎) ou parler (🎤), puis ➤ */}
+              <BarreMessage placeholder="Écrivez un message familial..." onEnvoyer={envoyerMessageFamille} />
             </div>
           </div>
         </div>

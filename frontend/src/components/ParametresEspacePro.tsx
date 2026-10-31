@@ -1,7 +1,6 @@
 import InstallAppButton from "./InstallAppButton";
 import AbonnementGestion from "./AbonnementGestion";
 import { useProBrand } from "./proBrand";
-import { getSessionUser, isAdmin } from "../utils/auth";
 import { useState } from "react";
 import { useTraduction } from "../i18n/traduction";
 import { lienAppGestionIci, copierTexte } from "../utils/lienAppGestion";
@@ -29,7 +28,7 @@ function CopierLienApplication({ couleur }: { couleur: string }) {
 export default function ParametresEspacePro() {
   const brand = useProBrand();
   const { tr } = useTraduction();
-  if (isAdmin(getSessionUser())) return null;
+  // Même page pour tous, administrateur compris : chacun voit le bouton d'installation
   return (
     <>
       <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "20px 24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>

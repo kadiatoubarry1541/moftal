@@ -501,7 +501,11 @@ export default function Inspir() {
                   <button onClick={stopRecording} className="ml-auto px-3 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold">⏹ Arrêter</button>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
+                  <label className="flex flex-col items-center gap-1 py-3 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 cursor-pointer hover:bg-gray-50">
+                    <span className="text-xl">📷</span>Photo
+                    <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => choisirFichier(e.target)} />
+                  </label>
                   <label className="flex flex-col items-center gap-1 py-3 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 cursor-pointer hover:bg-gray-50">
                     <span className="text-xl">🖼️</span>Galerie
                     <input type="file" accept="image/*,video/*,audio/*" className="hidden" onChange={e => choisirFichier(e.target)} />
