@@ -4,6 +4,8 @@ import FaithContent from '../models/FaithContent.js';
 import FaithCommunity from '../models/FaithCommunity.js';
 import HolyBook from '../models/HolyBook.js';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
+import { urlDurable } from '../services/stockageDurable.js';
 
 const router = express.Router();
 
@@ -290,6 +292,41 @@ router.post('/communities/:id/posts', async (req, res) => {
 // @route   GET /api/faith/books
 // @desc    Récupérer les livres saints
 // @access  Authentisé
+// Colonnes ajoutées aux livres (auteur, langue, catégorie, PDF) : créées une fois
+let colonnesLivres = null;
+const preparerLivres = () => (colonnesLivres ||= HolyBook.sequelize.query(`
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS author VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS language VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS category VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS pdf_url TEXT;
+`).catch((e) => { colonnesLivres = null; throw e; }));
+
+// @route   POST /api/faith/books — publier un livre ou un PDF (au nom de la personne connectée)
+router.post('/books', upload.single('pdf'), async (req, res) => {
+  try {
+    await preparerLivres();
+    const titre = String(req.body?.title || '').trim().slice(0, 255);
+    if (!titre) return res.status(400).json({ success: false, message: 'Le titre est obligatoire.' });
+    const categorie = String(req.body?.category || 'Islam').trim().slice(0, 100);
+    const pdfUrl = req.file ? await urlDurable(req.file, 'livres') : null;
+    const livre = await HolyBook.create({
+      title: titre,
+      description: String(req.body?.description || '').slice(0, 5000),
+      author: String(req.body?.author || '').trim().slice(0, 255) || null,
+      language: String(req.body?.language || '').trim().slice(0, 100) || null,
+      category: categorie,
+      religion: categorie,
+      pdfUrl,
+      chapters: [],
+      createdBy: req.user.numeroH,
+    });
+    res.status(201).json({ success: true, book: livre });
+  } catch (error) {
+    console.error('faith/books POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.get('/books', async (req, res) => {
   try {
     const { religion } = req.query;
@@ -299,6 +336,7 @@ router.get('/books', async (req, res) => {
       where.religion = religion;
     }
     
+    await preparerLivres();
     const books = await HolyBook.findAll({
       where,
       order: [['created_at', 'DESC']]
