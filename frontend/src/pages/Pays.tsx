@@ -958,7 +958,7 @@ export default function Pays() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setResidenceActiveTab(tab.id as any)}
+                    onClick={() => setResidenceActiveTab(tab.id as typeof residenceActiveTab)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
                       residenceActiveTab === tab.id
                         ? 'bg-green-600 text-white'

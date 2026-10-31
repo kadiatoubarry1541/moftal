@@ -997,7 +997,7 @@ export default function Education() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveCourseTab(tab.id as any)}
+                    onClick={() => setActiveCourseTab(tab.id as typeof activeCourseTab)}
                     className={`py-2 px-4 rounded-lg font-medium ${
                       activeCourseTab === tab.id
                         ? 'bg-blue-600 text-white'

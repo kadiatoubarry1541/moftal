@@ -154,7 +154,7 @@ export default function EspacePatientClinique() {
               style={{ background: TEAL, color: "white", border: "none", borderRadius: 10, padding: "10px 24px", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>
               Voir la clinique
             </button>
-            <button onClick={() => navigate(-1 as any)}
+            <button onClick={() => navigate(-1)}
               style={{ background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 24px", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
               Retour
             </button>

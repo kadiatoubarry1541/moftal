@@ -44,7 +44,7 @@ const linkBase =
 
 function useEntourageItems(user: Props['user']): NavItem[] {
   const genre = String(user?.genre ?? '').trim().toUpperCase()
-  const userIsAdmin = user ? isAdmin(user as any) : false
+  const userIsAdmin = user ? isAdmin(user) : false
   const showMari = userIsAdmin || genre === 'FEMME'
   const showFemme = userIsAdmin || genre === 'HOMME'
 

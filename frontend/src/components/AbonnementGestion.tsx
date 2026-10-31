@@ -4,6 +4,7 @@ import PaymentModal from "./PaymentModal";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { OffreGestionInterne, type PeriodeGI } from "./EspaceProModals";
 import { useTraduction } from "../i18n/traduction";
+import type { AccesGestionInterne } from "../types/pro";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -19,7 +20,7 @@ export default function AbonnementGestion() {
   const { tenantCode } = useParams<{ tenantCode?: string }>();
   const token = localStorage.getItem("token") || "";
   const estAdmin = isAdmin(getSessionUser());
-  const [accesGI, setAccesGI] = useState<any>(null);
+  const [accesGI, setAccesGI] = useState<AccesGestionInterne | null>(null);
   const [showOffre, setShowOffre] = useState(false);
   const [periode, setPeriode] = useState<PeriodeGI | null>(null);
 

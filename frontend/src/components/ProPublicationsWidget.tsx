@@ -130,7 +130,7 @@ export default function ProPublicationsWidget({ tenantCode, accentColor = "#0891
                 {/* Contenu */}
                 {pub.contenu && (
                   <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 10px", lineHeight: 1.5, flex: 1,
-                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as any}>
+                    display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                     {pub.contenu}
                   </p>
                 )}

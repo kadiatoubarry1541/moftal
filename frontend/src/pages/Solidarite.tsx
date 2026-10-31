@@ -506,7 +506,7 @@ export default function Solidarite() {
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setDonsSubTab(tab.id as any)}
+                      onClick={() => setDonsSubTab(tab.id as typeof donsSubTab)}
                       className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                         donsSubTab === tab.id
                           ? 'bg-green-500 text-white shadow-md'

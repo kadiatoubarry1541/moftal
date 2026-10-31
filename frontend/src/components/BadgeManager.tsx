@@ -12,7 +12,8 @@ interface Badge {
   color: string;
   category: string;
   rarity: string;
-  requirements?: any;
+  /** Conditions d'attribution (JSON libre) */
+  requirements?: Record<string, unknown> | null;
   isActive: boolean;
   createdBy: string;
   createdAt: string;

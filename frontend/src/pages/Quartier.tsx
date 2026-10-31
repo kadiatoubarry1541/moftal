@@ -19,8 +19,8 @@ export default function Quartier() {
   const navigate = useNavigate();
   const user = getSessionUser();
   const userIsAdmin = isAdmin(user);
-  const quartierNom = (user as any)?.quartier || (user as any)?.ville || "";
-  const userNumeroH = (user as any)?.numeroH || (user as any)?.numero_h || "";
+  const quartierNom = user?.quartier || user?.ville || "";
+  const userNumeroH = user?.numeroH || user?.numero_h || "";
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [manager, setManager] = useState<any>(null);
@@ -110,7 +110,7 @@ export default function Quartier() {
         </p>
         <div className="mt-4 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium">
           <span>📍</span>
-          <span>Localisation : {(user as any).ville || (user as any).quartier || "Non définie"}</span>
+          <span>Localisation : {user.ville || user.quartier || "Non définie"}</span>
         </div>
       </div>
 

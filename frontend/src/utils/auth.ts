@@ -20,6 +20,13 @@ export interface UserData {
   conjointNomFamille?: string;
   conjointGenre?: string;
   conjointPhoto?: string;
+  /** Lieu de vie (Terre ADAM, quartier) */
+  quartier?: string;
+  ville?: string;
+  pays?: string;
+  specialite?: string;
+  /** NuméroH au format serveur (snake_case) */
+  numero_h?: string;
   /** Autres champs du profil, lus après vérification */
   [key: string]: unknown;
 }
@@ -83,7 +90,7 @@ export function getSessionUser(): UserData | null {
  * @param user - Les données de l'utilisateur
  * @returns true si admin, false sinon
  */
-export function isAdmin(user: UserData | null): boolean {
+export function isAdmin(user: Partial<Pick<UserData, "role" | "isAdmin" | "numeroH">> | null): boolean {
   if (!user) return false;
   
   const role = user.role?.toLowerCase() || '';

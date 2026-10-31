@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Education.css'
 import { useTraduction } from '../i18n/traduction'
+import type { UserData } from '../utils/auth'
 
 interface Course {
   id: string
@@ -27,7 +28,7 @@ interface Lesson {
 }
 
 interface EducationProps {
-  userData: any
+  userData: UserData
 }
 
 export function Education({ userData }: EducationProps) {

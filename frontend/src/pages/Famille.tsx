@@ -4,7 +4,7 @@ import { getNumeroHForDisplay } from '../utils/auth';
 import { calculerAge } from '../utils/calculs';
 import ErreurChargement from "../components/ErreurChargement";
 
-const API_BASE = (import.meta as any)?.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
+const API_BASE = import.meta.env?.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5002';
 const getImageUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
   if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url;
@@ -786,7 +786,7 @@ export default function Famille() {
             {['parents', 'enfants', 'epoux', 'freres', 'soeurs', 'oncles', 'tantes', 'cousins', 'cousines', 'neveux', 'nieces', 'grandparents', 'arbre', 'gestion'].map((tab) => (
             <button
                 key={tab}
-                onClick={() => setActiveTab(tab as any)}
+                onClick={() => setActiveTab(tab as typeof activeTab)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-blue-500 text-blue-600'

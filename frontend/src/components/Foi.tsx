@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTraduction } from '../i18n/traduction'
+import type { UserData } from '../utils/auth'
 
 interface FoiProps {
-  userData: any
+  userData: UserData
 }
 
 export function Foi({ userData }: FoiProps) {

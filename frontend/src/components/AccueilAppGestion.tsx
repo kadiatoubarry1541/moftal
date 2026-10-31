@@ -5,6 +5,7 @@ import { getTypeInfo } from "./espaceProTypes";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { useTraduction } from "../i18n/traduction";
 import BoutonLienAppGestion from "./BoutonLienAppGestion";
+import type { CompteProfessionnel } from "../types/pro";
 
 // Espace pro d'un établissement en formule complète, vu sur le site Moftal :
 // tout se fait dans SA propre application (la gestion interne, avec son logo).
@@ -17,7 +18,7 @@ const DOMAINE_GESTION = "gestions.moftal.com";
 
 const estAndroid = () => /Android/i.test(navigator.userAgent);
 
-export default function AccueilAppGestion({ account, couleur }: { account: any; couleur: string }) {
+export default function AccueilAppGestion({ account, couleur }: { account: Pick<CompteProfessionnel, "id" | "name" | "type" | "photo" | "tenant_code">; couleur: string }) {
   const navigate = useNavigate();
   const { tr } = useTraduction();
   const token = localStorage.getItem("token") || "";

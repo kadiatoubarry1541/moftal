@@ -12,8 +12,9 @@ interface User {
   isVerified: boolean
   role: 'user' | 'admin' | 'super-admin'
   type: 'vivant' | 'defunt'
-  children: any[]
-  parents: any[]
+  /** NuméroH des enfants et des parents */
+  children: string[]
+  parents: string[]
   created_at: string
   lastLogin?: string
   email?: string
@@ -22,6 +23,13 @@ interface User {
 
 // Compte créé par l'inscription rapide (téléphone + mot de passe) : NuméroH provisoire
 const isQuickAccount = (u: User) => (u.numeroH || '').startsWith('TMP-')
+
+/** Famille listée par l'administration (/api/admin/families) */
+interface FamilleAdmin {
+  nomFamille: string
+  memberCount: number
+  members: User[]
+}
 
 interface Stats {
   totalUsers: number
@@ -34,7 +42,7 @@ interface Stats {
 }
 
 interface AdminPanelProps {
-  userData: any
+  userData: { numeroH?: string } | null
 }
 
 export function AdminPanel({ userData: _userData }: AdminPanelProps) {
@@ -42,7 +50,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'users' | 'families' | 'reports' | 'settings' | 'badges' | 'logos'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
-  const [families, setFamilies] = useState<any[]>([])
+  const [families, setFamilies] = useState<FamilleAdmin[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState<string>('all')
