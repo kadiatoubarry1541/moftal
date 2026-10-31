@@ -28,7 +28,7 @@ interface UserData {
   nomFamille: string;
   dateNaissance?: string;
   date_naissance?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface FamilyMember {
@@ -1405,7 +1405,7 @@ export default function Famille() {
               <div className="flex gap-2 flex-wrap">
                 <select
                   value={newMessage.category}
-                  onChange={e => setNewMessage({...newMessage, category: e.target.value as any})}
+                  onChange={e => setNewMessage({...newMessage, category: e.target.value as typeof newMessage.category})}
                   className="flex-1 min-w-[140px] border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
                 >
                   <option value="information">ℹ️ Information</option>
@@ -1417,7 +1417,7 @@ export default function Famille() {
                 </select>
                 <select
                   value={newMessage.type}
-                  onChange={e => setNewMessage({...newMessage, type: e.target.value as any, mediaFile: null})}
+                  onChange={e => setNewMessage({...newMessage, type: e.target.value as typeof newMessage.type, mediaFile: null})}
                   className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
                 >
                   <option value="text">📝 Texte</option>

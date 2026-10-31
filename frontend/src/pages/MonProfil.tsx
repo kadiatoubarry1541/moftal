@@ -50,7 +50,7 @@ export default function MonProfil() {
     dateNaissance?: string;
     age?: number;
     generation?: string;
-    [key: string]: string | number | boolean | undefined;
+    [key: string]: unknown;
   } | null>(null);
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
   const [memberships, setMemberships] = useState<any[]>([]);
@@ -441,7 +441,7 @@ export default function MonProfil() {
           setOpen(false);
           setShowEditProfile(true);
         }}
-        freshUserData={userData}
+        freshUserData={userData as React.ComponentProps<typeof IdentiteModal>["freshUserData"]}
       />
 
       <EditProfileModal

@@ -137,7 +137,7 @@ export default function ProfesseurIA() {
   };
 
   // PWA : manifest indépendant pour IA Education Moftal
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [pwaInstalled, setPwaInstalled] = useState(false);
 
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function ProfesseurIA() {
     setPwaInstalled(alreadyInstalled);
     if (alreadyInstalled && !standalone) reconcileInstalledFlag('iaEducationInstalled', setPwaInstalled);
 
-    const handler = (e: any) => {
+    const handler = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
       setInstallPrompt(e);
       // Le navigateur propose d'installer → il ne considère pas l'app comme installée

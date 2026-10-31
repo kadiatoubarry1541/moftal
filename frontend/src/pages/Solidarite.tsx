@@ -9,7 +9,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PoorPerson {
@@ -475,7 +475,7 @@ export default function Solidarite() {
                 onClick={() => {
                   if (tab.id === 'zaka') navigate('/zaka');
                   else if (tab.id === 'racines') navigate('/solidarite/racines');
-                  else setActiveTab(tab.id as any);
+                  else setActiveTab(tab.id as typeof activeTab);
                 }}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg font-medium text-[10px] transition-all ${
                   activeTab === tab.id
@@ -894,7 +894,7 @@ export default function Solidarite() {
                 </label>
                 <select
                   value={donationForm.type}
-                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
+                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as typeof donationForm.type})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="money">Argent</option>

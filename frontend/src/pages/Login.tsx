@@ -36,7 +36,7 @@ export function Login() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          const from = (location.state as any)?.from || retour || '/compte'
+          const from = (location.state as { from?: string } | null)?.from || retour || '/compte'
           navigate(from, { replace: true })
           return
         }
@@ -64,7 +64,7 @@ export function Login() {
 
   const allerApresConnexion = () => {
     // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
-    const from = (location.state as any)?.from || retour || '/compte'
+    const from = (location.state as { from?: string } | null)?.from || retour || '/compte'
     navigate(from, { replace: true, state: { fromLogin: true } })
   }
 

@@ -11,7 +11,7 @@ interface UserData {
   nomFamille: string;
   regionOrigine?: string;
   pays?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface RegionGroup {
@@ -841,7 +841,7 @@ export default function GuineeForestiere() {
                   <div className="flex gap-2 flex-1">
                     <select
                       value={newMessage.messageType}
-                      onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
+                      onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as typeof newMessage.messageType, mediaFile: null})}
                       className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                     >
                       <option value="text">📝</option>

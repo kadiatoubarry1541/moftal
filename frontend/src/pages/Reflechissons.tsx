@@ -9,7 +9,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   religion?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ReflectionContent {
@@ -446,7 +446,7 @@ export default function Reflechissons() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type *</label>
                   <select
                     value={newReflection.type}
-                    onChange={(e) => setNewReflection({...newReflection, type: e.target.value as any})}
+                    onChange={(e) => setNewReflection({...newReflection, type: e.target.value as typeof newReflection.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="message">📝 Message</option>

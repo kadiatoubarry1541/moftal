@@ -45,7 +45,9 @@ interface UserData {
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
   vitrineVideo?: string;
-  [key: string]: any;
+  /** Langues parlées, séparées par « ; » */
+  languesAutre?: string;
+  [key: string]: unknown;
 }
 
 interface EditProfileModalProps {

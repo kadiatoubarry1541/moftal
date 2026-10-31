@@ -244,7 +244,7 @@ export default function BadgeManager() {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
               activeTab === tab.id
                 ? 'bg-white text-blue-600 shadow-sm'

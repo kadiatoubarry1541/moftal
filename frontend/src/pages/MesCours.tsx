@@ -8,7 +8,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Course {
@@ -488,7 +488,7 @@ export default function MesCours() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                   if (tab.id === 'audio') loadAudioCourses();
                   if (tab.id === 'video') loadVideoCourses();
                   if (tab.id === 'ecrit') loadEcritCourses();
@@ -688,7 +688,7 @@ export default function MesCours() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de contenu *</label>
                   <select
                     value={newCourse.type}
-                    onChange={(e) => setNewCourse({...newCourse, type: e.target.value as any})}
+                    onChange={(e) => setNewCourse({...newCourse, type: e.target.value as typeof newCourse.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="audio">🎧 Audio</option>
@@ -929,7 +929,7 @@ export default function MesCours() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Type de cours *</label>
                     <select
                       value={newCourse.type}
-                      onChange={(e) => setNewCourse({...newCourse, type: e.target.value as any})}
+                      onChange={(e) => setNewCourse({...newCourse, type: e.target.value as typeof newCourse.type})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value="audio">🎧 Audio</option>
@@ -1027,7 +1027,7 @@ export default function MesCours() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de cours *</label>
                   <select
                     value={newPermission.courseType}
-                    onChange={(e) => setNewPermission({...newPermission, courseType: e.target.value as any})}
+                    onChange={(e) => setNewPermission({...newPermission, courseType: e.target.value as typeof newPermission.courseType})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="audio">🎧 Audio</option>

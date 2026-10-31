@@ -10,7 +10,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface PoorPerson {
@@ -829,7 +829,7 @@ export default function Zaka() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-green-500 text-white shadow-md'
@@ -1690,7 +1690,7 @@ export default function Zaka() {
                 </label>
                 <select
                   value={donationForm.type}
-                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
+                  onChange={(e) => setDonationForm({...donationForm, type: e.target.value as typeof donationForm.type})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="money">{t('zaka.type_money')}</option>

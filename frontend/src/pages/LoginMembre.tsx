@@ -20,7 +20,7 @@ export function LoginMembre() {
   // Page d'où l'on vient (espace patient, application de l'établissement…) :
   // on y revient après la connexion (seulement une adresse de ce site)
   const redirectParam = new URLSearchParams(location.search).get('redirect')
-  const retour = (location.state as any)?.from
+  const retour = (location.state as { from?: string } | null)?.from
     || (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null)
     || '/compte'
 

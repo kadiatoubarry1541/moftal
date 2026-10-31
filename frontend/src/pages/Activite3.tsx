@@ -9,7 +9,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   activite3?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Activity3Group {
@@ -1019,7 +1019,7 @@ export default function Activite3() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Type de contenu</label>
                   <select
                     value={newPost.type}
-                    onChange={(e) => setNewPost({...newPost, type: e.target.value as any})}
+                    onChange={(e) => setNewPost({...newPost, type: e.target.value as typeof newPost.type})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="text">📝 Texte</option>

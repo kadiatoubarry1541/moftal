@@ -20,7 +20,17 @@ interface UserData {
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
   vitrineVideo?: string;
-  [key: string]: any;
+  dateNaissance?: string;
+  email?: string;
+  ethnie?: string;
+  generation?: string;
+  nationalite?: string;
+  pays?: string;
+  region?: string;
+  tel1?: string;
+  telephone?: string;
+  video?: string;
+  [key: string]: unknown;
 }
 
 const CONFIRM_DELETE_TEXT = "SUPPRIMER";
@@ -34,7 +44,7 @@ export default function IdentiteModal({
   open: boolean;
   onClose: () => void;
   onEditProfile?: () => void;
-  freshUserData?: any;
+  freshUserData?: UserData | null;
 }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);

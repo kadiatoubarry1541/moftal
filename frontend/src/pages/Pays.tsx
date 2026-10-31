@@ -10,7 +10,8 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  pays?: string;
+  [key: string]: unknown;
 }
 
 interface RegionGroup {
@@ -909,7 +910,7 @@ export default function Pays() {
             ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center gap-2 ${
                 activeTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -1077,7 +1078,7 @@ export default function Pays() {
                         <div className="relative flex-1">
                           <select
                             value={newResidencePost.category}
-                            onChange={(e) => setNewResidencePost({...newResidencePost, category: e.target.value as any})}
+                            onChange={(e) => setNewResidencePost({...newResidencePost, category: e.target.value as typeof newResidencePost.category})}
                             className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                             <option value="information">Information</option>
@@ -1107,7 +1108,7 @@ export default function Pays() {
                         <select
                           value={newResidencePost.type}
                             onChange={(e) => {
-                              setNewResidencePost({...newResidencePost, type: e.target.value as any, mediaFile: null});
+                              setNewResidencePost({...newResidencePost, type: e.target.value as typeof newResidencePost.type, mediaFile: null});
                             }}
                             className="pl-10 pr-8 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[80px]"
                         >
@@ -1310,7 +1311,7 @@ export default function Pays() {
                       <div className="relative flex-1">
                         <select
                           value={newRegionPost.category}
-                          onChange={(e) => setNewRegionPost({...newRegionPost, category: e.target.value as any})}
+                          onChange={(e) => setNewRegionPost({...newRegionPost, category: e.target.value as typeof newRegionPost.category})}
                           className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="information">Information</option>
@@ -1340,7 +1341,7 @@ export default function Pays() {
                         <select
                           value={newRegionPost.type}
                           onChange={(e) => {
-                            setNewRegionPost({...newRegionPost, type: e.target.value as any, mediaFile: null});
+                            setNewRegionPost({...newRegionPost, type: e.target.value as typeof newRegionPost.type, mediaFile: null});
                           }}
                           className="pl-10 pr-8 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 appearance-none cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[80px]"
                       >

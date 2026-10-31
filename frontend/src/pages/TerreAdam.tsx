@@ -20,7 +20,32 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  continent?: string;
+  continentCode?: string;
+  isAdmin?: boolean;
+  isJournalist?: boolean;
+  lieu1?: string;
+  lieu2?: string;
+  lieu3?: string;
+  lieuResidence1?: string;
+  lieuResidence2?: string;
+  lieuResidence3?: string;
+  logoUrl?: string;
+  pays?: string;
+  paysCode?: string;
+  prefecture?: string;
+  prefectureCode?: string;
+  quartier?: string;
+  quartierCode?: string;
+  quartierCode2?: string;
+  quartierCode3?: string;
+  region?: string;
+  regionCode?: string;
+  regionOrigine?: string;
+  role?: string;
+  sousPrefecture?: string;
+  sousPrefectureCode?: string;
+  [key: string]: unknown;
 }
 
 interface ResidenceGroup {
@@ -488,7 +513,7 @@ export default function TerreAdam() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0 text-[7px] font-bold transition leading-none"
                   style={{
                     borderRadius: 8,

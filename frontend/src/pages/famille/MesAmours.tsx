@@ -16,7 +16,9 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  email?: string;
+  phone?: string;
+  [key: string]: unknown;
 }
 
 interface Friend {

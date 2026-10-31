@@ -12,7 +12,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface SciencePost {
@@ -322,7 +322,7 @@ export default function Science() {
 
   const handleMediaCapture = (file: File, type: 'photo' | 'video' | 'audio') => {
     const postType = type === 'photo' ? 'image' : type;
-    setNewPost({ ...newPost, type: postType as any });
+    setNewPost({...newPost, type: postType as typeof newPost.type });
     setSelectedFile(file);
     submitCreatePost(file);
   };
@@ -409,7 +409,7 @@ export default function Science() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-blue-500 text-white shadow-md'

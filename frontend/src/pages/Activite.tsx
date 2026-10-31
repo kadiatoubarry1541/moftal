@@ -23,7 +23,7 @@ interface UserData {
   activite1?: string;
   activite2?: string;
   activite3?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ActivityGroup {

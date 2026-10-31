@@ -11,7 +11,7 @@ interface UserData {
   numeroH: string;
   prenom: string;
   nomFamille: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 
@@ -730,7 +730,7 @@ export default function Education() {
                 if ('link' in tab && tab.link) {
                   navigate(tab.link);
                 } else {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                   if (tab.id === 'inscription-suivi') setInscriptionStep('button');
                 }
               }}
@@ -1165,7 +1165,7 @@ export default function Education() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.content_type_label')}</label>
                         <select
                           value={publishForm.type}
-                          onChange={(e) => setPublishForm({ ...publishForm, type: e.target.value as any })}
+                          onChange={(e) => setPublishForm({...publishForm, type: e.target.value as typeof publishForm.type })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           required
                         >

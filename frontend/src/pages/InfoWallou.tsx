@@ -1692,7 +1692,7 @@ export default function InfoWallou() {
   const [sendError, setSendError] = useState('');
 
   // PWA : manifest indépendant pour Info Moftal
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [pwaInstalled, setPwaInstalled] = useState(false);
 
   useEffect(() => {
@@ -1705,7 +1705,7 @@ export default function InfoWallou() {
     setPwaInstalled(alreadyInstalled);
     if (alreadyInstalled && !standalone) reconcileInstalledFlag('infoMoftalInstalled', setPwaInstalled);
 
-    const handler = (e: any) => {
+    const handler = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
       setInstallPrompt(e);
       // Le navigateur propose d'installer → il ne considère pas l'app comme installée

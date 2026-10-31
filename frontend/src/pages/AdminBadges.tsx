@@ -8,7 +8,7 @@ interface UserData {
   prenom: string;
   nomFamille: string;
   role: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface Badge {
@@ -754,7 +754,7 @@ export default function AdminBadges() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                   // Mettre à jour l'URL avec le paramètre tab
                   const newSearchParams = new URLSearchParams(searchParams);
                   if (tab.id === 'badges') {
