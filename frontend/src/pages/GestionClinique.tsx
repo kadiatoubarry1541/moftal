@@ -12,6 +12,14 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import ParametreLangue from "../components/ParametreLangue";
+import {
+  nomMedicament,
+  type Admission, type AvisPatient, type Consultation, type DemandeRendezVous, type Dispensation,
+  type EtablissementClinique, type Examen, type Facture, type FormClinique, type LigneFacture, type Lit,
+  type Montant, type Ordonnance, type Paiement, type ParametresClinique, type Patient, type Personnel,
+  type RendezVous, type ReponseAjoutPersonnel, type ReponseClinique, type StatsClinique, type StatsPharmacie,
+  type StockMedicament, type Vaccination,
+} from "../types/clinique";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -38,7 +46,7 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: Montant) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -48,8 +56,8 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
-function calcTotal(lignes: any[], remise: number) {
-  const st = (lignes || []).reduce((s: number, l: any) => s + (+l.prix_unitaire || 0) * (+l.quantite || 1), 0);
+function calcTotal(lignes: LigneFacture[], remise: number) {
+  const st = (lignes || []).reduce((s: number, l) => s + (+l.prix_unitaire || 0) * (+l.quantite || 1), 0);
   return Math.max(0, st - (remise || 0));
 }
 
@@ -95,8 +103,8 @@ const TEAL_DARK = "#156315";
 
 const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:12px">` : "";
 
-function printPrescription(p: any, clinicName: string, logoUrl?: string | null) {
-  const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
+function printPrescription(p: Ordonnance, clinicName: string, logoUrl?: string | null) {
+  const meds: Ordonnance["medicaments"] = Array.isArray(p.medicaments) ? p.medicaments : [];
   const date = p.date_prescription || p.created_at;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Ordonnance ${p.numero_ordo}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a8f1a;padding-bottom:20px;margin-bottom:24px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}.ordo-num{background:#f0fdfa;border:1px solid #99f6e4;padding:5px 14px;border-radius:20px;font-family:monospace;font-size:13px;color:#156315}.s-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;margin-top:20px}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;border-left:4px solid #1a8f1a}.pat-name{font-size:17px;font-weight:700}.diag{background:#fffbeb;border-radius:6px;padding:12px;border-left:3px solid #fbbf24;font-size:13px;color:#475569}.med-item{display:flex;align-items:center;padding:9px 14px;background:#f8fafc;border-radius:6px;margin-bottom:7px;border-left:3px solid #1a8f1a;font-size:13px}.footer{margin-top:60px;display:flex;justify-content:flex-end}.sig{width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:12px;color:#64748b;text-align:center}@media print{@page{margin:20px}}</style></head><body>
@@ -104,7 +112,7 @@ function printPrescription(p: any, clinicName: string, logoUrl?: string | null) 
 <div class="s-label" style="margin-top:0">Patient</div><div class="pat-box"><div class="pat-name">${p.p_prenom||""} ${p.p_nom||""}</div></div>
 ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagnostic}</div>`:""}
 <div class="s-label">Médicaments prescrits</div>
-${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map((m:any)=>`<div class="med-item">◆ &nbsp;${m.medicament||m}</div>`).join("")}
+${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map(m=>`<div class="med-item">◆ &nbsp;${nomMedicament(m)}</div>`).join("")}
 ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748b;font-style:italic">${p.notes}</p>`:""}
 <div class="footer"><div class="sig">Dr. ${p.s_nom?`${p.s_prenom||""} ${p.s_nom}`:"..."}<br>Médecin prescripteur</div></div>
 </body></html>`;
@@ -112,8 +120,8 @@ ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
 }
 
-function printInvoice(f: any, clinicName: string, logoUrl?: string | null) {
-  const lignes: any[] = Array.isArray(f.lignes) ? f.lignes : [];
+function printInvoice(f: Facture, clinicName: string, logoUrl?: string | null) {
+  const lignes: LigneFacture[] = Array.isArray(f.lignes) ? f.lignes : [];
   const isPaid = f.statut === "paye";
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Facture ${f.numero_facture}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}table{width:100%;border-collapse:collapse;margin:20px 0}thead tr{background:#1a8f1a;color:white}th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}tbody tr:nth-child(even){background:#f8fafc}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}.tr-total{background:#f0fdfa!important;font-weight:700}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:20px}.badge{display:inline-block;padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;background:${isPaid?"#f0fdf0":"#fffbeb"};color:${isPaid?"#1a8f1a":"#d97706"}}@media print{@page{margin:20px}}</style>
@@ -121,7 +129,7 @@ function printInvoice(f: any, clinicName: string, logoUrl?: string | null) {
 <div class="header"><div><div class="clinic-title">${logoHtml(logoUrl)}${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Facturation</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#0f172a">FACTURE</div><div style="font-family:monospace;font-size:15px;color:#156315;margin:4px 0">${f.numero_facture}</div><div style="font-size:12px;color:#64748b">Le ${new Date(f.date_facture||f.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div><div style="margin-top:8px"><span class="badge">${isPaid?"✓ Payé":"⏳ En attente"}</span></div></div></div>
 <div class="pat-box"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Facturé à</div><div style="font-size:17px;font-weight:700">${f.p_prenom||""} ${f.p_nom||"Patient anonyme"}</div>${f.s_nom?`<div style="font-size:12px;color:#64748b;margin-top:2px">Médecin : Dr. ${f.s_prenom||""} ${f.s_nom}</div>`:""}</div>
 <table><thead><tr><th style="width:50%">Description</th><th style="text-align:center">Qté</th><th style="text-align:right">Prix unit.</th><th style="text-align:right">Sous-total</th></tr></thead><tbody>
-${lignes.map((l:any)=>`<tr><td>${l.description}</td><td style="text-align:center">${l.quantite}</td><td style="text-align:right">${(+l.prix_unitaire||0).toLocaleString("fr-FR")} GNF</td><td style="text-align:right;font-weight:600">${((+l.prix_unitaire||0)*(+l.quantite||1)).toLocaleString("fr-FR")} GNF</td></tr>`).join("")}
+${lignes.map(l=>`<tr><td>${l.description}</td><td style="text-align:center">${l.quantite}</td><td style="text-align:right">${(+l.prix_unitaire||0).toLocaleString("fr-FR")} GNF</td><td style="text-align:right;font-weight:600">${((+l.prix_unitaire||0)*(+l.quantite||1)).toLocaleString("fr-FR")} GNF</td></tr>`).join("")}
 ${+f.remise>0?`<tr><td colspan="3" style="text-align:right;color:#64748b">Remise</td><td style="text-align:right;color:#ef4444">- ${(+f.remise).toLocaleString("fr-FR")} GNF</td></tr>`:""}
 <tr class="tr-total"><td colspan="3" style="text-align:right;font-size:14px">TOTAL</td><td style="text-align:right;font-size:18px;color:#1a8f1a">${(+f.total||0).toLocaleString("fr-FR")} GNF</td></tr></tbody></table>
 ${f.mode_paiement&&isPaid?`<p style="font-size:12px;color:#64748b;margin-top:8px">Mode de paiement : <strong>${PAYMENT_LABELS[f.mode_paiement]||f.mode_paiement}</strong></p>`:""}
@@ -139,48 +147,48 @@ export default function GestionClinique() {
   const navigate = useNavigate();
   const [section, setSection] = useState<Section>("dashboard");
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
-  const [tenant, setTenant] = useState<any>(null);
+  const [tenant, setTenant] = useState<EtablissementClinique | null>(null);
   const [myRole, setMyRole] = useState<string>("Admin");
-  const [stats, setStats] = useState<any>(null);
-  const [recentPatients, setRecentPatients] = useState<any[]>([]);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [prescriptions, setPrescriptions] = useState<any[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
-  const [exams, setExams] = useState<any[]>([]);
+  const [stats, setStats] = useState<StatsClinique | null>(null);
+  const [recentPatients, setRecentPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [staff, setStaff] = useState<Personnel[]>([]);
+  const [appointments, setAppointments] = useState<RendezVous[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Ordonnance[]>([]);
+  const [records, setRecords] = useState<Consultation[]>([]);
+  const [exams, setExams] = useState<Examen[]>([]);
   const [examsCategory, setExamsCategory] = useState<"laboratoire"|"imagerie">("laboratoire");
-  const [resultModalExam, setResultModalExam] = useState<any>(null);
-  const [vaccinations, setVaccinations] = useState<any[]>([]);
-  const [beds, setBeds] = useState<any[]>([]);
-  const [admissions, setAdmissions] = useState<any[]>([]);
+  const [resultModalExam, setResultModalExam] = useState<Examen | null>(null);
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>([]);
+  const [beds, setBeds] = useState<Lit[]>([]);
+  const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [hospitalTab, setHospitalTab] = useState<"admissions"|"beds">("admissions");
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [historyPatient, setHistoryPatient] = useState<any>(null);
-  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [pharmacyStock, setPharmacyStock] = useState<any[]>([]);
-  const [pharmacyPending, setPharmacyPending] = useState<any[]>([]);
-  const [pharmacyHistory, setPharmacyHistory] = useState<any[]>([]);
-  const [pharmacyStats, setPharmacyStats] = useState<any>(null);
+  const [reviews, setReviews] = useState<AvisPatient[]>([]);
+  const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<Consultation[]>([]);
+  const [payments, setPayments] = useState<Paiement[]>([]);
+  const [invoices, setInvoices] = useState<Facture[]>([]);
+  const [pharmacyStock, setPharmacyStock] = useState<StockMedicament[]>([]);
+  const [pharmacyPending, setPharmacyPending] = useState<Ordonnance[]>([]);
+  const [pharmacyHistory, setPharmacyHistory] = useState<Dispensation[]>([]);
+  const [pharmacyStats, setPharmacyStats] = useState<StatsPharmacie | null>(null);
   const [pharmacyTab, setPharmacyTab] = useState<"stock"|"pending"|"history">("pending");
   const [appointmentsTab, setAppointmentsTab] = useState<"list"|"requests">("list");
-  const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
+  const [appointmentRequests, setAppointmentRequests] = useState<DemandeRendezVous[]>([]);
   const [bloodFilter, setBloodFilter] = useState("");
   const [payingInvoiceId, setPayingInvoiceId] = useState<number|null>(null);
   const [partialAmount, setPartialAmount] = useState("");
   const [dispensingId, setDispensingId] = useState<number|null>(null);
-  const [dispensingMed, setDispensingMed] = useState<any>(null);
+  const [dispensingMed, setDispensingMed] = useState<Ordonnance | null>(null);
   // Sortie de stock choisie pour chaque médicament prescrit (article + quantité)
   const [dispenseLignes, setDispenseLignes] = useState<{ stock_id: string; quantite: string }[]>([]);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<string | null>(null);
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<FormClinique>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsForm, setSettingsForm] = useState<ParametresClinique>({});
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
@@ -195,25 +203,25 @@ export default function GestionClinique() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, tenantCode]);
 
-  const get = useCallback(async (path: string) => {
+  const get = useCallback(async (path: string): Promise<ReponseClinique> => {
     const r = await fetch(`${BASE(tenantCode!)}${path}`, { headers: auth() });
     if (r.status === 401) { handleUnauthorized(); return { success: false }; }
     return r.json();
   }, [tenantCode, handleUnauthorized]);
 
-  const post = useCallback(async (path: string, body: any) => {
+  const post = useCallback(async <T = ReponseClinique>(path: string, body: unknown): Promise<T> => {
     const r = await fetch(`${BASE(tenantCode!)}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    if (r.status === 401) { handleUnauthorized(); return { success: false }; }
+    if (r.status === 401) { handleUnauthorized(); return { success: false } as T; }
     return r.json();
   }, [tenantCode, handleUnauthorized]);
 
-  const put = useCallback(async (path: string, body: any) => {
+  const put = useCallback(async (path: string, body: unknown): Promise<ReponseClinique> => {
     const r = await fetch(`${BASE(tenantCode!)}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
     if (r.status === 401) { handleUnauthorized(); return { success: false }; }
     return r.json();
   }, [tenantCode, handleUnauthorized]);
 
-  const del = useCallback(async (path: string) => {
+  const del = useCallback(async (path: string): Promise<ReponseClinique> => {
     const r = await fetch(`${BASE(tenantCode!)}${path}`, { method: "DELETE", headers: auth() });
     if (r.status === 401) { handleUnauthorized(); return { success: false }; }
     return r.json();
@@ -246,7 +254,7 @@ export default function GestionClinique() {
     e.target.value = "";
     if (!file) return;
     normaliserLogo(file)
-      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .then(logo => setSettingsForm((f) => ({ ...f, logo_url: logo })))
       .catch(err => alert(err.message));
   };
 
@@ -327,9 +335,9 @@ export default function GestionClinique() {
   };
 
   // Invoice line helpers
-  const addLine = () => setForm((f: any) => ({ ...f, lignes: [...(f.lignes || []), { description: "", quantite: 1, prix_unitaire: 0 }] }));
-  const removeLine = (i: number) => setForm((f: any) => ({ ...f, lignes: (f.lignes || []).filter((_: any, idx: number) => idx !== i) }));
-  const updateLine = (i: number, field: string, val: any) => setForm((f: any) => {
+  const addLine = () => setForm((f) => ({ ...f, lignes: [...(f.lignes || []), { description: "", quantite: 1, prix_unitaire: 0 }] }));
+  const removeLine = (i: number) => setForm((f) => ({ ...f, lignes: (f.lignes || []).filter((_, idx) => idx !== i) }));
+  const updateLine = (i: number, field: keyof LigneFacture, val: string | number) => setForm((f) => {
     const lignes = [...(f.lignes || [])];
     lignes[i] = { ...lignes[i], [field]: val };
     return { ...f, lignes };
@@ -345,7 +353,7 @@ export default function GestionClinique() {
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-staff") {
         if (!form.nom || !form.prenom || !form.role) { showToast("Nom, prénom et rôle obligatoires", false); return; }
-        const d = await post("/staff", form);
+        const d = await post<ReponseAjoutPersonnel>("/staff", form);
         if (d.success) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast("Personnel ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-appointment") {
@@ -411,7 +419,7 @@ export default function GestionClinique() {
       } else if (modal === "add-invoice") {
         if (!(form.lignes || []).length) { showToast("Ajoutez au moins une ligne", false); return; }
         const lignes = form.lignes || [];
-        const sous_total = lignes.reduce((s: number, l: any) => s + (+l.prix_unitaire || 0) * (+l.quantite || 1), 0);
+        const sous_total = lignes.reduce((s: number, l) => s + (+l.prix_unitaire || 0) * (+l.quantite || 1), 0);
         const remise = +form.remise || 0;
         const total = Math.max(0, sous_total - remise);
         const d = await post("/invoices", { ...form, sous_total, remise, total });
@@ -610,7 +618,7 @@ export default function GestionClinique() {
                     [],
                     ["Liste des patients"],
                     ["Matricule","Nom","Prénom","Sexe","Né(e) le","Groupe sanguin","Téléphone","Solde dû (GNF)"],
-                    ...list.map((p: any) => [p.numero_matricule, p.nom, p.prenom, p.sexe || "", p.date_naissance || "", p.groupe_sanguin || "", p.telephone || "", p.solde_du || 0]),
+                    ...list.map((p) => [p.numero_matricule, p.nom, p.prenom, p.sexe || "", p.date_naissance || "", p.groupe_sanguin || "", p.telephone || "", p.solde_du || 0]),
                   ]);
                 }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}55`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   ⬇️ Exporter le rapport (CSV / Excel)
@@ -973,7 +981,7 @@ export default function GestionClinique() {
                   {p.medicaments?.length > 0 && (
                     <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 14px" }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Médicaments</p>
-                      {p.medicaments.map((m: any, i: number) => <div key={i} style={{ fontSize: 13, color: "#475569", padding: "2px 0" }}>◆ {m.medicament || m}</div>)}
+                      {p.medicaments.map((m, i) => <div key={i} style={{ fontSize: 13, color: "#475569", padding: "2px 0" }}>◆ {nomMedicament(m)}</div>)}
                     </div>
                   )}
                   {p.notes && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>{p.notes}</p>}
@@ -1377,7 +1385,7 @@ export default function GestionClinique() {
                   { id: "pending", label: "Ordonnances en attente", badge: pharmacyStats?.pending },
                   { id: "stock",   label: "Stock médicaments",      badge: pharmacyStats?.rupture ? `${pharmacyStats.rupture} rupture${pharmacyStats.rupture>1?"s":""}` : null },
                   { id: "history", label: "Historique dispensation" },
-                ] as { id: "pending"|"stock"|"history"; label: string; badge?: any }[]).map(t => (
+                ] as { id: "pending"|"stock"|"history"; label: string; badge?: number }[]).map(t => (
                   <button key={t.id} onClick={() => setPharmacyTab(t.id)}
                     style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: pharmacyTab === t.id ? 700 : 500, background: pharmacyTab === t.id ? TEAL : "transparent", color: pharmacyTab === t.id ? "white" : "#64748b", transition: "all 0.15s" }}>
                     {t.label}
@@ -1448,7 +1456,7 @@ export default function GestionClinique() {
                       <div style={{ fontSize: 13, color: "#94a3b8" }}>Toutes les ordonnances ont été dispensées.</div>
                     </div>
                   ) : pharmacyPending.map(p => {
-                    const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
+                    const meds: Ordonnance["medicaments"] = Array.isArray(p.medicaments) ? p.medicaments : [];
                     return (
                       <div key={p.id} style={{ background: "white", borderRadius: 12, border: "1px solid #fde68a", padding: "18px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: "4px solid #f59e0b" }}>
                         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
@@ -1469,8 +1477,8 @@ export default function GestionClinique() {
                                 setDispensingId(p.id);
                                 setDispensingMed(p);
                                 // Proposition : l'article du stock dont le nom figure dans la ligne prescrite
-                                setDispenseLignes(meds.map((m: any) => {
-                                  const texte = String(m?.medicament || m || "").toLowerCase();
+                                setDispenseLignes(meds.map((m) => {
+                                  const texte = nomMedicament(m).toLowerCase();
                                   const article = pharmacyStock.find(st => st.nom && texte.includes(String(st.nom).toLowerCase()));
                                   return { stock_id: article ? String(article.id) : "", quantite: article ? "1" : "" };
                                 }));
@@ -1484,8 +1492,8 @@ export default function GestionClinique() {
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                           {meds.length === 0
                             ? <span style={{ color: "#94a3b8", fontSize: 12 }}>Aucun médicament listé</span>
-                            : meds.map((m: any, i: number) => (
-                              <span key={i} style={{ padding: "4px 12px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid #99f6e4` }}>💊 {m.medicament || m}</span>
+                            : meds.map((m, i) => (
+                              <span key={i} style={{ padding: "4px 12px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid #99f6e4` }}>💊 {nomMedicament(m)}</span>
                             ))
                           }
                         </div>
@@ -1505,11 +1513,11 @@ export default function GestionClinique() {
                         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
                           <div style={{ background: "#f0fdfa", borderRadius: 10, padding: "12px 14px" }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: "#156315", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Médicaments à dispenser</div>
-                            {(Array.isArray(dispensingMed.medicaments) ? dispensingMed.medicaments : []).map((m: any, i: number) => (
+                            {(Array.isArray(dispensingMed.medicaments) ? dispensingMed.medicaments : []).map((m, i) => (
                               <div key={i} style={{ padding: "8px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                                   <span style={{ color: TEAL }}>💊</span>
-                                  <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{m.medicament || m}</span>
+                                  <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{nomMedicament(m)}</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                   <select className={inp} style={{ ...inpStyle, flex: "1 1 180px", minWidth: 0 }}
@@ -1590,7 +1598,7 @@ export default function GestionClinique() {
                       {pharmacyHistory.length === 0 ? (
                         <tr><td colSpan={5} style={{ padding: "48px", textAlign: "center", color: "#94a3b8" }}>Aucune dispensation enregistrée</td></tr>
                       ) : pharmacyHistory.map(h => {
-                        const meds: any[] = Array.isArray(h.medicaments_dispensed) ? h.medicaments_dispensed : [];
+                        const meds: Dispensation["medicaments_dispensed"] = Array.isArray(h.medicaments_dispensed) ? h.medicaments_dispensed : [];
                         return (
                           <tr key={h.id} style={{ borderBottom: "1px solid #f8fafc" }}
                             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"}
@@ -1600,8 +1608,8 @@ export default function GestionClinique() {
                             <td style={{ padding: "11px 14px", color: "#475569" }}>{h.s_nom ? `Dr. ${h.s_prenom||""} ${h.s_nom}` : "—"}</td>
                             <td style={{ padding: "11px 14px" }}>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                {meds.slice(0, 3).map((m: any, i: number) => (
-                                  <span key={i} style={{ padding: "2px 8px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 12, fontSize: 11 }}>💊 {m.medicament || m}</span>
+                                {meds.slice(0, 3).map((m, i) => (
+                                  <span key={i} style={{ padding: "2px 8px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 12, fontSize: 11 }}>💊 {nomMedicament(m)}</span>
                                 ))}
                                 {meds.length > 3 && <span style={{ color: "#94a3b8", fontSize: 11 }}>+{meds.length-3}</span>}
                               </div>
@@ -1653,34 +1661,34 @@ export default function GestionClinique() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
                     <label style={labelStyle}>Nom de la clinique</label>
-                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} placeholder="Ex : Clinique Saint-Gabriel" />
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex : Clinique Saint-Gabriel" />
                   </div>
                   <div>
                     <label style={labelStyle}>Description / Spécialités</label>
-                    <textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre clinique, vos services proposés..." />
+                    <textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f) => ({ ...f, description: e.target.value }))} placeholder="Décrivez votre clinique, vos services proposés..." />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
                       <label style={labelStyle}>Téléphone</label>
-                      <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} placeholder="+224 6xx xxx xxx" />
+                      <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+224 6xx xxx xxx" />
                     </div>
                     <div>
                       <label style={labelStyle}>Email</label>
-                      <input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} placeholder="contact@clinique.com" />
+                      <input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f) => ({ ...f, email: e.target.value }))} placeholder="contact@clinique.com" />
                     </div>
                   </div>
                   <div>
                     <label style={labelStyle}>Adresse</label>
-                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} placeholder="Ex : Quartier Ratoma, Conakry" />
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f) => ({ ...f, address: e.target.value }))} placeholder="Ex : Quartier Ratoma, Conakry" />
                   </div>
                   <div>
                     <label style={labelStyle}>Horaires d'ouverture</label>
-                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} placeholder="Ex : Lun-Sam 8h-18h, Dim fermé" />
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f) => ({ ...f, horaires: e.target.value }))} placeholder="Ex : Lun-Sam 8h-18h, Dim fermé" />
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiché sur votre page vitrine publique.</p>
                   </div>
                   <div>
                     <label style={labelStyle}>Téléphone urgence 24/7 (optionnel)</label>
-                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone_urgence: e.target.value }))} placeholder="+224 6xx xxx xxx" />
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone_urgence: e.target.value }))} placeholder="+224 6xx xxx xxx" />
                     <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiche un bouton d'appel direct visible sur votre vitrine.</p>
                   </div>
                 </div>
@@ -1742,150 +1750,150 @@ export default function GestionClinique() {
                 {/* Lien Moftal */}
                 <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
                   <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
-                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345 — permet l'accès à l'espace patient en ligne" value={form.numero_h || ""} onChange={e => setForm((f: any) => ({ ...f, numero_h: e.target.value }))} />
+                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345 — permet l'accès à l'espace patient en ligne" value={form.numero_h || ""} onChange={e => setForm((f) => ({ ...f, numero_h: e.target.value }))} />
                   <p style={{ margin: "6px 0 0", fontSize: 11, color: "#156315" }}>Si le patient a un compte Moftal, entrez son numéro H pour lui donner accès à son espace patient numérique.</p>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f: any) => ({ ...f, nom: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Prénom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prenom || ""} onChange={e => setForm((f: any) => ({ ...f, prenom: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f) => ({ ...f, nom: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Prénom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prenom || ""} onChange={e => setForm((f) => ({ ...f, prenom: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Date de naissance</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_naissance || ""} onChange={e => setForm((f: any) => ({ ...f, date_naissance: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Sexe</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.sexe || ""} onChange={e => setForm((f: any) => ({ ...f, sexe: e.target.value }))}><option value="">—</option><option value="M">Masculin</option><option value="F">Féminin</option></select></div>
+                  <div><label style={labelStyle}>Date de naissance</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_naissance || ""} onChange={e => setForm((f) => ({ ...f, date_naissance: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Sexe</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.sexe || ""} onChange={e => setForm((f) => ({ ...f, sexe: e.target.value }))}><option value="">—</option><option value="M">Masculin</option><option value="F">Féminin</option></select></div>
                 </div>
-                <div><label style={labelStyle}>Téléphone</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.telephone || ""} onChange={e => setForm((f: any) => ({ ...f, telephone: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Adresse</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.adresse || ""} onChange={e => setForm((f: any) => ({ ...f, adresse: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Téléphone</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.telephone || ""} onChange={e => setForm((f) => ({ ...f, telephone: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Adresse</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.adresse || ""} onChange={e => setForm((f) => ({ ...f, adresse: e.target.value }))} /></div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Groupe sanguin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.groupe_sanguin || ""} onChange={e => setForm((f: any) => ({ ...f, groupe_sanguin: e.target.value }))}><option value="">—</option>{BLOOD_GROUPS.map(g => <option key={g}>{g}</option>)}</select></div>
-                  <div><label style={labelStyle}>Allergies</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Pénicilline..." value={form.allergies || ""} onChange={e => setForm((f: any) => ({ ...f, allergies: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Groupe sanguin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.groupe_sanguin || ""} onChange={e => setForm((f) => ({ ...f, groupe_sanguin: e.target.value }))}><option value="">—</option>{BLOOD_GROUPS.map(g => <option key={g}>{g}</option>)}</select></div>
+                  <div><label style={labelStyle}>Allergies</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Pénicilline..." value={form.allergies || ""} onChange={e => setForm((f) => ({ ...f, allergies: e.target.value }))} /></div>
                 </div>
               </>}
 
               {modal === "add-staff" && <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f: any) => ({ ...f, nom: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Prénom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prenom || ""} onChange={e => setForm((f: any) => ({ ...f, prenom: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f) => ({ ...f, nom: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Prénom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prenom || ""} onChange={e => setForm((f) => ({ ...f, prenom: e.target.value }))} /></div>
                 </div>
-                <div><label style={labelStyle}>Rôle *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.role || ""} onChange={e => setForm((f: any) => ({ ...f, role: e.target.value }))}><option value="">Choisir un rôle...</option>{ROLES_CLINIC.map(r => <option key={r}>{r}</option>)}</select></div>
+                <div><label style={labelStyle}>Rôle *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.role || ""} onChange={e => setForm((f) => ({ ...f, role: e.target.value }))}><option value="">Choisir un rôle...</option>{ROLES_CLINIC.map(r => <option key={r}>{r}</option>)}</select></div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Service</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.service || ""} onChange={e => setForm((f: any) => ({ ...f, service: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
-                  <div><label style={labelStyle}>Spécialité</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Cardiologie..." value={form.specialite || ""} onChange={e => setForm((f: any) => ({ ...f, specialite: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Service</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.service || ""} onChange={e => setForm((f) => ({ ...f, service: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
+                  <div><label style={labelStyle}>Spécialité</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Cardiologie..." value={form.specialite || ""} onChange={e => setForm((f) => ({ ...f, specialite: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Téléphone</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.telephone || ""} onChange={e => setForm((f: any) => ({ ...f, telephone: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Email</label><input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.email || ""} onChange={e => setForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Téléphone</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.telephone || ""} onChange={e => setForm((f) => ({ ...f, telephone: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Email</label><input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.email || ""} onChange={e => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
                 </div>
                 <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
                   <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
-                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345" value={form.numero_h || ""} onChange={e => setForm((f: any) => ({ ...f, numero_h: e.target.value }))} />
+                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345" value={form.numero_h || ""} onChange={e => setForm((f) => ({ ...f, numero_h: e.target.value }))} />
                   <p style={{ margin: "6px 0 0", fontSize: 11, color: "#156315" }}>Si renseigné, cette personne pourra se connecter avec son propre compte Moftal et n'aura accès qu'aux sections liées à son rôle ({form.role || "à choisir"}).</p>
                 </div>
               </>}
 
               {modal === "add-appointment" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir un patient...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom} · {s.role}</option>)}</select></div>
-                <div><label style={labelStyle}>Service</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.service || ""} onChange={e => setForm((f: any) => ({ ...f, service: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir un patient...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom} · {s.role}</option>)}</select></div>
+                <div><label style={labelStyle}>Service</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.service || ""} onChange={e => setForm((f) => ({ ...f, service: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Date *</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_rdv || ""} onChange={e => setForm((f: any) => ({ ...f, date_rdv: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Heure</label><input type="time" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.heure || ""} onChange={e => setForm((f: any) => ({ ...f, heure: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Date *</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_rdv || ""} onChange={e => setForm((f) => ({ ...f, date_rdv: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Heure</label><input type="time" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.heure || ""} onChange={e => setForm((f) => ({ ...f, heure: e.target.value }))} /></div>
                 </div>
-                <div><label style={labelStyle}>Motif</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.motif || ""} onChange={e => setForm((f: any) => ({ ...f, motif: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Motif</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.motif || ""} onChange={e => setForm((f) => ({ ...f, motif: e.target.value }))} /></div>
               </>}
 
               {modal === "add-prescription" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Médecin prescripteur</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Diagnostic</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.diagnostic || ""} onChange={e => setForm((f: any) => ({ ...f, diagnostic: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Médicaments (1 par ligne)</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 100, resize: "none" as const }} placeholder={"Paracétamol 500mg — 3x/jour\nAmoxicilline 1g — 2x/jour"} value={form.medicaments_text || ""} onChange={e => setForm((f: any) => ({ ...f, medicaments_text: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin prescripteur</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Diagnostic</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.diagnostic || ""} onChange={e => setForm((f) => ({ ...f, diagnostic: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Médicaments (1 par ligne)</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 100, resize: "none" as const }} placeholder={"Paracétamol 500mg — 3x/jour\nAmoxicilline 1g — 2x/jour"} value={form.medicaments_text || ""} onChange={e => setForm((f) => ({ ...f, medicaments_text: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
               </>}
 
               {modal === "add-record" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Type de consultation</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.type_consultation || ""} onChange={e => setForm((f: any) => ({ ...f, type_consultation: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Type de consultation</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.type_consultation || ""} onChange={e => setForm((f) => ({ ...f, type_consultation: e.target.value }))}><option value="">—</option>{SERVICES.map(s => <option key={s}>{s}</option>)}</select></div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  <div><label style={labelStyle}>Poids (kg)</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.poids || ""} onChange={e => setForm((f: any) => ({ ...f, poids: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Tension</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="120/80" value={form.tension || ""} onChange={e => setForm((f: any) => ({ ...f, tension: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Temp. (°C)</label><input type="number" step="0.1" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.temperature || ""} onChange={e => setForm((f: any) => ({ ...f, temperature: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Poids (kg)</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.poids || ""} onChange={e => setForm((f) => ({ ...f, poids: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Tension</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="120/80" value={form.tension || ""} onChange={e => setForm((f) => ({ ...f, tension: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Temp. (°C)</label><input type="number" step="0.1" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.temperature || ""} onChange={e => setForm((f) => ({ ...f, temperature: e.target.value }))} /></div>
                 </div>
-                <div><label style={labelStyle}>Diagnostic</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.diagnostic || ""} onChange={e => setForm((f: any) => ({ ...f, diagnostic: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Traitement</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.traitement || ""} onChange={e => setForm((f: any) => ({ ...f, traitement: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Diagnostic</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.diagnostic || ""} onChange={e => setForm((f) => ({ ...f, diagnostic: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Traitement</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.traitement || ""} onChange={e => setForm((f) => ({ ...f, traitement: e.target.value }))} /></div>
               </>}
 
               {modal === "add-exam" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Médecin prescripteur</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin prescripteur</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
                 <div><label style={labelStyle}>Catégorie *</label>
                   <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                     {(["laboratoire","imagerie"] as const).map(c => (
-                      <button key={c} type="button" onClick={() => setForm((f: any) => ({ ...f, categorie: c }))}
+                      <button key={c} type="button" onClick={() => setForm((f) => ({ ...f, categorie: c }))}
                         style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${(form.categorie || "laboratoire") === c ? TEAL : "#e2e8f0"}`, background: (form.categorie || "laboratoire") === c ? "#f0fdfa" : "white", color: (form.categorie || "laboratoire") === c ? TEAL_DARK : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                         {c === "laboratoire" ? "🧪 Laboratoire" : "📷 Imagerie"}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div><label style={labelStyle}>Type d'examen *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder={form.categorie === "imagerie" ? "Ex: Radio thorax, Échographie abdominale..." : "Ex: NFS, Glycémie, Groupage sanguin..."} value={form.type_examen || ""} onChange={e => setForm((f: any) => ({ ...f, type_examen: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Date de prescription</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_prescription || new Date().toISOString().slice(0,10)} onChange={e => setForm((f: any) => ({ ...f, date_prescription: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Type d'examen *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder={form.categorie === "imagerie" ? "Ex: Radio thorax, Échographie abdominale..." : "Ex: NFS, Glycémie, Groupage sanguin..."} value={form.type_examen || ""} onChange={e => setForm((f) => ({ ...f, type_examen: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Date de prescription</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_prescription || new Date().toISOString().slice(0,10)} onChange={e => setForm((f) => ({ ...f, date_prescription: e.target.value }))} /></div>
               </>}
 
               {modal === "add-vaccination" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Administré par</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Administré par</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Vaccin *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: BCG, Rougeole, Fièvre jaune..." value={form.vaccin || ""} onChange={e => setForm((f: any) => ({ ...f, vaccin: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Dose</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: 1ère dose, Rappel..." value={form.dose || ""} onChange={e => setForm((f: any) => ({ ...f, dose: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Vaccin *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: BCG, Rougeole, Fièvre jaune..." value={form.vaccin || ""} onChange={e => setForm((f) => ({ ...f, vaccin: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Dose</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: 1ère dose, Rappel..." value={form.dose || ""} onChange={e => setForm((f) => ({ ...f, dose: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Date d'administration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_administration || new Date().toISOString().slice(0,10)} onChange={e => setForm((f: any) => ({ ...f, date_administration: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Prochain rappel</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prochain_rappel || ""} onChange={e => setForm((f: any) => ({ ...f, prochain_rappel: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Date d'administration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_administration || new Date().toISOString().slice(0,10)} onChange={e => setForm((f) => ({ ...f, date_administration: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Prochain rappel</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prochain_rappel || ""} onChange={e => setForm((f) => ({ ...f, prochain_rappel: e.target.value }))} /></div>
                 </div>
-                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
               </>}
 
               {modal === "add-bed" && <>
-                <div><label style={labelStyle}>Numéro de chambre/lit *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: Chambre 12, Lit A3..." value={form.numero || ""} onChange={e => setForm((f: any) => ({ ...f, numero: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Type</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.type_chambre || "commune"} onChange={e => setForm((f: any) => ({ ...f, type_chambre: e.target.value }))}>{["commune","privée","VIP","soins intensifs","maternité","pédiatrie"].map(t => <option key={t}>{t}</option>)}</select></div>
+                <div><label style={labelStyle}>Numéro de chambre/lit *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: Chambre 12, Lit A3..." value={form.numero || ""} onChange={e => setForm((f) => ({ ...f, numero: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Type</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.type_chambre || "commune"} onChange={e => setForm((f) => ({ ...f, type_chambre: e.target.value }))}>{["commune","privée","VIP","soins intensifs","maternité","pédiatrie"].map(t => <option key={t}>{t}</option>)}</select></div>
               </>}
 
               {modal === "add-admission" && <>
-                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Médecin responsable</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Chambre/Lit</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.bed_id || ""} onChange={e => setForm((f: any) => ({ ...f, bed_id: e.target.value }))}><option value="">—</option>{beds.filter(b => b.statut === "libre").map(b => <option key={b.id} value={b.id}>{b.numero} ({b.type_chambre})</option>)}</select></div>
-                <div><label style={labelStyle}>Motif d'admission</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.motif_admission || ""} onChange={e => setForm((f: any) => ({ ...f, motif_admission: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin responsable</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Chambre/Lit</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.bed_id || ""} onChange={e => setForm((f) => ({ ...f, bed_id: e.target.value }))}><option value="">—</option>{beds.filter(b => b.statut === "libre").map(b => <option key={b.id} value={b.id}>{b.numero} ({b.type_chambre})</option>)}</select></div>
+                <div><label style={labelStyle}>Motif d'admission</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.motif_admission || ""} onChange={e => setForm((f) => ({ ...f, motif_admission: e.target.value }))} /></div>
               </>}
 
               {modal === "add-payment" && <>
-                <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                <div><label style={labelStyle}>Montant (GNF) *</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.montant || ""} onChange={e => setForm((f: any) => ({ ...f, montant: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Motif</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Consultation, Médicaments..." value={form.motif || ""} onChange={e => setForm((f: any) => ({ ...f, motif: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Mode de paiement</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.mode_paiement || "especes"} onChange={e => setForm((f: any) => ({ ...f, mode_paiement: e.target.value }))}>{PAYMENT_MODES.map(m => <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>)}</select></div>
+                <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Montant (GNF) *</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.montant || ""} onChange={e => setForm((f) => ({ ...f, montant: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Motif</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Consultation, Médicaments..." value={form.motif || ""} onChange={e => setForm((f) => ({ ...f, motif: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Mode de paiement</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.mode_paiement || "especes"} onChange={e => setForm((f) => ({ ...f, mode_paiement: e.target.value }))}>{PAYMENT_MODES.map(m => <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>)}</select></div>
               </>}
 
               {(modal === "add-stock" || modal === "edit-stock") && <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ gridColumn: "1/-1" }}><label style={labelStyle}>Nom du médicament *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f:any)=>({...f,nom:e.target.value}))} placeholder="Ex: Paracétamol, Amoxicilline..." /></div>
-                  <div><label style={labelStyle}>Forme</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.forme || "comprimé"} onChange={e => setForm((f:any)=>({...f,forme:e.target.value}))}>
+                  <div style={{ gridColumn: "1/-1" }}><label style={labelStyle}>Nom du médicament *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f)=>({...f,nom:e.target.value}))} placeholder="Ex: Paracétamol, Amoxicilline..." /></div>
+                  <div><label style={labelStyle}>Forme</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.forme || "comprimé"} onChange={e => setForm((f)=>({...f,forme:e.target.value}))}>
                     {["comprimé","sirop","injection","crème","pommade","gélule","suppositoire","gouttes","spray","patch","autre"].map(f => <option key={f}>{f}</option>)}
                   </select></div>
-                  <div><label style={labelStyle}>Dosage</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.dosage || ""} onChange={e => setForm((f:any)=>({...f,dosage:e.target.value}))} placeholder="Ex: 500mg, 1g..." /></div>
-                  <div><label style={labelStyle}>Quantité en stock</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite ?? 0} onChange={e => setForm((f:any)=>({...f,quantite:+e.target.value}))} /></div>
-                  <div><label style={labelStyle}>Seuil d'alerte (rupture)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite_min ?? 5} onChange={e => setForm((f:any)=>({...f,quantite_min:+e.target.value}))} /></div>
-                  <div><label style={labelStyle}>Prix unitaire (GNF)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prix_unitaire ?? 0} onChange={e => setForm((f:any)=>({...f,prix_unitaire:+e.target.value}))} /></div>
-                  <div><label style={labelStyle}>Date d'expiration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_expiration?.slice(0,10) || ""} onChange={e => setForm((f:any)=>({...f,date_expiration:e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Dosage</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.dosage || ""} onChange={e => setForm((f)=>({...f,dosage:e.target.value}))} placeholder="Ex: 500mg, 1g..." /></div>
+                  <div><label style={labelStyle}>Quantité en stock</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite ?? 0} onChange={e => setForm((f)=>({...f,quantite:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Seuil d'alerte (rupture)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite_min ?? 5} onChange={e => setForm((f)=>({...f,quantite_min:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Prix unitaire (GNF)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prix_unitaire ?? 0} onChange={e => setForm((f)=>({...f,prix_unitaire:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Date d'expiration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_expiration?.slice(0,10) || ""} onChange={e => setForm((f)=>({...f,date_expiration:e.target.value}))} /></div>
                 </div>
               </>}
 
               {modal === "add-invoice" && <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
-                  <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom} · {s.role}</option>)}</select></div>
+                  <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                  <div><label style={labelStyle}>Médecin</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom} · {s.role}</option>)}</select></div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div><label style={labelStyle}>Date facture</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_facture || new Date().toISOString().split("T")[0]} onChange={e => setForm((f: any) => ({ ...f, date_facture: e.target.value }))} /></div>
-                  <div><label style={labelStyle}>Statut</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.statut || "impaye"} onChange={e => setForm((f: any) => ({ ...f, statut: e.target.value }))}><option value="impaye">En attente</option><option value="paye">Payée</option></select></div>
+                  <div><label style={labelStyle}>Date facture</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_facture || new Date().toISOString().split("T")[0]} onChange={e => setForm((f) => ({ ...f, date_facture: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Statut</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.statut || "impaye"} onChange={e => setForm((f) => ({ ...f, statut: e.target.value }))}><option value="impaye">En attente</option><option value="paye">Payée</option></select></div>
                 </div>
 
                 <div>
@@ -1897,7 +1905,7 @@ export default function GestionClinique() {
                       <span style={{ ...labelStyle, fontSize: 10 }}>Prix (GNF)</span>
                       <span />
                     </div>
-                    {(form.lignes || []).map((l: any, i: number) => (
+                    {(form.lignes || []).map((l, i) => (
                       <div key={i} style={{ display: "grid", gridTemplateColumns: "3fr 1fr 2fr 28px", gap: 6, marginBottom: 7 }}>
                         <input value={l.description} onChange={e => updateLine(i, "description", e.target.value)} placeholder="Ex: Consultation générale" style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: "#0f172a", outline: "none" }} />
                         <input type="number" min={1} value={l.quantite} onChange={e => updateLine(i, "quantite", +e.target.value || 1)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "6px 8px", fontSize: 12, color: "#0f172a", outline: "none", textAlign: "center" }} />
@@ -1911,15 +1919,15 @@ export default function GestionClinique() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, flex: 1 }}>
-                    <div><label style={labelStyle}>Remise (GNF)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.remise || 0} onChange={e => setForm((f: any) => ({ ...f, remise: +e.target.value || 0 }))} /></div>
-                    <div><label style={labelStyle}>Mode paiement</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.mode_paiement || "especes"} onChange={e => setForm((f: any) => ({ ...f, mode_paiement: e.target.value }))}>{PAYMENT_MODES.map(m => <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>)}</select></div>
+                    <div><label style={labelStyle}>Remise (GNF)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.remise || 0} onChange={e => setForm((f) => ({ ...f, remise: +e.target.value || 0 }))} /></div>
+                    <div><label style={labelStyle}>Mode paiement</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.mode_paiement || "especes"} onChange={e => setForm((f) => ({ ...f, mode_paiement: e.target.value }))}>{PAYMENT_MODES.map(m => <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>)}</select></div>
                   </div>
                   <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "10px 16px", textAlign: "center", flexShrink: 0 }}>
                     <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>TOTAL</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: TEAL_DARK, marginTop: 2 }}>{fmtMoney(calcTotal(form.lignes || [], form.remise || 0))}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: TEAL_DARK, marginTop: 2 }}>{fmtMoney(calcTotal(form.lignes || [], +form.remise || 0))}</div>
                   </div>
                 </div>
-                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Informations complémentaires..." value={form.notes || ""} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Informations complémentaires..." value={form.notes || ""} onChange={e => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
               </>}
 
             </div>
@@ -2001,7 +2009,7 @@ export default function GestionClinique() {
               <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>Patient : {resultModalExam.p_prenom} {resultModalExam.p_nom}</p>
             </div>
             <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
-              <div><label style={labelStyle}>Résultat / Interprétation</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 90, resize: "none" as const }} placeholder="Résumé du résultat..." value={form.resultat || ""} onChange={e => setForm((f: any) => ({ ...f, resultat: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Résultat / Interprétation</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 90, resize: "none" as const }} placeholder="Résumé du résultat..." value={form.resultat || ""} onChange={e => setForm((f) => ({ ...f, resultat: e.target.value }))} /></div>
               <div>
                 <label style={labelStyle}>Joindre un fichier (image, PDF)</label>
                 <input type="file" accept="image/*,.pdf" style={{ marginTop: 4 }} onChange={e => {
@@ -2009,11 +2017,11 @@ export default function GestionClinique() {
                   if (!file) return;
                   if (file.size > 6 * 1024 * 1024) { showToast("Fichier trop volumineux (max 6 Mo)", false); return; }
                   const reader = new FileReader();
-                  reader.onload = () => setForm((f: any) => ({ ...f, fichier: reader.result as string }));
+                  reader.onload = () => setForm((f) => ({ ...f, fichier: reader.result as string }));
                   reader.readAsDataURL(file);
                 }} />
               </div>
-              <div><label style={labelStyle}>Date du résultat</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_resultat || ""} onChange={e => setForm((f: any) => ({ ...f, date_resultat: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Date du résultat</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_resultat || ""} onChange={e => setForm((f) => ({ ...f, date_resultat: e.target.value }))} /></div>
             </div>
             <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", gap: 10 }}>
               <button onClick={() => setResultModalExam(null)} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
