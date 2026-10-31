@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { AudioRecorder } from '../components/AudioRecorder';
 import ErreurChargement from "../components/ErreurChargement";
+import type { MessageGroupe } from "../types/groupes";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -306,8 +307,8 @@ export default function Pays() {
   const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<RegionGroup | null>(null);
   const [selectedResidenceGroup, setSelectedResidenceGroup] = useState<ResidenceGroup | null>(null);
-  const [residenceMessages, setResidenceMessages] = useState<any[]>([]);
-  const [regionMessages, setRegionMessages] = useState<any[]>([]);
+  const [residenceMessages, setResidenceMessages] = useState<MessageGroupe[]>([]);
+  const [regionMessages, setRegionMessages] = useState<MessageGroupe[]>([]);
   const messagesEndRefResidence = useRef<HTMLDivElement>(null);
   const messagesEndRefRegion = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();

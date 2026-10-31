@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
+import type { MessageGroupe, PermissionPublication } from "../types/groupes";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -57,13 +58,13 @@ export default function GuineeForestiere() {
   const [selectedGroup, setSelectedGroup] = useState<RegionGroup | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<MessageGroupe[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [showPermissionForm, setShowPermissionForm] = useState(false);
   const [permissionNumeroH, setPermissionNumeroH] = useState('');
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<PermissionPublication[]>([]);
   const [showMembersList, setShowMembersList] = useState(false);
   const navigate = useNavigate();
 

@@ -8,6 +8,7 @@ import { isActivityBlocked } from '../utils/activityIcons';
 import { ActivityIcon } from '../components/ActivityIconBadge';
 import { hideIncrement } from '../utils/formatNumeroH';
 import ErreurChargement from "../components/ErreurChargement";
+import type { MessageGroupe } from "../types/groupes";
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -80,7 +81,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(false);
   const [blockedActivity, setBlockedActivity] = useState(false);
-  const [activityMessages, setActivityMessages] = useState<any[]>([]);
+  const [activityMessages, setActivityMessages] = useState<MessageGroupe[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -88,7 +89,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
   // Carte outil cliquable — URL ouvre le lien, app name → recherche Google
-  const renderToolCard = (msg: any) => {
+  const renderToolCard = (msg: MessageGroupe) => {
     const content = msg.content || '';
     const dashIdx = content.indexOf(' — ');
     const nom = dashIdx > -1 ? content.substring(0, dashIdx) : content;
@@ -449,7 +450,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
             return (
               <span className="text-sm text-amber-700 flex items-center gap-1">
                 🎯 <strong>{currentActivityName}</strong>
-                {(userData as any)?.specialite && ` · ${(userData as any).specialite}`}
+                {userData?.specialite && ` · ${userData.specialite}`}
               </span>
             );
           })()}
@@ -549,7 +550,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                       <p className="text-gray-400 text-sm">Connexion au groupe…</p>
                     </div>
                   ) : (() => {
-                    const filtered = activityMessages.filter((m: any) => (m.category || 'information') === 'outil');
+                    const filtered = activityMessages.filter((m) => (m.category || 'information') === 'outil');
                     return (
                       <>
                         <div className="mb-4 flex justify-center">
@@ -575,7 +576,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                         </div>
                         {filtered.length === 0
                           ? <div className="text-center text-gray-500 py-6"><p>Aucun outil partagé. Proposez une ressource !</p></div>
-                          : filtered.map((msg: any) => renderToolCard(msg))}
+                          : filtered.map((msg) => renderToolCard(msg))}
                       </>
                     );
                   })()}
