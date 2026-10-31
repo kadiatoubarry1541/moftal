@@ -1,9 +1,8 @@
 /**
  * emailService.js — Service d'envoi d'emails Moftal
  *
- * CHAÎNE DE PRIORITÉ :
- *   OTP mot de passe  → Gmail SMTP (1er) → Brevo (secours)
- *   Tous autres emails → Brevo (1er) → MailerSend (secours automatique)
+ * CHAÎNE DE PRIORITÉ (tous les emails) :
+ *   Gmail (1er) → Brevo (relais) → MailerSend (dernier secours)
  *
  * Si tous les fournisseurs échouent → notification dans l'espace admin.
  */
@@ -215,45 +214,23 @@ async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
   }
 }
 
-// ─── OTP : Gmail → MailerSend (REST, rapide) → Brevo (ultime secours) ───────
+// ─── Ordre d'envoi pour TOUS les emails : Gmail (1er) → Brevo (relais) →
+// MailerSend (dernier secours). Le suivant n'est essayé que si le précédent échoue.
 
-async function sendOtp({ to, toName, subject, htmlContent }) {
+async function envoyerAvecRelais({ to, toName, subject, htmlContent }) {
   if (!to) return false;
-  const sent = await sendGmail({ to, toName, subject, htmlContent });
-  if (sent) return true;
-  console.warn('⚠️  Gmail indisponible — bascule MailerSend pour OTP');
-  const sentMailerSend = await sendMailerSend({ to, toName, subject, htmlContent });
-  if (sentMailerSend) return true;
-  console.warn('⚠️  MailerSend indisponible — bascule Brevo pour OTP');
-  const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
-  if (sentBrevo) return true;
+  if (await sendGmail({ to, toName, subject, htmlContent })) return true;
+  console.warn('⚠️  Gmail indisponible — relais Brevo');
+  if (await sendBrevo({ to, toName, subject, htmlContent })) return true;
+  console.warn('⚠️  Brevo indisponible — relais MailerSend');
+  if (await sendMailerSend({ to, toName, subject, htmlContent })) return true;
   await notifyAdminEmailFailure({ to, subject });
   return false;
 }
 
-// ─── Bienvenue : MailerSend → Brevo (secours) ────────────────────────────────
-
-async function sendWelcome({ to, toName, subject, htmlContent }) {
-  if (!to) return;
-  const sent = await sendMailerSend({ to, toName, subject, htmlContent });
-  if (!sent) {
-    console.warn('⚠️  MailerSend indisponible — bascule Brevo pour bienvenue');
-    const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
-    if (!sentBrevo) await notifyAdminEmailFailure({ to, subject });
-  }
-}
-
-// ─── Abonnements/paiements : Brevo → MailerSend (secours) ────────────────────
-
-async function sendAutomatic({ to, toName, subject, htmlContent }) {
-  if (!to) return;
-  const sent = await sendBrevo({ to, toName, subject, htmlContent });
-  if (!sent) {
-    console.warn('⚠️  Brevo indisponible — bascule MailerSend');
-    const sentMailerSend = await sendMailerSend({ to, toName, subject, htmlContent });
-    if (!sentMailerSend) await notifyAdminEmailFailure({ to, subject });
-  }
-}
+const sendOtp = envoyerAvecRelais;
+const sendWelcome = envoyerAvecRelais;
+const sendAutomatic = envoyerAvecRelais;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // EMAILS PUBLICS
