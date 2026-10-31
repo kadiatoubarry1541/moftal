@@ -772,7 +772,7 @@ export default function EspacePro() {
     if (!account) return;
     const me = getSessionUser();
     const estProprietaire = !!me && me.numeroH === account.ownerNumeroH;
-    const enModeApp = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+    const enModeApp = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     const dansApp = enModeApp || window.location.hostname.startsWith("gestions.");
     const depuisGestion = new URLSearchParams(window.location.search).get("rdv") === "1";
     const complete = account.status === "approved" && account.planType !== "visibility"

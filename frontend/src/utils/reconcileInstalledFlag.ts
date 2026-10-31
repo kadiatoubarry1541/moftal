@@ -7,7 +7,7 @@
 // effacée à ce moment-là.
 export async function reconcileInstalledFlag(storageKey: string | null, setInstalled: (v: boolean) => void) {
   if (!storageKey) return;
-  const nav = navigator as any;
+  const nav = navigator;
   if (typeof nav.getInstalledRelatedApps !== "function") return;
   try {
     const related = await nav.getInstalledRelatedApps();
