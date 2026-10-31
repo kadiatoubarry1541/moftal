@@ -169,11 +169,13 @@ export default function ReseauPro() {
   const [pForm, setPForm] = useState({ nom_structure: "", adresse: "", quartier: "", ville: "", pays: "Guinée", bio: "" });
   const [aForm, setAForm] = useState({ titre: "", contenu: "", date_annonce: new Date().toISOString().slice(0, 10) });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (!user) { navigate("/login"); return; } loadProfile(); }, [type]);
   useEffect(() => {
     if (tab === "connections") loadConnections();
     if (tab === "community")   loadCommunity();
     if (tab === "announcements") loadHistory();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, type]);
 
   async function loadProfile() {

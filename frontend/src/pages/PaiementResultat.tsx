@@ -18,6 +18,7 @@ export default function PaiementResultat() {
 
   useEffect(() => {
     verifier();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function verifier() {

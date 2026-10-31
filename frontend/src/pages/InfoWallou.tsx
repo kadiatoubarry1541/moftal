@@ -191,6 +191,7 @@ function Mic({ card, setCard }: { card: CardState; setCard: React.Dispatch<React
       mr.start(); setRec(true); setSec(0);
       timerRef.current = setInterval(() => setSec(s => { if (s >= 59) { stop(); return 60; } return s + 1; }), 1000);
     } catch { alert("Microphone inaccessible."); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [sec]);
 
   const stop = useCallback(() => {

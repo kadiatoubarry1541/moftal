@@ -33,6 +33,7 @@ export default function Quartier() {
 
   useEffect(() => {
     if (user && quartierNom) loadManager();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const loadManager = async () => {

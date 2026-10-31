@@ -70,6 +70,7 @@ export default function GestionJournaliste() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -78,6 +79,7 @@ export default function GestionJournaliste() {
     else if (tab === "articles") loadArticles();
     else if (tab === "subscribers") loadSubscribers();
     else if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab]);
 
   async function loadAll() {

@@ -27,6 +27,7 @@ export default function BibliothequeEcole({ mode = "school" }: { mode?: "school"
       .then(async (r) => ({ ok: r.ok, d: await r.json().catch(() => ({})) }))
       .then(({ ok, d }) => { if (ok && d.success) { setEcole(d.ecole); setLivres(d.livres); } else setErreur(d.message || "Accès refusé."); })
       .catch(() => setErreur("Erreur de connexion. Réessayez."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode, navigate]);
 
   const q = recherche.trim().toLowerCase();

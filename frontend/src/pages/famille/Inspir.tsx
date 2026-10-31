@@ -115,6 +115,7 @@ export default function Inspir() {
       .then(r => r.json())
       .then(d => { if (d.success && Array.isArray(d.sections)) setSections(d.sections.filter((x: string) => (ALL_SECTIONS as string[]).includes(x))); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userData]);
 
   // Onglet / section de publication toujours dans ce qui est permis
@@ -122,6 +123,7 @@ export default function Inspir() {
     if (!sections.length) return;
     if (sectionTab !== 'tout' && !sections.includes(sectionTab)) setSectionTab('tout');
     if (!sections.includes(publishSection)) setPublishSection(sections[0]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [sections]);
 
   const visibleSections: Section[] = useMemo(
@@ -157,6 +159,7 @@ export default function Inspir() {
       if (accesData.aAcces) setAAccesLivres(true);
       if (prixData.an) setPrixLivres(prixData.an);
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userData]);
 
   // Charger les livres publiés
@@ -256,6 +259,7 @@ export default function Inspir() {
       }, 10000);
       return () => clearInterval(iv);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [visibleSections, userData]);
 
   // Audio recording avec timer 3 min

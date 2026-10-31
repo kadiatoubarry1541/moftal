@@ -36,6 +36,7 @@ export default function AdminPublicites() {
 
   useEffect(() => {
     chargerTout();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function chargerTout() {

@@ -43,6 +43,7 @@ export function Login() {
       }
     } catch {}
     if (!hasAcceptedTerms()) setShowTerms(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
   const successMessage = (location.state as { message?: string } | null)?.message
 

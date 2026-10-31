@@ -134,7 +134,7 @@ export function CommandesRecues({ tout = false, toujoursVisible = false }: { tou
       .then(d => { if (!d.success) throw new Error(d.message); setCommandes(d.commandes || []); })
       .catch((e) => { setErreur(e.message || tr("Impossible de charger les commandes.")); setCommandes([]); });
   };
-  useEffect(charger, [voirTout]);
+  useEffect(charger, [tr, voirTout]);
 
   const changer = async (id: number, statut: string) => {
     try {
@@ -253,7 +253,7 @@ export function MessagesTousLesSites() {
       .then(d => { if (!d.success) throw new Error(d.message); setDemandes(d.demandes || []); })
       .catch((e) => { setErreur(e.message || tr("Impossible de charger les messages.")); setDemandes([]); });
   };
-  useEffect(charger, []);
+  useEffect(charger, [tr]);
   if (demandes === null) return null;
   const visibles = filtre === "commandes" ? demandes.filter(d => /commande/i.test(d.objet || "")) : filtre === "nouveau" ? demandes.filter(d => d.statut === "nouveau") : demandes;
 

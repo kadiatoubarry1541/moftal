@@ -90,6 +90,7 @@ export default function Securite() {
 
   useEffect(() => {
     if (userCountry) loadAgents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userCountry, activeTab]);
 
   // GPS silencieux

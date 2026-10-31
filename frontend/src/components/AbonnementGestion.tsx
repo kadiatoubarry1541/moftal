@@ -27,6 +27,7 @@ export default function AbonnementGestion() {
     fetch(`${API}/api/payment/acces-gestion-interne${tenantCode ? `?tenantCode=${encodeURIComponent(tenantCode)}` : ""}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (!estAdmin) charger(); }, []);
 
   if (estAdmin || !accesGI || !["essai", "paye", "vie"].includes(accesGI.mode)) return null;

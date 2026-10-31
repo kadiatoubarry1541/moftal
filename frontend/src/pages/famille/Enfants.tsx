@@ -258,6 +258,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
     if (!focusNumeroH || !children.length) return
     const match = children.find(c => c.childNumeroH === focusNumeroH)
     if (match && selectedChild?.id !== match.id) setSelectedChild(match)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [focusNumeroH, children])
 
   useEffect(() => {
@@ -268,6 +269,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
       setActivities([])
       setChildRatings([])
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedChild?.id])
 
   const handleAddLink = async () => {

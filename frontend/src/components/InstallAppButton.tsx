@@ -882,6 +882,7 @@ function GestionInstallButton({ themeColor, label }: {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("pwa-prompt-ready", onReady);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const handleInstall = async () => {

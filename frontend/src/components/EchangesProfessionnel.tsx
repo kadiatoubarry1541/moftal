@@ -142,6 +142,7 @@ export function EchangesProfessionnel() {
         setLoadingBySection(prev => ({ ...prev, [section.id]: false }));
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   // Le raccourci actif suit toujours la section réellement visible à l'écran
@@ -160,6 +161,7 @@ export function EchangesProfessionnel() {
       if (el) observer.observe(el);
     });
     return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const scrollToSection = (id: string) => {

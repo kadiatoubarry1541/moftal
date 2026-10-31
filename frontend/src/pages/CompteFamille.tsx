@@ -80,6 +80,7 @@ export default function CompteFamille() {
   }, []);
 
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   useEffect(() => {
@@ -87,6 +88,7 @@ export default function CompteFamille() {
       .then(r => r.json())
       .then(d => { if (d.success) setRizInfo(d); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   async function charger() {

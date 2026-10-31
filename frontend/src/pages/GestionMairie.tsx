@@ -217,6 +217,7 @@ export default function GestionMairie() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     fetchTenant();
     fetchDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [fetchTenant, fetchDashboard]);
 
   useEffect(() => { if (section === "mariages") fetchMariages(); }, [section, fetchMariages]);
@@ -224,11 +225,16 @@ export default function GestionMairie() {
   useEffect(() => { if (section === "deces") fetchDeces(); }, [section, fetchDeces]);
   useEffect(() => { if (section === "residences") fetchResidences(); }, [section, fetchResidences]);
   useEffect(() => { if (section === "chefs_quartier") fetchChefsQuartier(); }, [section, fetchChefsQuartier]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "residences") fetchChefsQuartier(); }, [section]);
   useEffect(() => { if (section === "agents") fetchAgents(); }, [section, fetchAgents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "mariages") fetchMariages(); }, [mariageSearch, mariageStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "naissances") fetchNaissances(); }, [naissanceSearch, naissanceStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "deces") fetchDeces(); }, [decesSearch, decesStatut]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (section === "residences") fetchResidences(); }, [residenceSearch, residenceStatut]);
 
   // ── MARIAGE HANDLERS ──────────────────────────────────────────────────────

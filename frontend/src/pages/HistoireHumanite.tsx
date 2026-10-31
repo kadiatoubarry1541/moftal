@@ -531,6 +531,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const genRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const navigate = useNavigate();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   const sections = [
     { id: 'naissance', title: t('recit.sec_naissance'), icon: '👶' },
     { id: 'jeunesse', title: t('recit.sec_jeunesse'), icon: '🌱' },
@@ -574,6 +575,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     }
     loadStories();
     loadStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [parsedSearch.generation, parsedSearch.sectionId, parsedSearch.text]);
 
   const loadStories = async () => {

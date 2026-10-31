@@ -60,6 +60,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
   const accounts = useMemo(() => sortByProximity(rawAccounts, userGeo), [rawAccounts, userGeo]);
   const vitrinePath = GESTION_VITRINE_PATHS[type];
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { loadAccounts(); loadTenants(); }, [type]);
 
   useEffect(() => {

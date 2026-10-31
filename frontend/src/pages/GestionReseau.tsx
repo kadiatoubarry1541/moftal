@@ -68,6 +68,7 @@ export default function GestionReseau() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function GestionReseau() {
     if (tab === "projets") loadProjets();
     if (tab === "cotisations") loadCotisations();
     if (tab === "annonces") loadAnnonces();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode]);
 
   async function loadDashboard() {

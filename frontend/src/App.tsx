@@ -312,7 +312,7 @@ function App() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [navigate]);
 
   // Recharger le profil dès que la session change (ex: après modification dans EditProfileModal)
   useEffect(() => {
@@ -357,7 +357,7 @@ function App() {
     navigate(pathname + (q ? `?${q}` : ""), { replace: true });
     setPanneauVue("messages");
     setPanneauProOuvert(true);
-  }, [pathname, location.search]);
+  }, [pathname, location.search, navigate]);
   // Dans l'espace du pro : icône d'onglet et titre à son nom, pas ceux de Moftal
   useEffect(() => {
     if (!isEspaceTenant || !proBrand) return;
@@ -373,6 +373,7 @@ function App() {
       anciens.forEach(({ l, href, type }) => { if (href) l.setAttribute("href", href); if (type) l.setAttribute("type", type); });
       document.title = ancienTitre;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [isEspaceTenant, proBrand?.logoUrl, proBrand?.name, proBrand?.color]);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
@@ -423,6 +424,7 @@ function App() {
       ecrireRetourGestion(null);
       setRetourGestion(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [pathname]);
   const isProfilPage = pathname === '/moi/profil';
   // Applis autonomes avec leur propre écran, logo et bouton d'installation —

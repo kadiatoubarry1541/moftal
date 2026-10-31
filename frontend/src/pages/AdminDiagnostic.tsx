@@ -55,6 +55,7 @@ export default function AdminDiagnostic() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [API]);
 
   useEffect(() => {

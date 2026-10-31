@@ -149,6 +149,7 @@ export default function EchangePrimaire() {
         .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.includes('primaire'))); })
         .catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   useEffect(() => {

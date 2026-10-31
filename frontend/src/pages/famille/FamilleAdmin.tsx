@@ -85,6 +85,7 @@ export default function FamilleAdmin() {
     }
     load()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, user?.numeroH])
 
   const handleConfirmParentChild = async (linkId: string) => {

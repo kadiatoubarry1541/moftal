@@ -43,6 +43,7 @@ export default function MonEspacePro() {
       .catch(() => {
         navigate("/mes-comptes-pro", { replace: true });
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   return (

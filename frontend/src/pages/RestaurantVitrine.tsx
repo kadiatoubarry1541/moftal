@@ -54,6 +54,7 @@ export default function RestaurantVitrine() {
       .finally(() => setLoading(false));
   }, [tenantCode]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   const dishes = data?.dishes || [];
   const stats  = data?.stats || {};
 

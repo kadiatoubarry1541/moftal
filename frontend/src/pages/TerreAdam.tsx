@@ -283,6 +283,7 @@ export default function TerreAdam() {
         })
         .catch(() => { /* hors-ligne : on garde les données en cache */ });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   useEffect(() => {
@@ -295,6 +296,7 @@ export default function TerreAdam() {
     } else {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [activeTab, activeLieuTab, userData, filterScope]);
 
   // Charge le logo du groupe principal de chaque résidence réelle de

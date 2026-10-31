@@ -93,6 +93,7 @@ export default function GestionInterne() {
       : Promise.resolve();
 
     Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   function chargerComptes() {
@@ -113,6 +114,7 @@ export default function GestionInterne() {
         .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
         .catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [accesGI?.mode, accesGI?.proId]);
 
   // Formule complète : « Espace Pro » ouvre directement la gestion interne complète
@@ -132,6 +134,7 @@ export default function GestionInterne() {
     setOuvertureDirecte(true);
     // Si l'ouverture échoue (erreur déjà affichée), on montre la page normale.
     ouvrirGestion(cible, true).then(ok => { if (!ok) setOuvertureDirecte(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [loading, accounts, accesGI, location.search]);
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────

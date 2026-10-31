@@ -25,6 +25,7 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
   const [testMsg, setTestMsg] = useState('');
   const { tr } = useTraduction();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   async function charger() {

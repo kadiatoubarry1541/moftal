@@ -76,6 +76,7 @@ export default function GestionEntreprise() {
       setTenant(info.tenant);
       setDash(d);
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function GestionEntreprise() {
     if (tab === "clients")      fetch(`${BASE(tenantCode)}/clients`,      { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || []));
     if (tab === "contracts")    fetch(`${BASE(tenantCode)}/contracts`,    { headers: h }).then(r => r.json()).then(d => d.success && setContracts(d.contracts || []));
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,

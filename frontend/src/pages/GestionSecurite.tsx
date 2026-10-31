@@ -77,6 +77,7 @@ export default function GestionSecurite() {
       if (d?.success) setDash(d);
       else setDashError(d?.message || "Impossible de charger le tableau de bord.");
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -86,6 +87,7 @@ export default function GestionSecurite() {
     if (tab === "missions")     fetch(`${BASE(tenantCode)}/missions`,      { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || []));
     if (tab === "clients")      fetch(`${BASE(tenantCode)}/clients`,       { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || []));
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   const post = async (url: string, body: object) => {

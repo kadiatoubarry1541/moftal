@@ -101,6 +101,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
     loadLogo();
     checkCanPublishActu();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [scope, location]);
 
   // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
@@ -124,6 +125,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       if (!cancelled) setAllowedHigherLevels(results.filter((l): l is HigherLevel => !!l));
     });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [showActuForm]);
 
   const togglePartage = (lvl: HigherLevel) => {

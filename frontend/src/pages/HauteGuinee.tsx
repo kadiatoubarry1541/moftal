@@ -121,12 +121,14 @@ export default function HauteGuinee() {
         loadPermissions();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup]);
 
   useEffect(() => {
     if (selectedGroup && (isAdmin || isCreator)) {
       loadPermissions();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup, isAdmin, isCreator]);
 
   const loadGroups = async () => {

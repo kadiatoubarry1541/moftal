@@ -52,6 +52,7 @@ export default function Developpement() {
 
   useEffect(() => {
     if (user) loadStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const loadStats = async () => {

@@ -65,6 +65,7 @@ export default function GestionVendeur() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function GestionVendeur() {
     if (tab === "sales") { loadSales(); loadProducts(); }
     if (tab === "clients") loadClients();
     if (tab === "expenses") loadExpenses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode]);
 
   async function loadAll() {

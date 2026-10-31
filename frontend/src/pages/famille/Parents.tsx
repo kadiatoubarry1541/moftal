@@ -284,6 +284,7 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
     } else {
       setActivities([])
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedParent?.id])
 
   const handleAddMedia = (mediaData: { type: 'photo' | 'video' | 'audio'; url: string; caption?: string }) => {

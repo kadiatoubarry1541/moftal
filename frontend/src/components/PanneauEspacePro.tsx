@@ -106,6 +106,7 @@ export default function PanneauEspacePro({ tenantCode, onClose, vueInitiale }: {
       .then(r => r.json())
       .then(d => { if (d.success && d.account) setAccount(d.account); else setErreur(d.message || "Compte introuvable."); })
       .catch(() => setErreur("Erreur de connexion au serveur."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   // ─── Publications ──────────────────────────────────────────────────────────

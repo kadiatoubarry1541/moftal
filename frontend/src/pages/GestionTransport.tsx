@@ -97,7 +97,7 @@ export default function GestionTransport() {
   useEffect(() => {
     if (!token()) { navigate(cheminConnexion(), { replace: true }); return; }
     loadAll();
-  }, [loadAll]);
+  }, [loadAll, navigate]);
 
   // VEHICLES
   const addVehicle = async () => {

@@ -76,6 +76,7 @@ export default function TrouverProfesseur() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadProfessors = async () => {

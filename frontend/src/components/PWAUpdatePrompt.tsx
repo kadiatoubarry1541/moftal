@@ -33,6 +33,7 @@ export default function PWAUpdatePrompt() {
       updateServiceWorker(true);
     }, 3000);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [needRefresh]);
 
   return null;

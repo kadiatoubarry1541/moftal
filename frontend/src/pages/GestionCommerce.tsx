@@ -122,6 +122,7 @@ export default function GestionCommerce() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -133,6 +134,7 @@ export default function GestionCommerce() {
     if (tab === "suppliers") { loadSuppliers(); loadPurchases(); loadProducts(); }
     if (tab === "staff") loadStaff();
     if (tab === "avis") loadReviews();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode]);
 
   async function loadAll() {

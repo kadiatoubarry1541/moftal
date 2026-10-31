@@ -35,6 +35,7 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
       .then(r => r.json())
       .then(d => { if (d.success && d.tenantCode) setTenantCode(d.tenantCode); else setErreur(d.message || "Impossible de préparer votre gestion."); })
       .catch(() => setErreur("Erreur de connexion. Vérifiez internet puis réessayez."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account.id]);
 
   // Code d'ouverture préparé à l'avance (valable 10 min, renouvelé) : l'appui sur

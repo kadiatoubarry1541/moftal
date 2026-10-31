@@ -111,6 +111,7 @@ export default function MonProfil() {
     const handleSessionUpdate = () => loadUserData();
     window.addEventListener("session-updated", handleSessionUpdate);
     return () => window.removeEventListener("session-updated", handleSessionUpdate);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadUserLogos = async (numeroH?: string) => {

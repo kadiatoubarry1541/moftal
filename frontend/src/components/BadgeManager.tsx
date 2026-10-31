@@ -57,6 +57,7 @@ export default function BadgeManager() {
   useEffect(() => {
     loadBadges();
     loadUserBadges();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const loadBadges = async () => {

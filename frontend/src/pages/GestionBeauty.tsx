@@ -75,6 +75,7 @@ export default function GestionBeauty() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export default function GestionBeauty() {
     if (tab === "staff")        loadStaff();
     if (tab === "clients")      loadClients();
     if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   async function loadAll() {

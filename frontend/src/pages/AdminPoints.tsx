@@ -78,6 +78,7 @@ export default function AdminPoints() {
   useEffect(() => {
     if (tab === 'history') loadTransactions()
     if (tab === 'users') loadUsers()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab])
 
   const loadUserDetail = async (id: string) => {

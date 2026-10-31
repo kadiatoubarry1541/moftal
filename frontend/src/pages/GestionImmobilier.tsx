@@ -133,6 +133,7 @@ export default function GestionImmobilier() {
       setTenant(info.tenant);
       setDash(d);
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -145,6 +146,7 @@ export default function GestionImmobilier() {
     if (tab === "demandes")      fetch(`${BASE(tenantCode)}/demandes`,      { headers: h }).then(r => r.json()).then(d => d.success && setDemandes(d.demandes || []));
     if (tab === "maintenance")   fetch(`${BASE(tenantCode)}/maintenance`,   { headers: h }).then(r => r.json()).then(d => d.success && setMaintenance(d.maintenance || []));
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   // Coupure réseau ou réponse illisible : échec affiché, jamais de bouton bloqué.

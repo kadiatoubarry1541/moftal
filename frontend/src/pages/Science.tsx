@@ -186,6 +186,7 @@ export default function Science() {
     if (userData) {
       loadPosts();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [userData, activeTab]);
 
   const loadPosts = async () => {

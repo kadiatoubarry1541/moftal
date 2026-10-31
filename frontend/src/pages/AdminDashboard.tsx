@@ -198,6 +198,7 @@ export default function AdminDashboard() {
         navigate("/moi");
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadStats = async () => {
@@ -2523,6 +2524,7 @@ function NarateursReciSection({ token, apiBase }: { token: string; apiBase: stri
       .then(r => r.json())
       .then(d => { if (d.success) setNarrateurs(d.narrateurs || []); })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const filtrés = narrateurs.filter(n =>
@@ -2614,6 +2616,7 @@ function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: s
     } finally { setLoading(false); }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { charger(); }, []);
 
   async function activer(treeId: string, activer: boolean) {

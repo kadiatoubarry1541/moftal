@@ -153,6 +153,7 @@ export default function EchangeSecondaire() {
         .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.includes('secondaire'))); })
         .catch(() => {});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   useEffect(() => {

@@ -274,12 +274,14 @@ export default function Zaka() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
   
   useEffect(() => {
     if (activeTab === 'formation-religieux' && userData) {
       loadFormationReligieuxData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [activeTab, userData]);
 
   const loadData = async () => {

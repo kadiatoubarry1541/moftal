@@ -758,6 +758,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [game?.id, game?.status]);
 
   // Vue Menu

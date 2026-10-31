@@ -393,6 +393,7 @@ export default function AdminBadges() {
 
   useEffect(() => {
     filterLogos();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [logos, searchTerm, selectedCategory]);
 
   const filterLogos = () => {

@@ -49,6 +49,7 @@ export default function Publicite() {
         .then(r => r.json()).then(d => { if (d.success) { setPrix(d.prix); setZone(d.zone); } }),
       chargerMesPublicites(),
     ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   async function chargerMesPublicites() {

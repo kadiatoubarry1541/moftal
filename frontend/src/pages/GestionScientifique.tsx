@@ -65,6 +65,7 @@ export default function GestionScientifique() {
   const [prjForm, setPrjForm] = useState({ titre: "", description: "", responsable: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
   const [aForm, setAForm] = useState({ titre: "", contenu: "", type: "general" });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (!user) { navigate(cheminConnexion(), { replace: true }); return; } if (!tenantCode) return; loadAll(); }, [tenantCode]);
   useEffect(() => {
     if (!tenantCode || !tenant) return;
@@ -72,6 +73,7 @@ export default function GestionScientifique() {
     else if (tab === "publications") loadPublications();
     else if (tab === "projects") loadProjects();
     else if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab]);
 
   async function loadAll() {

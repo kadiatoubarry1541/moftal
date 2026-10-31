@@ -78,6 +78,7 @@ export default function GestionArtisan() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -86,12 +87,14 @@ export default function GestionArtisan() {
     if (tab === "services")      loadServices();
     if (tab === "clients")       loadClients();
     if (tab === "announcements") loadAnnouncements();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading]);
 
   // Liste des interventions : rechargée aussi quand on change le filtre de statut.
   useEffect(() => {
     if (!tenantCode || loading || tab !== "interventions") return;
     loadInterventions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode, loading, filterStatut]);
 
   async function loadAll() {

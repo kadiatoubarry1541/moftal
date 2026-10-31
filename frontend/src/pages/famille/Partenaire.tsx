@@ -420,6 +420,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
     } else {
       setLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, location.pathname])
 
   // Auto-ouvrir la section liens rompus si l'autre personne est à l'origine

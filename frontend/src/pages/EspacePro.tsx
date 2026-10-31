@@ -431,6 +431,7 @@ function SubscriptionPaymentWall({
       .then(r => r.json())
       .then(d => { if (d.success) setPrix(d); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account.id, isBlocked]);
 
   useEffect(() => {
@@ -441,6 +442,7 @@ function SubscriptionPaymentWall({
       .then(r => r.json())
       .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account.id, isBlocked]);
 
   if (isBlocked) {
@@ -759,6 +761,7 @@ export default function EspacePro() {
   const memberLabel = account ? (MEMBER_LABELS[account.type] || DEFAULT_MEMBER_LABEL) : DEFAULT_MEMBER_LABEL;
 
   /* ---- Chargement initial ---- */
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { loadAccount(); }, [id]);
   // Formule complète, dans SON application (installée, ou sur gestions.moftal.com) :
   // l'application s'ouvre toujours sur la GESTION INTERNE complète, jamais sur
@@ -781,8 +784,11 @@ export default function EspacePro() {
       .then(r => r.json())
       .then(d => { if (d.success && d.tenantCode) navigate(`/${chemin}/${d.tenantCode}`, { replace: true }); })
       .catch(() => { /* reste sur cette page : rien n'est perdu */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [account?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
   useEffect(() => {
     if (tab === 'vitrine' && account) {
@@ -791,6 +797,7 @@ export default function EspacePro() {
       setEditSpecialties(Array.isArray(account.specialties) ? account.specialties : []);
       loadPublications(account.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, account?.id]);
 
   const loadAccount = async () => {

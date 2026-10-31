@@ -102,7 +102,7 @@ export default function InstallClientApp() {
       })
       .catch(() => setError(tr("Impossible de charger les informations.")))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, tr]);
 
   if (loading) {
     return (

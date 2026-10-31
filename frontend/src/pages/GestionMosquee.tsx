@@ -73,6 +73,7 @@ export default function GestionMosquee() {
     if (!user) { navigate(cheminConnexion(), { replace: true }); return; }
     if (!tenantCode) return;
     loadDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tenantCode]);
 
   useEffect(() => {
@@ -84,6 +85,7 @@ export default function GestionMosquee() {
     if (tab === "imams") loadImams();
     if (tab === "predications") loadPredications();
     if (tab === "partenaires") loadPartenaires();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [tab, tenantCode]);
 
   async function loadDashboard() {

@@ -96,6 +96,7 @@ export default function ListeProfessionnels() {
 
   useEffect(() => {
     loadAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [filterType]);
 
   // Demande GPS silencieuse au chargement

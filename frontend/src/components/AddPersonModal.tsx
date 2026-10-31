@@ -79,6 +79,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
       stopLiveScanner();
       if (permWatcherRef.current) { permWatcherRef.current.onchange = null; }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   // ── Vérification permission caméra ──
@@ -106,6 +107,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     } catch {
       setPermState('unknown');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   // Vérifier la permission dès qu'on ouvre l'onglet scanner
@@ -113,6 +115,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     if (mode === 'qr' && qrSub === 'scan') {
       checkPermission(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [mode, qrSub]);
 
   // ── Démarrer le scanner en direct (qr-scanner WebAssembly — pro) ──

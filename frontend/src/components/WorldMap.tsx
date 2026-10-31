@@ -81,6 +81,7 @@ export default function WorldMap({
       setUserPosition(initialPosition);
       setUserAddress(null);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [initialPosition?.lat, initialPosition?.lng]);
 
   const askForMyPosition = useCallback(() => {
@@ -188,6 +189,7 @@ export default function WorldMap({
         const map = useMap();
         useEffect(() => {
           if (position) map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
         }, [position?.lat, position?.lng, map]);
         return null;
       }
@@ -196,6 +198,7 @@ export default function WorldMap({
         const map = useMap();
         useEffect(() => {
           if (result) map.flyTo([result.lat, result.lng], 17, { duration: 1.5 });
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
         }, [result?.lat, result?.lng, map]);
         return null;
       }

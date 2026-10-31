@@ -223,7 +223,7 @@ export default function GestionEnseignement({ mode }: Props) {
       })
       .catch(e => setError(trHors("Impossible de joindre le serveur : {err}", { err: String(e?.message || e) })))
       .finally(() => setLoading(false));
-  }, [get]);
+  }, [get, navigate]);
 
   // Employé qui est aussi enseignant ou parent ici : ses espaces, dans l'application
   const [droitsMembre, setDroitsMembre] = useState<{ enseignant: boolean; parent: boolean } | null>(null);
@@ -232,6 +232,7 @@ export default function GestionEnseignement({ mode }: Props) {
     let fini = false;
     droitsMembreEcole(mode, tenantCode).then(d => { if (!fini) setDroitsMembre(d); });
     return () => { fini = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [!!tenant, tenantCode, mode]);
 
   // Le propriétaire et le co-responsable (« total ») choisissent l'accès de chacun

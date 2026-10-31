@@ -276,7 +276,7 @@ export default function NotificationBell() {
     });
     return () => { clearInterval(interval);
       window.removeEventListener(EVENEMENT_MESSAGES_LUS, chargerMessages); socket.off("new-notification"); };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

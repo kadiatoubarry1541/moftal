@@ -26,6 +26,7 @@ export default function ReseauImam() {
   const [pForm, setPForm] = useState({ nom_mosquee: "", adresse: "", quartier: "", ville: "", pays: "Guinée", bio: "" });
   const [fForm, setFForm] = useState({ sourate_nom: "", texte_arabe: "", traduction: "", message_imam: "", date_vendredi: new Date().toISOString().slice(0, 10) });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   useEffect(() => { if (!user) { navigate("/login"); return; } loadProfile(); }, []);
   useEffect(() => {
     if (tab === "connections") loadConnections();

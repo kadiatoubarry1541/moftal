@@ -192,6 +192,7 @@ export default function GestionClinique() {
   const handleUnauthorized = useCallback(() => {
     localStorage.removeItem("token");
     navigate(cheminConnexion(), { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate, tenantCode]);
 
   const get = useCallback(async (path: string) => {

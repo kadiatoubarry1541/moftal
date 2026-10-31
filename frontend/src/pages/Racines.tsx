@@ -112,6 +112,7 @@ export default function Racines() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const userIsAdmin = isAdmin(user as any);

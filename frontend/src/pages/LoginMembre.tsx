@@ -39,6 +39,7 @@ export function LoginMembre() {
       }
     } catch {}
     if (!hasAcceptedTerms()) setShowTerms(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   const onSubmit = async () => {

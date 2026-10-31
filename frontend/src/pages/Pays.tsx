@@ -390,6 +390,7 @@ export default function Pays() {
     } catch {
       navigate("/login");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [navigate]);
 
   const loadData = async () => {
@@ -670,6 +671,7 @@ export default function Pays() {
       }, 10000); // Augmenté de 5s à 10s pour réduire la charge
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedGroup]);
 
   const loadResidenceGroups = async () => {
@@ -930,6 +932,7 @@ export default function Pays() {
       }, 10000); // Augmenté de 5s à 10s pour réduire la charge
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [selectedResidenceGroup]);
 
   const filteredGroups = regionGroups.filter(group => group.region === activeTab);

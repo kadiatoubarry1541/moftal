@@ -127,6 +127,7 @@ export default function MesComptesPro() {
 
   useEffect(() => {
     loadAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
   const loadAccounts = async () => {

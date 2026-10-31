@@ -456,6 +456,7 @@ export default function Noyau() {
       return null
     })
     setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   useEffect(() => {

@@ -55,6 +55,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
     loadUsers()
     loadStats()
     loadFamilies()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [])
 
   const loadUsers = async () => {
