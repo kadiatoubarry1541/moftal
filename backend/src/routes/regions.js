@@ -66,15 +66,15 @@ router.get('/groups', async (req, res) => {
 // @access  Authentifié
 router.post('/groups', async (req, res) => {
   try {
-    const { name, description, region, createdBy } = req.body;
+    const { name, description, region } = req.body;
     
     const group = await RegionGroup.create({
       name,
       description,
       region,
-      members: [createdBy || req.user.numeroH],
+      members: [req.user.numeroH],
       posts: [],
-      createdBy: createdBy || req.user.numeroH
+      createdBy: req.user.numeroH
     });
     
     res.status(201).json({
@@ -147,7 +147,7 @@ router.post('/groups/:id/posts', upload.single('media'), async (req, res) => {
     const posts = group.posts || [];
     const newPost = {
       id: Date.now().toString(),
-      author,
+      author: req.user.numeroH,
       authorName,
       content,
       type,

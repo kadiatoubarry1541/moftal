@@ -67,7 +67,7 @@ router.get('/posts', async (req, res) => {
 // @access  Admin uniquement
 router.post('/create-post', upload.single('media'), async (req, res) => {
   try {
-    const { title, content, type, category, author, authorName } = req.body;
+    const { title, content, type, category, authorName } = req.body;
     
     if (!title && !content && !req.file) {
       return res.status(400).json({
@@ -81,7 +81,7 @@ router.post('/create-post', upload.single('media'), async (req, res) => {
       content: content || '',
       type: type || 'text',
       category: category || 'message',
-      author: author || req.user.numeroH,
+      author: req.user.numeroH,
       authorName: authorName || `${req.user.prenom} ${req.user.nomFamille}`
     };
     

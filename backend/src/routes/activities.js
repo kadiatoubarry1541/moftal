@@ -97,7 +97,7 @@ router.get('/groups', async (req, res) => {
       where,
       order: [
         // Les groupes du pays demandé apparaissent en premier
-        ...(pays ? [[ActivityGroup.sequelize.literal(`CASE WHEN pays = '${pays.replace(/'/g, "''")}' THEN 0 ELSE 1 END`), 'ASC']] : []),
+        ...(pays ? [[ActivityGroup.sequelize.literal(`CASE WHEN pays = ${ActivityGroup.sequelize.escape(String(pays))} THEN 0 ELSE 1 END`), 'ASC']] : []),
         ['created_at', 'DESC']
       ]
     });

@@ -5,7 +5,7 @@ import { sequelize } from '../config/database.js';
 import User from '../models/User.js';
 import PublishedStory from '../models/PublishedStory.js';
 import Friend from '../models/Friend.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, estAdminUtilisateur } from '../middleware/auth.js';
 
 // Stockage en mémoire → conversion en base64 et stockage en DB
 const upload = multer({
@@ -156,12 +156,23 @@ router.get('/published/stats', async (_req, res) => {
 // Toutes les autres routes nécessitent l'authentification
 router.use(authenticate);
 
+// Une histoire ne s'écrit que pour soi-même (ou par un admin) : le NuméroH
+// envoyé par le navigateur doit être celui de la personne connectée.
+const pasLeMien = (req, res, numeroH) => {
+  if (numeroH && numeroH !== req.user?.numeroH && !estAdminUtilisateur(req.user)) {
+    res.status(403).json({ success: false, message: 'Accès refusé' });
+    return true;
+  }
+  return false;
+};
+
 // @route   POST /api/user-stories
 // @desc    Sauvegarder une section d'histoire utilisateur
 // @access  Private
 router.post('/', async (req, res) => {
   try {
     const { numeroH, sectionId, data } = req.body;
+    if (pasLeMien(req, res, numeroH)) return;
 
     if (!numeroH || !sectionId) {
       return res.status(400).json({
@@ -233,6 +244,7 @@ router.post('/', async (req, res) => {
 router.post('/all', async (req, res) => {
   try {
     const { numeroH, stories } = req.body;
+    if (pasLeMien(req, res, numeroH)) return;
 
     if (!numeroH || !stories) {
       return res.status(400).json({
@@ -438,6 +450,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const { numeroH, sectionId, type } = req.body;
+    if (pasLeMien(req, res, numeroH)) return;
 
     if (!numeroH || !sectionId || !type) {
       return res.status(400).json({
@@ -526,6 +539,7 @@ const SECTION_AGE_REQUIREMENTS = {
 router.post('/publish', async (req, res) => {
   try {
     const { numeroH, sectionId, witnesses } = req.body;
+    if (pasLeMien(req, res, numeroH)) return;
 
     if (!numeroH || !sectionId) {
       return res.status(400).json({ success: false, message: 'NumeroH et sectionId sont requis' });
