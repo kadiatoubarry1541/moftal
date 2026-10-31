@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoEtablissement from "./LogoEtablissement";
-import { getTypeInfo } from "./EspaceProModals";
+import { getTypeInfo } from "./espaceProTypes";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { useTraduction } from "../i18n/traduction";
 import BoutonLienAppGestion from "./BoutonLienAppGestion";

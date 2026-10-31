@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
-import { ADMIN_SERVICES } from "./EspaceProModals";
-import { TenantLogo, goToMoftal, MoftalMark } from "./GestionBrand";
+import { ADMIN_SERVICES } from "./espaceProTypes";
+import { TenantLogo, MoftalMark } from "./GestionBrand";
+import { goToMoftal } from "../utils/goToMoftal";
 import InstallAppButton from "./InstallAppButton";
 import { getSessionUser } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";

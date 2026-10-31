@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
-import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
+import { heure, duree } from "../components/ecole/formatEcole";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminConnexion } from "../utils/connexionRetour";

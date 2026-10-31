@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
-import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
+import { TermsModal } from '../components/TermsModal';
+import { hasAcceptedTerms } from '../utils/conditionsUtilisation';
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 

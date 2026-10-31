@@ -8,10 +8,8 @@ import PaymentModal from "../components/PaymentModal";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { cheminConnexion } from "../utils/connexionRetour";
-import {
-  ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
-  type PublishModal, type ProfilModal,
-} from "../components/EspaceProModals";
+import { PublierModal, ProfilModalComp, OffreGestionInterne, type PublishModal, type ProfilModal } from "../components/EspaceProModals";
+import { ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo } from "../components/espaceProTypes";
 import { CommandesRecues } from "../components/CommanderProduit";
 
 // En prod, frontend et backend sont sur des domaines différents : un chemin relatif

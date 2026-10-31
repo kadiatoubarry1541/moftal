@@ -1,4 +1,4 @@
-import { getTypeInfo } from "../components/EspaceProModals";
+import { getTypeInfo } from "../components/espaceProTypes";
 
 // Lien de l'application de gestion d'un établissement : quiconque l'ouvre peut
 // l'installer ; une fois connecté, chacun n'a que les droits que le

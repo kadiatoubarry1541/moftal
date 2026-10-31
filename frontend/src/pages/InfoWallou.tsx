@@ -1,6 +1,7 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BackToMoftalBadge, reconcileInstalledFlag } from "../components/InstallAppButton";
+import { BackToMoftalBadge } from "../components/InstallAppButton";
+import { reconcileInstalledFlag } from "../utils/reconcileInstalledFlag";
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"

@@ -3,7 +3,8 @@ import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
 import { config } from '../config/api'
 import { useI18n } from '../i18n/useI18n'
-import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
+import { TermsModal } from '../components/TermsModal';
+import { hasAcceptedTerms } from '../utils/conditionsUtilisation';
 
 export function Login() {
   const [numeroH, setNumeroH] = useState('')

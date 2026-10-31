@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { config } from "../config/api";
-import { ADMIN_SERVICES } from "./EspaceProModals";
+import { ADMIN_SERVICES } from "./espaceProTypes";
 import { normaliserLogo } from "../utils/logoImage";
 import EnvoiLien from "./EnvoiLien";
 import { lienAppGestion } from "../utils/lienAppGestion";

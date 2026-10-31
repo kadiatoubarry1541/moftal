@@ -10,7 +10,7 @@ import { normaliserLogo } from "../utils/logoImage";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AccueilAppGestion from "../components/AccueilAppGestion";
 import AdminCarteFormule from "../components/AdminCarteFormule";
-import { getTypeInfo } from "../components/EspaceProModals";
+import { getTypeInfo } from "../components/espaceProTypes";
 import { libellesServices } from "../utils/libellesServices";
 
 interface ProAccount {

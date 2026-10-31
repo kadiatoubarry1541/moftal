@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
-import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
+import { TermsModal } from '../components/TermsModal';
+import { hasAcceptedTerms } from '../utils/conditionsUtilisation';
 
 export function RegistrationChoice() {
   const { t } = useI18n()

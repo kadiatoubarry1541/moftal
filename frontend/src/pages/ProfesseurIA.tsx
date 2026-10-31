@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { config } from '../config/api';
-import { BackToMoftalBadge, reconcileInstalledFlag } from '../components/InstallAppButton';
+import { BackToMoftalBadge } from '../components/InstallAppButton';
+import { reconcileInstalledFlag } from '../utils/reconcileInstalledFlag';
 import PaymentModal from '../components/PaymentModal';
 
 interface Message {

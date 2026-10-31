@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { config } from "../../config/api";
 import { getPhotoUrl } from "../../utils/auth";
-import { useTraduction, trHors, langueCourante } from "../../i18n/traduction";
+import { useTraduction } from "../../i18n/traduction";
+import { heure, duree, tailleTexte } from "./formatEcole";
 
 // École — écrans du directeur : pointage des cours (début / fin marqués par les
 // enseignants) et bibliothèque de livres PDF réservée aux membres de l'école.
@@ -9,16 +10,6 @@ import { useTraduction, trHors, langueCourante } from "../../i18n/traduction";
 const jeton = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const api = (apiName: string, code: string, chemin: string) => `${config.API_BASE_URL}/${apiName}/${encodeURIComponent(code)}${chemin}`;
 
-export const heure = (d?: string | null) =>
-  d ? new Date(d).toLocaleTimeString(langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Conakry" }) : "—";
-
-export function duree(debut?: string | null, fin?: string | null) {
-  if (!debut) return "—";
-  const min = Math.max(0, Math.round(((fin ? new Date(fin) : new Date()).getTime() - new Date(debut).getTime()) / 60000));
-  return min >= 60
-    ? trHors("{h} h {m}", { h: Math.floor(min / 60), m: String(min % 60).padStart(2, "0") })
-    : trHors("{n} min", { n: min });
-}
 
 /** Retard au début, en minutes, par rapport à l'heure prévue (« 08:00 »). */
 function retard(p: { debut: string; prevu_debut?: string | null }) {
@@ -104,10 +95,6 @@ export function PointageCours({ tenantCode, apiName = "school-mgmt", couleur }: 
 }
 
 export interface Livre { id: number; titre: string; auteur?: string | null; niveau?: string | null; fichier_url: string; taille?: number | null; created_at: string }
-
-export const tailleTexte = (n?: number | null) => !n ? "" : n >= 1048576
-  ? trHors("{n} Mo", { n: (n / 1048576).toFixed(1) })
-  : trHors("{n} Ko", { n: Math.max(1, Math.round(n / 1024)) });
 
 export function CarteLivre({ livre, couleur, onSupprimer }: { livre: Livre; couleur: string; onSupprimer?: () => void }) {
   const { tr } = useTraduction();

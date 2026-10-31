@@ -8,10 +8,8 @@ import CoordonneesSite from "./CoordonneesSite";
 import { TenantCodeCard } from "./GestionBrand";
 import ParametreLangue from "./ParametreLangue";
 import { useTraduction } from "../i18n/traduction";
-import {
-  DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
-  type PublishModal, type ProfilModal,
-} from "./EspaceProModals";
+import { PublierModal, ProfilModalComp, type PublishModal, type ProfilModal } from "./EspaceProModals";
+import { DEFAULT_PUB_FORM, getTypeInfo } from "./espaceProTypes";
 import { CommandesRecues } from "./CommanderProduit";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
