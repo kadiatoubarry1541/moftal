@@ -3,6 +3,8 @@
  * en fonction des conditions remplies par les utilisateurs
  */
 
+import type { DefuntServeur, EnfantProfil } from "../types/arbre";
+
 export interface FamilyMember {
   id: string;
   numeroH: string;
@@ -35,7 +37,26 @@ interface UserData {
   perePhoto?: string;
   merePhoto?: string;
   photo?: string;
-  [key: string]: any;
+  conjointPrenom?: string;
+  conjointNumeroH?: string;
+  conjointNomFamille?: string;
+  conjointGenre?: string;
+  conjointPhoto?: string;
+  enfants?: EnfantProfil[];
+  // Nombres déclarés dans le profil (cercle des racines)
+  nbFreresMere?: number;
+  nbSoeursMere?: number;
+  nbFreresPere?: number;
+  nbSoeursPere?: number;
+  nbTantesMaternelles?: number;
+  nbTantesPaternelles?: number;
+  nbOnclesMaternels?: number;
+  nbOnclesPaternels?: number;
+  nbCousins?: number;
+  nbCousines?: number;
+  nbFilles?: number;
+  nbGarcons?: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -106,7 +127,7 @@ export function checkConditions(
  */
 // deceasedMembers : défunts chargés depuis le serveur (/api/family-tree/tree).
 // Absents → aucun défunt affiché (jamais de lecture dans localStorage).
-export function buildFamilyTree(userData: UserData, deceasedMembers: any[] = []): FamilyMember[] {
+export function buildFamilyTree(userData: UserData, deceasedMembers: DefuntServeur[] = []): FamilyMember[] {
   const tree: FamilyMember[] = [];
   
   // 1. L'utilisateur lui-même (toujours visible)
@@ -273,7 +294,7 @@ export function buildFamilyTree(userData: UserData, deceasedMembers: any[] = [])
 
   // 7. ENFANTS (si définis dans userData)
   if (userData.enfants && Array.isArray(userData.enfants) && userData.enfants.length > 0) {
-    userData.enfants.forEach((enfant: any, index: number) => {
+    userData.enfants.forEach((enfant: EnfantProfil, index: number) => {
       const enfantMember: FamilyMember = {
         id: `enfant-${enfant.numeroH || index}`,
         numeroH: enfant.numeroH || `ENF${index}`,
@@ -295,7 +316,7 @@ export function buildFamilyTree(userData: UserData, deceasedMembers: any[] = [])
 
   // 8. DÉFUNTS enregistrés en base (fournis par l'appelant depuis le serveur)
   try {
-    const deceasedList: any[] = Array.isArray(deceasedMembers) ? deceasedMembers : []
+    const deceasedList: DefuntServeur[] = Array.isArray(deceasedMembers) ? deceasedMembers : []
     const relationMap: Record<string, FamilyMember['relation']> = {
       'pere': 'pere',
       'mere': 'mere',
@@ -313,7 +334,7 @@ export function buildFamilyTree(userData: UserData, deceasedMembers: any[] = [])
       'cousine': 'cousine',
       'autre': 'pere'
     }
-    deceasedList.forEach((d: any, i: number) => {
+    deceasedList.forEach((d, i) => {
       // Lien de parenté : enregistré en base (additionalInfo.relationAvecDeclarant),
       // sinon déduit des liens parent connus
       const relationDeclarant = d.additionalInfo?.relationAvecDeclarant

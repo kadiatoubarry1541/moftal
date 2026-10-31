@@ -9,6 +9,8 @@ import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
 import AjouterEnfantModal from './AjouterEnfantModal'
 import ChampPersonne from './ChampPersonne'
+import type { UserData } from '../utils/auth'
+import type { ArbreConjoint, DefuntServeur, PersonneLiee } from '../types/arbre'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -30,7 +32,7 @@ interface FamilyMember {
 }
 
 interface ArbreGenealogiqueProps {
-  userData: any
+  userData: UserData
   cercleCounts?: CercleDesRacinesCounts
   treeHidden?: string[]
   onTreeHiddenChange?: (newList: string[]) => void
@@ -59,7 +61,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [, setPendingInvitationCount] = useState(0)
-  const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: any | null; loading: boolean }>({ open: false, data: null, loading: false })
+  const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: ArbreConjoint | null; loading: boolean }>({ open: false, data: null, loading: false })
   const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{id: string; type: string; description: string; annee?: string}>>>({})
   const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
@@ -77,7 +79,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [realConjoint, setRealConjoint] = useState<{ numeroH: string; prenom: string; nomFamille: string; genre: string; photo?: string } | null>(null)
 
   // Défunts enregistrés en base (arbre familial côté serveur) — jamais lus du téléphone
-  const [deceasedServeur, setDeceasedServeur] = useState<any[]>([])
+  const [deceasedServeur, setDeceasedServeur] = useState<DefuntServeur[]>([])
   useEffect(() => {
     if (!userData.numeroH) return
     let annule = false
@@ -138,7 +140,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             headers: token ? { Authorization: `Bearer ${token}` } : {}
           })
           const data = await res.json()
-          const kids: FamilyMember[] = (data.success ? data.children : []).map((c: any) => ({
+          const kids: FamilyMember[] = (data.success ? data.children : []).map((c: PersonneLiee) => ({
             id: `g3-${c.numeroH}`,
             numeroH: c.numeroH,
             prenom: c.prenom,
@@ -174,12 +176,12 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
       try {
         const [parentsRes, partnerRes] = await Promise.all([
-          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
-          fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then((r): Promise<{ success: boolean; parents?: PersonneLiee[] }> => r.json()).catch((): null => null),
+          fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then((r): Promise<{ success: boolean; partner?: PersonneLiee }> => r.json()).catch((): null => null),
         ])
 
-        const realParents: any[] = (parentsRes?.success ? parentsRes.parents : []) || []
-        const toMember = (p: any, relation: FamilyMember['relation'], generation: string, idPrefix: string): FamilyMember => ({
+        const realParents: PersonneLiee[] = (parentsRes?.success ? parentsRes.parents : []) || []
+        const toMember = (p: PersonneLiee, relation: FamilyMember['relation'], generation: string, idPrefix: string): FamilyMember => ({
           id: `${idPrefix}-${p.numeroH}`,
           numeroH: p.numeroH,
           prenom: p.prenom,
@@ -229,7 +231,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           try {
             const res = await fetch(`${API_BASE}/api/parent-child/parents-of/${encodeURIComponent(p.numeroH)}`, { headers })
             const data = await res.json()
-            const list: any[] = (data.success ? data.parents : []) || []
+            const list: PersonneLiee[] = (data.success ? data.parents : []) || []
             const gp = list.find(g => g.genre === 'HOMME')
             const gm = list.find(g => g.genre === 'FEMME')
             if (gp) { newMembers.push(toMember(gp, 'grand-pere', 'G-1', `real-gp-${branch}`)); if (localGpArr[bi]?.id) placeholderIdsToRemove.add(localGpArr[bi].id); grandParentsFound.push({ numeroH: gp.numeroH, excludeChild: p.numeroH }) }
@@ -244,7 +246,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           try {
             const res = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(gpEntry.numeroH)}`, { headers })
             const data = await res.json()
-            const kids: any[] = (data.success ? data.children : []) || []
+            const kids: PersonneLiee[] = (data.success ? data.children : []) || []
             for (const kid of kids) {
               if (kid.numeroH === gpEntry.excludeChild || seenOnclesTantes.has(kid.numeroH)) continue
               seenOnclesTantes.add(kid.numeroH)
@@ -253,7 +255,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               try {
                 const resCousins = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(kid.numeroH)}`, { headers })
                 const dataCousins = await resCousins.json()
-                const cousins: any[] = (dataCousins.success ? dataCousins.children : []) || []
+                const cousins: PersonneLiee[] = (dataCousins.success ? dataCousins.children : []) || []
                 for (const cousin of cousins) {
                   newMembers.push(toMember(cousin, cousin.genre === 'FEMME' ? 'cousine' : 'cousin', 'G1', 'real-cousin'))
                 }
@@ -268,7 +270,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           try {
             const res = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(p.numeroH)}`, { headers })
             const data = await res.json()
-            const kids: any[] = (data.success ? data.children : []) || []
+            const kids: PersonneLiee[] = (data.success ? data.children : []) || []
             for (const kid of kids) {
               if (kid.numeroH === userData.numeroH || seenSiblings.has(kid.numeroH)) continue
               seenSiblings.add(kid.numeroH)
@@ -283,7 +285,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         try {
           const res = await fetch(`${API_BASE}/api/sibling/my-siblings`, { headers })
           const data = await res.json()
-          const directSiblings: any[] = (data.success ? data.siblings : []) || []
+          const directSiblings: PersonneLiee[] = (data.success ? data.siblings : []) || []
           for (const sib of directSiblings) {
             if (sib.numeroH === userData.numeroH || seenSiblings.has(sib.numeroH)) continue
             seenSiblings.add(sib.numeroH)
@@ -293,7 +295,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
         if (newMembers.length > 0) {
           setFamilyMembers(prev => {
-            const siblingRelationsFound = new Set(newMembers.filter(m => m.relation === 'frere' || m.relation === 'soeur').map(m => m.relation))
+            const siblingRelationsFound = new Set<FamilyMember['relation']>(newMembers.filter(m => m.relation === 'frere' || m.relation === 'soeur').map(m => m.relation))
             const realNumeroHs = new Set(newMembers.map(m => m.numeroH).filter(Boolean))
             const kept = prev.filter(m => {
               if (m.id.startsWith('real-')) return true
@@ -303,7 +305,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               // même de la même relation (ex : un frère décédé reste affiché à côté
               // d'un frère réel confirmé).
               const isPlaceholder = !m.numeroH || m.numeroH === 'N/A'
-              if (isPlaceholder && siblingRelationsFound.has(m.relation as any)) return false
+              if (isPlaceholder && siblingRelationsFound.has(m.relation)) return false
               if (m.numeroH && realNumeroHs.has(m.numeroH)) return false
               return true
             })
@@ -350,7 +352,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             const r = await fetch(`${API_BASE}/api/family-data/documents`, {
               method: 'POST', headers: familyDataHeaders(),
               body: JSON.stringify({ memberNumeroH, type: d.type, description: d.description, annee: d.annee })
-            }).then(r => r.json()).catch(() => null)
+            }).then((r): Promise<{ success: boolean }> => r.json()).catch((): null => null)
             if (!r?.success) (restants[memberNumeroH] ||= []).push(d)
           }
         }
@@ -531,8 +533,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       })
       alert(`Invitation envoyée au membre ${toName} (${newMember.numeroH}).\nIl pourra accepter ou refuser depuis sa page "Mes invitations".`)
       resetAddMemberForm()
-    } catch (err: any) {
-      alert(err?.message || "Erreur : l'invitation n'a pas été enregistrée. Réessayez.")
+    } catch (err) {
+      alert((err as Error)?.message || "Erreur : l'invitation n'a pas été enregistrée. Réessayez.")
     }
   }
 
@@ -641,7 +643,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     if (relation === 'enfant') { setAjoutEnfant(true); return }
     setShowAddMemberForm(true)
     setAddMemberType('vivant')
-    setNewMember(prev => ({ ...prev, relation: relation as any }))
+    setNewMember(prev => ({ ...prev, relation: relation as typeof prev.relation }))
   }
 
   // Petit badge "+" dans le coin inférieur droit des cartes vides — n'efface pas la carte existante
@@ -700,8 +702,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const isHidden = (numeroH: string) => hiddenSet.has(String(numeroH || '').trim())
 
   // Filtrer les membres visibles : conditions remplies ET non masqués
-  const visibleMembers = familyMembers.filter(m => (m as any).isVisible !== false && !isHidden(m.numeroH))
-  const filteredMembers = getGenerationMembers(generationFilter).filter(m => (m as any).isVisible !== false && !isHidden(m.numeroH))
+  const visibleMembers = familyMembers.filter(m => m.isVisible !== false && !isHidden(m.numeroH))
+  const filteredMembers = getGenerationMembers(generationFilter).filter(m => m.isVisible !== false && !isHidden(m.numeroH))
   const generations = [...new Set(visibleMembers.map(m => m.generation))].sort()
 
 
@@ -725,7 +727,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
       {ajoutEnfant && (
         <AjouterEnfantModal
-          user={userData as any}
+          user={userData}
           onClose={() => setAjoutEnfant(false)}
           onSaved={(m) => { setAjoutEnfant(false); alert(m); window.location.reload() }}
         />
@@ -791,8 +793,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                       try {
                         await InvitationManager.acceptInvitation(inv.id)
                         window.location.reload()
-                      } catch (err: any) {
-                        alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+                      } catch (err) {
+                        alert((err as Error)?.message || "Erreur : la réponse n'a pas été enregistrée.")
                       }
                     }}
                     style={{
@@ -808,8 +810,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                       try {
                         await InvitationManager.declineInvitation(inv.id)
                         window.location.reload()
-                      } catch (err: any) {
-                        alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+                      } catch (err) {
+                        alert((err as Error)?.message || "Erreur : la réponse n'a pas été enregistrée.")
                       }
                     }}
                     style={{
@@ -946,7 +948,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                   <label>Relation souhaitée *</label>
                   <select
                     value={newMember.relation}
-                    onChange={(e) => setNewMember({...newMember, relation: e.target.value as any})}
+                    onChange={(e) => setNewMember({...newMember, relation: e.target.value as typeof newMember.relation})}
                   >
                     <option value="">Sélectionner une relation</option>
                     <option value="pere">Père</option>
@@ -1155,7 +1157,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           {/* ── G-1 : Grands-parents ── */}
           {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">
-              {renderNodeShape((gpp?.genre as any) || 'HOMME', gppX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpp || null))}
+              {renderNodeShape((gpp?.genre) || 'HOMME', gppX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpp || null))}
               <circle cx={gppX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gpp?.photo && <image href={gpp.photo} x={gppX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpp)"/>}
               <defs><clipPath id="c-gpp"><circle cx={gppX+26} cy={75} r={20}/></clipPath></defs>
@@ -1164,7 +1166,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gppX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpp?.numeroH||''}</text>
               <line x1={gppX+NW} y1={75} x2={gmpX} y2={75} stroke="#1a8f1a" strokeWidth={2}/>
 
-              {renderNodeShape((gmp?.genre as any) || 'FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
+              {renderNodeShape((gmp?.genre) || 'FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
               <circle cx={gmpX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gmp?.photo && <image href={gmp.photo} x={gmpX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmp)"/>}
               <defs><clipPath id="c-gmp"><circle cx={gmpX+26} cy={75} r={20}/></clipPath></defs>
@@ -1174,7 +1176,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               {/* Verticale couple paternel → père G0 : au centre du gap entre gpp et gmp */}
               <line x1={pMidX} y1={75} x2={pMidX} y2={190} stroke="#1a8f1a" strokeWidth={2}/>
 
-              {renderNodeShape((gpm?.genre as any) || 'HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
+              {renderNodeShape((gpm?.genre) || 'HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
               <circle cx={gpmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gpm?.photo && <image href={gpm.photo} x={gpmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpm)"/>}
               <defs><clipPath id="c-gpm"><circle cx={gpmX+26} cy={75} r={20}/></clipPath></defs>
@@ -1183,7 +1185,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gpmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpm?.numeroH||''}</text>
               <line x1={gpmX+NW} y1={75} x2={gmmX} y2={75} stroke="#1a8f1a" strokeWidth={2}/>
 
-              {renderNodeShape((gmm?.genre as any) || 'FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
+              {renderNodeShape((gmm?.genre) || 'FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
               <circle cx={gmmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gmm?.photo && <image href={gmm.photo} x={gmmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmm)"/>}
               <defs><clipPath id="c-gmm"><circle cx={gmmX+26} cy={75} r={20}/></clipPath></defs>
@@ -1201,7 +1203,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
           {/* ── G0 : Parents ── */}
           <g className="generation-g0">
-            {renderNodeShape((pereMember?.genre as any) || 'HOMME', pX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='pere')||null))}
+            {renderNodeShape((pereMember?.genre) || 'HOMME', pX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='pere')||null))}
             <circle cx={pX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
             {familyMembers.find(m=>m.relation==='pere')?.photo && <image href={familyMembers.find(m=>m.relation==='pere')?.photo} x={pX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-pere)"/>}
             <defs><clipPath id="c-pere"><circle cx={pX+26} cy={225} r={20}/></clipPath></defs>
@@ -1212,7 +1214,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <line x1={pX+NW} y1={225} x2={mX} y2={225} stroke="#1a8f1a" strokeWidth={2}/>
             <text x={pmMidX} y={217} textAnchor="middle" fontSize={11} fill="#FF9800" fontWeight="bold">Conjoints</text>
 
-            {renderNodeShape((mereMember?.genre as any) || 'FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
+            {renderNodeShape((mereMember?.genre) || 'FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
             <circle cx={mX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
             {familyMembers.find(m=>m.relation==='mere')?.photo && <image href={familyMembers.find(m=>m.relation==='mere')?.photo} x={mX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-mere)"/>}
             <defs><clipPath id="c-mere"><circle cx={mX+26} cy={225} r={20}/></clipPath></defs>
@@ -1886,7 +1888,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 <div>
                   <strong style={{ fontSize: 14, color: '#444' }}>Membres ({spouseTreeModal.data.tree?.memberCount || spouseTreeModal.data.tree?.members?.length || 0})</strong>
                   <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 13 }}>
-                    {(spouseTreeModal.data.tree?.members || []).map((m: any) => (
+                    {(spouseTreeModal.data.tree?.members || []).map((m) => (
                       <li key={m.numeroH} style={{ marginBottom: 4 }}>
                         {m.prenom} {m.nomFamille}
                         {spouseTreeModal.data.accessLevel === 'full' && <span style={{ color: '#888', marginLeft: 8, fontSize: 11 }}>({m.genre?.toLowerCase()})</span>}
