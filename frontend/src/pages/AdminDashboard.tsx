@@ -43,6 +43,74 @@ interface ProfessionalAccount {
   planType?: "visibility" | "full" | null;
   /** Code de la gestion interne (absent tant qu'elle n'a pas été créée) */
   tenant_code?: string | null;
+  /** Compte confié à un administrateur de secteur */
+  grantedToSubAdmin?: boolean;
+}
+
+
+/** Responsable d'une page de secteur (/api/page-admins) */
+interface ResponsablePage {
+  id: number;
+  pageName?: string;
+  page_name?: string;
+  pagePath?: string;
+  page_path?: string;
+  isActive?: boolean;
+  admin?: { numeroH?: string; prenom?: string; nomFamille?: string; photo?: string | null };
+}
+
+/** Publication d'une vitrine pro, avec son professionnel (/api/pro-vitrine/admin/all) */
+interface PublicationAdmin {
+  id: string;
+  type: string;
+  titre: string;
+  contenu?: string | null;
+  prix?: string | null;
+  is_active?: boolean;
+  pro_name?: string | null;
+  pro_type?: string | null;
+  pro_city?: string | null;
+}
+
+/** Produit de la place de marché Échanges (/api/exchange/admin/products) */
+interface ProduitEchangeAdmin {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  price?: number | string;
+  currency?: string;
+  location?: string;
+  numeroH?: string;
+  createdBy?: string;
+}
+
+/** Narrateur des récits (Reci) */
+interface Narrateur {
+  numeroH: string;
+  nom?: string;
+  contact?: string;
+  pays?: string;
+  nbRecits?: number;
+}
+
+/** Arbre familial en attente ou activé (/api/admin/arbres-activation) */
+interface ArbreActivation {
+  id: string;
+  familyName: string;
+  memberCount: number;
+  arbreActive: boolean;
+  familyCode?: string | null;
+  bloodNumber?: string | null;
+  activationRef?: string | null;
+  createdAt: string;
+}
+
+interface StatsArbres {
+  total?: number;
+  nbActives?: number;
+  nbInactives?: number;
+  nbEnAttente?: number;
 }
 
 const isFormuleRdv = (p: { planType?: string | null }) => p.planType === "visibility";
@@ -56,7 +124,7 @@ interface Stats {
   totalDefunts: number;
   totalAdmins: number;
   totalFamilies: number;
-  recentUsers?: any[];
+  recentUsers?: UserData[];
 }
 
 interface CoupleLink {
@@ -99,7 +167,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [recentUsers, setRecentUsers] = useState<UserData[]>([]);
   const [pendingPros, setPendingPros] = useState<ProfessionalAccount[]>([]);
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
   // Compte pro dont l'admin modifie le nom et le logo
@@ -119,7 +187,7 @@ export default function AdminDashboard() {
   const [searchPC, setSearchPC] = useState("");
   const [mySectors, setMySectors] = useState<SectorInfo[]>([]);
   const [sectorAdminOnly, setSectorAdminOnly] = useState(false);
-  const [pageAdmins, setPageAdmins] = useState<any[]>([]);
+  const [pageAdmins, setPageAdmins] = useState<ResponsablePage[]>([]);
   const [pageAdminsLoading, setPageAdminsLoading] = useState(false);
   const [sectorAdminNumeroH, setSectorAdminNumeroH] = useState("");
   const [sectorAdminSector, setSectorAdminSector] = useState<
@@ -134,9 +202,9 @@ export default function AdminDashboard() {
     | "/juridique"
     | "/journalisme"
   >("/sante");
-  const [publications, setPublications] = useState<any[]>([]);
+  const [publications, setPublications] = useState<PublicationAdmin[]>([]);
   const [publicationsLoading, setPublicationsLoading] = useState(false);
-  const [exchangeProducts, setExchangeProducts] = useState<any[]>([]);
+  const [exchangeProducts, setExchangeProducts] = useState<ProduitEchangeAdmin[]>([]);
   const [exchangeProductsLoading, setExchangeProductsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -210,7 +278,7 @@ export default function AdminDashboard() {
     try {
       const response = await getAllUsers({ limit: 5 });
       const users = (response.users || []).filter(
-        (u: any) => u.numeroH !== HIDDEN_MASTER_NUMEROH
+        (u: UserData) => u.numeroH !== HIDDEN_MASTER_NUMEROH
       );
       setRecentUsers(users);
     } catch (error) {
@@ -516,7 +584,7 @@ export default function AdminDashboard() {
         ];
         setPageAdmins(
           res.pageAdmins.filter(
-            (pa: any) =>
+            (pa: ResponsablePage) =>
               sectorPaths.includes(pa.pagePath || pa.page_path) &&
               pa.isActive !== false
           )
@@ -1362,7 +1430,7 @@ export default function AdminDashboard() {
                       <div className="flex flex-wrap gap-2 self-end sm:self-center">
                         {/* Bouton accorder/retirer visibilité — super admin G7 uniquement */}
                         {isSuperAdmin7(userData) && (
-                          (pro as any).grantedToSubAdmin ? (
+                          pro.grantedToSubAdmin ? (
                             <button
                               onClick={() => handleGrantVisibility(pro.id, false)}
                               className="min-h-[36px] px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
@@ -1381,7 +1449,7 @@ export default function AdminDashboard() {
                           )
                         )}
                         {/* Badge si visible par l'admin délégué */}
-                        {isSuperAdmin7(userData) && (pro as any).grantedToSubAdmin && (
+                        {isSuperAdmin7(userData) && pro.grantedToSubAdmin && (
                           <span className="self-center text-xs text-indigo-700 font-medium">✓ Vu par admin délégué</span>
                         )}
                         {pro.justificatifDocument && (
@@ -2268,7 +2336,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-gray-500">Aucun admin de secteur configuré.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {pageAdmins.map((pa: any) => {
+                    {pageAdmins.map((pa) => {
                       const admin = pa.admin || {};
                       const path = pa.pagePath ?? pa.page_path;
                       const name = pa.pageName ?? pa.page_name ?? path;
@@ -2506,7 +2574,7 @@ function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: str
 
 // ─── Section Narrateurs Reci ─────────────────────────────────────────────────
 function NarateursReciSection({ token, apiBase }: { token: string; apiBase: string }) {
-  const [narrateurs, setNarrateurs] = useState<any[]>([]);
+  const [narrateurs, setNarrateurs] = useState<Narrateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -2590,8 +2658,8 @@ function NarateursReciSection({ token, apiBase }: { token: string; apiBase: stri
 
 // ─── Section Arbres Familiaux — Activation ───────────────────────────────────
 function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: string }) {
-  const [arbres, setArbres] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [arbres, setArbres] = useState<ArbreActivation[]>([]);
+  const [stats, setStats] = useState<StatsArbres | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtre, setFiltre] = useState<'tous' | 'actives' | 'inactifs'>('tous');
@@ -2624,7 +2692,7 @@ function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: s
     } finally { setActionId(null); }
   }
 
-  const fmt = (n: number) => new Date(n).toLocaleDateString('fr-FR');
+  const fmt = (d: string | number) => new Date(d).toLocaleDateString('fr-FR');
 
   const filtrés = arbres
     .filter(a => filtre === 'tous' || (filtre === 'actives' ? a.arbreActive : (!a.arbreActive && a.memberCount >= 5)))

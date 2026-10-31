@@ -18,3 +18,23 @@ export interface TotauxPortefeuilles {
   totalRecu: number;
   totalRetire: number;
 }
+
+/** Demande de retrait d'un professionnel (/api/withdrawal-requests/mes-demandes) */
+export interface DemandeRetrait {
+  id: string;
+  proAccountId?: string;
+  ownerNom?: string | null;
+  proAccountName?: string | null;
+  proAccountType?: string | null;
+  proLogoUrl?: string | null;
+  montant: number;
+  motif?: string | null;
+  coordonneesPaiement?: string | null;
+  /** « en_attente », « valide », « rejete » */
+  statut: string;
+  raisonRejet?: string | null;
+  receiptRef?: string | null;
+  valideParNom?: string | null;
+  valideAt?: string | null;
+  creeLe: string;
+}

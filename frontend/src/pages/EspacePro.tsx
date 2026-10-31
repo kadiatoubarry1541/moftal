@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { getSessionUser, isAdmin } from "../utils/auth";
-import { ReçuTransaction } from "../components/ReçuTransaction";
+import { ReçuTransaction, type DonneesReçu } from "../components/ReçuTransaction";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
@@ -23,7 +23,8 @@ interface ProAccount {
   country: string;
   phone: string;
   email: string;
-  services: any[];
+  /** Services (texte) ; pour un restaurant, les plats du menu */
+  services: (string | MenuItem)[];
   specialties: string[];
   status: string;
   ownerNumeroH: string;
@@ -394,6 +395,9 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
 
 import { config } from "../config/api";
 import { CommandesRecues } from "../components/CommanderProduit";
+import type { DemandeRetrait } from "../types/moftalPay";
+import type { MembrePro, PublicationPro } from "../types/pro";
+import type { UserData } from "../utils/auth";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
@@ -407,7 +411,7 @@ function SubscriptionPaymentWall({
   onSuccess,
 }: {
   account: ProAccount;
-  userData: any;
+  userData: UserData | null;
   onSuccess: () => void;
 }) {
   const navigate = useNavigate();
@@ -692,9 +696,9 @@ export default function EspacePro() {
   const [retraitCoord, setRetraitCoord]                 = useState('');
   const [retraitLoading, setRetraitLoading]             = useState(false);
   const [retraitMsg, setRetraitMsg]                     = useState('');
-  const [mesDemandes, setMesDemandes]                   = useState<any[]>([]);
+  const [mesDemandes, setMesDemandes]                   = useState<DemandeRetrait[]>([]);
   const [loadingDemandes, setLoadingDemandes]           = useState(false);
-  const [retraitReçu, setRetraitReçu]                   = useState<any>(null);
+  const [retraitReçu, setRetraitReçu]                   = useState<Omit<DonneesReçu, "type"> | null>(null);
 
   // Cours école / prof
   const [showPublishCourse, setShowPublishCourse] = useState(false);
@@ -704,7 +708,7 @@ export default function EspacePro() {
   const [linkedStudents, setLinkedStudents] = useState<string[]>([]);
 
   // Carnet d'accès (membres liés)
-  const [members, setMembers]           = useState<any[]>([]);
+  const [members, setMembers]           = useState<MembrePro[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [showAddMember, setShowAddMember]   = useState(false);
   const [addMemberRole, setAddMemberRole]   = useState('client');
@@ -722,7 +726,7 @@ export default function EspacePro() {
   const [servicesSaving, setServicesSaving]   = useState(false);
   const [servicesSuccess, setServicesSuccess] = useState(false);
 
-  const [publications, setPublications]   = useState<any[]>([]);
+  const [publications, setPublications]   = useState<PublicationPro[]>([]);
   const [pubsLoading, setPubsLoading]     = useState(false);
   const [showAddPub, setShowAddPub]       = useState(false);
   const [pubSaving, setPubSaving]         = useState(false);
@@ -793,7 +797,7 @@ export default function EspacePro() {
   useEffect(() => {
     if (tab === 'vitrine' && account) {
       setVitrineInfo({ name: account.name || '', description: account.description || '', address: account.address || '', city: account.city || '', country: account.country || '', phone: account.phone || '', email: account.email || '' });
-      setEditServices(Array.isArray(account.services) ? account.services.filter((s: any) => typeof s === 'string') : []);
+      setEditServices(Array.isArray(account.services) ? account.services.filter((s): s is string => typeof s === 'string') : []);
       setEditSpecialties(Array.isArray(account.specialties) ? account.specialties : []);
       loadPublications(account.id);
     }
@@ -854,7 +858,7 @@ export default function EspacePro() {
     }
   };
 
-  const removeMember = async (memberId: string) => {
+  const removeMember = async (memberId: number) => {
     if (!account) return;
     if (!window.confirm('Retirer cette personne ?')) return;
     try {
@@ -962,7 +966,7 @@ export default function EspacePro() {
     } catch { alert("Erreur de connexion : rien n'a été supprimé. Réessayez."); }
   };
 
-  const toggleDisponible = async (pub: any) => {
+  const toggleDisponible = async (pub: PublicationPro) => {
     if (!account) return;
     try {
       const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pub.id}`, {
@@ -1187,7 +1191,7 @@ export default function EspacePro() {
   /* ---- Chargement menu restaurant ---- */
   const loadMenuItems = (acc: ProAccount) => {
     if (acc.type === 'restaurant') {
-      const items = (acc.services || []).filter((s: any) => typeof s === 'object' && s !== null && s.name);
+      const items = (acc.services || []).filter((s): s is MenuItem => typeof s === 'object' && s !== null && !!s.name);
       setMenuItems(items);
     }
   };
@@ -1897,7 +1901,7 @@ export default function EspacePro() {
                     onChange={e => setNewCourseData(p => ({ ...p, description: e.target.value }))}
                     rows={3} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400" />
                   <div className="grid grid-cols-2 gap-3">
-                    <select value={newCourseData.type} onChange={e => setNewCourseData(p => ({ ...p, type: e.target.value as any }))}
+                    <select value={newCourseData.type} onChange={e => setNewCourseData(p => ({ ...p, type: e.target.value as typeof newCourseData.type }))}
                       className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
                       <option value="audio">🎧 Audio</option>
                       <option value="video">🎥 Vidéo</option>
@@ -2206,7 +2210,7 @@ export default function EspacePro() {
                         onChange={e => setVitrineInfo(prev => ({ ...prev, [f.key]: e.target.value }))}
                         placeholder={f.placeholder}
                         className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-0"
-                        style={{ '--tw-ring-color': 'currentColor' } as any}
+                        style={{ '--tw-ring-color': 'currentColor' } as React.CSSProperties}
                       />
                     </div>
                   ))}

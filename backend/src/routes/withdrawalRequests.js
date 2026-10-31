@@ -141,6 +141,7 @@ router.get('/mes-demandes', async (req, res) => {
       demandes: demandes.map(d => ({
         id:                  d.id,
         proAccountId:        d.proAccountId,
+        ownerNom:            d.ownerNom,
         proAccountName:      d.proAccountName,
         proAccountType:      d.proAccountType,
         proLogoUrl:          d.proLogoUrl,

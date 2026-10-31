@@ -4,12 +4,12 @@ import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils
 import { ReçuTransaction, type DonneesReçu } from '../components/ReçuTransaction';
 import PaymentModal from '../components/PaymentModal';
 import LogoEtablissement from "../components/LogoEtablissement";
-import type { CompteFamille, InfosRiz, TransactionFamille } from '../types/compteFamille';
+import type { CompteFamille, InfosRiz, SoldesFamille, TransactionFamille } from '../types/compteFamille';
 import type { CompteProfessionnel } from '../types/pro';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-const CATEGORIES = [
+const CATEGORIES: { key: keyof SoldesFamille; label: string; pct: number; color: string; icon: string }[] = [
   { key: 'reserve',    label: 'Réserve bloquée',  pct: 20, color: '#1e3a5f', icon: '🔒' },
   { key: 'sante',      label: 'Santé',             pct: 40, color: '#1a8f1a', icon: '🏥' },
   { key: 'nourriture', label: 'Nourriture',        pct: 20, color: '#d97706', icon: '🌾' },

@@ -82,6 +82,8 @@ export interface PublicationPro {
   disponible?: boolean;
   is_active?: boolean;
   created_at?: string;
+  /** Même date, au format camelCase (anciennes réponses) */
+  createdAt?: string;
   updated_at?: string;
 }
 
@@ -117,4 +119,14 @@ export interface ReponseServeur {
   success?: boolean;
   message?: string;
   [cle: string]: unknown;
+}
+
+/** Membre d'un compte professionnel (/api/pro-members) */
+export interface MembrePro {
+  id: number;
+  numero_h: string;
+  role: string;
+  nom_display?: string | null;
+  prenom?: string | null;
+  nom?: string | null;
 }
