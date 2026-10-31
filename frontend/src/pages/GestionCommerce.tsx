@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿import MediasArticle from "../components/MediasArticle";
+import { useState, useEffect } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSessionUser } from "../utils/auth";
@@ -605,6 +606,10 @@ export default function GestionCommerce() {
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
                   <span>Vente : <b style={{ color: "#22a722" }}>{fmtMoney(p.prix_vente)}</b></span>
                   <span style={{ color: p.stock <= p.stock_min ? "#ef4444" : "#64748b" }}>Stock : <b>{p.stock} {p.unite}</b></span>
+                </div>
+                {/* Vidéo et message vocal du produit : sur le site et dans Échange */}
+                <div style={{ marginBottom: 8 }}>
+                  <MediasArticle tenantCode={tenantCode!} articleId={p.id} videoUrl={p.video_url} audioUrl={p.audio_url} couleur={COLOR} taille={48} />
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => updateStock(p.id, -1)} style={{ flex: 1, padding: "4px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>−1</button>

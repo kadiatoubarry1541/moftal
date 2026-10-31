@@ -31,6 +31,8 @@ export interface Produit {
   photo_url?: string | null;
   is_active?: boolean;
   created_at?: string;
+  video_url?: string | null;
+  audio_url?: string | null;
 }
 
 /** Article d'une vente */

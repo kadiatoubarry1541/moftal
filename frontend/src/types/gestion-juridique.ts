@@ -14,6 +14,8 @@ export interface JuridiqueService {
   image_url?: string | null;
   is_active?: boolean | null;
   created_at?: string | null;
+  video_url?: string | null;
+  audio_url?: string | null;
 }
 
 export interface JuridiqueStaff {

@@ -1,3 +1,4 @@
+import MediasPublics from "../components/MediasPublics";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
@@ -337,6 +338,8 @@ export default function CommerceVitrine() {
                       {getCatIcon(p.categorie || "")}
                     </div>
                   )}
+
+                  <div style={{ marginBottom: 10 }}><MediasPublics videoUrl={p.video_url} audioUrl={p.audio_url} /></div>
 
                   {/* Nom + catégorie */}
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{p.nom}</div>

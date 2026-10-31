@@ -16,6 +16,7 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import MediasArticle from "../components/MediasArticle";
 import { compressImage } from "../utils/compressImage";
 import { uploadMedia } from "../utils/uploadMedia";
 import type { EtablissementGestion } from "../types/pro";
@@ -399,6 +400,10 @@ export default function GestionImmobilier() {
                         <button onClick={async () => { if (confirm("Supprimer ce bien ?")) { await del(`${BASE(tenantCode!)}/properties/${p.id}`); reloadTab("properties"); } }}
                           style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                       </div>
+                    </div>
+                    {/* Vidéo et message vocal : montrés sur le site avec la photo */}
+                    <div style={{ clear: "both", paddingTop: 10 }}>
+                      <MediasArticle tenantCode={tenantCode!} articleId={p.id} videoUrl={p.video_url} audioUrl={p.audio_url} couleur={AMBER} taille={56} />
                     </div>
                   </div>
                 );

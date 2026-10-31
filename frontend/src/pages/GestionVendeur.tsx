@@ -16,6 +16,7 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import CarreauPhoto from "../components/CarreauPhoto";
+import MediasArticle from "../components/MediasArticle";
 import type { EtablissementGestion, ReponseServeur } from "../types/pro";
 import type { TableauVendeur, VendeurClient, VendeurExpense, VendeurProduct, VendeurSale } from "../types/gestion-retailer";
 
@@ -318,6 +319,10 @@ export default function GestionVendeur() {
                   <button onClick={() => adjustStock(p.id, -1)} style={btn("#fef2f2", "#dc2626")}>−1</button>
                   <button onClick={() => adjustStock(p.id, 1)} style={btn("#f0fdf0", "#1a8f1a")}>+1</button>
                   <button onClick={() => { const n = prompt("Ajouter au stock :", "10"); if (n) adjustStock(p.id, +n); }} style={btn(COLOR_BG, COLOR)}>+N</button>
+                </div>
+                {/* Vidéo et message vocal : montrés sur le site avec la photo */}
+                <div style={{ clear: "both", paddingTop: 10 }}>
+                  <MediasArticle tenantCode={tenantCode!} articleId={p.id} videoUrl={p.video_url} audioUrl={p.audio_url} couleur={COLOR} taille={56} />
                 </div>
               </div>
             ))}
