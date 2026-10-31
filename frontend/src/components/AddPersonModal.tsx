@@ -41,6 +41,9 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
 
   const [contactMatches, setContactMatches] = useState<FoundUser[] | null>(null);
   const [contactMatchesLoading, setContactMatchesLoading] = useState(false);
+  // Contacts cochés dans la liste du téléphone, et échec éventuel de la recherche
+  const [contactsChoisis, setContactsChoisis] = useState(0);
+  const [contactsErreur, setContactsErreur] = useState(false);
 
   const [emailInput, setEmailInput] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
@@ -202,6 +205,8 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     if (phones.length === 0) return;
     setContactMatchesLoading(true);
     setContactMatches(null);
+    setContactsErreur(false);
+    setContactsChoisis(phones.length ? new Set(phones.map((t) => t.replace(/[^0-9]/g, '').slice(-9))).size : 0);
     try {
       const res = await fetch(`${API_BASE}/api/friends/match-phones`, {
         method: 'POST',
@@ -209,8 +214,10 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
         body: JSON.stringify({ phones, includeConnections: true }),
       });
       const data = await res.json();
-      setContactMatches(data.success ? (data.matches || []) : []);
+      if (!res.ok || !data.success) { setContactsErreur(true); setContactMatches([]); return; }
+      setContactMatches(data.matches || []);
     } catch {
+      setContactsErreur(true);
       setContactMatches([]);
     } finally {
       setContactMatchesLoading(false);
@@ -362,7 +369,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
             </button>
             {contactMatches && (
               contactMatches.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center mt-2">Aucun de vos contacts n'est encore sur Moftal.</p>
+                <p className="text-sm text-gray-500 text-center mt-2">{contactsErreur ? "Connexion impossible : la recherche n'a pas pu se faire. Réessayez." : `Parmi les ${contactsChoisis} numéro(s) choisi(s), aucun n'a encore de compte Moftal. Pour en vérifier d'autres, rouvrez la liste et cochez-les tous.`}</p>
               ) : (
                 <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
                   {contactMatches.map(c => (
