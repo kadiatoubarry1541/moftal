@@ -373,8 +373,8 @@ export function VideoRegistration() {
     }
 
     try {
-      const result = await api.registerLiving(completeData as any)
-      const saveAndGo = (user: any, source: string) => {
+      const result = await api.registerLiving(completeData)
+      const saveAndGo = (user: { numeroH?: string; [champ: string]: unknown } | null | undefined, source: string) => {
         const userSafe = { ...user } // le serveur renvoie le compte sans mot de passe
         localStorage.setItem('dernier_vivant', JSON.stringify(userSafe))
         // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
@@ -407,7 +407,7 @@ export function VideoRegistration() {
 
         if (loginResult?.success) {
           // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
-          showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, normalizedData.password)
+          showCredentialsReminder(loginResult.user?.numeroH || numeroH, normalizedData.password)
           navigate('/compte')
         } else {
           alert(result.message || 'Une erreur est survenue lors de l\'inscription. Réessayez.')

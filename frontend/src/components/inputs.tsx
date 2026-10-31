@@ -23,7 +23,7 @@ export function Select({ value, onChange, options, placeholder }: { value?: stri
   )
 }
 
-export function SelectCode({ value, onChange, options, placeholder }: { value?: string, onChange: (v: string)=>void, options: {label:string,code:string}[], placeholder?: string }) {
+export function SelectCode({ value, onChange, options, placeholder }: { value?: string, onChange: (v: string)=>void, options: readonly {label:string,code:string}[], placeholder?: string }) {
   const { tr } = useTraduction()
   return (
     <select value={value || ''} onChange={(e)=>onChange(e.target.value)}>

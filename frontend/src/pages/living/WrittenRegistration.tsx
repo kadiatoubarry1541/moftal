@@ -326,7 +326,7 @@ export function WrittenRegistration() {
     // Le compte n'existe que s'il est enregistré dans la base : jamais de
     // « faux » compte gardé seulement dans le téléphone si le serveur échoue.
     try {
-      const result = await api.registerLiving(completeData as any)
+      const result = await api.registerLiving(completeData)
 
       if (result.success) {
         const user = result.user || completeData
@@ -352,7 +352,7 @@ export function WrittenRegistration() {
         : null
       if (loginResult?.success) {
         // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
-        showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, data.password)
+        showCredentialsReminder(loginResult.user?.numeroH || numeroH, data.password)
         navigate('/compte')
       } else {
         alert(result.message || "L'inscription n'a pas pu être enregistrée. Réessayez.")

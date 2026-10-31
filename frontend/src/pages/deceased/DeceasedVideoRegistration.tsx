@@ -152,7 +152,7 @@ export function DeceasedVideoRegistration() {
       }
 
       // 4. Appel backend → crée le DeceasedMember en base de données
-      const result = await api.registerDeceased(completeData as any)
+      const result = await api.registerDeceased(completeData)
 
       if (result.success) {
         const numeroHD = result.deceased?.numeroHD || ''

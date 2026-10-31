@@ -4,6 +4,8 @@ import { VideoRecorder } from '../../components/VideoRecorder'
 import { FAMILLES, ETHNIES } from '../../utils/constants'
 
 interface DeceasedWrittenData {
+  prenom: string
+  genre: 'HOMME' | 'FEMME'
   numeroHPere: string
   numeroHMere: string
   continent: string
@@ -27,6 +29,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
 export function DeceasedWrittenForm() {
   const [data, setData] = useState<DeceasedWrittenData>({
+    prenom: '',
+    genre: 'HOMME',
     numeroHPere: '',
     numeroHMere: '',
     continent: 'Afrique',
@@ -100,9 +104,9 @@ export function DeceasedWrittenForm() {
       }
 
       const payload = {
-        prenom: (data as any).prenom || '',
+        prenom: data.prenom.trim(),
         nomFamille: data.famille || '',
-        genre: (data as any).genre || 'HOMME',
+        genre: data.genre,
         numeroHPere: data.numeroHPere || null,
         numeroHMere: data.numeroHMere || null,
         dateNaissance: data.dateNaissance || null,
@@ -144,6 +148,31 @@ export function DeceasedWrittenForm() {
       <div className="stack">
         <h2>Informations du défunt (enregistrement par écrit)</h2>
         <div className="card">
+          <div className="row">
+            <div className="col-6">
+              <div className="field">
+                <label>Prénom du défunt</label>
+                <input
+                  value={data.prenom}
+                  onChange={(e) => setData(prev => ({ ...prev, prenom: e.target.value }))}
+                  className={data.prenom.trim() ? 'border-green-500' : ''}
+                />
+              </div>
+            </div>
+            <div className="col-6">
+              <div className="field">
+                <label>Genre</label>
+                <select
+                  value={data.genre}
+                  onChange={(e) => setData(prev => ({ ...prev, genre: e.target.value as DeceasedWrittenData['genre'] }))}
+                >
+                  <option value="HOMME">Homme</option>
+                  <option value="FEMME">Femme</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="row">
             <div className="col-6">
               <div className="field">
@@ -374,14 +403,14 @@ export function DeceasedWrittenForm() {
             <button
               className="btn"
               onClick={() => setStep('video')}
-              disabled={!data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille}
+              disabled={!data.prenom.trim() || !data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille}
             >
               Passer à la vidéo (optionnel)
             </button>
             <button
               className="btn"
               onClick={handleSubmit}
-              disabled={submitting || !data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille || !data.relationDeclarant}
+              disabled={submitting || !data.prenom.trim() || !data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille || !data.relationDeclarant}
             >
               {submitting ? 'Enregistrement...' : 'Enregistrer sans vidéo'}
             </button>

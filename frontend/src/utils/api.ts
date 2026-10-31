@@ -25,7 +25,8 @@ export interface User {
   lieuResidence2?: string
   lieuResidence3?: string
   
-  [key: string]: any
+  /** Autres champs du formulaire d'inscription */
+  [key: string]: unknown
 }
 
 export const api = {
@@ -88,7 +89,8 @@ export const api = {
   },
 
   // Enregistrer un utilisateur défunt
-  async registerDeceased(userData: User) {
+  // NuméroH et mot de passe ne sont pas demandés : le serveur génère le NuméroHD
+  async registerDeceased(userData: Partial<User> & { nom?: string }) {
     try {
       // Ajouter un défunt exige d'être connecté (le serveur le refuse sinon)
       const jeton = localStorage.getItem('token')
