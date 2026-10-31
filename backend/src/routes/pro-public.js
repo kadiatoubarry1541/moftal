@@ -1,4 +1,5 @@
 import express from 'express';
+import { publicationsEchangeDuSite } from '../services/syncEchange.js';
 import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
 import { ajouterRoutesPhotosPubliques } from './photosSiteEtablissement.js';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
@@ -269,7 +270,9 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q(`SELECT id,nom,categorie,prix_gros,prix_detail,stock,unite,to_jsonb(supplier_products)->>'image_url' AS image_url FROM supplier_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 20`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM supplier_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
-        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products, announcements });
+        // + les publications faites depuis Échange par ce fournisseur
+        const tousProduits = [...products, ...(await publicationsEchangeDuSite(code)).map((e) => ({ id: e.id, nom: e.nom, categorie: e.categorie, prix_detail: e.prix, stock: e.stock, unite: e.unite, image_url: e.photo, description: e.description }))];
+        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products: tousProduits, announcements });
       }
 
       case 'reseau': {
@@ -292,7 +295,8 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           // Le prix d'achat reste privé : seul le prix de vente est public.
           q(`SELECT id,nom,categorie,prix_vente AS prix_detail,stock,unite,to_jsonb(retailer_products)->>'image_url' AS image_url FROM retailer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
         ]);
-        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products, announcements: [] });
+        const tousProduits = [...products, ...(await publicationsEchangeDuSite(code)).map((e) => ({ id: e.id, nom: e.nom, categorie: e.categorie, prix_detail: e.prix, stock: e.stock, unite: e.unite, image_url: e.photo, description: e.description }))];
+        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products: tousProduits, announcements: [] });
       }
 
       case 'producer': {
@@ -302,7 +306,8 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q(`SELECT id,nom,categorie,prix_unitaire AS prix_detail,stock,unite,description,to_jsonb(producer_products)->>'image_url' AS image_url FROM producer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
           q(`SELECT titre,contenu,type,created_at FROM producer_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
-        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products, announcements });
+        const tousProduits = [...products, ...(await publicationsEchangeDuSite(code)).map((e) => ({ id: e.id, nom: e.nom, categorie: e.categorie, prix_detail: e.prix, stock: e.stock, unite: e.unite, image_url: e.photo, description: e.description }))];
+        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products: tousProduits, announcements });
       }
 
       case 'beauty': {
