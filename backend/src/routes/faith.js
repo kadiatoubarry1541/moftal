@@ -4,6 +4,8 @@ import FaithContent from '../models/FaithContent.js';
 import FaithCommunity from '../models/FaithCommunity.js';
 import HolyBook from '../models/HolyBook.js';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
+import { urlDurable } from '../services/stockageDurable.js';
 
 const router = express.Router();
 
@@ -11,6 +13,71 @@ const router = express.Router();
 router.use(authenticate);
 
 // ========== CONTENU DE FOI ==========
+
+// ========== RÉFLÉCHISSONS (page /reflechissons) ==========
+// Les réflexions sont des contenus de foi marqués « reflechissons » : même table,
+// rien de nouveau à créer en base.
+const ESPACE_REFLEXIONS = 'reflechissons';
+const enReflexion = (c) => {
+  const contenu = c.content || {};
+  return {
+    id: c.id,
+    title: c.title,
+    description: c.description || '',
+    type: c.type,
+    content: { text: contenu.text, videoUrl: contenu.videoUrl, audioUrl: contenu.audioUrl, transcript: contenu.transcript },
+    religion: c.religion,
+    category: c.category,
+    isActive: c.isActive,
+    createdBy: c.createdBy,
+    createdAt: c.createdAt || c.created_at,
+    tags: Array.isArray(contenu.tags) ? contenu.tags : [],
+  };
+};
+
+// @route   GET /api/faith/reflections
+router.get('/reflections', async (req, res) => {
+  try {
+    const rows = await FaithContent.findAll({
+      where: { isActive: true, [Op.and]: [FaithContent.sequelize.literal(`content->>'espace' = '${ESPACE_REFLEXIONS}'`)] },
+      order: [['created_at', 'DESC']],
+      limit: 500,
+    });
+    res.json({ success: true, reflections: rows.map(enReflexion) });
+  } catch (error) {
+    console.error('faith/reflections GET:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/faith/reflections — l'auteur est toujours la personne connectée
+router.post('/reflections', async (req, res) => {
+  try {
+    const { title, description, type, content, category, religion, tags } = req.body || {};
+    const titre = String(title || '').trim().slice(0, 255);
+    const texte = String(content || '').trim();
+    const genre = ['message', 'video', 'audio'].includes(type) ? type : 'message';
+    if (!titre || !texte) return res.status(400).json({ success: false, message: 'Titre et contenu requis.' });
+    const contenu = { espace: ESPACE_REFLEXIONS, tags: (Array.isArray(tags) ? tags : []).map(String).map(t => t.trim()).filter(Boolean).slice(0, 20) };
+    if (genre === 'video') contenu.videoUrl = texte;
+    else if (genre === 'audio') contenu.audioUrl = texte;
+    else contenu.text = texte.slice(0, 20000);
+    const c = await FaithContent.create({
+      title: titre,
+      description: String(description || '').slice(0, 5000),
+      type: genre,
+      content: contenu,
+      category: String(category || 'reflexion').slice(0, 50),
+      religion: String(religion || req.user.religion || 'Islam').slice(0, 50),
+      createdBy: req.user.numeroH,
+    });
+    res.status(201).json({ success: true, reflection: enReflexion(c) });
+  } catch (error) {
+    console.error('faith/reflections POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 
 // @route   GET /api/faith/content
 // @desc    Récupérer le contenu de foi
@@ -54,6 +121,10 @@ router.get('/content', async (req, res) => {
 router.post('/content', async (req, res) => {
   try {
     const { title, description, type, content, category, religion } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre est obligatoire.' });
+    if (!String(type || '').trim()) return res.status(400).json({ success: false, message: 'Le type est obligatoire.' });
+    if (!String(category || '').trim()) return res.status(400).json({ success: false, message: 'La catégorie est obligatoire.' });
+    if (!String(religion || '').trim()) return res.status(400).json({ success: false, message: 'La religion est obligatoire.' });
     
     const faithContent = await FaithContent.create({
       title,
@@ -117,6 +188,8 @@ router.get('/communities', async (req, res) => {
 router.post('/communities', async (req, res) => {
   try {
     const { name, description, religion } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom de la communauté est obligatoire.' });
+    if (!String(religion || '').trim()) return res.status(400).json({ success: false, message: 'La religion est obligatoire.' });
     
     const community = await FaithCommunity.create({
       name,
@@ -225,6 +298,41 @@ router.post('/communities/:id/posts', async (req, res) => {
 // @route   GET /api/faith/books
 // @desc    Récupérer les livres saints
 // @access  Authentisé
+// Colonnes ajoutées aux livres (auteur, langue, catégorie, PDF) : créées une fois
+let colonnesLivres = null;
+const preparerLivres = () => (colonnesLivres ||= HolyBook.sequelize.query(`
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS author VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS language VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS category VARCHAR(255);
+  ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS pdf_url TEXT;
+`).catch((e) => { colonnesLivres = null; throw e; }));
+
+// @route   POST /api/faith/books — publier un livre ou un PDF (au nom de la personne connectée)
+router.post('/books', upload.single('pdf'), async (req, res) => {
+  try {
+    await preparerLivres();
+    const titre = String(req.body?.title || '').trim().slice(0, 255);
+    if (!titre) return res.status(400).json({ success: false, message: 'Le titre est obligatoire.' });
+    const categorie = String(req.body?.category || 'Islam').trim().slice(0, 100);
+    const pdfUrl = req.file ? await urlDurable(req.file, 'livres') : null;
+    const livre = await HolyBook.create({
+      title: titre,
+      description: String(req.body?.description || '').slice(0, 5000),
+      author: String(req.body?.author || '').trim().slice(0, 255) || null,
+      language: String(req.body?.language || '').trim().slice(0, 100) || null,
+      category: categorie,
+      religion: categorie,
+      pdfUrl,
+      chapters: [],
+      createdBy: req.user.numeroH,
+    });
+    res.status(201).json({ success: true, book: livre });
+  } catch (error) {
+    console.error('faith/books POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.get('/books', async (req, res) => {
   try {
     const { religion } = req.query;
@@ -234,6 +342,7 @@ router.get('/books', async (req, res) => {
       where.religion = religion;
     }
     
+    await preparerLivres();
     const books = await HolyBook.findAll({
       where,
       order: [['created_at', 'DESC']]

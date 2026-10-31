@@ -157,7 +157,8 @@ export default function LieuResidence1() {
 
       if (response.ok) {
         const data = await response.json();
-        setGroups(data.groups || []);
+        // Le serveur n'envoie pas toujours de publications : liste vide par défaut (évite un plantage)
+        setGroups((data.groups || []).map((g: Residence1Group) => ({ ...g, posts: g.posts || [] })));
       } else {
         setGroups([]);
       }

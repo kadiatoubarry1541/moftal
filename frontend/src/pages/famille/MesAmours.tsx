@@ -388,7 +388,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     maritalStatus: '',
     children: 0,
     languages: [],
-    profilePicture: '/api/placeholder/200/200',
+    profilePicture: '',
     isPublic: true
   });
 

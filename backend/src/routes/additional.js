@@ -52,7 +52,7 @@ router.get('/exchange/products', authenticateToken, async (req, res) => {
     const { level } = req.query;
     const products = await ExchangeProduct.findAll({
       where: level ? { level } : {},
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json({ products });
   } catch (error) {
@@ -75,7 +75,7 @@ router.get('/exchange/suppliers', authenticateToken, async (req, res) => {
   try {
     const suppliers = await Supplier.findAll({
       where: { isApproved: true },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json({ suppliers });
   } catch (error) {
@@ -151,7 +151,7 @@ router.get('/health/doctors', authenticateToken, async (req, res) => {
   try {
     const doctors = await Doctor.findAll({
       where: { isActive: true, isAvailable: true },
-      order: [['rating', 'DESC']]
+      order: [['name', 'ASC']] // les avis sont dans « ratings » (liste) : pas de colonne « rating »
     });
     res.json({ doctors });
   } catch (error) {
@@ -164,7 +164,7 @@ router.get('/health/products', authenticateToken, async (req, res) => {
   try {
     const products = await HealthProduct.findAll({
       where: { isActive: true },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json({ products });
   } catch (error) {
@@ -225,7 +225,7 @@ router.post('/family/tree/messages', authenticateToken, async (req, res) => {
 router.get('/etats/documents', authenticateToken, async (req, res) => {
   try {
     const documents = await Document.findAll({
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json({ documents });
   } catch (error) {
@@ -354,7 +354,7 @@ router.get('/zakat/poor-people', authenticateToken, async (req, res) => {
   try {
     const people = await PoorPerson.findAll({
       where: { isActive: true },
-      order: [['urgency', 'DESC'], ['createdAt', 'DESC']]
+      order: [['urgency', 'DESC'], ['created_at', 'DESC']]
     });
     res.json({ poorPeople: people });
   } catch (error) {

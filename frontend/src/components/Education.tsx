@@ -244,7 +244,7 @@ export function Education({ userData }: EducationProps) {
           <div className="stat-card">
             <div className="stat-icon">📊</div>
             <div className="stat-content">
-              <h4>{Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length)}%</h4>
+              <h4>{courses.length ? Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length) : 0}%</h4>
               <p>{tr("Progrès moyen")}</p>
             </div>
           </div>
@@ -373,7 +373,7 @@ export function Education({ userData }: EducationProps) {
                 <div className="overall-progress">
                   <div className="progress-circle">
                     <div className="circle-fill">
-                      {Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length)}%
+                      {courses.length ? Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length) : 0}%
                     </div>
                   </div>
                 </div>

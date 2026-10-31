@@ -189,6 +189,7 @@ router.get('/:tenantCode/orders', authenticate, verifyTenant, async (req, res) =
 router.post('/:tenantCode/orders', authenticate, verifyTenant, async (req, res) => {
   try {
     const { table_id, table_num, items, type_service, type_paiement, notes } = req.body;
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ success: false, message: 'Ajoutez au moins un plat à la commande.' });
     const code = req.params.tenantCode;
     const total = (items || []).reduce((s, i) => s + (+i.prix || 0) * (+i.quantite || 1), 0);
     await sequelize.query(

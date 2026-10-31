@@ -49,7 +49,7 @@ class Badge extends Model {
         defaultValue: true
       },
       createdBy: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(80),
         allowNull: false,
         comment: 'NumeroH de l\'admin qui a créé le badge'
       }

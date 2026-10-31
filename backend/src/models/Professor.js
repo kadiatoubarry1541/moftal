@@ -25,7 +25,7 @@ class Professor extends Model {
     const professors = await this.findAll({
       attributes: ['id', 'name', 'specialty', 'experience'],
       include: [{
-        model: ProfessorRequest,
+        model: this.sequelize.models.ProfessorRequest,
         as: 'requests',
         attributes: ['id']
       }]

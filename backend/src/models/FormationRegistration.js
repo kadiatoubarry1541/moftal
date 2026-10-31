@@ -7,7 +7,7 @@ class FormationRegistration extends Model {
     return await this.findAll({
       where: { numeroH },
       include: [{
-        model: Formation,
+        model: this.sequelize.models.Formation,
         as: 'formation'
       }],
       order: [['created_at', 'DESC']]

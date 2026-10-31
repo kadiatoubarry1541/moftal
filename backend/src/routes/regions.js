@@ -67,6 +67,7 @@ router.get('/groups', async (req, res) => {
 router.post('/groups', async (req, res) => {
   try {
     const { name, description, region } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du groupe est obligatoire.' });
     
     const group = await RegionGroup.create({
       name,

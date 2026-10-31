@@ -122,6 +122,7 @@ router.get('/:tenantCode/cotisations', authenticate, verifyTenant, async (req, r
 router.post('/:tenantCode/cotisations', authenticate, verifyTenant, async (req, res) => {
   try {
     const { membre_nom, montant, type_cot, periode } = req.body;
+    if (!(Number(montant) > 0)) return res.status(400).json({ success: false, message: 'Indiquez le montant de la cotisation.' });
     const [rows] = await sequelize.query(
       `INSERT INTO reseau_cotisations (tenant_code,membre_nom,montant,type_cot,periode,est_paye,date_paiement) VALUES(:code,:nom,:montant,:type,:periode,true,NOW()) RETURNING *`,
       { replacements: { code: req.params.tenantCode, nom: membre_nom||'Anonyme', montant: montant||0, type: type_cot||'mensuelle', periode: periode||null }, type: sequelize.QueryTypes.INSERT }

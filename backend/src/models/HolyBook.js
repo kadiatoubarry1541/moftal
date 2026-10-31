@@ -37,6 +37,10 @@ HolyBook.init({
     defaultValue: [],
     comment: 'Chapitres du livre'
   },
+  author: { type: DataTypes.STRING, allowNull: true },
+  language: { type: DataTypes.STRING, allowNull: true },
+  category: { type: DataTypes.STRING, allowNull: true },
+  pdfUrl: { type: DataTypes.TEXT, allowNull: true, field: 'pdf_url' },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true

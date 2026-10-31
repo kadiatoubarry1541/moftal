@@ -171,6 +171,8 @@ router.post('/groups', requireAdmin, async (req, res) => {
   try {
     await ensureLogoColumn();
     const { location, title, description, settings } = req.body;
+    if (!String(location || '').trim()) return res.status(400).json({ success: false, message: 'Le lieu est obligatoire.' });
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du groupe est obligatoire.' });
     const normalizedLocation = location ? normalizeLoc(location) : location;
 
     const group = await ResidenceGroup.create({

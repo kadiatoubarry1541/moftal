@@ -10,12 +10,8 @@ class UserBadge extends Model {
         autoIncrement: true
       },
       numeroH: {
-        type: DataTypes.STRING(20),
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'numero_h'
-        }
+        type: DataTypes.STRING(80),
+        allowNull: false
       },
       badgeId: {
         type: DataTypes.INTEGER,
@@ -31,7 +27,7 @@ class UserBadge extends Model {
         defaultValue: DataTypes.NOW
       },
       awardedBy: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(80),
         allowNull: false,
         comment: 'NumeroH de l\'admin qui a attribué le badge'
       },
@@ -53,7 +49,7 @@ class UserBadge extends Model {
       indexes: [
         {
           unique: true,
-          fields: ['numero_h', 'badgeId']
+          fields: ['numeroH', 'badgeId']
         }
       ]
     });

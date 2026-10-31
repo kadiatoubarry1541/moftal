@@ -38,7 +38,9 @@ const UserLogo = sequelize.define('UserLogo', {
   }
 }, {
   tableName: 'user_logos',
-  timestamps: true
+  timestamps: true,
+  // Colonnes en snake_case (is_active, logo_id…), comme la table créée au démarrage
+  underscored: true
 });
 
 // Associations

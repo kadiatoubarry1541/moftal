@@ -739,7 +739,7 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
       if (!fund) return { error: 'Aucun compte famille actif : créez d\'abord le compte de votre famille.' };
     }
     if (purpose === 'wallet_depot_pro') {
-      const pro = await ProfessionalAccount.findOne({ where: { ownerNumeroH: user?.numeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
+      const pro = await ProfessionalAccount.findOne({ where: { ownerNumeroH: user?.numeroH, status: 'approved' }, order: [['created_at', 'ASC']] });
       if (!pro) return { error: 'Aucun compte professionnel approuvé pour recevoir ce dépôt.' };
     }
     amount = montantDepot;
@@ -1133,7 +1133,7 @@ export async function handlePostPayment(payment) {
     // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
     if (payment.purpose === 'wallet_depot_pro') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
-      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
+      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' }, order: [['created_at', 'ASC']] });
       if (proAccount) {
         let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
         if (!wallet) {

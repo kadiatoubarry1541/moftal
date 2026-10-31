@@ -115,6 +115,7 @@ router.get('/groups', async (req, res) => {
 router.post('/groups', async (req, res) => {
   try {
     const { name, description, activity, pays } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du groupe est obligatoire.' });
 
     // Récupère le pays depuis : body > profil utilisateur connecté
     let groupPays = pays || '';
@@ -244,6 +245,91 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       success: false,
       message: 'Erreur serveur lors de la création du message'
     });
+  }
+});
+
+// ========== PUBLICATIONS DES GROUPES (Activités 2 et 3) ==========
+// Rangées dans group.posts (ce que les pages lisent). Les détails d'un atelier,
+// d'une collaboration, d'une exposition, d'un spectacle ou d'un projet sont
+// gardés avec leur liste d'inscrits, qui commence toujours vide.
+const DETAILS = {
+  workshop:      { cle: 'workshopDetails',      liste: 'participants', max: 'maxParticipants' },
+  collaboration: { cle: 'collaborationDetails', liste: 'participants', max: null },
+  exhibition:    { cle: 'exhibitionDetails',    liste: 'artists',      max: 'maxArtists' },
+  performance:   { cle: 'performanceDetails',   liste: 'performers',   max: 'maxPerformers' },
+  project:       { cle: 'projectDetails',       liste: 'participants', max: null },
+};
+const lireJson = (v) => { if (!v) return null; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch { return null; } };
+
+// @route   POST /api/activities/groups/:id/posts — publier dans son groupe
+router.post('/groups/:id/posts', upload.single('media'), async (req, res) => {
+  try {
+    const user = req.user;
+    const type = String(req.body?.type || 'text');
+    const content = String(req.body?.content || '').slice(0, 10000);
+    const mediaUrl = req.file ? await urlDurable(req.file, 'activites') : null;
+    if (!content.trim() && !mediaUrl && !DETAILS[type]) {
+      return res.status(400).json({ success: false, message: 'Publication vide.' });
+    }
+    const author = await User.findOne({ where: { numero_h: user.numeroH }, attributes: ['prenom', 'nomFamille'] });
+    const post = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      author: user.numeroH,
+      authorName: author ? `${author.prenom || ''} ${author.nomFamille || ''}`.trim() : user.numeroH,
+      content, type, mediaUrl, likes: [], comments: [], createdAt: new Date().toISOString(),
+    };
+    const d = DETAILS[type];
+    if (d) {
+      const details = lireJson(req.body?.[d.cle]) || {};
+      post[d.cle] = { ...details, [d.liste]: [] };
+    }
+    const resultat = await ActivityGroup.sequelize.transaction(async (transaction) => {
+      const group = await ActivityGroup.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!group) return { statut: 404, message: 'Organisation non trouvé' };
+      if (!(group.members || []).includes(user.numeroH)) return { statut: 403, message: 'Rejoignez le groupe pour publier.' };
+      await group.update({ posts: [post, ...(group.posts || [])] }, { transaction });
+      return { group };
+    });
+    if (resultat.statut) return res.status(resultat.statut).json({ success: false, message: resultat.message });
+    res.status(201).json({ success: true, post });
+  } catch (error) {
+    console.error('activities posts POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/activities/:niveau/posts/:postId/:action — s'inscrire (en son nom)
+const ACTIONS = { 'join-workshop': 'workshop', 'join-collaboration': 'collaboration', 'join-exhibition': 'exhibition', 'join-performance': 'performance', 'join-project': 'project' };
+router.post('/:niveau(activity2|activity3)/posts/:postId/:action', async (req, res) => {
+  try {
+    const type = ACTIONS[req.params.action];
+    if (!type) return res.status(404).json({ success: false, message: 'Action inconnue.' });
+    const d = DETAILS[type];
+    const moi = req.user.numeroH;
+    const activite = req.params.niveau === 'activity2' ? 'Activité2' : 'Activité3';
+    const resultat = await ActivityGroup.sequelize.transaction(async (transaction) => {
+      const groupes = await ActivityGroup.findAll({ where: { activity: activite, isActive: true }, transaction });
+      const groupe = groupes.find((g) => (g.members || []).includes(moi) && (g.posts || []).some((p) => p.id === req.params.postId));
+      if (!groupe) return { statut: 404, message: 'Publication introuvable dans vos groupes.' };
+      const g = await ActivityGroup.findByPk(groupe.id, { transaction, lock: transaction.LOCK.UPDATE });
+      const posts = (g.posts || []).map((p) => ({ ...p }));
+      const post = posts.find((p) => p.id === req.params.postId);
+      if (!post || post.type !== type || !post[d.cle]) return { statut: 400, message: 'Cette publication ne permet pas cette inscription.' };
+      const details = { ...post[d.cle] };
+      const liste = Array.isArray(details[d.liste]) ? [...details[d.liste]] : [];
+      if (liste.includes(moi)) return { statut: 200, post };
+      const max = d.max ? Number(details[d.max]) : 0;
+      if (max > 0 && liste.length >= max) return { statut: 409, message: 'Complet : plus de place disponible.' };
+      details[d.liste] = [...liste, moi];
+      post[d.cle] = details;
+      await g.update({ posts }, { transaction });
+      return { statut: 200, post };
+    });
+    if (resultat.statut !== 200) return res.status(resultat.statut).json({ success: false, message: resultat.message });
+    res.json({ success: true, post: resultat.post });
+  } catch (error) {
+    console.error('activities join POST:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

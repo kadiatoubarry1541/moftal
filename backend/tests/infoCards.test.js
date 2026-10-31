@@ -19,7 +19,17 @@ test('cartes Info Moftal', { skip: !actif && 'TEST_DB non défini (pas de base d
   const { default: router } = await import('../src/routes/infoCards.js');
   const { sequelize } = await import('../src/config/database.js');
 
-  await sequelize.query(`CREATE TABLE IF NOT EXISTS gallery_points (numero_h VARCHAR(80) PRIMARY KEY, points_disponibles INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  // Même table qu'en production (routes/quotas.js)
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS "gallery_points" (
+      "id"                 UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      "numero_h"           VARCHAR(255) NOT NULL UNIQUE,
+      "points_disponibles" INTEGER      NOT NULL DEFAULT 0 CHECK (points_disponibles >= 0),
+      "total_achete"       INTEGER      NOT NULL DEFAULT 0,
+      "expires_at"         TIMESTAMPTZ,
+      "created_at"         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      "updated_at"         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )`);
   const qui = `TEST-${Date.now()}`;
   await sequelize.query(`INSERT INTO gallery_points (numero_h, points_disponibles) VALUES (:qui, 3)`, { replacements: { qui } });
 

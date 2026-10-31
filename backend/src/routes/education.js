@@ -11,6 +11,18 @@ import User from '../models/User.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import School from '../models/School.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+
+// Liens entre formations / inscriptions et professeurs / demandes (lecture seule :
+// aucune contrainte ajoutée en base). Sans eux, « Mes formations », « Mes demandes »
+// et les statistiques échouaient.
+if (!Formation.associations.registrations) {
+  Formation.hasMany(FormationRegistration, { as: 'registrations', foreignKey: 'formationId', constraints: false });
+  FormationRegistration.belongsTo(Formation, { as: 'formation', foreignKey: 'formationId', constraints: false });
+}
+if (!Professor.associations.requests) {
+  Professor.hasMany(ProfessorRequest, { as: 'requests', foreignKey: 'professorId', constraints: false });
+  ProfessorRequest.belongsTo(Professor, { as: 'professor', foreignKey: 'professorId', constraints: false });
+}
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
@@ -89,6 +101,7 @@ router.get('/formations', async (req, res) => {
 router.post('/formations', requireAdmin, async (req, res) => {
   try {
     const { title, description, category, duration, level, requirements, curriculum, maxStudents, price } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre de la formation est obligatoire.' });
     
     const formation = await Formation.create({
       title,
@@ -401,6 +414,8 @@ router.get('/professors', async (req, res) => {
 router.post('/professors', requireAdmin, async (req, res) => {
   try {
     const { name, specialty, experience, qualifications, bio, contactInfo, hourlyRate, availability } = req.body;
+    if (!String(name || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du professeur est obligatoire.' });
+    if (!String(specialty || '').trim()) return res.status(400).json({ success: false, message: 'La spécialité est obligatoire.' });
     
     const professor = await Professor.create({
       name,
@@ -583,6 +598,7 @@ const canCreateCourse = async (req, res, next) => {
 router.post('/courses', canCreateCourse, upload.single('media'), async (req, res) => {
   try {
     const { title, description, type, duration, level, category, prerequisites } = req.body;
+    if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le titre du cours est obligatoire.' });
     
     const courseData = {
       title,
@@ -1043,14 +1059,26 @@ router.get('/my-certificates', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    const certificates = completed
-      .filter(r => (r.progress ?? 0) >= 100)
-      .map(r => ({
+    const termines = completed.filter(r => (r.progress ?? 0) >= 100);
+    // Titre et description de la formation, pour afficher un vrai certificat
+    const formations = termines.length
+      ? await Formation.findAll({ where: { id: termines.map(r => r.formationId) }, attributes: ['id', 'title', 'description'] })
+      : [];
+    const parId = new Map(formations.map(f => [String(f.id), f]));
+    const certificates = termines.map(r => {
+      const f = parId.get(String(r.formationId));
+      const date = r.completedAt || r.approvedAt || r.updatedAt;
+      return {
         id: r.id,
         formationId: r.formationId,
-        completedAt: r.completedAt || r.approvedAt || r.updatedAt,
+        title: f?.title || 'Formation terminée',
+        description: f?.description || '',
+        completedAt: date,
+        receivedDate: date,
+        issuedBy: 'Moftal',
         progress: r.progress
-      }));
+      };
+    });
 
     res.json({ success: true, certificates });
   } catch (error) {

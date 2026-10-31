@@ -32,6 +32,22 @@ interface CourseContent {
   completed: boolean;
 }
 
+// Certificat imprimable (le navigateur propose aussi « Enregistrer en PDF »)
+const echapper = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+function imprimerCertificat(cert: Certificate, nom: string) {
+  const w = window.open('', '_blank');
+  if (!w) { alert("Autorisez l'ouverture d'une nouvelle fenêtre pour télécharger le certificat."); return; }
+  const date = cert.receivedDate ? new Date(cert.receivedDate).toLocaleDateString('fr-FR') : '';
+  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Certificat — ${echapper(cert.title)}</title>
+<style>body{font-family:Georgia,serif;margin:0;padding:40px;color:#1f2937}.c{border:8px double #ca8a04;padding:48px;text-align:center;max-width:800px;margin:auto}
+h1{font-size:40px;margin:0 0 8px;color:#a16207}h2{font-size:28px;margin:24px 0}p{font-size:18px;margin:8px 0}</style></head>
+<body><div class="c"><div style="font-size:64px">🏅</div><h1>Certificat</h1><p>décerné à</p><h2>${echapper(nom || '')}</h2>
+<p>pour avoir terminé la formation</p><h2>${echapper(cert.title)}</h2>${cert.description ? `<p>${echapper(cert.description)}</p>` : ''}
+<p style="margin-top:32px">Le ${echapper(date)} — ${echapper(cert.issuedBy || 'Moftal')}</p></div>
+<script>window.onload=function(){window.print()}</script></body></html>`);
+  w.document.close();
+}
+
 interface Certificate {
   id: string;
   title: string;
@@ -41,17 +57,6 @@ interface Certificate {
   issuedBy: string;
 }
 
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  description: string;
-  coverUrl?: string;
-  category: string;
-  isbn?: string;
-  pages: number;
-  createdAt: string;
-}
 
 interface CoursePermission {
   id: string;
@@ -70,7 +75,6 @@ export default function MesCours() {
   const [audioCourses, setAudioCourses] = useState<Course[]>([]);
   const [videoCourses, setVideoCourses] = useState<Course[]>([]);
   const [ecritCourses, setEcritCourses] = useState<Course[]>([]);
-  const [books, setBooks] = useState<Book[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,7 +157,6 @@ export default function MesCours() {
         loadAudioCourses(),
         loadVideoCourses(),
         loadEcritCourses(),
-        loadBooks(),
         loadCertificates()
       ]);
     } catch (error) {
@@ -197,32 +200,10 @@ export default function MesCours() {
     setEcritCourses(courses.filter(c => c.category === 'ecrit'));
   };
 
-  const loadBooks = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/education/library`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setBooks(data.books || []);
-      } else {
-        setBooks([]); setErreurChargement(true);
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      setBooks([]); setErreurChargement(true);
-    }
-  };
-
   const loadCertificates = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/badges/user/${userData?.numeroH}`, {
+      const response = await fetch(`${API_BASE}/api/education/my-certificates`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -413,7 +394,7 @@ export default function MesCours() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadCourses(); loadBooks(); }} />
+      <ErreurChargement visible={erreurChargement} onRetry={() => { setErreurChargement(false); loadCourses(); }} />
       <button
         onClick={() => navigate('/compte')}
         className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
@@ -431,7 +412,7 @@ export default function MesCours() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-blue-600 mb-1">{courses.length}</div>
             <div className="text-sm text-blue-800">Cours disponibles</div>
@@ -441,10 +422,6 @@ export default function MesCours() {
               {courses.filter(c => c.completed).length}
             </div>
             <div className="text-sm text-green-800">Cours complétés</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600 mb-1">{books.length}</div>
-            <div className="text-sm text-purple-800">Livres en bibliothèque</div>
           </div>
           <div className="bg-orange-50 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-orange-600 mb-1">{certificates.length}</div>
@@ -492,7 +469,6 @@ export default function MesCours() {
                   if (tab.id === 'audio') loadAudioCourses();
                   if (tab.id === 'video') loadVideoCourses();
                   if (tab.id === 'ecrit') loadEcritCourses();
-                  if (tab.id === 'bibliotheque') loadBooks();
                   if (tab.id === 'certificats') loadCertificates();
                   if (tab.id === 'publier') setShowCreateForm(false);
                 }}
@@ -622,32 +598,16 @@ export default function MesCours() {
         )}
 
         {activeTab === 'bibliotheque' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {books.map((book) => (
-              <div key={book.id} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-200 border border-gray-200">
-                {book.coverUrl ? (
-                  <img src={book.coverUrl} alt={book.title} className="w-full h-48 object-cover rounded-lg mb-3" />
-                ) : (
-                  <div className="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
-                    <span className="text-6xl">📚</span>
-                  </div>
-                )}
-                <h3 className="font-semibold text-gray-900 mb-1 text-sm">{book.title}</h3>
-                <p className="text-gray-600 text-xs mb-2">Par {book.author}</p>
-                <p className="text-gray-500 text-xs">{book.pages} pages • {book.category}</p>
-                <button
-                  onClick={() => window.open('/api/education/books/' + book.id + '/read', '_blank')}
-                  className="w-full mt-3 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
-                >
-                  📖 Lire
-                </button>
-              </div>
-            ))}
-            {books.length === 0 && (
-              <div className="text-center text-gray-500 py-12 col-span-full">
-                <p>Aucun livre disponible dans la bibliothèque.</p>
-              </div>
-            )}
+          // La bibliothèque de Moftal (livres) se trouve dans Inspir
+          <div className="text-center py-12 bg-white rounded-lg shadow-md border border-gray-200">
+            <div className="text-6xl mb-4">📚</div>
+            <p className="text-gray-700 mb-4">Les livres de Moftal sont dans la Bibliothèque Inspir.</p>
+            <button
+              onClick={() => navigate('/famille/inspir')}
+              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            >
+              📖 Ouvrir la bibliothèque
+            </button>
           </div>
         )}
 
@@ -826,7 +786,7 @@ export default function MesCours() {
                   <p className="mt-2">Par {cert.issuedBy}</p>
                 </div>
                 <button
-                  onClick={() => window.open('/api/badges/certificate/' + cert.id + '/download', '_blank')}
+                  onClick={() => imprimerCertificat(cert, `${userData?.prenom || ''} ${userData?.nomFamille || ''}`.trim())}
                   className="w-full mt-4 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors duration-200"
                 >
                   📥 Télécharger
