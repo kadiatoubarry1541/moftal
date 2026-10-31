@@ -47,6 +47,7 @@ interface UserData {
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
   vitrineVideo?: string;
+  video?: string;
   /** Langues parlées, séparées par « ; » */
   languesAutre?: string;
   [key: string]: unknown;
@@ -449,7 +450,9 @@ export default function EditProfileModal({
       // 4. Construire l'utilisateur final — uniquement à partir de ce que le
       // serveur a enregistré (jamais le formulaire brut : un champ refusé ou
       // ignoré par le serveur ne doit pas paraître enregistré)
-      const base: Partial<UserData> = { ...(reference || {}), ...serverUser };
+      // Le profil d'avant (toujours présent : la fenêtre s'ouvre avec lui) complété
+      // par ce que le serveur a enregistré
+      const base: UserData = { ...reference!, ...serverUser };
       const updatedUser: UserData = {
         ...base,
         // Le formulaire lit « region » / « telephone » ; la base les nomme regionOrigine / tel1
