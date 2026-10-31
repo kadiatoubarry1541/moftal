@@ -148,9 +148,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
   // Charger un jeu
   const loadGame = async (gameId: number) => {
     try {
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {
@@ -225,9 +222,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
     if (!game || !guestNumeroH.trim()) return;
     try {
       setLoading(true);
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {
@@ -262,9 +256,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
   const joinGame = async (gameId: number) => {
     try {
       setLoading(true);
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {
@@ -356,9 +347,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       formData.append('media', file);
       formData.append('type', type);
 
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {};
@@ -517,9 +505,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
     if (!game) return;
     try {
       setLoading(true);
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {
@@ -561,9 +546,6 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
     if (!game || !rechargeAmount) return;
     try {
       setLoading(true);
-      const session = localStorage.getItem('session_user');
-      const parsed = session ? JSON.parse(session) : {};
-      const userNumeroH = parsed.numeroH || parsed.userData?.numeroH;
       const token = getToken();
 
       const headers: Record<string, string> = {
