@@ -14,13 +14,17 @@ import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
 import ParametreLangue from "../components/ParametreLangue";
+import type {
+  Achat, AvisCommerce, Montant, Client, Depense, EmployeCommerce, EtablissementCommerce, FormProduit, Fournisseur,
+  MouvementStock, ParametresCommerce, Produit, ReponseCommerce, TableauCommerce, Vente,
+} from "../types/commerce";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "suppliers" | "staff" | "avis" | "settings";
 
-function fmtMoney(n: number) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtMoney(n: Montant) { return (Number(n) || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function downloadCsv(filename: string, rows: (string | number)[][]) {
   const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -75,12 +79,12 @@ export default function GestionCommerce() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [sales, setSales] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementCommerce | null>(null);
+  const [dash, setDash] = useState<TableauCommerce | null>(null);
+  const [products, setProducts] = useState<Produit[]>([]);
+  const [sales, setSales] = useState<Vente[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [expenses, setExpenses] = useState<Depense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -88,21 +92,21 @@ export default function GestionCommerce() {
   const [showNewSale, setShowNewSale] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [editProduct, setEditProduct] = useState<any>(null);
-  const [editClient, setEditClient] = useState<any>(null);
-  const [editExpense, setEditExpense] = useState<any>(null);
-  const [movementsFor, setMovementsFor] = useState<any>(null);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [editProduct, setEditProduct] = useState<Produit | null>(null);
+  const [editClient, setEditClient] = useState<Client | null>(null);
+  const [editExpense, setEditExpense] = useState<Depense | null>(null);
+  const [movementsFor, setMovementsFor] = useState<Produit | null>(null);
+  const [movements, setMovements] = useState<MouvementStock[]>([]);
   const [myRole, setMyRole] = useState<string>("Propriétaire");
-  const [staff, setStaff] = useState<any[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [staff, setStaff] = useState<EmployeCommerce[]>([]);
+  const [reviews, setReviews] = useState<AvisCommerce[]>([]);
   const [showAddStaff, setShowAddStaff] = useState(false);
-  const [editStaff, setEditStaff] = useState<any>(null);
+  const [editStaff, setEditStaff] = useState<EmployeCommerce | null>(null);
   const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
 
-  const [pForm, setPForm] = useState<any>({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" });
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [purchases, setPurchases] = useState<any[]>([]);
+  const [pForm, setPForm] = useState<FormProduit>({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" });
+  const [suppliers, setSuppliers] = useState<Fournisseur[]>([]);
+  const [purchases, setPurchases] = useState<Achat[]>([]);
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showNewPurchase, setShowNewPurchase] = useState(false);
   const [supForm, setSupForm] = useState({ nom: "", telephone: "", adresse: "" });
@@ -113,7 +117,7 @@ export default function GestionCommerce() {
   const [eForm, setEForm] = useState({ description: "", montant: "", categorie: "Transport" });
   const [stForm, setStForm] = useState({ nom: "", telephone: "", role: "Caissier", numero_h: "" });
   const [saving, setSaving] = useState(false);
-  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsForm, setSettingsForm] = useState<ParametresCommerce>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
 
   const b = (code: string) => BASE(code);
@@ -181,7 +185,7 @@ export default function GestionCommerce() {
   }
   // Envoie au serveur et renvoie toujours une réponse lisible. En cas d'échec,
   // on prévient et le formulaire reste ouvert : rien n'est perdu en silence.
-  async function envoyer(chemin: string, method: string, body?: any): Promise<any> {
+  async function envoyer(chemin: string, method: string, body?: unknown): Promise<ReponseCommerce> {
     try {
       const r = await fetch(`${b(tenantCode!)}${chemin}`, { method, headers: auth(), ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
       return await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}).` }));
@@ -189,7 +193,7 @@ export default function GestionCommerce() {
       return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." };
     }
   }
-  function echec(d: any) { alert(d?.message || "Erreur : rien n'a été enregistré."); }
+  function echec(d: ReponseCommerce) { alert(d?.message || "Erreur : rien n'a été enregistré."); }
 
   async function saveSupplier() {
     if (!supForm.nom) return;
@@ -277,7 +281,7 @@ export default function GestionCommerce() {
     setSaving(true);
     const brut = items.reduce((s, i) => s + +i.prix_unitaire * +i.quantite, 0);
     const net = Math.max(0, brut - (+sForm.remise || 0));
-    const body: any = { ...sForm, remise: +sForm.remise || 0, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu !== "" ? +sForm.montant_recu : (sForm.est_credit ? 0 : net) };
+    const body = { ...sForm, remise: +sForm.remise || 0, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu !== "" ? +sForm.montant_recu : (sForm.est_credit ? 0 : net) };
     const d = await envoyer("/sales", "POST", body);
     setSaving(false);
     // Vente refusée ou connexion coupée : on garde le panier pour réessayer
@@ -353,7 +357,7 @@ export default function GestionCommerce() {
     if (!d.success) return echec(d);
     loadProducts();
   }
-  async function openMovements(product: any) {
+  async function openMovements(product: Produit) {
     setMovementsFor(product);
     const d = await envoyer(`/products/${product.id}/movements`, "GET");
     if (d.success) setMovements(d.movements || []);
@@ -379,11 +383,11 @@ export default function GestionCommerce() {
     if (!d.success) return echec(d);
     loadSales(); loadAll(); loadProducts();
   }
-  function printSaleReceipt(s: any) {
+  function printSaleReceipt(s: Vente) {
     imprimerRecu({
       titre: "Reçu de vente", numero: s.id, date: s.date_vente, etablissement: tenant || {}, couleur: COLOR,
       client: s.client_nom || "Client",
-      lignes: (s.items || []).map((i: any) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
+      lignes: (s.items || []).map((i) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
       remise: s.remise, total: s.total, paye: s.montant_recu, modePaiement: s.est_credit ? `${s.type_paiement} (crédit)` : s.type_paiement,
     });
   }
@@ -393,7 +397,7 @@ export default function GestionCommerce() {
     e.target.value = "";
     if (!file) return;
     normaliserLogo(file)
-      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .then(logo => setSettingsForm((f) => ({ ...f, logo_url: logo })))
       .catch(err => alert(err.message));
   };
   async function saveSettings() {
@@ -505,7 +509,7 @@ export default function GestionCommerce() {
           {dash.recentSales?.length > 0 && (
             <div style={{ background: "white", borderRadius: 12, padding: 20, marginBottom: 16, border: "1px solid #f1f5f9" }}>
               <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>Dernières ventes</div>
-              {dash.recentSales.map((s: any) => (
+              {dash.recentSales.map((s) => (
                 <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f8fafc" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{s.client_nom || "Client"}</div>
@@ -520,7 +524,7 @@ export default function GestionCommerce() {
           {dash.lowStockProducts?.length > 0 && (
             <div style={{ background: "#fff7ed", borderRadius: 12, padding: 20, border: "1px solid #fed7aa" }}>
               <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14, color: "#c2410c" }}>⚠️ Stock faible — réapprovisionnement nécessaire</div>
-              {dash.lowStockProducts.map((p: any) => (
+              {dash.lowStockProducts.map((p) => (
                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13 }}>
                   <span>{p.nom}</span>
                   <span style={{ fontWeight: 700, color: "#ef4444" }}>{p.stock} {p.unite} restant(s)</span>
@@ -559,7 +563,7 @@ export default function GestionCommerce() {
                     if (!file) return;
                     if (file.size > 2 * 1024 * 1024) { alert("Photo trop volumineuse (max 2 Mo)"); return; }
                     const reader = new FileReader();
-                    reader.onload = () => setPForm((f: any) => ({ ...f, photo_url: reader.result as string }));
+                    reader.onload = () => setPForm((f) => ({ ...f, photo_url: reader.result as string }));
                     reader.readAsDataURL(file);
                   }} />
                 </div>
@@ -574,10 +578,10 @@ export default function GestionCommerce() {
                   ["Stock minimum alerte", "stock_min"],
                   ["Unité (pièce, kg, litre…)", "unite"],
                   ["Code-barres", "code_barre"],
-                ] as [string, string][]).map(([label, key]) => (
+                ] as [string, keyof FormProduit][]).map(([label, key]) => (
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
-                    <input value={(pForm as any)[key]} onChange={e => setPForm((f: any) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                    <input value={pForm[key]} onChange={e => setPForm((f) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
                   </div>
                 ))}
               </div>
@@ -733,10 +737,10 @@ export default function GestionCommerce() {
             <div style={formBg}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau client</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse / Quartier", "adresse"]] as [string, string][]).map(([label, key]) => (
+                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse / Quartier", "adresse"]] as [string, keyof typeof cForm][]).map(([label, key]) => (
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
-                    <input value={(cForm as any)[key]} onChange={e => setCForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                    <input value={cForm[key]} onChange={e => setCForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
                   </div>
                 ))}
               </div>
@@ -751,10 +755,10 @@ export default function GestionCommerce() {
             <div style={formBg}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Modifier le client</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse / Quartier", "adresse"]] as [string, string][]).map(([label, key]) => (
+                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse / Quartier", "adresse"]] as [string, "nom" | "telephone" | "adresse"][]).map(([label, key]) => (
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
-                    <input value={editClient[key] || ""} onChange={e => setEditClient((f: any) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                    <input value={editClient[key] || ""} onChange={e => setEditClient((f) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
                   </div>
                 ))}
               </div>
@@ -767,14 +771,14 @@ export default function GestionCommerce() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {filtrer(clients, recherche).map(c => (
-              <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${c.credit_total > 0 ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${+c.credit_total > 0 ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{c.nom}</div>
                   {c.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>{c.telephone}</div>}
                   {c.adresse && <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.adresse}</div>}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {c.credit_total > 0 ? (
+                  {+c.credit_total > 0 ? (
                     <>
                       <div style={{ fontWeight: 700, color: "#ef4444" }}>Crédit : {fmtMoney(c.credit_total)}</div>
                       <button onClick={() => payCredit(c.id)} style={{ padding: "6px 12px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rembourser</button>
@@ -847,7 +851,7 @@ export default function GestionCommerce() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ fontWeight: 700, color: "#dc2626", fontSize: 15 }}>{fmtMoney(e.montant)}</div>
-                  <button onClick={() => { setEditExpense(e); setEForm({ description: e.description, montant: e.montant, categorie: e.categorie || "Transport" }); setShowAddExpense(true); }} title="Modifier" style={{ padding: "5px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => { setEditExpense(e); setEForm({ description: e.description, montant: String(e.montant), categorie: e.categorie || "Transport" }); setShowAddExpense(true); }} title="Modifier" style={{ padding: "5px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
                   <button onClick={() => deleteExpense(e.id)} title="Supprimer" style={{ padding: "5px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
                 </div>
               </div>
@@ -873,10 +877,10 @@ export default function GestionCommerce() {
             <div style={formBg}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau fournisseur</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse", "adresse"]] as [string, string][]).map(([label, key]) => (
+                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse", "adresse"]] as [string, keyof typeof supForm][]).map(([label, key]) => (
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
-                    <input value={(supForm as any)[key]} onChange={e => setSupForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                    <input value={supForm[key]} onChange={e => setSupForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
                   </div>
                 ))}
               </div>
@@ -1062,28 +1066,28 @@ export default function GestionCommerce() {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Nom</label>
-                <input style={inputStyle} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} />
+                <input style={inputStyle} value={settingsForm.name || ""} onChange={e => setSettingsForm((f) => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
                 <label style={labelStyle}>Description</label>
-                <textarea style={{ ...inputStyle, height: 70, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} />
+                <textarea style={{ ...inputStyle, height: 70, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f) => ({ ...f, description: e.target.value }))} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={labelStyle}>Téléphone</label><input style={inputStyle} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Email</label><input type="email" style={inputStyle} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Téléphone</label><input style={inputStyle} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Email</label><input type="email" style={inputStyle} value={settingsForm.email || ""} onChange={e => setSettingsForm((f) => ({ ...f, email: e.target.value }))} /></div>
               </div>
               <div>
                 <label style={labelStyle}>Adresse</label>
-                <input style={inputStyle} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} />
+                <input style={inputStyle} value={settingsForm.address || ""} onChange={e => setSettingsForm((f) => ({ ...f, address: e.target.value }))} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <label style={labelStyle}>Horaires d'ouverture</label>
-                  <input style={inputStyle} placeholder="Ex : Lun-Sam 8h-19h" value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} />
+                  <input style={inputStyle} placeholder="Ex : Lun-Sam 8h-19h" value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f) => ({ ...f, horaires: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Téléphone d'urgence</label>
-                  <input style={inputStyle} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone_urgence: e.target.value }))} />
+                  <input style={inputStyle} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f) => ({ ...f, phone_urgence: e.target.value }))} />
                 </div>
               </div>
               <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Ces informations sont affichées sur votre page vitrine publique.</p>
