@@ -1,3 +1,4 @@
+import GalerieAlbum from '../../components/GalerieAlbum'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
@@ -191,8 +192,6 @@ export default function Arbre() {
   const [sharedLoading, setSharedLoading] = useState(false)
   const [activeAlbum, setActiveAlbum] = useState('rencontre')
   const [uploading, setUploading] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [viewerMedia, setViewerMedia] = useState<GalleryItem | null>(null)
   const [galleryView, setGalleryView] = useState<'list' | 'detail'>('list')
 
   // Personnes masquées dans mon arbre (je ne les vois plus)
@@ -465,31 +464,23 @@ const enhancedUser: UserData = useMemo(() => {
     }
   }
 
-  const handleDeleteMedia = async (item: GalleryItem) => {
-    await deleteFromSharedGallery(item.id)
+  // Suppression depuis la galerie (déjà confirmée une fois pour toute la sélection)
+  const supprimerMediasGalerie = async (ids: string[]) => {
+    const token = localStorage.getItem('token')
+    const supprimes: string[] = []
+    let echec = ''
+    for (const id of ids) {
+      try {
+        const res = await fetch(`${API_BASE}/api/family/shared-gallery/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+        if (res.ok) supprimes.push(id)
+        else echec = (await res.json().catch(() => ({}))).message || 'Erreur lors de la suppression'
+      } catch { echec = 'Erreur de connexion au serveur' }
+    }
+    if (supprimes.length) setSharedItems(prev => prev.filter(item => !supprimes.includes(item.id)))
+    if (echec) alert(echec)
   }
 
-  const deleteFromSharedGallery = async (id: string) => {
-    if (!confirm('Supprimer ce média ? Cette action est irréversible.')) return
-    try {
-      setDeletingId(id)
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/api/family/shared-gallery/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        setSharedItems(prev => prev.filter(item => item.id !== id))
-      } else {
-        const data = await res.json()
-        alert(data.message || 'Erreur lors de la suppression')
-      }
-    } catch {
-      alert('Erreur de connexion au serveur')
-    } finally {
-      setDeletingId(null)
-    }
-  }
+
 
   // Sauvegarde des gérants désignés depuis l'arbre
   const sauvegarderChefs = async () => {
@@ -784,24 +775,7 @@ const enhancedUser: UserData = useMemo(() => {
             {/* ─── Filtre vivants / décédés ─── */}
             {treeInfo && (
               <div className="mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  {(['vivants', 'defunts', 'tous'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setFiltreArbre(f)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        filtreArbre === f
-                          ? f === 'vivants'   ? 'bg-emerald-600 text-white border-emerald-600'
-                          : f === 'defunts'   ? 'bg-gray-700 text-white border-gray-700'
-                          :                     'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      {f === 'vivants' ? `🌿 Vivants (${(treeInfo.members || []).length})` : f === 'defunts' ? `🕯️ Décédés (${(treeInfo.deceasedMembers || []).length})` : '📋 Tous'}
-                    </button>
-                  ))}
-                </div>
-
+                {/* Le choix Vivants / Décédés / Tous est dans le menu du bouton Zoom de l'arbre */}
                 {/* Liste membres vivants */}
                 {(filtreArbre === 'vivants' || filtreArbre === 'tous') && (treeInfo.members || []).length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
@@ -857,6 +831,15 @@ const enhancedUser: UserData = useMemo(() => {
             <ArbreGenealogique
               userData={enhancedUser}
               cercleCounts={cercleCounts}
+              filtres={treeInfo ? {
+                valeur: filtreArbre,
+                onChange: (cle) => setFiltreArbre(cle as 'vivants' | 'defunts' | 'tous'),
+                options: [
+                  { cle: 'vivants', libelle: `🌿 Vivants (${(treeInfo.members || []).length})` },
+                  { cle: 'defunts', libelle: `🕯️ Décédés (${(treeInfo.deceasedMembers || []).length})` },
+                  { cle: 'tous', libelle: '📋 Tous' },
+                ],
+              } : undefined}
               onOpenGallery={openGallery}
               treeHidden={treeHidden}
               onTreeHiddenChange={async (newList) => {
@@ -1129,7 +1112,6 @@ const enhancedUser: UserData = useMemo(() => {
                 onClick={() => {
                   setShowGallery(false)
                   setGalleryView('list')
-                  setViewerMedia(null)
                 }}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg"
               >
@@ -1204,60 +1186,23 @@ const enhancedUser: UserData = useMemo(() => {
 
               {/* Colonne droite : contenu de l'album sélectionné */}
               <div className="flex-1 overflow-y-auto bg-[#f0f2f5]">
-                {(albums[activeAlbum]?.length || 0) === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full py-20 text-gray-600">
-                    <span className="text-7xl mb-4 opacity-20">
-                      {ALBUM_CONFIG.find(c => c.key === activeAlbum)?.emoji}
-                    </span>
-                    <p className="text-sm font-medium text-gray-500">{t('heritage.gallery_empty')}</p>
-                    <p className="text-xs text-gray-600 mt-1">Appuyez sur "＋ Ajouter" pour commencer</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-0.5 p-4">
-                    {albums[activeAlbum].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="relative group overflow-hidden bg-white rounded-md shadow-sm"
-                        style={{ aspectRatio: '1' }}
-                      >
-                        {item.type === 'video' || isVideo(item.url) ? (
-                          <video
-                            src={buildMediaUrl(item.url)}
-                            className="w-full h-full object-cover cursor-pointer"
-                            muted
-                            onClick={() => setViewerMedia(item)}
-                          />
-                        ) : (
-                          <img
-                            src={buildMediaUrl(item.url)}
-                            alt=""
-                            className="w-full h-full object-cover cursor-pointer"
-                            onClick={() => setViewerMedia(item)}
-                          />
-                        )}
-
-                        {(item.type === 'video' || isVideo(item.url)) && (
-                          <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded-full pointer-events-none">
-                            ▶
-                          </div>
-                        )}
-
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all opacity-0 group-hover:opacity-100 flex items-end justify-end p-1">
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              handleDeleteMedia(item)
-                            }}
-                            disabled={deletingId === item.id}
-                            className="w-7 h-7 rounded-full bg-red-600/90 flex items-center justify-center text-white text-xs active:scale-90"
-                          >
-                            {deletingId === item.id ? '…' : '🗑️'}
-                          </button>
-                        </div>
+                {/* Galerie comme celle du téléphone : un appui ouvre, la suppression passe par « Sélectionner » */}
+                <div className="p-3">
+                  <GalerieAlbum
+                    elements={(albums[activeAlbum] || []).map((item) => ({
+                      cle: item.id, url: buildMediaUrl(item.url), video: item.type === 'video' || isVideo(item.url),
+                      auteur: item.uploaderName, supprimable: item.uploaderNumeroH === user?.numeroH,
+                    }))}
+                    onSupprimer={supprimerMediasGalerie}
+                    vide={
+                      <div className="flex flex-col items-center justify-center py-20 text-gray-600">
+                        <span className="text-7xl mb-4 opacity-20">{ALBUM_CONFIG.find(c => c.key === activeAlbum)?.emoji}</span>
+                        <p className="text-sm font-medium text-gray-500">{t('heritage.gallery_empty')}</p>
+                        <p className="text-xs text-gray-600 mt-1">Appuyez sur "＋ Ajouter" pour commencer</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    }
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -1265,31 +1210,6 @@ const enhancedUser: UserData = useMemo(() => {
       )}
 
       {/* ── MODAL APPEL WebRTC ─────────────────────────────────────────────── */}
-      {/* ── VISIONNEUSE PLEIN ÉCRAN ── */}
-      {viewerMedia && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4"
-          onClick={() => setViewerMedia(null)}
-        >
-          <button className="absolute top-4 right-4 text-white text-3xl w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20" onClick={() => setViewerMedia(null)}>✕</button>
-          {viewerMedia.type === 'video' || isVideo(viewerMedia.url) ? (
-            <video
-              src={buildMediaUrl(viewerMedia.url)}
-              controls
-              autoPlay
-              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <img
-              src={buildMediaUrl(viewerMedia.url)}
-              alt=""
-              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
-              onClick={e => e.stopPropagation()}
-            />
-          )}
-        </div>
-      )}
     </div>
   )
 }

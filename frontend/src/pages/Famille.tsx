@@ -1,3 +1,4 @@
+import GalerieAlbum from '../components/GalerieAlbum';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNumeroHForDisplay } from '../utils/auth';
@@ -131,8 +132,6 @@ export default function Famille() {
   const [activeAlbum, setActiveAlbum] = useState<AlbumKey | null>(null);
   const [uploadingAlbum, setUploadingAlbum] = useState<string | null>(null);
   const [gallerySection, setGallerySection] = useState<'photos' | 'albums'>('photos');
-  const [viewerMedia, setViewerMedia] = useState<AlbumMedia | null>(null);
-  const [deletingGalleryIdx, setDeletingGalleryIdx] = useState<number | null>(null);
 
   const [newMember, setNewMember] = useState({
     numeroH: '',
@@ -279,7 +278,6 @@ export default function Famille() {
 
   const deleteFromAlbum = async (album: AlbumKey, idx: number) => {
     try {
-      setDeletingGalleryIdx(idx);
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE}/api/family/gallery/${album}/${idx}`, {
         method: 'DELETE',
@@ -294,15 +292,12 @@ export default function Famille() {
           mariage:   raw.mariage   || [],
           deces:     raw.deces     || [],
         });
-        setViewerMedia(null);
       } else {
         alert("La suppression n'a pas pu être enregistrée. Réessayez.");
       }
     } catch (error) {
       console.error('Erreur suppression galerie:', error);
       alert("Connexion impossible : rien n'a été enregistré. Réessayez.");
-    } finally {
-      setDeletingGalleryIdx(null);
     }
   };
 
@@ -1507,7 +1502,7 @@ export default function Famille() {
                 </div>
               </div>
               <button
-                onClick={() => { setShowFamilyGallery(false); setGallerySection('photos'); setViewerMedia(null); }}
+                onClick={() => { setShowFamilyGallery(false); setGallerySection('photos'); }}
                 className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 aria-label="Fermer"
               >
@@ -1686,67 +1681,29 @@ export default function Famille() {
                             )}
                           </div>
 
-                          {/* Grille photos */}
+                          {/* Galerie comme celle du téléphone : un appui ouvre, la suppression passe par « Sélectionner » */}
                           <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
-                            {items.length === 0 ? (
-                              <div className="flex flex-col items-center justify-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-white">
-                                <span className="text-6xl mb-4 opacity-20">{cfg.emoji}</span>
-                                <p className="text-sm font-semibold text-slate-600">Cet album est vide</p>
-                                {canPublishGallery
-                                  ? <p className="text-xs text-slate-400 mt-1">Cliquez sur « Ajouter » pour partager un souvenir</p>
-                                  : <p className="text-xs text-slate-400 mt-1">Aucun contenu partagé pour le moment</p>}
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {items.map((item, idx) => (
-                                  <div
-                                    key={item.id || idx}
-                                    className="relative group aspect-square rounded-xl overflow-hidden bg-slate-200 shadow-sm ring-1 ring-slate-200/50 hover:ring-2 hover:ring-indigo-300 transition-all cursor-pointer"
-                                    onClick={() => setViewerMedia(item)}
-                                  >
-                                    {item.type === 'video' ? (
-                                      <video src={getImageUrl(item.url) || ''} className="w-full h-full object-cover" muted />
-                                    ) : (
-                                      <img src={getImageUrl(item.url) || ''} alt="" className="w-full h-full object-cover" />
-                                    )}
-
-                                    {/* Badge vidéo */}
-                                    {item.type === 'video' && (
-                                      <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-lg flex items-center gap-1 pointer-events-none">
-                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
-                                        Vidéo
-                                      </span>
-                                    )}
-
-                                    {/* Nom de l'auteur */}
-                                    {item.uploaderName && (
-                                      <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-lg truncate max-w-[75%] pointer-events-none">
-                                        {item.uploaderName}
-                                      </span>
-                                    )}
-
-                                    {/* Bouton supprimer (propriétaire uniquement) */}
-                                    {canPublishGallery && item.uploaderNumeroH === userData?.numeroH && (
-                                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end p-2">
-                                        <button
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); deleteFromAlbum(activeAlbum, idx); }}
-                                          disabled={deletingGalleryIdx === idx}
-                                          className="w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow transition-colors"
-                                          aria-label="Supprimer"
-                                        >
-                                          {deletingGalleryIdx === idx ? (
-                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                          ) : (
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                          )}
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                            <GalerieAlbum
+                              elements={items.map((item, idx) => ({
+                                cle: String(idx), url: getImageUrl(item.url) || '', video: item.type === 'video' || isVideoUrl(item.url),
+                                auteur: item.uploaderName,
+                                supprimable: canPublishGallery && item.uploaderNumeroH === userData?.numeroH,
+                              }))}
+                              onSupprimer={async (cles) => {
+                                // Par position : on retire de la fin vers le début pour ne pas décaler les suivantes
+                                const positions = cles.map(Number).sort((a, b) => b - a);
+                                for (const idx of positions) await deleteFromAlbum(activeAlbum, idx);
+                              }}
+                              vide={
+                                <div className="flex flex-col items-center justify-center py-16 rounded-2xl border-2 border-dashed border-slate-200 bg-white">
+                                  <span className="text-6xl mb-4 opacity-20">{cfg.emoji}</span>
+                                  <p className="text-sm font-semibold text-slate-600">Cet album est vide</p>
+                                  {canPublishGallery
+                                    ? <p className="text-xs text-slate-400 mt-1">Cliquez sur « Ajouter » pour partager un souvenir</p>
+                                    : <p className="text-xs text-slate-400 mt-1">Aucun contenu partagé pour le moment</p>}
+                                </div>
+                              }
+                            />
                           </div>
                         </>
                       );
@@ -1756,39 +1713,6 @@ export default function Famille() {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Visionneuse plein écran */}
-      {viewerMedia && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/95 p-4"
-          onClick={() => setViewerMedia(null)}
-        >
-          <button
-            type="button"
-            className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-            onClick={() => setViewerMedia(null)}
-            aria-label="Fermer"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-          {viewerMedia.type === 'video' || isVideoUrl(viewerMedia.url) ? (
-            <video
-              src={getImageUrl(viewerMedia.url) || ''}
-              controls
-              autoPlay
-              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <img
-              src={getImageUrl(viewerMedia.url) || ''}
-              alt=""
-              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-          )}
         </div>
       )}
 

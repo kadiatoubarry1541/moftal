@@ -37,9 +37,11 @@ interface ArbreGenealogiqueProps {
   treeHidden?: string[]
   onTreeHiddenChange?: (newList: string[]) => void
   onOpenGallery?: () => void
+  /** Filtres proposés dans le menu du bouton Zoom (ex. Vivants / Décédés / Tous) */
+  filtres?: { valeur: string; options: { cle: string; libelle: string }[]; onChange: (cle: string) => void }
 }
 
-export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery }: ArbreGenealogiqueProps) {
+export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery, filtres }: ArbreGenealogiqueProps) {
   const { t } = useI18n()
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
@@ -637,7 +639,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     )
   }
 
-  // Couleur par genre — bleu pour homme, rose pour femme (style MyHeritage)
+  // Couleur par genre — bleu pour homme, rose pour femme
   const getGenreColor = (genre?: string) =>
     genre?.toUpperCase() === 'FEMME' ? '#9333ea' : genre?.toUpperCase() === 'HOMME' ? '#1d4ed8' : '#374151'
 
@@ -711,7 +713,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const generations = [...new Set(visibleMembers.map(m => m.generation))].sort()
 
 
-  // Variables pour le rendu SVG (MyHeritage-style)
+  // Variables pour le rendu SVG de l'arbre
   const pereMember = familyMembers.find(m => m.relation === 'pere')
   const mereMember = familyMembers.find(m => m.relation === 'mere')
   // Conjoint réel confirmé prioritaire sur les champs de profil (jamais validés par l'autre personne)
@@ -994,7 +996,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         </div>
       )}
 
-      {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
+      {/* Vue arbre généalogique : couleurs par genre, dates, boutons "+" */}
 
       {/* ── Zoom : un seul bouton qui ouvre un petit menu avec les 3 réglages ── */}
       <div ref={zoomMenuRef} className="relative flex items-center justify-end mb-2.5">
@@ -1039,6 +1041,17 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               onClick={() => setZoom(0.4)}
               className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
             >🔍 Vue globale</button>
+            {filtres && (
+              <>
+                <span className="text-[11px] font-bold text-gray-400 uppercase px-1 pt-1">Afficher</span>
+                {filtres.options.map(o => (
+                  <button key={o.cle} type="button" onClick={() => { filtres.onChange(o.cle); setShowZoomMenu(false) }}
+                    className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold shadow-sm text-left ${filtres.valeur === o.cle ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 active:bg-gray-50'}`}>
+                    {filtres.valeur === o.cle ? '✓ ' : ''}{o.libelle}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1501,7 +1514,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     )}
                   </div>
 
-                  {/* ── Documents historiques (équivalent Record Matches MyHeritage) ── */}
+                  {/* ── Documents historiques ── */}
                   {selectedMember.numeroH && selectedMember.numeroH !== 'N/A' && (
                     <div className="mt-4 border-t border-gray-100 pt-4">
                       <div className="flex items-center justify-between mb-2">
