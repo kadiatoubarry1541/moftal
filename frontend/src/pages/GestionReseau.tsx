@@ -10,7 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
 import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
@@ -37,7 +37,7 @@ const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 export default function GestionReseau() {
   const { tr } = useTraduction();
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();

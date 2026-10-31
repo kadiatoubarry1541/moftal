@@ -9,12 +9,13 @@ import ParametreLangue from "../components/ParametreLangue";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
-import ModifierFiche from "../components/ModifierFiche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
 import { cheminConnexion } from "../utils/connexionRetour";
+import type { Annonce, ClientEntreprise, Contrat, Employe, EtablissementGestion, ReponseEntreprise, TableauEntreprise } from "../types/entreprise";
 
 const BASE = (code: string) => `/api/enterprise-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -36,19 +37,19 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 
 export default function GestionEntreprise() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
   useEffect(() => { setRecherche(""); }, [tab]);
-  const [tenant, setTenant] = useState<any>(null);
-  const [dash, setDash] = useState<any>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [tenant, setTenant] = useState<EtablissementGestion | null>(null);
+  const [dash, setDash] = useState<TableauEntreprise | null>(null);
+  const [employees, setEmployees] = useState<Employe[]>([]);
+  const [clients, setClients] = useState<ClientEntreprise[]>([]);
+  const [contracts, setContracts] = useState<Contrat[]>([]);
+  const [announcements, setAnnouncements] = useState<Annonce[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -91,7 +92,7 @@ export default function GestionEntreprise() {
 
   // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
   // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
-  const post = async (url: string, body: object): Promise<any> => {
+  const post = async (url: string, body: object): Promise<ReponseEntreprise> => {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
@@ -105,7 +106,7 @@ export default function GestionEntreprise() {
   const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
   const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
-  const reload = (resource: string, setter: (v: any[]) => void, key: string) => {
+  const reload = <T,>(resource: string, setter: (v: T[]) => void, key: string) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
     fetch(`${BASE(tenantCode!)}/${resource}`, { headers: h }).then(r => r.json()).then(d => d.success && setter(d[key] || []));
   };
@@ -250,7 +251,7 @@ export default function GestionEntreprise() {
                 <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Contrats récents</span>
                 <button onClick={() => setTab("contracts")} style={{ fontSize: 12, color: INDIGO, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir tous →</button>
               </div>
-              {dash.recentContracts.map((c: any) => {
+              {dash.recentContracts.map((c) => {
                 const sc = STATUT_COLORS[c.statut] || { bg: "#f1f5f9", color: "#64748b", label: c.statut };
                 return (
                   <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderBottom: "1px solid #f8fafc" }}>
@@ -315,7 +316,7 @@ export default function GestionEntreprise() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: INDIGO_BG, color: INDIGO, padding: "3px 10px", borderRadius: 6, border: `1px solid ${INDIGO_BORDER}` }}>{e.poste}</span>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/employees/${e.id}`, item: e, colonnes: ["nom", "prenom", "telephone", "numero_h", "poste", "departement"], onSaved: (it: any) => setEmployees((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/employees/${e.id}`, item: e, colonnes: ["nom", "prenom", "telephone", "numero_h", "poste", "departement"], onSaved: (it) => setEmployees((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/employees/${e.id}`))) return; setEmployees(es => es.filter(x => x.id !== e.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
@@ -357,7 +358,7 @@ export default function GestionEntreprise() {
                   {c.adresse && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {c.adresse}</div>}
                   {c.secteur && <div style={{ fontSize: 12, color: "#64748b" }}>🏭 {c.secteur}</div>}
                 </div>
-                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "secteur"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "secteur"], onSaved: (it) => setClients((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                   style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Retirer
@@ -431,7 +432,7 @@ export default function GestionEntreprise() {
                       <option value="annule">Annulé</option>
                     </select>
                     <br />
-                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/contracts/${c.id}`, item: c, colonnes: ["titre", "client_nom", "client_id", "budget", "statut", "date_debut", "date_fin", "description"], onSaved: (it: any) => setContracts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/contracts/${c.id}`, item: c, colonnes: ["titre", "client_nom", "client_id", "budget", "statut", "date_debut", "date_fin", "description"], onSaved: (it) => setContracts((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                     <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/contracts/${c.id}`))) return; setContracts(cs => cs.filter(x => x.id !== c.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
@@ -479,7 +480,7 @@ export default function GestionEntreprise() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it) => setAnnouncements((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver

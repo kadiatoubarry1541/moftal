@@ -31,22 +31,32 @@ function typeChamp(c: string): "number" | "date" | "textarea" | "text" {
   return "text";
 }
 
-export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#1a8f1a", onClose, onSaved }: {
+/** Fiche lue champ par champ (employé, client, contrat…) */
+export type Fiche = Record<string, unknown>;
+
+/** Ce qu'un écran de gestion passe à la fenêtre « Modifier » */
+export interface EditionFiche {
   titre: string;
   url: string;
-  item: Record<string, any>;
+  /** La fiche à modifier, telle qu'affichée dans la liste */
+  item: object;
   colonnes: string[];
+  /** Reçoit la fiche modifiée : ses champs d'avant, remplacés par ceux saisis */
+  onSaved: (item: Fiche) => void;
+}
+
+export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#1a8f1a", onClose, onSaved }: EditionFiche & {
   couleur?: string;
   onClose: () => void;
-  onSaved: (item: Record<string, any>) => void;
 }) {
   // Le statut se change avec son propre sélecteur (valeurs fixes) : pas ici.
   const { tr } = useTraduction();
   const champs = colonnes.filter(c => !c.endsWith("_id") && c !== "est_paye" && c !== "statut");
-  const [form, setForm] = useState<Record<string, any>>(() =>
+  const [form, setForm] = useState<Record<string, string | number>>(() =>
     Object.fromEntries(champs.map(c => {
-      const v = item[c];
-      return [c, typeChamp(c) === "date" && v ? String(v).slice(0, 10) : v ?? ""];
+      const v = (item as Fiche)[c];
+      if (typeChamp(c) === "date" && v) return [c, String(v).slice(0, 10)];
+      return [c, typeof v === "number" ? v : String(v ?? "")];
     })));
   const [saving, setSaving] = useState(false);
 

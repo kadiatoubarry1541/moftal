@@ -10,7 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
 import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
@@ -29,7 +29,7 @@ const VIOLET_BORDER = "#ede9fe";
 
 export default function GestionImam() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();

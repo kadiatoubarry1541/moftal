@@ -10,7 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import RenseignementsEtablissement from "../components/RenseignementsEtablissement";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
-import ModifierFiche from "../components/ModifierFiche";
+import ModifierFiche, { type EditionFiche } from "../components/ModifierFiche";
 import BarreRecherche from "../components/BarreRecherche";
 import { filtrer } from "../utils/filtrer";
 import { BoutonRapport } from "../components/RapportMois";
@@ -36,7 +36,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 
 export default function GestionFournisseur() {
   const [recherche, setRecherche] = useState("");
-  const [edition, setEdition] = useState<any>(null);
+  const [edition, setEdition] = useState<EditionFiche | null>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -320,7 +320,7 @@ export default function GestionFournisseur() {
                       <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#156315" : "#be123c" }}>{p.stock}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.unite || "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
-                        <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/products/${p.id}`, item: p, colonnes: ["nom", "categorie", "prix_gros", "prix_detail", "stock", "unite"], onSaved: (it: any) => setProducts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                        <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/products/${p.id}`, item: p, colonnes: ["nom", "categorie", "prix_gros", "prix_detail", "stock", "unite"], onSaved: (it) => setProducts((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                         <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/products/${p.id}`))) return; setProducts(ps => ps.filter(x => x.id !== p.id)); }}
                           style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                           Retirer
@@ -371,7 +371,7 @@ export default function GestionFournisseur() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: CYAN_BG, color: CYAN, padding: "3px 10px", borderRadius: 6, border: `1px solid ${CYAN_BORDER}` }}>{c.type_client}</span>
-                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_client"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_client"], onSaved: (it) => setClients((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
@@ -437,7 +437,7 @@ export default function GestionFournisseur() {
                       <option value="annulee">Annulée</option>
                     </select>
                     <br />
-                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/orders/${o.id}`, item: o, colonnes: ["client_nom", "client_id", "montant_total", "statut", "date_commande", "notes"], onSaved: (it: any) => setOrders((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/orders/${o.id}`, item: o, colonnes: ["client_nom", "client_id", "montant_total", "statut", "date_commande", "notes"], onSaved: (it) => setOrders((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                     <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/orders/${o.id}`))) return; setOrders(os => os.filter(x => x.id !== o.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
@@ -485,7 +485,7 @@ export default function GestionFournisseur() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it) => setAnnouncements((xs) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
