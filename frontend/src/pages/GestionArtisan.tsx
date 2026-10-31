@@ -129,7 +129,7 @@ export default function GestionArtisan() {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
       if (!r.ok && d.success !== false) return { ...d, success: false };
       return d;

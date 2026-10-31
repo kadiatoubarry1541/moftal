@@ -423,7 +423,7 @@ export default function Pays() {
       });
       
       // Serveur injoignable : on le dit (jamais de faux groupe)
-      const data = response.ok ? await response.json().catch(() => null) : null;
+      const data = response.ok ? await response.json().catch((): null => null) : null;
       if (!data) { setRegionGroups([]); setErreurChargement(true); return; }
       const groups: RegionGroup[] = data.groups || [];
       
@@ -643,7 +643,7 @@ export default function Pays() {
       });
       
       // Serveur injoignable : on le dit (jamais de faux groupe)
-      const data = response.ok ? await response.json().catch(() => null) : null;
+      const data = response.ok ? await response.json().catch((): null => null) : null;
       if (!data) { setResidenceGroups([]); setErreurChargement(true); return; }
       const groups: ResidenceGroup[] = data.groups || [];
       

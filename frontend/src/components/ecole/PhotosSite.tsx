@@ -58,7 +58,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite, eco
   };
 
   const modifier = async (p: PhotoSite, champs: Partial<{ legende: string; categorie: string; couverture: boolean }>) => {
-    const r = await fetch(`${base}/${p.id}`, { method: "PUT", headers: jeton(), body: JSON.stringify(champs) }).catch(() => null);
+    const r = await fetch(`${base}/${p.id}`, { method: "PUT", headers: jeton(), body: JSON.stringify(champs) }).catch((): null => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (!r?.ok || !d.success) setErreur(d.message || "Modification non enregistrée.");
     charger();
@@ -66,7 +66,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite, eco
 
   const supprimer = async (p: PhotoSite) => {
     if (!confirm(tr("Retirer cette photo du site ?"))) return;
-    const r = await fetch(`${base}/${p.id}`, { method: "DELETE", headers: jeton() }).catch(() => null);
+    const r = await fetch(`${base}/${p.id}`, { method: "DELETE", headers: jeton() }).catch((): null => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (!r?.ok || !d.success) setErreur(d.message || "Suppression impossible.");
     charger();

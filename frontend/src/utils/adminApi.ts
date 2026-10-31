@@ -125,7 +125,7 @@ export const getUserByNumeroH = async (numeroH: string) => {
 };
 
 // Update a user
-export const updateUser = async (numeroH: string, updates: any) => {
+export const updateUser = async (numeroH: string, updates: Record<string, unknown>) => {
   return authenticatedFetch(`/api/admin/users/${encodeURIComponent(numeroH)}`, {
     method: 'PUT',
     body: JSON.stringify(updates),
@@ -199,7 +199,18 @@ export const getMySectors = async (): Promise<{ success: boolean; sectors: Secto
 };
 
 /** Liste des admins de page (nécessite admin). */
-export const getPageAdmins = async (): Promise<{ success: boolean; pageAdmins: any[] }> => {
+/** Responsable d'une page de secteur */
+export interface ResponsablePage {
+  id: number;
+  pageName?: string;
+  page_name?: string;
+  pagePath?: string;
+  page_path?: string;
+  isActive?: boolean;
+  admin?: { numeroH?: string; prenom?: string; nomFamille?: string; photo?: string | null };
+}
+
+export const getPageAdmins = async (): Promise<{ success: boolean; pageAdmins: ResponsablePage[] }> => {
   return authenticatedFetch('/api/page-admins');
 };
 

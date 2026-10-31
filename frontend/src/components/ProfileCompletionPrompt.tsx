@@ -28,7 +28,7 @@ function installGuard() {
     const response = await originalFetch(...args);
     if (response.status === 403) {
       response.clone().json()
-        .then((d) => { if (d?.code === "PROFILE_INCOMPLETE") listeners.forEach((l) => l(d.message)); })
+        .then((d: { code?: string; message?: string }) => { if (d?.code === "PROFILE_INCOMPLETE") listeners.forEach((l) => l(d.message)); })
         .catch(() => {});
     }
     return response;

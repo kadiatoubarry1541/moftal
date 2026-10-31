@@ -9,7 +9,17 @@ const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
 })
 
-async function call<T = any>(path: string, init?: RequestInit): Promise<T> {
+// Réponse du serveur : chaque route remplit la clé qui la concerne
+interface ReponseInvitations {
+  success?: boolean
+  message?: string
+  invitation?: Invitation
+  received?: Invitation[]
+  sent?: Invitation[]
+  notifications?: InvitationNotification[]
+}
+
+async function call<T = ReponseInvitations>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${config.API_BASE_URL}/family-data${path}`, { ...init, headers: authHeaders() })
   const data = await res.json().catch(() => ({}))
   if (!res.ok || !data.success) throw new Error(data.message || "L'enregistrement a échoué. Réessayez.")

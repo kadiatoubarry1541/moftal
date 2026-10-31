@@ -185,7 +185,7 @@ export default function WorldMap({
 
       if (cancelled) return;
 
-      function FlyToPosition({ position }: { position: MapPosition | null }) {
+      function FlyToPosition({ position }: { position: MapPosition | null }): null {
         const map = useMap();
         useEffect(() => {
           if (position) map.flyTo([position.lat, position.lng], 16, { duration: 1.5 });
@@ -194,7 +194,7 @@ export default function WorldMap({
         return null;
       }
 
-      function FlyToSearch({ result }: { result: SearchResult | null }) {
+      function FlyToSearch({ result }: { result: SearchResult | null }): null {
         const map = useMap();
         useEffect(() => {
           if (result) map.flyTo([result.lat, result.lng], 17, { duration: 1.5 });
@@ -203,7 +203,7 @@ export default function WorldMap({
         return null;
       }
 
-      function ResetWorldView({ trigger }: { trigger: number }) {
+      function ResetWorldView({ trigger }: { trigger: number }): null {
         const map = useMap();
         useEffect(() => {
           if (trigger > 0) map.flyTo([20, 0], 2, { duration: 1 });
@@ -211,7 +211,7 @@ export default function WorldMap({
         return null;
       }
 
-      function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+      function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }): null {
         useMapEvents({
           click(e) {
             onMapClick?.(e.latlng.lat, e.latlng.lng);

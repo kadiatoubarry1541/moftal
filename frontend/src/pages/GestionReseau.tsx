@@ -108,7 +108,7 @@ export default function GestionReseau() {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       return d || { success: false, message: tr("Erreur de connexion : rien n'a été enregistré.") };
     } catch {
       return { success: false, message: tr("Erreur de connexion : rien n'a été enregistré.") };

@@ -61,7 +61,7 @@ export async function synchroniserIconeApp(tenantCode: string, nom?: string, log
   enCours.add(cle);
   try {
     const base = `${config.API_BASE_URL}/professionals/tenant-icon-png/${encodeURIComponent(tenantCode)}`;
-    const actuelle = await fetch(`${base}/source`).then(r => r.json()).catch(() => null);
+    const actuelle = await fetch(`${base}/source`).then(r => r.json()).catch((): null => null);
     if (actuelle?.source === source) return;
     const png = await dessinerIcone(nom || "", logoUrl, couleur || "#1a8f1a");
     await fetch(base, {

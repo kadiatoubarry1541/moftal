@@ -122,7 +122,7 @@ export default function GestionRestaurant() {
     setSaving(true);
     try {
       const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      const d = await r.json().catch(() => null);
+      const d = await r.json().catch((): null => null);
       if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
       if (!r.ok && d.success !== false) return { ...d, success: false };
       return d;
@@ -420,7 +420,7 @@ export default function GestionRestaurant() {
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf0" : "#f1f5f9", color: d.disponible ? "#1a8f1a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}
-                          onClick={async () => { const r = await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }).catch(() => null); if (!r?.ok) return; const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
+                          onClick={async () => { const r = await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }).catch((): null => null); if (!r?.ok) return; const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
                           {d.disponible ? "✓ Disponible" : "Indisponible"}
                         </span>
                         <button onClick={async () => { if (await envoyerGestion(`${BASE(tenantCode!)}/dishes/${d.id}`, { method: "DELETE", headers: auth() })) setDishes(ds => ds.filter(x => x.id !== d.id)); }}
@@ -467,7 +467,7 @@ export default function GestionRestaurant() {
                     <div style={{ fontSize: 28, marginBottom: 4 }}>🪑</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>Table {t.numero}</div>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{t.zone} · {t.capacite} pers.</div>
-                    <select value={t.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }).catch(() => null); reloadTables(); }}
+                    <select value={t.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }).catch((): null => null); reloadTables(); }}
                       style={{ fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color, border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", width: "100%" }}>
                       {Object.entries(TABLE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
@@ -568,7 +568,7 @@ export default function GestionRestaurant() {
                           lignes: items.map((i) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
                           total: o.total, modePaiement: o.type_paiement,
                         })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
-                        <select value={o.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch(() => null); reloadOrders(); reloadTables(); reloadDash(); }}
+                        <select value={o.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch((): null => null); reloadOrders(); reloadTables(); reloadDash(); }}
                           style={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
                           {Object.entries(ORDER_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>

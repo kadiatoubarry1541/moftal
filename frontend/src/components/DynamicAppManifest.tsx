@@ -22,7 +22,7 @@ export default function DynamicAppManifest({
   startUrl,
   themeColor = "#0f4b0f",
   backgroundColor = "#ffffff",
-}: DynamicAppManifestProps) {
+}: DynamicAppManifestProps): null {
   useEffect(() => {
     const link = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
     if (!link) return;

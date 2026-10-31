@@ -290,8 +290,8 @@ export function WrittenRegistration() {
 
     // Les fichiers activitePreuve/activiteDoc sont volumineux et facultatifs
     // → on ne les envoie pas lors de l'inscription pour ne pas alourdir le payload
-    const activitePreuveBase64 = null
-    const activiteDocBase64 = null
+    const activitePreuveBase64: string | null = null
+    const activiteDocBase64: string | null = null
 
     // Upload photo vers ImageKit
     let photoUrl = normalizedForm.photoPreview || null
@@ -348,7 +348,7 @@ export function WrittenRegistration() {
       // → on essaie de connecter la personne avec ce qu'elle vient de saisir.
       const identifiant = data.email?.trim() || data.telephone?.trim() || ''
       const loginResult = identifiant
-        ? await api.login(identifiant, data.password).catch(() => null)
+        ? await api.login(identifiant, data.password).catch((): null => null)
         : null
       if (loginResult?.success) {
         // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)

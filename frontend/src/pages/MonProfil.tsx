@@ -39,6 +39,8 @@ interface UserLogo {
 
 interface EtablissementMembre {
   id?: number | string;
+  /** Compte professionnel de l'établissement */
+  professional_account_id?: string;
   name?: string | null;
   photo?: string | null;
   role?: string | null;
@@ -157,7 +159,7 @@ export default function MonProfil() {
     }
   };
 
-  const quitterEtablissement = async (membership) => {
+  const quitterEtablissement = async (membership: EtablissementMembre) => {
     if (!window.confirm(`${t('toast.leave_confirm')} "${membership.name}" ?`)) return;
     try {
       const token = localStorage.getItem("token");

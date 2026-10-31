@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import toast from "react-hot-toast";
 
-export default function PWAUpdatePrompt() {
+export default function PWAUpdatePrompt(): null {
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,

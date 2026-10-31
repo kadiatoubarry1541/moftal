@@ -366,8 +366,8 @@ export function VideoRegistration() {
       specialite: normalizedData.specialite?.trim() || '',
       photo: photoUrl,
       photoPreview: photoUrl,
-      activitePreuve: null,
-      activiteDoc: null,
+      activitePreuve: null as string | null,
+      activiteDoc: null as string | null,
       lieu1: normalizedData.quartier?.trim() || normalizedData.lieu1 || '',
       video: videoUrl,
     }
@@ -402,7 +402,7 @@ export function VideoRegistration() {
         // connecté automatiquement au lieu de voir un message de rejet.
         const identifiant = normalizedData.email?.trim() || normalizedData.telephone?.trim() || ''
         const loginResult = identifiant
-          ? await api.login(identifiant, normalizedData.password).catch(() => null)
+          ? await api.login(identifiant, normalizedData.password).catch((): null => null)
           : null
 
         if (loginResult?.success) {

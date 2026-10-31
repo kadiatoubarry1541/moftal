@@ -353,13 +353,13 @@ export function FloatingMessenger() {
       const residenceLocs = quartierCodes.length > 0 ? quartierCodes.map(normalizeLoc) : (admin ? [''] : [])
 
       const [friendsRes, wivesRes, partnerRes, childrenRes, parentsRes, ...residenceResList] = await Promise.all([
-        fetch(`${API_BASE}/api/friends/list`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/couple/my-wives`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/parent-child/my-children`, { headers }).then(r => r.json()).catch(() => null),
-        fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/friends/list`, { headers }).then(r => r.json()).catch((): null => null),
+        fetch(`${API_BASE}/api/couple/my-wives`, { headers }).then(r => r.json()).catch((): null => null),
+        fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch((): null => null),
+        fetch(`${API_BASE}/api/parent-child/my-children`, { headers }).then(r => r.json()).catch((): null => null),
+        fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch((): null => null),
         ...residenceLocs.map(loc =>
-          fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(loc)}`, { headers }).then(r => r.json()).catch(() => null)
+          fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(loc)}`, { headers }).then(r => r.json()).catch((): null => null)
         ),
       ])
 
@@ -368,14 +368,14 @@ export function FloatingMessenger() {
       const activityResList = await Promise.all(activityNames.map(async (name) => {
         const paysParam = userPays ? `&pays=${encodeURIComponent(userPays)}` : ''
         const data = await fetch(`${API_BASE}/api/activities/groups?activity=${encodeURIComponent(name)}${paysParam}`, { headers })
-          .then(r => r.json()).catch(() => null)
+          .then(r => r.json()).catch((): null => null)
         let group: RawActivityGroup | null = data?.success ? ((data.groups || []).find((g: RawActivityGroup) => (g.pays || '') === userPays) || data.groups?.[0] || null) : null
         if (!group) {
           group = await fetch(`${API_BASE}/api/activities/groups`, {
             method: 'POST',
             headers: { ...headers, 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: `${name}${userPays ? ` — ${userPays}` : ''}`, activity: name, pays: userPays, createdBy: myNumeroH }),
-          }).then(r => r.json()).then(d => d?.group || null).catch(() => null)
+          }).then(r => r.json()).then(d => d?.group || null).catch((): null => null)
         }
         return group ? { name, group } : null
       }))
@@ -483,7 +483,7 @@ export function FloatingMessenger() {
         CONTACT_ENDPOINTS.map(endpoint =>
           fetch(`${API_BASE}/api/friends/${endpoint}`, {
             headers: { Authorization: `Bearer ${token}` },
-          }).then(res => res.json()).catch(() => null)
+          }).then(res => res.json()).catch((): null => null)
         )
       )
       const byNumeroH = new Map<string, Contact>()

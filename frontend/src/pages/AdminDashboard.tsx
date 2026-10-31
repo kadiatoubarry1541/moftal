@@ -13,6 +13,7 @@ import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
 import type { UserData } from "../utils/auth";
+import type { ResponsablePage } from "../utils/adminApi";
 
 interface ProfessionalAccount {
   id: string;
@@ -48,16 +49,6 @@ interface ProfessionalAccount {
 }
 
 
-/** Responsable d'une page de secteur (/api/page-admins) */
-interface ResponsablePage {
-  id: number;
-  pageName?: string;
-  page_name?: string;
-  pagePath?: string;
-  page_path?: string;
-  isActive?: boolean;
-  admin?: { numeroH?: string; prenom?: string; nomFamille?: string; photo?: string | null };
-}
 
 /** Publication d'une vitrine pro, avec son professionnel (/api/pro-vitrine/admin/all) */
 interface PublicationAdmin {
