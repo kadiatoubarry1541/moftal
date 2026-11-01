@@ -16,7 +16,7 @@ import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
-import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAncienAdmin } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion } from '../services/comptesProvisoires.js';
@@ -994,6 +994,10 @@ router.post('/forgot-password/verify-code', [
       return res.status(400).json({ success: false, message: `Code incorrect. Vérifiez le code reçu par email (${5 - essais} essai(s) restant(s)).` });
     }
     essaisCode.set(payload.jti, { n: 99, t: Date.now() }); // un code ne sert qu'une fois
+    // Compte de consultation (ancien administrateur) : son mot de passe ne se change pas
+    if (estAncienAdmin(payload.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Ce compte est un compte de consultation : il ne peut pas être modifié.' });
+    }
     const user = await User.findByNumeroH(payload.numeroH);
     if (!user) {
       return res.status(400).json({ success: false, message: 'Compte introuvable.' });
@@ -1033,6 +1037,9 @@ router.post('/forgot-password/reset', [
     }
     if (payload.purpose !== 'forgot_password' || !payload.numeroH) {
       return res.status(400).json({ success: false, message: 'Token invalide.' });
+    }
+    if (estAncienAdmin(payload.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Ce compte est un compte de consultation : il ne peut pas être modifié.' });
     }
 
     const user = await User.findByNumeroH(payload.numeroH);
