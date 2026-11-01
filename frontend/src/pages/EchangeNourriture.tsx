@@ -110,7 +110,8 @@ export default function EchangeNourriture() {
         const canPublishHere = !!(data.isAdmin || data.approvedSectors?.includes('nourriture'));
         setCanPublish(canPublishHere);
         if (data.accountName) setVendorName(data.accountName);
-        if (data.pendingSectors?.includes('nourriture')) setHasPendingRequest(true);
+        // Commerçant dont le compte attend l'approbation : même message (pas de nouveau compte à créer)
+        if (data.pendingSectors?.includes('nourriture') || data.compteCommercant === 'en_attente') setHasPendingRequest(true);
       }
     } catch {
       setCanPublish(false);

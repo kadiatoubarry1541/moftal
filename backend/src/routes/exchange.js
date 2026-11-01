@@ -139,7 +139,7 @@ router.get('/vendor-status', async (req, res) => {
     if (!userNumeroH) return res.json({ success: true, isVendor: false, approvedSectors: [], pendingSectors: [] });
 
     if (isGlobalAdmin(req.user)) {
-      return res.json({ success: true, isVendor: true, isAdmin: true, approvedSectors: ['primaire', 'secondaire', 'tertiaire', 'quaternaire'], pendingSectors: [] });
+      return res.json({ success: true, isVendor: true, isAdmin: true, approvedSectors: SECTEURS_ECHANGE, pendingSectors: [] });
     }
 
     const accounts = await sequelize.query(
@@ -167,6 +167,20 @@ router.get('/vendor-status', async (req, res) => {
     }
     const approvedSectors = approvedAccounts.map(a => a.subSector);
 
+    // Commerçant qui a DÉJÀ son compte mais ne peut pas encore publier : on lui dit
+    // pourquoi (en attente d'approbation, ou abonnement à renouveler) au lieu de lui
+    // proposer de créer un compte vendeur.
+    let compteCommercant = null;
+    if (!commercant) {
+      const comptes = await sequelize.query(
+        `SELECT status, subscription_status FROM professional_accounts
+          WHERE owner_numero_h=:n AND type IN (:types) AND status IN ('approved','pending')`,
+        { replacements: { n: userNumeroH, types: TYPES_COMMERCANTS }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (comptes.some(c => c.status === 'approved')) compteCommercant = 'abonnement';
+      else if (comptes.some(c => c.status === 'pending')) compteCommercant = 'en_attente';
+    }
+
     return res.json({
       success: true,
       isVendor: approvedSectors.length > 0,
@@ -174,6 +188,7 @@ router.get('/vendor-status', async (req, res) => {
       approvedAccounts,
       pendingSectors,
       accountName,
+      compteCommercant,
     });
   } catch (e) {
     console.error('vendor-status error:', e);

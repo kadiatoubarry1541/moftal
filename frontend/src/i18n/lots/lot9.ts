@@ -26,5 +26,8 @@ const lot: Lot = {
   "Ajoutez d'abord vos professeurs dans Personnel.": ["First add your teachers in Staff.", "أضف معلميك أولًا في قسم الموظفين.", "I ka karamɔgɔw fara Baarakɛlaw la fɔlɔ.", "Ɓeydu jannginooɓe maa e Golloɓe adii."],
   "Nom du parent (facultatif)": ["Parent's name (optional)", "اسم وليّ الأمر (اختياري)", "Bangebaga tɔgɔ (n'i b'a fɛ)", "Innde jibinɗo (so a yiɗii)"],
   "Ex : Mariama Diallo": ["E.g. Mariama Diallo", "مثال: Mariama Diallo", "Misali : Mariama Diallo", "Misal : Mariama Diallo"],
+  "⏳ Compte en attente d'approbation": ["⏳ Account awaiting approval", "⏳ الحساب في انتظار الموافقة", "⏳ Jatɔ bɛ makɔnɔni na", "⏳ Konte ina habba jaɓeede"],
+  "Votre compte commerçant est en attente d'approbation : dès qu'il est approuvé, le bouton Publier apparaît ici.": ["Your merchant account is awaiting approval: as soon as it is approved, the Publish button appears here.", "حساب التاجر الخاص بك في انتظار الموافقة: بمجرد الموافقة يظهر زر النشر هنا.", "I ka jagokɛla jatɔ bɛ makɔnɔni na : n'a sɔnna, « A jira » butɔn bɛ bɔ yan.", "Konte njulaagu maa ina habba jaɓeede : so jaɓaama, butoŋ « Bayyin » ina feeña ɗoo."],
+  "🔄 Renouveler mon abonnement pour publier": ["🔄 Renew my subscription to publish", "🔄 تجديد اشتراكي للنشر", "🔄 N ka abonɛmanw kura walasa ka jira", "🔄 Hesɗitin abonemaa am ngam bayyinde"],
 };
 export default lot;

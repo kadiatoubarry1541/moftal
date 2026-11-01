@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { useTraduction } from "../i18n/traduction";
@@ -73,6 +73,39 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
       setLoading(false);
     }
   };
+
+  // Commerçant qui a déjà son compte : jamais « Devenir vendeur » ; on lui dit
+  // simplement ce qui manque (approbation en cours, ou abonnement à renouveler).
+  const [compteCommercant, setCompteCommercant] = useState<'en_attente' | 'abonnement' | null>(null);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let fini = false;
+    fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (!fini && d?.success && d.compteCommercant) setCompteCommercant(d.compteCommercant); })
+      .catch(() => {});
+    return () => { fini = true; };
+  }, []);
+
+  if (compteCommercant === 'en_attente') {
+    return (
+      <span className={className || 'flex items-center gap-1.5 px-3 py-2 bg-amber-100 text-amber-800 text-sm font-semibold rounded-xl'}
+        style={className ? { background: '#fef3c7', color: '#92400e' } : undefined}
+        title={tr("Votre compte commerçant est en attente d'approbation : dès qu'il est approuvé, le bouton Publier apparaît ici.")}>
+        {tr('⏳ Compte en attente d\'approbation')}
+      </span>
+    );
+  }
+  if (compteCommercant === 'abonnement') {
+    return (
+      <button type="button" onClick={() => navigate('/mes-comptes-pro')}
+        className={className || 'flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-colors'}
+        style={className ? { background: '#f59e0b' } : undefined}>
+        {tr('🔄 Renouveler mon abonnement pour publier')}
+      </button>
+    );
+  }
 
   return (
     <>
