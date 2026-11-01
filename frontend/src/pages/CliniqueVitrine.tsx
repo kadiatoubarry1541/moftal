@@ -387,15 +387,18 @@ export default function CliniqueVitrine() {
           <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Pourquoi nous choisir ?")}</h2>
           <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Nous combinons expertise médicale et technologie pour vous offrir les meilleurs soins.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
-            {[
-              { icon: "🏆", title: "Expertise reconnue", desc: "Des médecins diplômés et expérimentés dans leurs domaines respectifs." },
-              { icon: "⚡", title: "Prise en charge rapide", desc: "Des rendez-vous optimisés pour minimiser votre temps d'attente." },
-              { icon: "🔒", title: "Confidentialité totale", desc: "Vos données médicales sont protégées et strictement confidentielles." },
-            ].map((item, i) => (
+            {(Array.isArray(clinic?.valeurs) && clinic.valeurs.length
+              // Les valeurs écrites par la clinique (gestion → Mon site → Nos valeurs)
+              ? clinic.valeurs.map((v, i) => ({ icon: ["⭐", "⚡", "🔒"][i] || "⭐", title: v.titre, desc: v.texte, propre: true }))
+              : [
+                { icon: "🏆", title: "Expertise reconnue", desc: "Des médecins diplômés et expérimentés dans leurs domaines respectifs.", propre: false },
+                { icon: "⚡", title: "Prise en charge rapide", desc: "Des rendez-vous optimisés pour minimiser votre temps d'attente.", propre: false },
+                { icon: "🔒", title: "Confidentialité totale", desc: "Vos données médicales sont protégées et strictement confidentielles.", propre: false },
+              ]).map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{tr(item.title)}</h3>
-                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{item.propre ? item.title : tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{item.propre ? item.desc : tr(item.desc)}</p>
               </div>
             ))}
           </div>
