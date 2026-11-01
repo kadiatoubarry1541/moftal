@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ouvrirDocument } from "../utils/documentImprimable";
 import AccesEmployes from "./AccesEmployes";
 import { useTraduction } from "../i18n/traduction";
 
@@ -75,8 +76,6 @@ export default function RapportMois({ base, etablissement, couleur = "#1a8f1a", 
 
   const imprimer = () => {
     if (!r) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
     // Impression dans la langue choisie (arabe : document de droite à gauche)
     const g = (n: number) => gnf(n, locale);
     const nm = (m: string) => nomMois(m, locale);
@@ -84,7 +83,7 @@ export default function RapportMois({ base, etablissement, couleur = "#1a8f1a", 
     const lignes = (t: Ligne[]) => t.map(l => `<tr><td>${tr(l.label)}</td><td class="c">${l.n}</td><td class="r">${g(l.total)}</td></tr>`).join("");
     const entete = `<tr><th>${tr("Source")}</th><th class="c">${tr("Nombre")}</th><th class="r">${tr("Montant")}</th></tr>`;
     const logo = etablissement?.logo_url ? `<img src="${/^(data:|https?:)/.test(etablissement.logo_url) ? etablissement.logo_url : window.location.origin + etablissement.logo_url}" style="width:60px;height:60px;object-fit:contain">` : "";
-    w.document.write(`<!doctype html><html lang="${isAr ? "ar" : "fr"}" dir="${isAr ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${tr("Rapport {mois}", { mois: nm(r.mois) })}</title><style>
+    ouvrirDocument(`<!doctype html><html lang="${isAr ? "ar" : "fr"}" dir="${isAr ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${tr("Rapport {mois}", { mois: nm(r.mois) })}</title><style>
       body{font-family:'Segoe UI',Arial,sans-serif;padding:28px;color:#0f172a;max-width:720px;margin:auto}
       .h{display:flex;gap:14px;align-items:center;border-bottom:3px solid ${couleur};padding-bottom:14px;margin-bottom:18px}
       h1{font-size:20px;margin:0}h2{font-size:15px;color:${couleur};margin:18px 0 6px}
@@ -98,8 +97,7 @@ export default function RapportMois({ base, etablissement, couleur = "#1a8f1a", 
       <tr><td class="t">${tr("Total dépenses")}</td><td></td><td class="r t">${g(r.totalDepenses)}</td></tr></table>` : ""}
       <h2>${tr("Résultat")}</h2><table><tr><td class="t">${r.benefice >= 0 ? tr("Bénéfice") : tr("Perte")}</td><td class="r t" style="color:${r.benefice >= 0 ? "#15803d" : "#dc2626"}">${g(r.benefice)}</td></tr>
       <tr><td>${tr("Mois précédent ({mois})", { mois: nm(r.precedent.mois) })}</td><td class="r">${g(r.precedent.benefice)}</td></tr></table>
-      <script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`);
-    w.document.close();
+      </body></html>`, `rapport-${r.mois}-${etablissement?.name || ""}`);
   };
 
   const carte = (titre: string, valeur: number, avant: number, rouge = false) => {

@@ -5,6 +5,22 @@ import { nomMedicament, type Consultation, type Ordonnance, type Patient, type R
 import type { EtablissementPublic } from "../types/vitrine";
 import CartePatient from "../components/CartePatient";
 import { useImpressionCarte } from "../utils/impressionCarte";
+import { ouvrirDocument } from "../utils/documentImprimable";
+
+const echap = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+/** Ordonnance ou résultat reçu, à imprimer ou à télécharger en PDF (avec le logo de la clinique). */
+function documentPatient(titre: string, clinique: { name?: string | null; logo_url?: string | null; address?: string | null; phone?: string | null } | null, patient: string, corps: string, fichier: string) {
+  const logo = clinique?.logo_url ? (/^(data:|https?:)/.test(clinique.logo_url) ? clinique.logo_url : window.location.origin + clinique.logo_url) : "";
+  ouvrirDocument(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${echap(titre)}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;color:#0f172a;padding:32px;max-width:720px;margin:auto;background:#fff}
+.h{display:flex;gap:14px;align-items:center;border-bottom:3px solid #1a8f1a;padding-bottom:14px}.h img{width:64px;height:64px;object-fit:contain}
+.n{font-size:20px;font-weight:800}.c{font-size:12px;color:#475569;margin-top:3px}h1{font-size:18px;color:#1a8f1a;margin:20px 0 10px;text-transform:uppercase}
+.p{background:#f8fafc;border-left:4px solid #1a8f1a;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-weight:700}.l{padding:8px 12px;background:#f8fafc;border-radius:6px;margin-bottom:6px;font-size:14px}
+.t{font-size:14px;line-height:1.6;margin-bottom:10px}.s{margin-top:50px;display:flex;justify-content:flex-end}.s div{width:200px;border-top:1px dashed #94a3b8;padding-top:6px;text-align:center;font-size:12px;color:#64748b}
+</style></head><body><div class="h">${logo ? `<img src="${echap(logo)}" alt="">` : ""}<div><div class="n">${echap(clinique?.name || "")}</div><div class="c">${[clinique?.address, clinique?.phone].filter(Boolean).map(echap).join(" · ")}</div></div></div>
+<h1>${echap(titre)}</h1><div class="p">${echap(patient)}</div>${corps}<div class="s"><div>Signature &amp; cachet</div></div></body></html>`, fichier);
+}
 
 /** Document que la clinique a envoyé au patient (carte, ordonnance, résultat d'examen) */
 interface DocumentRecu {
@@ -327,6 +343,10 @@ export default function EspacePatientClinique() {
                       </div>
                     )}
                     {e.document.notes && <p style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>{e.document.notes}</p>}
+                    <button onClick={() => { const d = e.document!; documentPatient(`Ordonnance ${d.numero_ordo ? "N° " + d.numero_ordo : ""}`, clinic, `${patient?.prenom || ""} ${patient?.nom || ""}`,
+                        `${d.s_nom ? `<p class="t">Dr. ${echap(d.s_prenom || "")} ${echap(d.s_nom)} — ${new Date(d.created_at || e.created_at).toLocaleDateString("fr-FR")}</p>` : ""}${d.diagnostic ? `<p class="t"><b>Diagnostic :</b> ${echap(d.diagnostic)}</p>` : ""}${(d.medicaments || []).map(m => `<div class="l">◆ ${echap(nomMedicament(m))}</div>`).join("")}${d.notes ? `<p class="t" style="margin-top:10px"><i>${echap(d.notes)}</i></p>` : ""}`,
+                        `ordonnance-${d.numero_ordo || d.id}`); }}
+                      style={{ marginTop: 10, padding: "8px 14px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}`, borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨️ Imprimer / PDF</button>
                   </>
                 )}
                 {e.type === "examen" && e.document && (
@@ -334,6 +354,10 @@ export default function EspacePatientClinique() {
                     <div style={{ fontWeight: 700, color: "#0f172a" }}>🧪 Résultat : {e.document.type_examen}</div>
                     {e.document.date_resultat && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Rendu le {fmtDate(e.document.date_resultat)}</div>}
                     {e.document.resultat && <p style={{ fontSize: 13, color: "#334155", margin: "8px 0", whiteSpace: "pre-wrap" }}>{e.document.resultat}</p>}
+                    <button onClick={() => { const d = e.document!; documentPatient(`Résultat d'examen`, clinic, `${patient?.prenom || ""} ${patient?.nom || ""}`,
+                        `<p class="t"><b>${echap(d.type_examen || "")}</b>${d.date_resultat ? ` — rendu le ${new Date(d.date_resultat).toLocaleDateString("fr-FR")}` : ""}</p>${d.resultat ? `<p class="t" style="white-space:pre-wrap">${echap(d.resultat)}</p>` : ""}`,
+                        `resultat-${d.type_examen || d.id}`); }}
+                      style={{ margin: "4px 8px 4px 0", padding: "8px 14px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}`, borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨️ Imprimer / PDF</button>
                     {e.document.a_fichier && (
                       <button onClick={async () => {
                         try {

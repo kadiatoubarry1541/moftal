@@ -5,6 +5,8 @@ import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
 import CartePatient from "../components/CartePatient";
 import { useImpressionCarte } from "../utils/impressionCarte";
 import { compressImage } from "../utils/compressImage";
+import { ouvrirDocument } from "../utils/documentImprimable";
+import { imprimerRecu } from "../utils/imprimerRecu";
 import EnvoiLien from "../components/EnvoiLien";
 import { lienAppGestion } from "../utils/lienAppGestion";
 import CoordonneesSite from "../components/CoordonneesSite";
@@ -125,8 +127,7 @@ ${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>
 ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748b;font-style:italic">${p.notes}</p>`:""}
 <div class="footer"><div class="sig">Dr. ${p.s_nom?`${p.s_prenom||""} ${p.s_nom}`:"..."}<br>Médecin prescripteur</div></div>
 </body></html>`;
-  const w = window.open("", "_blank", "width=800,height=900");
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+  ouvrirDocument(html, `ordonnance-${p.numero_ordo || p.id}`);
 }
 
 function printInvoice(f: Facture, clinicName: string, logoUrl?: string | null) {
@@ -145,8 +146,7 @@ ${f.mode_paiement&&isPaid?`<p style="font-size:12px;color:#64748b;margin-top:8px
 ${f.notes?`<p style="font-size:12px;color:#64748b;margin-top:8px;font-style:italic">Notes : ${f.notes}</p>`:""}
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature &amp; Cachet</div></div>
 </body></html>`;
-  const w = window.open("", "_blank", "width=800,height=900");
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+  ouvrirDocument(html, `facture-${f.numero_facture || f.id}`);
 }
 
 // ── COMPONENT ────────────────────────────────────────────────────────────────
@@ -1278,14 +1278,14 @@ export default function GestionClinique() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                      {["N° Reçu", "Patient", "Montant", "Motif", "Mode", "Date"].map(h => (
+                      {["N° Reçu", "Patient", "Montant", "Motif", "Mode", "Date", "Reçu"].map(h => (
                         <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {payments.length === 0 ? (
-                      <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun paiement enregistré</td></tr>
+                      <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun paiement enregistré</td></tr>
                     ) : payments.map(p => (
                       <tr key={p.id} style={{ borderBottom: "1px solid #f8fafc" }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"}
@@ -1298,6 +1298,17 @@ export default function GestionClinique() {
                           <span style={{ padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 20, fontSize: 11, fontWeight: 500 }}>{PAYMENT_LABELS[p.mode_paiement] || p.mode_paiement}</span>
                         </td>
                         <td style={{ padding: "11px 16px", color: "#64748b" }}>{fmtDate(p.date_paiement)}</td>
+                        <td style={{ padding: "11px 16px" }}>
+                          {/* Reçu à imprimer ou à télécharger en PDF */}
+                          <button onClick={() => imprimerRecu({
+                            titre: "Reçu de paiement", numero: p.recu_numero || p.id, date: p.date_paiement || p.created_at,
+                            etablissement: tenant || {}, couleur: TEAL,
+                            client: `${p.p_prenom || ""} ${p.p_nom || ""}`.trim() || null, clientTelephone: p.p_tel || null,
+                            lignes: [{ libelle: p.motif || "Paiement", montant: +p.montant || 0 }],
+                            total: +p.montant || 0, paye: +p.montant || 0,
+                            modePaiement: p.mode_paiement ? (PAYMENT_LABELS[p.mode_paiement] || p.mode_paiement) : null,
+                          })} style={{ padding: "5px 10px", background: "#f0fdfa", color: TEAL_DARK, border: "1px solid #99f6e4", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>🧾 Reçu</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

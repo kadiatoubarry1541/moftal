@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ouvrirDocument } from "../utils/documentImprimable";
 import { useNavigate } from 'react-router-dom';
 import ErreurChargement from "../components/ErreurChargement";
 
@@ -35,17 +36,14 @@ interface CourseContent {
 // Certificat imprimable (le navigateur propose aussi « Enregistrer en PDF »)
 const echapper = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 function imprimerCertificat(cert: Certificate, nom: string) {
-  const w = window.open('', '_blank');
-  if (!w) { alert("Autorisez l'ouverture d'une nouvelle fenêtre pour télécharger le certificat."); return; }
   const date = cert.receivedDate ? new Date(cert.receivedDate).toLocaleDateString('fr-FR') : '';
-  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Certificat — ${echapper(cert.title)}</title>
+  ouvrirDocument(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Certificat — ${echapper(cert.title)}</title>
 <style>body{font-family:Georgia,serif;margin:0;padding:40px;color:#1f2937}.c{border:8px double #ca8a04;padding:48px;text-align:center;max-width:800px;margin:auto}
 h1{font-size:40px;margin:0 0 8px;color:#a16207}h2{font-size:28px;margin:24px 0}p{font-size:18px;margin:8px 0}</style></head>
 <body><div class="c"><div style="font-size:64px">🏅</div><h1>Certificat</h1><p>décerné à</p><h2>${echapper(nom || '')}</h2>
 <p>pour avoir terminé la formation</p><h2>${echapper(cert.title)}</h2>${cert.description ? `<p>${echapper(cert.description)}</p>` : ''}
 <p style="margin-top:32px">Le ${echapper(date)} — ${echapper(cert.issuedBy || 'Moftal')}</p></div>
-<script>window.onload=function(){window.print()}</script></body></html>`);
-  w.document.close();
+</body></html>`, `certificat-${cert.title}`);
 }
 
 interface Certificate {
