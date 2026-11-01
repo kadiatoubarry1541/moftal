@@ -163,23 +163,24 @@ export async function publicationsEchangeDuSite(tenantCode, limite = 40) {
   try {
     await preparer();
     const lignes = await sequelize.query(
-      `SELECT e.id, e.title, e.subcategory, e.price, e.quantity, e.images, e.description
+      `SELECT e.id, e.title, e.subcategory, e.price, e.quantity, e.images, e.videos, e.audio, e.description
          FROM exchange_products e
          JOIN management_tenants t ON t.owner_numero_h = e.numero_h
         WHERE t.tenant_code = :code AND e.is_active = true AND e.source_gestion IS NULL
         ORDER BY e.created_at DESC LIMIT :limite`,
       { replacements: { code: tenantCode, limite }, type: sequelize.QueryTypes.SELECT }
     );
-    return lignes.map((e) => {
-      let images = e.images;
-      if (typeof images === 'string') { try { images = JSON.parse(images); } catch { images = []; } }
-      const premiere = Array.isArray(images) ? images[0] : null;
-      const photo = typeof premiere === 'string' ? premiere : (premiere?.url || null);
-      return {
-        id: `echange-${e.id}`, nom: e.title, categorie: e.subcategory || 'Échange', prix: Number(e.price) || 0,
-        stock: e.quantity ?? null, unite: 'pièce', photo, description: e.description || '',
-      };
-    });
+    const premier = (liste) => {
+      let l = liste;
+      if (typeof l === 'string') { try { l = JSON.parse(l); } catch { l = []; } }
+      const x = Array.isArray(l) ? l[0] : null;
+      return typeof x === 'string' ? x : (x?.url || null);
+    };
+    return lignes.map((e) => ({
+      id: `echange-${e.id}`, nom: e.title, categorie: e.subcategory || 'Échange', prix: Number(e.price) || 0,
+      stock: e.quantity ?? null, unite: 'pièce', photo: premier(e.images), video: premier(e.videos), audio: premier(e.audio),
+      description: e.description || '',
+    }));
   } catch (e) {
     console.error('Échange → site :', e.message);
     return [];

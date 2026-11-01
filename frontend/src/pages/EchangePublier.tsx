@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { config } from '../config/api';
-import AjoutMedias from '../components/AjoutMedias';
+import ChampPublication from '../components/ChampPublication';
 import { MEDIAS_VIDES, type Medias } from '../utils/medias';
 import { useI18n } from '../i18n/useI18n';
 import { useTraduction } from '../i18n/traduction';
@@ -123,8 +123,11 @@ export default function EchangePublier() {
     const errs: Record<string, string> = {};
     if (publishMode === 'simple') {
       if (!product.title.trim()) errs.title = t('echange_publier.err_title_required');
-      if (!product.price || Number(product.price) <= 0) errs.price = t('echange_publier.err_price_required');
-      if (!medias.images.length && !medias.videos.length && !medias.audios.length) errs.medias = tr('Ajoutez au moins une photo, une vidéo ou un message vocal.');
+      // Le prix est écrit, ou dit dans le vocal (qui accompagne toujours une photo)
+      const prixDansLeVocal = medias.audios.length > 0 && medias.images.length > 0;
+      if (product.price !== '' && Number(product.price) < 0) errs.price = t('echange_publier.err_price_required');
+      else if (!prixDansLeVocal && (!product.price || Number(product.price) <= 0)) errs.price = tr('Écrivez le prix, ou dites-le en vocal avec la photo.');
+      if (!medias.images.length && !medias.videos.length) errs.medias = tr('Ajoutez une photo ou une vidéo du produit.');
     } else if (publishMode === 'lot') {
       if (!product.category) errs.category = t('echange_publier.err_category_required');
       if (!product.location.trim()) errs.location = t('echange_publier.err_location_required');
@@ -158,7 +161,7 @@ export default function EchangePublier() {
       formData.append('location', product.location.trim() || 'Non précisé');
       medias.images.forEach((img, i) => formData.append(`image_${i}`, img));
       medias.videos.forEach((vid, i) => formData.append(`video_${i}`, vid));
-      medias.audios.forEach((a, i) => formData.append(`audio_${i}`, a));
+      if (medias.images.length) medias.audios.forEach((a, i) => formData.append(`audio_${i}`, a));
 
       const token = localStorage.getItem('token');
       const res = await fetch(`${config.API_BASE_URL}/exchange/${level}/products`, {
@@ -317,30 +320,19 @@ export default function EchangePublier() {
             {/* ── Écran unique : on ajoute ce qu'on veut, dans l'ordre qu'on veut ── */}
             {publishMode === 'simple' && (
               <div className="p-5 sm:p-8 space-y-5">
-                <div className={errors.medias ? 'rounded-2xl ring-2 ring-red-300 p-2 -m-2' : ''}>
-                  <AjoutMedias valeur={medias} onChange={(m) => { setMedias(m); setErrors(e => ({ ...e, medias: '' })); }}
-                    desactive={submitting} dureeVideo={30} dureeVocal={30} />
-                  {errors.medias && <p className="mt-2 text-xs text-red-500">{errors.medias}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">✏️ {tr('Nom du produit')}</label>
-                  <input type="text" value={product.title} onChange={e => setProduct({ ...product, title: e.target.value })}
-                    placeholder={t('echange_publier.title_placeholder')}
-                    className={`w-full px-4 py-3 border-2 rounded-xl text-base focus:outline-none focus:ring-2 ${errors.title ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`} />
-                  {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">💰 {tr('Prix')}</label>
-                  <div className="flex gap-2">
-                    <input type="number" inputMode="numeric" value={product.price} onChange={e => setProduct({ ...product, price: e.target.value })}
-                      placeholder={t('echange_publier.price_placeholder')}
-                      className={`flex-1 min-w-0 px-4 py-3 border-2 rounded-xl text-base focus:outline-none focus:ring-2 ${errors.price ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`} />
-                    <span className="px-4 py-3 rounded-xl bg-gray-100 text-sm font-bold text-gray-600">{product.currency}</span>
-                  </div>
-                  {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
-                </div>
+                <ChampPublication
+                  medias={medias}
+                  onMedias={(m) => { setMedias(m); setErrors(e => ({ ...e, medias: '', price: '' })); }}
+                  nom={product.title}
+                  onNom={(v) => { setProduct(p => ({ ...p, title: v })); setErrors(e => ({ ...e, title: '' })); }}
+                  prix={product.price}
+                  onPrix={(v) => { setProduct(p => ({ ...p, price: v })); setErrors(e => ({ ...e, price: '' })); }}
+                  devise={product.currency}
+                  dureeVideo={30}
+                  dureeVocal={60}
+                  desactive={submitting}
+                  erreurs={{ medias: errors.medias, nom: errors.title, prix: errors.price }}
+                />
 
                 {/* Le reste est facultatif : rangé pour ne pas fatiguer */}
                 <button type="button" onClick={() => setPlusDeDetails(v => !v)}

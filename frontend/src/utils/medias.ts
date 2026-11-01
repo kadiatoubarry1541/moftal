@@ -1,4 +1,4 @@
-// Médias d'une publication (photos, vidéos, messages vocaux) — voir components/AjoutMedias
+// Médias d'une publication (photos, vidéos, messages vocaux) — voir components/ChampPublication
 export interface Medias {
   images: File[];
   videos: File[];

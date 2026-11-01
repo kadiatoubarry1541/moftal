@@ -321,12 +321,17 @@ export function EchangesProfessionnel() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-4xl">{section.placeholder}</div>
                         )}
+                        {!!product.audio?.length && (
+                          <span className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-white/95 shadow flex items-center justify-center text-base" title={tr("Message vocal du vendeur")}>🎤</span>
+                        )}
                       </div>
                       <div className="p-2.5">
                         <p className="text-sm font-semibold text-gray-900 truncate">{product.title}</p>
                         {product.subcategory && <p className="text-xs text-gray-500 truncate">{product.subcategory}</p>}
-                        {product.price > 0 && (
-                          <p className="text-sm font-bold mt-1" style={{ color: '#1a8f1a' }}>{product.price.toLocaleString()} {product.currency}</p>
+                        {Number(product.price) > 0 ? (
+                          <p className="text-sm font-bold mt-1" style={{ color: '#1a8f1a' }}>{Number(product.price).toLocaleString()} {product.currency}</p>
+                        ) : !!product.audio?.length && (
+                          <p className="text-xs font-bold mt-1 text-amber-700">🎤 {tr("Prix dans le vocal")}</p>
                         )}
                         <span className="mt-2 block w-full text-center py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold">{tr("🛒 Commander")}</span>
                       </div>

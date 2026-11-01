@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin, type UserData } from "../utils/auth";
+import { getPhotoUrl, getSessionUser, isAdmin, type UserData } from "../utils/auth";
 import type { CommandeEchange } from "../types/echange";
 import type { MessageDuSite } from "../types/vitrine";
 import { useTraduction } from "../i18n/traduction";
@@ -27,7 +27,18 @@ export interface ProduitACommander {
   currency?: string;
   sellerName?: string;
   location?: string;
+  images?: unknown[];
+  videos?: unknown[];
+  /** Message vocal du vendeur (souvent : le prix dit à voix haute) */
+  audio?: unknown[];
 }
+
+// Les listes de médias peuvent contenir des adresses ou des objets { url }
+const premiereUrl = (l?: unknown[]) => {
+  const x = Array.isArray(l) ? l[0] : null;
+  const u = typeof x === "string" ? x : (x && typeof x === "object" && "url" in x ? String((x as { url: unknown }).url) : null);
+  return u ? getPhotoUrl(u) : null;
+};
 
 /** Fenêtre « Commander » : quantité, téléphone, adresse, message → au vendeur. */
 export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }: { product: ProduitACommander; couleur?: string; onClose: () => void }) {
@@ -42,6 +53,9 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
   const [erreur, setErreur] = useState("");
   const [envoyee, setEnvoyee] = useState(false);
   const prix = Number(product.price) || 0;
+  const photo = premiereUrl(product.images);
+  const video = premiereUrl(product.videos);
+  const vocal = premiereUrl(product.audio);
 
   const commander = async () => {
     setErreur("");
@@ -77,7 +91,21 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">🛒 {tr("Commander")}</h3>
           <p className="font-semibold text-gray-800 dark:text-gray-100">{product.title}</p>
           {product.sellerName && <p className="text-xs text-gray-500 dark:text-gray-400">{product.sellerName}</p>}
-          <p className="text-lg font-bold mt-1 mb-4" style={{ color: couleur }}>{montant(prix, product.currency)}</p>
+          {prix > 0
+            ? <p className="text-lg font-bold mt-1 mb-3" style={{ color: couleur }}>{montant(prix, product.currency)}</p>
+            : <p className="text-sm font-semibold mt-1 mb-3 text-amber-700">{vocal ? tr("🎤 Le prix est dans le vocal du vendeur") : tr("Le vendeur vous dira le prix")}</p>}
+
+          {(photo || video) && (
+            video && !photo
+              ? <video src={video} controls playsInline className="w-full max-h-64 rounded-xl bg-black mb-3" />
+              : <img src={photo || ""} alt={product.title} className="w-full max-h-64 object-cover rounded-xl mb-3" />
+          )}
+          {vocal && (
+            <div className="flex items-center gap-2 p-2 mb-4 rounded-xl bg-amber-50 border border-amber-200">
+              <span className="text-xl">🎤</span>
+              <audio src={vocal} controls className="flex-1 h-9 min-w-0" />
+            </div>
+          )}
 
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{tr("Quantité")}
@@ -93,10 +121,12 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
             <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} placeholder={tr("Un mot pour le vendeur (facultatif)")} className={champ} />
           </div>
 
-          <div className="mt-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-300">{tr("Total")}</span>
-            <span className="font-bold text-gray-900 dark:text-white">{montant(prix * quantite, product.currency)}</span>
-          </div>
+          {prix > 0 && (
+            <div className="mt-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-300">{tr("Total")}</span>
+              <span className="font-bold text-gray-900 dark:text-white">{montant(prix * quantite, product.currency)}</span>
+            </div>
+          )}
           {erreur && <p className="mt-3 text-sm text-red-600">{erreur}</p>}
 
           <div className="flex gap-3 mt-5">

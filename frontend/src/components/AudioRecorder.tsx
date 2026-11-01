@@ -16,9 +16,11 @@ interface AudioRecorderProps {
   maxDuration?: number;
   /** Mode compact pour les barres de chat (défaut false) */
   compact?: boolean;
+  /** Commence à enregistrer dès l'affichage (le bouton 🎤 vient d'être touché) */
+  autoStart?: boolean;
 }
 
-export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = false }: AudioRecorderProps) {
+export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = false, autoStart = false }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -95,11 +97,19 @@ export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = fal
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    // L'état du micro lui-même (et pas l'état React, figé au démarrage pour le minuteur)
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       if (timerRef.current) clearInterval(timerRef.current);
     }
   };
+
+  // Démarrage immédiat (une seule fois), sans second bouton à toucher
+  const dejaDemarre = useRef(false);
+  useEffect(() => {
+    if (autoStart && !dejaDemarre.current) { dejaDemarre.current = true; void startRecording(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
 
   const formatTime = (ms: number) => {
     const s = Math.floor(ms / 1000);
