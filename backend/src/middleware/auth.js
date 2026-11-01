@@ -139,10 +139,19 @@ export const authenticate = async (req, res, next) => {
       }
 
       req.user = user;
-      // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base
+      // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base,
+      // et compte de consultation seulement : il se connecte et regarde, mais ne
+      // peut rien modifier (ni son profil, ni publier, ni ajouter, ni supprimer).
       if (estAncienAdmin(user.numeroH)) {
         user.role = 'user';
         if ('isAdmin' in user) user.isAdmin = false;
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+          return res.status(403).json({
+            success: false,
+            code: 'COMPTE_CONSULTATION',
+            message: 'Ce compte est un compte de consultation : vous pouvez regarder, mais rien modifier.'
+          });
+        }
       }
       req.userId = user.numeroH;
 

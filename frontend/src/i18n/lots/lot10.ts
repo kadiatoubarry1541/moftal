@@ -51,5 +51,6 @@ const lot: Lot = {
   "⏳ Préparation du PDF…": ["⏳ Preparing the PDF…", "⏳ جارٍ تجهيز ملف PDF…", "⏳ PDF bɛ labɛn…", "⏳ PDF ina hebboo…"],
   "✅ PDF téléchargé": ["✅ PDF downloaded", "✅ تم تنزيل PDF", "✅ PDF jiginna", "✅ PDF aawtaama"],
   "Le PDF n'a pas pu être créé. Utilisez « Imprimer », puis « Enregistrer en PDF ».": ["The PDF could not be created. Use “Print”, then “Save as PDF”.", "تعذر إنشاء ملف PDF. استخدم «طباعة» ثم «حفظ بصيغة PDF».", "PDF ma se ka dilan. « A gafe bɔ » kɛ, o kɔ « A mara PDF ye ».", "PDF waawaa waɗeede. Huutoro « Muuɓal », refti « Danndu PDF »."],
+  "Compte de consultation : vous pouvez regarder, mais rien modifier.": ["View-only account: you can look, but not change anything.", "حساب للاطلاع فقط: يمكنك المشاهدة دون أي تعديل.", "Lajɛli jatɔ : i bɛ se ka filɛ, nka i tɛ se ka foyi yɛlɛma.", "Konte ƴeewtagol tan : aɗa waawi ƴeewde, kono waawaa waylude hay huunde."],
 };
 export default lot;

@@ -11,6 +11,7 @@ import NotificationBell, { InvitationNotifications } from "./components/Notifica
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
+import BandeauConsultation from "./components/BandeauConsultation";
 import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
@@ -444,6 +445,7 @@ function App() {
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : (isGestionMode || isVitrineMode ? "pro-page" : "")}>
     <GestionPaymentGate />
     <OfflineStatusBar />
+    <BandeauConsultation />
     <ProfileCompletionPrompt />
     {isLoggedIn && !isFullscreenPage && <InvitationInstallerMoftal />}
     {isLoggedIn && !isFullscreenPage && <InvitationNotifications />}
