@@ -3,13 +3,27 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { nomMedicament, type Consultation, type Ordonnance, type Patient, type RendezVous } from "../types/clinique";
 import type { EtablissementPublic } from "../types/vitrine";
+import CartePatient from "../components/CartePatient";
+import { useImpressionCarte } from "../utils/impressionCarte";
+
+/** Document que la clinique a envoyé au patient (carte, ordonnance, résultat d'examen) */
+interface DocumentRecu {
+  id: number;
+  type: "carte" | "ordonnance" | "examen";
+  created_at: string;
+  document?: {
+    id: number; numero_ordo?: string; medicaments?: Ordonnance["medicaments"]; diagnostic?: string | null; notes?: string | null;
+    s_prenom?: string | null; s_nom?: string | null; created_at?: string;
+    categorie?: string; type_examen?: string; resultat?: string | null; statut?: string; date_resultat?: string | null; a_fichier?: boolean;
+  } | null;
+}
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 const TEAL = "#1a8f1a";
 const TEAL_DARK = "#156315";
 const TEAL_LIGHT = "#14b8a6";
 
-type Tab = "appointments" | "prescriptions" | "records" | "rdv" | "avis";
+type Tab = "documents" | "appointments" | "prescriptions" | "records" | "rdv" | "avis";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 
@@ -43,6 +57,8 @@ export default function EspacePatientClinique() {
   const [appointments, setAppointments] = useState<RendezVous[]>([]);
   const [prescriptions, setPrescriptions] = useState<Ordonnance[]>([]);
   const [records, setRecords] = useState<Consultation[]>([]);
+  const [envois, setEnvois] = useState<DocumentRecu[]>([]);
+  const impressionCarte = useImpressionCarte();
   const [rdvForm, setRdvForm] = useState({ service: "", date_rdv: "", heure: "", motif: "" });
   const [rdvSaving, setRdvSaving] = useState(false);
   const [rdvSuccess, setRdvSuccess] = useState(false);
@@ -75,6 +91,9 @@ export default function EspacePatientClinique() {
           setAppointments(d.appointments || []);
           setPrescriptions(d.prescriptions || []);
           setRecords(d.records || []);
+          setEnvois(d.envois || []);
+          // Des documents reçus : on les montre en premier
+          if ((d.envois || []).length) setTab("documents");
         } else if (d.not_registered) {
           setNotRegistered(true);
           setError(d.message);
@@ -177,6 +196,7 @@ export default function EspacePatientClinique() {
   );
 
   const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
+    { id: "documents", label: "Documents reçus", icon: "📥", count: envois.length },
     { id: "appointments", label: "Mes RDV", icon: "📅", count: appointments.length },
     { id: "prescriptions", label: "Ordonnances", icon: "💊", count: prescriptions.length },
     { id: "records", label: "Consultations", icon: "📋", count: records.length },
@@ -275,6 +295,62 @@ export default function EspacePatientClinique() {
             </button>
           ))}
         </div>
+
+        {/* ── Documents reçus : carte patient, ordonnances, résultats ─────────── */}
+        {tab === "documents" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {envois.length === 0 && (
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                Aucun document reçu pour l'instant. Votre clinique peut vous envoyer votre carte, vos ordonnances et vos résultats.
+              </div>
+            )}
+            {envois.map(e => (
+              <div key={e.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>Reçu le {fmtDate(e.created_at)}</div>
+                {e.type === "carte" && patient && (
+                  <>
+                    <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>🪪 Votre carte patient</div>
+                    <div ref={impressionCarte.ref} style={{ display: "flex", justifyContent: "center" }}>
+                      <CartePatient patient={patient} clinique={{ name: clinic?.name, logo_url: clinic?.logo_url, phone: clinic?.phone, address: clinic?.address }} couleur={TEAL} />
+                    </div>
+                    <button onClick={impressionCarte.imprimer} style={{ marginTop: 12, padding: "8px 16px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}`, borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨️ Imprimer ma carte</button>
+                  </>
+                )}
+                {e.type === "ordonnance" && e.document && (
+                  <>
+                    <div style={{ fontWeight: 700, color: "#0f172a" }}>💊 Ordonnance {e.document.numero_ordo ? `N° ${e.document.numero_ordo}` : ""}</div>
+                    {e.document.s_nom && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Dr. {e.document.s_prenom} {e.document.s_nom}</div>}
+                    {e.document.diagnostic && <p style={{ fontSize: 13, color: "#475569", margin: "8px 0" }}><strong>Diagnostic :</strong> {e.document.diagnostic}</p>}
+                    {(e.document.medicaments || []).length > 0 && (
+                      <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", marginTop: 6 }}>
+                        {(e.document.medicaments || []).map((m, i) => <div key={i} style={{ fontSize: 13, color: "#334155", padding: "2px 0" }}>◆ {nomMedicament(m)}</div>)}
+                      </div>
+                    )}
+                    {e.document.notes && <p style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>{e.document.notes}</p>}
+                  </>
+                )}
+                {e.type === "examen" && e.document && (
+                  <>
+                    <div style={{ fontWeight: 700, color: "#0f172a" }}>🧪 Résultat : {e.document.type_examen}</div>
+                    {e.document.date_resultat && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Rendu le {fmtDate(e.document.date_resultat)}</div>}
+                    {e.document.resultat && <p style={{ fontSize: 13, color: "#334155", margin: "8px 0", whiteSpace: "pre-wrap" }}>{e.document.resultat}</p>}
+                    {e.document.a_fichier && (
+                      <button onClick={async () => {
+                        try {
+                          const r = await fetch(`${API_BASE}/clinic-public/${tenantCode}/my-portal/exams/${e.document!.id}/fichier`, { headers: { Authorization: `Bearer ${token}` } });
+                          const d = await r.json();
+                          if (!d.success) { showToast(d.message || "Fichier introuvable", false); return; }
+                          const a = document.createElement("a"); a.href = d.fichier; a.download = `resultat-${e.document!.id}`; a.target = "_blank"; a.click();
+                        } catch { showToast("Connexion impossible. Réessayez.", false); }
+                      }} style={{ padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>📄 Ouvrir le document</button>
+                    )}
+                  </>
+                )}
+                {e.type !== "carte" && !e.document && <div style={{ fontSize: 13, color: "#94a3b8" }}>Ce document n'est plus disponible.</div>}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Mes Rendez-vous ──────────────────────────────────────────────────── */}
         {tab === "appointments" && (

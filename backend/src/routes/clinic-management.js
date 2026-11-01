@@ -7,6 +7,9 @@ import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { numeroHComplet } from './schoolCoursBibliotheque.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
+import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -178,10 +181,18 @@ async function prochainMatricule(code, transaction) {
   return `${prefixe}${String(+row.n + 1).padStart(4, '0')}`;
 }
 
+// Photo du patient : facultative, enregistrée dans la base (table fichiers), montrée sur sa carte
+let photoPatientPrete = null;
+const preparerPhotoPatient = () => (photoPatientPrete ||= sequelize.query(
+  `ALTER TABLE clinic_patients ADD COLUMN IF NOT EXISTS photo_url TEXT`
+).catch((e) => { photoPatientPrete = null; throw e; }));
+
 router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, date_naissance, sexe, telephone, adresse, groupe_sanguin, allergies, numero_h } = req.body;
     const code = req.params.tenantCode;
+    await preparerPhotoPatient();
+    const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: code, usage: 'photo-patient' });
     // Vérifier doublon numeroH dans cette clinique
     if (numero_h) {
       const [existing] = await sequelize.query(
@@ -193,9 +204,9 @@ router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res
     const rows = await sequelize.transaction(async (transaction) => {
       const mat = await prochainMatricule(code, transaction);
       const [r] = await sequelize.query(
-        `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h)
-         VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh) RETURNING *`,
-        { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT, transaction }
+        `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h,photo_url)
+         VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh,:photo) RETURNING *`,
+        { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: numero_h || null, photo }, type: sequelize.QueryTypes.INSERT, transaction }
       );
       return r;
     });
@@ -206,9 +217,13 @@ router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res
 router.put('/:tenantCode/patients/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, date_naissance, sexe, telephone, adresse, groupe_sanguin, allergies } = req.body;
+    await preparerPhotoPatient();
+    // Une photo vide n'efface jamais la photo enregistrée
+    const photo = await photoDepuisFormulaire(req.body.photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-patient' });
     await sequelize.query(
-      `UPDATE clinic_patients SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=:sexe,telephone=:tel,adresse=:adr,groupe_sanguin=:gs,allergies=:alg WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE clinic_patients SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=:sexe,telephone=:tel,adresse=:adr,groupe_sanguin=:gs,allergies=:alg,
+         photo_url=COALESCE(:photo,photo_url) WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom, prenom, dob: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, photo, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -218,6 +233,82 @@ router.delete('/:tenantCode/patients/:id', authenticate, verifyTenant, async (re
   try {
     await sequelize.query(`DELETE FROM clinic_patients WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ─── ENVOI AU PATIENT (carte, ordonnance, bilan) ─────────────────────────────
+// Rien n'est obligatoire : le professionnel choisit ce qu'il envoie. Le patient
+// le reçoit dans sa cloche (et sur son téléphone) et le retrouve dans son
+// espace patient, rubrique « Documents reçus ».
+let envoisPrets = null;
+export const preparerEnvoisPatient = () => (envoisPrets ||= sequelize.query(`
+  CREATE TABLE IF NOT EXISTS clinic_envois (
+    id          SERIAL PRIMARY KEY,
+    tenant_code VARCHAR(50) NOT NULL,
+    patient_id  INTEGER NOT NULL,
+    numero_h    VARCHAR(60) NOT NULL,
+    type        VARCHAR(20) NOT NULL,
+    ref_id      INTEGER,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS clinic_envois_patient ON clinic_envois (tenant_code, numero_h);
+`).catch((e) => { envoisPrets = null; throw e; }));
+
+const LIBELLES_ENVOI = { carte: 'votre carte patient', ordonnance: 'une ordonnance', examen: 'un résultat d\'examen (bilan)' };
+
+router.post('/:tenantCode/patients/:id/envoyer', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const code = req.params.tenantCode;
+    const type = String(req.body?.type || '');
+    if (!LIBELLES_ENVOI[type]) return res.status(400).json({ success: false, message: 'Document inconnu.' });
+    await preparerEnvoisPatient();
+    const [patient] = await sequelize.query(
+      `SELECT * FROM clinic_patients WHERE id=:id AND tenant_code=:code LIMIT 1`,
+      { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!patient) return res.status(404).json({ success: false, message: 'Patient introuvable.' });
+
+    // Le document envoyé doit être celui de CE patient, dans CETTE clinique
+    let refId = null;
+    if (type !== 'carte') {
+      const table = type === 'ordonnance' ? 'clinic_prescriptions' : 'clinic_exams';
+      if (type === 'examen') await ensureExamsTable();
+      const [doc] = await sequelize.query(
+        `SELECT id FROM ${table} WHERE id=:rid AND tenant_code=:code AND patient_id=:pid LIMIT 1`,
+        { replacements: { rid: parseInt(req.body.ref_id, 10) || 0, code, pid: patient.id }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (!doc) return res.status(404).json({ success: false, message: 'Document introuvable pour ce patient.' });
+      refId = doc.id;
+    }
+
+    // Son compte Moftal : celui déjà relié, sinon par son téléphone (compte préparé s'il n'en a pas)
+    let nh = String(patient.numero_h || '').trim();
+    if (!nh) {
+      if (!String(patient.telephone || '').trim()) {
+        return res.status(400).json({ success: false, message: 'Ajoutez d\'abord le téléphone du patient sur sa fiche : c\'est là qu\'il recevra ses documents.' });
+      }
+      const trouve = await trouverOuPreparerPersonne(patient.telephone);
+      if (!trouve.personne) return res.status(trouve.statut || 400).json({ success: false, message: trouve.erreur || 'Téléphone du patient invalide.' });
+      nh = trouve.personne.numero_h;
+      const [autre] = await sequelize.query(
+        `SELECT id FROM clinic_patients WHERE tenant_code=:code AND LOWER(TRIM(numero_h))=LOWER(TRIM(:nh)) AND id<>:id LIMIT 1`,
+        { replacements: { code, nh, id: patient.id }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (autre) return res.status(409).json({ success: false, message: 'Ce téléphone est déjà celui d\'un autre patient de votre clinique.' });
+      await sequelize.query(`UPDATE clinic_patients SET numero_h=:nh WHERE id=:id AND tenant_code=:code`, { replacements: { nh, id: patient.id, code } });
+    }
+
+    await sequelize.query(
+      `INSERT INTO clinic_envois (tenant_code, patient_id, numero_h, type, ref_id) VALUES (:code, :pid, :nh, :type, :rid)`,
+      { replacements: { code, pid: patient.id, nh, type, rid: refId } }
+    );
+    const nomClinique = req.tenant?.name || 'Votre clinique';
+    const recu = await notifierMembreEtablissement(code, nh, 'clinic_patient',
+      `${nomClinique} vous a envoyé ${LIBELLES_ENVOI[type]}. Ouvrez votre espace patient pour le voir.`,
+      { titre: `🩺 ${nomClinique}`, url: `/clinique/${code}/espace-patient` });
+    if (!recu) return res.status(500).json({ success: false, message: 'Le document est enregistré, mais la notification n\'a pas pu partir. Réessayez.' });
+    res.json({ success: true, numero_h: nh });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 

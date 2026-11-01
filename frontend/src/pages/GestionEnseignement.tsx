@@ -31,7 +31,7 @@ interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "settings";
+type Section = "dashboard" | "apprenants" | "parents" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "settings";
 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
@@ -144,6 +144,7 @@ export default function GestionEnseignement({ mode }: Props) {
   const NAV: { id: Section; label: string; icon: string }[] = [
     { id: "dashboard",   label: tr("Tableau de bord"),       icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
     { id: "apprenants",  label: tr(V.apprenants),             icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
+    ...(!isMadrasa ? [{ id: "parents" as Section, label: tr("Parents"), icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" }] : []),
     { id: "staff",       label: tr(V.staffLabel),             icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
     { id: "groupes",     label: tr(V.groupes),                icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
     { id: "presences",   label: tr("Présences"),              icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
@@ -249,6 +250,7 @@ export default function GestionEnseignement({ mode }: Props) {
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
     if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
+    if (s === "parents")     { get("/students").then(d => d.students && setStudents(d.students)); get("/members").then(d => d?.success && setMembres(d.members || [])); }
     if (s === "photos")      { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "groupes")     { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "presences")   { loadG(); get("/students").then(d => d.students && setStudents(d.students)); }
@@ -301,13 +303,24 @@ export default function GestionEnseignement({ mode }: Props) {
         if (!form.nom || !form.prenom) { showToast(tr("Nom et prénom obligatoires"), false); return; }
         if (form.id) {
           const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Élève modifié(e)")); }
+          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } as Apprenant : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Élève modifié(e)")); get("/students").then(r => r.students && setStudents(r.students)); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post("/students", { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Élève ajouté(e)")); }
+          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Élève ajouté(e)")); get("/students").then(r => r.students && setStudents(r.students)); }
           else showToast(tr(d.message || "Erreur"), false);
         }
+      } else if (modal === "add-parent") {
+        // Un parent = un numéro : s'il existe déjà, ses nouveaux enfants s'ajoutent à sa fiche
+        const ident = (form.telephone || "").trim();
+        if (!ident) { showToast(tr("Indiquez le téléphone (ou le NuméroH) du parent"), false); return; }
+        if (!(form.matricules || "").trim()) { showToast(tr("Indiquez le matricule d'au moins un enfant"), false); return; }
+        const tel = !/[a-z]/i.test(ident) && ident.replace(/[^0-9]/g, "").length >= 8;
+        const d = await post("/members/add", { ...(tel ? { telephone: ident } : { numero_h: ident }), role: "parent", matricules: form.matricules, nom_parent: form.nom_parent });
+        if (!d.success) { showToast(tr(d.message || "Erreur"), false); return; }
+        showToast(d.user ? tr("Parent relié ({nom})", { nom: `${d.user.prenom || ""} ${d.user.nom || ""}`.trim() }) : tr("Parent relié"));
+        setModal(null); setForm({});
+        get("/members").then(r => r?.success && setMembres(r.members || []));
       } else if (modal === "add-staff") {
         // Le téléphone ou l'e-mail suffit : l'enseignant complète son profil lui-même
         if (!form.telephone?.trim() && !form.email?.trim() && !form.numero_h?.trim() && !(form.nom && form.prenom)) {
@@ -324,18 +337,19 @@ export default function GestionEnseignement({ mode }: Props) {
         }
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast(tr("Nom obligatoire"), false); return; }
-        const body: Partial<Groupe> = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
+        const body: Omit<Partial<Groupe>, "enseignants"> & { enseignants?: number[] } = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
         if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
+        if (!isMadrasa) body.enseignants = [...new Set([...(form.enseignants || []).map(Number), ...(form.enseignant_id ? [Number(form.enseignant_id)] : [])])];
         // Photo de la salle (facultative) : montrée sur le site
         if (typeof form.photo_url === "string" && form.photo_url.startsWith("data:")) body.photo_url = form.photo_url;
         if (form.id) {
           const d = await put(`/${groupEP}/${form.id}`, body);
-          if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(M("Halaqa modifiée", "Classe modifiée")); }
+          if (d.success) { setModal(null); setForm({}); showToast(M("Halaqa modifiée", "Classe modifiée")); get(`/${groupEP}`).then(r => setGroupes(r[groupEP] || [])); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post(`/${groupEP}`, body);
           const created = d[isMadrasa ? "halaqa" : "classroom"];
-          if (created) { setGroupes(p => [...p, created]); setModal(null); setForm({}); showToast(M("Halaqa créé(e)", "Classe créé(e)")); }
+          if (created) { setModal(null); setForm({}); showToast(M("Halaqa créé(e)", "Classe créé(e)")); get(`/${groupEP}`).then(r => setGroupes(r[groupEP] || [])); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "edit-schedule") {
@@ -393,7 +407,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
   const filteredStudents = students.filter(s => {
     const q = search.toLowerCase();
-    return (!q || `${s.nom} ${s.prenom}`.toLowerCase().includes(q)) && (!niveauFilter || s.niveau === niveauFilter);
+    return (!q || `${s.nom} ${s.prenom} ${s.numero_matricule || ""}`.toLowerCase().includes(q)) && (!niveauFilter || s.niveau === niveauFilter);
   });
 
   const niveauColor = (n: string) => {
@@ -531,8 +545,9 @@ export default function GestionEnseignement({ mode }: Props) {
       <div style={{ background: "white", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: modal === "edit-schedule" ? 640 : 520, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
 
         {modal === "add-apprenant" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'apprenant", "Modifier l'élève") : M("Nouvel apprenant", "Nouvel élève")}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'apprenant", "Modifier l'élève") : M("Nouvel apprenant", "Nouvel élève")}</h3>
+          {champPhoto}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
             {(["Prénom *|prenom|text","Nom *|nom|text","Date de naissance|date_naissance|date","Sexe|sexe|sexe","Tél. parent|telephone_parent|text","Niveau|niveau|niveau","NuméroH|numero_h|text","NuméroH parent|parent_numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|") as [string, ChampTexte, string];
               return (
@@ -552,13 +567,61 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               );
             })}
+            {!isMadrasa && (<>
+              <div>
+                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Classe")}</label>
+                <select value={form.classroom_id ?? ""} onChange={e=>setForm((f) =>({...f,classroom_id:e.target.value || null}))} className={inp} style={inpSt}>
+                  <option value="">{tr("— Aucune —")}</option>
+                  {groupes.map(g=><option key={g.id} value={g.id}>{g.nom}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Matricule")}</label>
+                <input value={form.numero_matricule || ""} onChange={e=>setForm((f) =>({...f,numero_matricule:e.target.value}))}
+                  placeholder={tr("Automatique si vide")} className={inp} style={inpSt} />
+              </div>
+            </>)}
           </div>
-          {champPhoto}
+          {!isMadrasa && <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Le matricule sert à relier l'élève à ses parents : donnez-le au parent ou tapez-le en ajoutant le parent.")}</p>}
         </>)}
 
+        {modal === "add-parent" && (() => {
+          const voulus = (form.matricules || "").split(/[,;\s]+/).map(m => m.trim().toLowerCase()).filter(Boolean);
+          const trouves = students.filter(st => st.numero_matricule && voulus.includes(st.numero_matricule.toLowerCase()));
+          const inconnus = voulus.filter(m => !students.some(st => (st.numero_matricule || "").toLowerCase() === m));
+          return (<>
+            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>{tr("Ajouter un parent")}</h3>
+            <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Téléphone du parent")}</label>
+            <input value={form.telephone || ""} onChange={e=>setForm(f=>({...f,telephone:e.target.value}))} inputMode="tel"
+              placeholder={tr("Ex : 620 00 00 00 (ou son NuméroH)")} className={inp} style={inpSt} />
+            <label style={{ ...lbl, display: "block", margin: "14px 0 4px" }}>{tr("Nom du parent (facultatif)")}</label>
+            <input value={form.nom_parent || ""} onChange={e=>setForm(f=>({...f,nom_parent:e.target.value}))}
+              placeholder={tr("Ex : Mariama Diallo")} className={inp} style={inpSt} />
+            <label style={{ ...lbl, display: "block", margin: "14px 0 4px" }}>{tr("Matricule de ses enfants")}</label>
+            <input value={form.matricules || ""} onChange={e=>setForm(f=>({...f,matricules:e.target.value}))}
+              placeholder={tr("Ex : ELV-0001, ELV-0002")} className={inp} style={inpSt} />
+            {trouves.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                {trouves.map(st => (
+                  <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                    <span style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#166534", flexShrink: 0 }}>
+                      {st.photo_url ? <img src={getPhotoUrl(st.photo_url) || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : st.prenom?.charAt(0)}
+                    </span>
+                    <span style={{ fontSize: 13 }}><b>{st.prenom} {st.nom}</b>{st.classe ? ` — ${st.classe}` : ""}<br /><span style={{ fontFamily: "monospace", fontSize: 11, color: "#64748b" }}>{st.numero_matricule}</span></span>
+                    <span style={{ marginInlineStart: "auto", color: "#16a34a", fontWeight: 800 }}>✓</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {inconnus.length > 0 && <p style={{ margin: "8px 0 0", fontSize: 12, color: "#dc2626" }}>{tr("Matricule introuvable : {m}", { m: inconnus.join(", ") })}</p>}
+            <p style={{ margin: "12px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Un numéro = un seul parent : s'il est déjà enregistré, l'enfant s'ajoute simplement à sa fiche. Le parent suit ses enfants dans l'application de l'école.")}</p>
+          </>);
+        })()}
+
         {modal === "add-staff" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'enseignant", "Modifier le professeur") : M("Nouvel enseignant", "Nouveau professeur")}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700 }}>{form.id ? M("Modifier l'enseignant", "Modifier le professeur") : M("Nouvel enseignant", "Nouveau professeur")}</h3>
+          {champPhoto}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
             {(["Téléphone|telephone|tel","E-mail|email|email","Prénom|prenom|text","Nom|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","NuméroH|numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|") as [string, ChampTexte, string];
               return (
@@ -599,7 +662,7 @@ export default function GestionEnseignement({ mode }: Props) {
           <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>
             {tr("Le téléphone ou l'e-mail suffit : la personne se connecte avec, choisit son mot de passe et complète elle-même le reste.")}
           </p>
-          {champPhoto}
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Un numéro de téléphone = une seule personne : il n'est jamais enregistré deux fois.")}</p>
         </>)}
 
         {modal === "add-groupe" && (<>
@@ -626,6 +689,35 @@ export default function GestionEnseignement({ mode }: Props) {
                 {staff.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} ({tr(s.specialite||s.role||"")})</option>)}
               </select>
             </div>
+            {!isMadrasa && (
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={{ ...lbl, display: "block", marginBottom: 6 }}>{tr("Enseignants de la classe (plusieurs possibles)")}</label>
+                {staff.length === 0 ? <p style={{ margin: 0, fontSize: 12, color: "#94a3b8" }}>{tr("Ajoutez d'abord vos professeurs dans Personnel.")}</p> : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+                    {staff.map(s => {
+                      const coche = (form.enseignants || []).map(Number).includes(Number(s.id)) || String(form.enseignant_id || "") === String(s.id);
+                      return (
+                        <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", border: `1px solid ${coche ? V.color : "#e2e8f0"}`, borderRadius: 10, background: coche ? "#f0fdf0" : "white", cursor: "pointer", fontSize: 12 }}>
+                          <input type="checkbox" checked={coche} onChange={e => setForm(f => {
+                            const liste = new Set((f.enseignants || []).map(Number));
+                            if (e.target.checked) liste.add(Number(s.id)); else liste.delete(Number(s.id));
+                            const principal = !e.target.checked && String(f.enseignant_id || "") === String(s.id) ? "" : f.enseignant_id;
+                            return { ...f, enseignants: [...liste], enseignant_id: principal };
+                          })} />
+                          <span style={{ width: 26, height: 26, borderRadius: "50%", overflow: "hidden", background: "#e2e8f0", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#64748b" }}>
+                            {s.photo_url ? <img src={getPhotoUrl(s.photo_url) || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : s.prenom?.charAt(0)}
+                          </span>
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: "block", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.prenom} {s.nom}</span>
+                            {s.specialite && <span style={{ display: "block", color: "#64748b", fontSize: 11 }}>{tr(s.specialite)}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <p style={{ margin: "12px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Photo de la salle : facultative, elle rend votre site plus vivant.")}</p>
           {champPhoto}
@@ -870,6 +962,7 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Nouvel apprenant", "Nouvel élève")}</button>}
+            {section === "parents"     && <button onClick={()=>{setModal("add-parent");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter un parent")}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter")}</button>}
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Créer une halaqa", "Créer une classe")}</button>}
             {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter note")}</button>}
@@ -963,22 +1056,26 @@ export default function GestionEnseignement({ mode }: Props) {
               <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
-                    {[tr(V.apprenant),tr("Niveau"),tr("Date naissance"),tr("Tél. parent"),tr("Action")].map(h=>(
+                    {[tr(V.apprenant),...(!isMadrasa?[tr("Classe")]:[]),tr("Niveau"),tr("Date naissance"),tr("Tél. parent"),tr("Action")].map(h=>(
                       <th key={h} style={{ padding:"10px 16px",textAlign:"start",fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {filteredStudents.length===0 ? (
-                      <tr><td colSpan={5} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{M("Aucun apprenant trouvé", "Aucun élève trouvé")}</td></tr>
+                      <tr><td colSpan={isMadrasa ? 5 : 6} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{M("Aucun apprenant trouvé", "Aucun élève trouvé")}</td></tr>
                     ) : filteredStudents.map(s=>(
                       <tr key={s.id} style={{ borderBottom:"1px solid #f8fafc" }}
                         onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#fafafa"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                         <td style={{ padding:"11px 16px" }}>
                           <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                            <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:11,fontWeight:700,flexShrink:0,overflow:"hidden" }}>{s.photo_url ? <img src={getPhotoUrl(s.photo_url) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
-                            <span style={{ fontWeight:600,color:"#0f172a" }}>{s.prenom} {s.nom}</span>
+                            <div style={{ width:40,height:40,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:13,fontWeight:700,flexShrink:0,overflow:"hidden" }}>{s.photo_url ? <img src={getPhotoUrl(s.photo_url) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
+                            <div>
+                              <div style={{ fontWeight:600,color:"#0f172a" }}>{s.prenom} {s.nom}</div>
+                              {s.numero_matricule && <div style={{ fontFamily:"monospace",fontSize:11,color:"#64748b" }}>{s.numero_matricule}</div>}
+                            </div>
                           </div>
                         </td>
+                        {!isMadrasa && <td style={{ padding:"11px 16px",color:"#334155",fontWeight:600 }}>{s.classe || "—"}</td>}
                         <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 10px",background:niveauBg(s.niveau),color:niveauColor(s.niveau),borderRadius:20,fontSize:11,fontWeight:700 }}>{tr(s.niveau || "")}</span></td>
                         <td style={{ padding:"11px 16px",color:"#64748b" }}>{s.date_naissance?fmtDate(s.date_naissance):"—"}</td>
                         <td style={{ padding:"11px 16px",color:"#475569" }}>{s.telephone_parent||"—"}</td>
@@ -995,6 +1092,43 @@ export default function GestionEnseignement({ mode }: Props) {
                 </table>
                 {filteredStudents.length>0 && <div style={{ padding:"10px 16px",borderTop:"1px solid #f1f5f9",fontSize:12,color:"#94a3b8" }}>{filteredStudents.length>1 ? M("{n} apprenants", "{n} élèves", { n: filteredStudents.length }) : M("{n} apprenant", "{n} élève", { n: filteredStudents.length })}</div>}
               </div>
+            </div>
+          )}
+
+          {/* ── PARENTS (reliés à leurs enfants par le matricule) ── */}
+          {section === "parents" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:12,animation:"fadeIn 0.2s ease" }}>
+              {membres.filter(m => m.role === "parent").length === 0 ? (
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"50px 20px",textAlign:"center",color:"#94a3b8" }}>
+                  {tr("Aucun parent pour l'instant. Touchez « + Ajouter un parent » : son téléphone et le matricule de ses enfants suffisent.")}
+                </div>
+              ) : membres.filter(m => m.role === "parent").map(m => (
+                <div key={m.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:16,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+                    <div style={{ width:46,height:46,borderRadius:"50%",overflow:"hidden",background:`linear-gradient(135deg,#7c3aed,#a78bfa)`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,flexShrink:0 }}>
+                      {m.photo ? <img src={getPhotoUrl(m.photo) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : (m.prenom || m.nom_display || "?").charAt(0)}
+                    </div>
+                    <div style={{ minWidth:0,flex:1 }}>
+                      <div style={{ fontWeight:700,color:"#0f172a" }}>{(String(m.numero_h || "").startsWith("TMP-") ? m.nom_display : null) || [m.prenom, m.nom].filter(Boolean).join(" ") || m.nom_display || tr("Parent")}</div>
+                      {m.telephone_compte && <div style={{ fontSize:12,color:"#64748b" }}>📞 {m.telephone_compte}</div>}
+                    </div>
+                    <button onClick={async()=>{ if(confirm(tr("Retirer ce parent de l'établissement ?"))){ const d=await del(`/members/${m.id}`); if(d.success){ setMembres(ms=>ms.filter(x=>x.id!==m.id)); showToast(tr("Retiré(e)")); } else showToast(d.message||"Erreur",false); } }}
+                      style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
+                  </div>
+                  <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginTop:12 }}>
+                    {(m.enfants || []).map(e => (
+                      <span key={e.id} style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"4px 10px 4px 4px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:24,fontSize:12 }}>
+                        <span style={{ width:30,height:30,borderRadius:"50%",overflow:"hidden",background:"#dcfce7",display:"inline-flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:"#166534" }}>
+                          {e.photo_url ? <img src={getPhotoUrl(e.photo_url) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : e.prenom?.charAt(0)}
+                        </span>
+                        <span><b>{e.prenom} {e.nom}</b>{e.classe ? ` · ${e.classe}` : ""}{e.numero_matricule && <span style={{ display:"block",fontFamily:"monospace",fontSize:10,color:"#64748b" }}>{e.numero_matricule}</span>}</span>
+                      </span>
+                    ))}
+                    <button onClick={()=>{ setForm({ telephone: m.telephone_compte || m.numero_h }); setModal("add-parent"); }}
+                      style={{ padding:"4px 12px",border:`1px dashed ${V.color}`,borderRadius:24,background:"white",color:V.color,fontSize:12,fontWeight:700,cursor:"pointer" }}>+ {tr("Enfant")}</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -1065,6 +1199,18 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ height:"100%",width:`${pct}%`,background:niveauColor(g.niveau),borderRadius:2,transition:"width 0.4s ease" }} />
                         </div>
                         {teacher && <div style={{ fontSize:12,color:"#475569",marginBottom:10 }}>👤 {M("Cheikh", "Prof.")} {teacher.prenom} {teacher.nom}</div>}
+                        {!isMadrasa && (g.enseignants || []).length > 0 && (
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+                            {(g.enseignants || []).map(e => (
+                              <span key={e.id} title={e.specialite ? tr(e.specialite) : undefined} style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"2px 8px 2px 2px", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:20, fontSize:11, fontWeight:600, color:"#334155" }}>
+                                <span style={{ width:22, height:22, borderRadius:"50%", overflow:"hidden", background:"#e2e8f0", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:10 }}>
+                                  {e.photo_url ? <img src={getPhotoUrl(e.photo_url) || ""} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : e.prenom?.charAt(0)}
+                                </span>
+                                {e.prenom} {e.nom}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {Array.isArray(g.emploi_du_temps) && g.emploi_du_temps.length > 0 && (
                           <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
                             {g.emploi_du_temps.slice(0,3).map((s, i) =>(
@@ -1074,7 +1220,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           </div>
                         )}
                         <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                          <button onClick={()=>{ setForm({ ...g, enseignant_id: g.enseignant_id || g.professeur_id }); setModal("add-groupe"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
+                          <button onClick={()=>{ const { enseignants, ...reste } = g; setForm({ ...reste, enseignant_id: g.enseignant_id || g.professeur_id, enseignants: (enseignants || []).map(e => Number(e.id)) }); setModal("add-groupe"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
                           {!isMadrasa && (
                             <button onClick={()=>{ setForm({ id: g.id, nom: g.nom, emploi_du_temps: Array.isArray(g.emploi_du_temps) ? g.emploi_du_temps : [] }); setModal("edit-schedule"); }} style={{ color:"#0369a1",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>📅 {tr("Emploi du temps")}</button>
                           )}

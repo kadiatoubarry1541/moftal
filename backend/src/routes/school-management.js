@@ -48,6 +48,81 @@ router.use(async (req, res, next) => {
   next();
 });
 
+// ─── UNICITÉ ET LIENS (téléphone du personnel, matricule, enseignants d'une classe) ──
+// Un numéro de téléphone = une seule personne : on compare les 9 derniers chiffres
+// (« 620 00 00 00 », « +224620000000 » et « 00224 620000000 » sont le même numéro).
+const chiffresTel = (v) => String(v || '').replace(/[^0-9]/g, '').slice(-9);
+
+/** Fiche du personnel actif qui a déjà ce téléphone (ou ce NuméroH), sauf `saufId`. */
+async function personnelEnDouble(code, { telephone, numeroH }, saufId = null) {
+  const tel = chiffresTel(telephone);
+  const nh = String(numeroH || '').trim();
+  if (tel.length < 8 && !nh) return null;
+  const [doublon] = await sequelize.query(
+    `SELECT id, prenom, nom FROM school_staff
+      WHERE tenant_code = :code AND is_active = true AND (:sauf::int IS NULL OR id <> :sauf::int)
+        AND ((:tel <> '' AND RIGHT(REGEXP_REPLACE(COALESCE(telephone, ''), '[^0-9]', '', 'g'), 9) = :tel)
+          OR (:nh <> '' AND LOWER(COALESCE(numero_h, '')) = LOWER(:nh)))
+      LIMIT 1`,
+    { replacements: { code, sauf: saufId ? Number(saufId) : null, tel: tel.length >= 8 ? tel : '', nh }, type: sequelize.QueryTypes.SELECT }
+  );
+  return doublon || null;
+}
+const messageDoublonPersonnel = (d) =>
+  `Ce numéro est déjà celui de ${[d.prenom, d.nom].filter(Boolean).join(' ') || 'une personne'} dans votre personnel : une personne n'est jamais enregistrée deux fois. Modifiez sa fiche plutôt que d'en créer une nouvelle.`;
+
+/** Matricule déjà porté par un autre élève de l'établissement ? */
+async function matriculePris(code, matricule, saufId = null) {
+  const [r] = await sequelize.query(
+    `SELECT id, prenom, nom FROM school_students WHERE tenant_code = :code AND LOWER(numero_matricule) = LOWER(:m)
+       AND (:sauf::int IS NULL OR id <> :sauf::int) LIMIT 1`,
+    { replacements: { code, m: matricule, sauf: saufId ? Number(saufId) : null }, type: sequelize.QueryTypes.SELECT }
+  );
+  return r || null;
+}
+
+/** Matricule automatique, jamais déjà utilisé dans l'établissement. */
+async function nouveauMatricule(code) {
+  const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
+  let n = +cnt.c + 1;
+  for (;;) {
+    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(n).padStart(4, '0')}`;
+    if (!(await matriculePris(code, mat))) return mat;
+    n += 1;
+  }
+}
+
+// Plusieurs enseignants par classe (le professeur principal en fait partie)
+let enseignantsClassesPrets = false;
+export async function ensureEnseignantsClasses() {
+  if (enseignantsClassesPrets) return;
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS school_classroom_teachers (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      classroom_id INTEGER NOT NULL REFERENCES school_classrooms(id) ON DELETE CASCADE,
+      staff_id     INTEGER NOT NULL REFERENCES school_staff(id) ON DELETE CASCADE,
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (classroom_id, staff_id)
+    );
+  `);
+  enseignantsClassesPrets = true;
+}
+
+/** Remplace la liste des enseignants d'une classe (seulement le personnel de l'établissement). */
+async function enregistrerEnseignantsClasse(code, classroomId, ids, principalId) {
+  await ensureEnseignantsClasses();
+  const liste = [...new Set([...(Array.isArray(ids) ? ids : []), principalId].map((x) => parseInt(x, 10)).filter((x) => x > 0))];
+  await sequelize.query(`DELETE FROM school_classroom_teachers WHERE tenant_code=:code AND classroom_id=:cid`, { replacements: { code, cid: classroomId } });
+  if (!liste.length) return;
+  await sequelize.query(
+    `INSERT INTO school_classroom_teachers (tenant_code, classroom_id, staff_id)
+       SELECT :code, :cid, s.id FROM school_staff s WHERE s.tenant_code = :code AND s.id IN (:ids)
+     ON CONFLICT (classroom_id, staff_id) DO NOTHING`,
+    { replacements: { code, cid: classroomId, ids: liste } }
+  );
+}
+
 // ─── LIENS PARENT ↔ ÉLÈVES ───────────────────────────────────────────────────
 // Un parent peut suivre plusieurs enfants du même établissement : chaque lien
 // est une ligne de school_member_students. L'ancienne colonne
@@ -201,9 +276,14 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
     const code = req.params.tenantCode;
     await ensureSchoolColumns();
     // Photo facultative, enregistrée dans la base (table fichiers)
+    // Matricule : celui de l'école s'il est donné (jamais deux fois le même), sinon automatique
+    const matChoisi = String(req.body.numero_matricule || '').trim();
+    if (matChoisi) {
+      const pris = await matriculePris(code, matChoisi);
+      if (pris) return res.status(409).json({ success: false, message: `Le matricule ${matChoisi} est déjà celui de ${pris.prenom} ${pris.nom}.` });
+    }
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-eleve' });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const mat = matChoisi || await nouveauMatricule(code);
     const [rows] = await sequelize.query(
       `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h,photo_url) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh,:photo) RETURNING *`,
       { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo }, type: sequelize.QueryTypes.INSERT }
@@ -217,14 +297,20 @@ router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, 
     const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut, niveau, numero_h, parent_numero_h, photo_url } = req.body;
     if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     await ensureSchoolColumns();
+    const matChoisi = String(req.body.numero_matricule || '').trim();
+    if (matChoisi) {
+      const pris = await matriculePris(req.params.tenantCode, matChoisi, req.params.id);
+      if (pris) return res.status(409).json({ success: false, message: `Le matricule ${matChoisi} est déjà celui de ${pris.prenom} ${pris.nom}.` });
+    }
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-eleve' });
     // Un champ que le formulaire n'envoie pas garde sa valeur enregistrée
     await sequelize.query(
       `UPDATE school_students SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=COALESCE(:sexe,sexe),telephone_parent=:tel,
          nom_parent=COALESCE(:parent,nom_parent),adresse=COALESCE(:adr,adresse),classroom_id=COALESCE(:cid,classroom_id),statut=:statut,
-         niveau=COALESCE(:niveau,niveau),numero_h=:nh,parent_numero_h=:pnh,photo_url=COALESCE(:photo,photo_url)
+         niveau=COALESCE(:niveau,niveau),numero_h=:nh,parent_numero_h=:pnh,photo_url=COALESCE(:photo,photo_url),
+         numero_matricule=COALESCE(:mat,numero_matricule)
        WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, dob: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null, tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, statut: statut || 'actif', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo, id: req.params.id, code: req.params.tenantCode } }
+      { replacements: { mat: matChoisi || null, nom, prenom, dob: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null, tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, statut: statut || 'actif', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -261,6 +347,8 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const code = req.params.tenantCode;
+    const doublon = await personnelEnDouble(code, { telephone, numeroH: nh });
+    if (doublon) return res.status(409).json({ success: false, message: messageDoublonPersonnel(doublon), staffId: doublon.id });
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
     if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
@@ -286,6 +374,8 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
     const { role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
     const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
+    const doublon = await personnelEnDouble(req.params.tenantCode, { telephone, numeroH: nh }, req.params.id);
+    if (doublon) return res.status(409).json({ success: false, message: messageDoublonPersonnel(doublon), staffId: doublon.id });
     const [ancien] = await sequelize.query(`SELECT numero_h FROM school_staff WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role, niveau: req.body.acces_gestion });
     if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
@@ -318,10 +408,15 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 
 router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, res) => {
   try {
+    await ensureEnseignantsClasses();
+    await ensureStaffPhotoColumn();
     const rows = await sequelize.query(
       // Élèves d'une classe : ceux qui y sont rattachés, sinon ceux du même niveau
       `SELECT c.*,c.professeur_principal_id as professeur_id,s.nom as prof_nom,s.prenom as prof_prenom,
-              COUNT(st.id)::int as nb_eleves, COUNT(st.id)::int as student_count
+              COUNT(st.id)::int as nb_eleves, COUNT(st.id)::int as student_count,
+              COALESCE((SELECT json_agg(json_build_object('id',e.id,'prenom',e.prenom,'nom',e.nom,'photo_url',e.photo_url,'specialite',e.specialite) ORDER BY e.prenom)
+                        FROM school_staff e WHERE e.tenant_code=c.tenant_code AND e.is_active=true
+                          AND (e.id=c.professeur_principal_id OR e.id IN (SELECT t.staff_id FROM school_classroom_teachers t WHERE t.classroom_id=c.id))), '[]'::json) AS enseignants
        FROM school_classrooms c
        LEFT JOIN school_staff s ON c.professeur_principal_id=s.id
        LEFT JOIN school_students st ON st.tenant_code=c.tenant_code AND st.statut='actif'
@@ -344,6 +439,7 @@ router.post('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, r
       `INSERT INTO school_classrooms (tenant_code,nom,niveau,capacite,professeur_principal_id,photo_url) VALUES(:code,:nom,:niveau,:cap,:prof,:photo) RETURNING *, professeur_principal_id as professeur_id`,
       { replacements: { code: req.params.tenantCode, nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null, photo }, type: sequelize.QueryTypes.INSERT }
     );
+    await enregistrerEnseignantsClasse(req.params.tenantCode, rows[0].id, req.body.enseignants, professeur_principal_id || professeur_id);
     const [nb] = await sequelize.query(
       `SELECT COUNT(*)::int as c FROM school_students WHERE tenant_code=:code AND statut='actif' AND classroom_id IS NULL AND niveau=:niveau`,
       { replacements: { code: req.params.tenantCode, niveau: niveau || null }, type: sequelize.QueryTypes.SELECT }
@@ -362,6 +458,7 @@ router.put('/:tenantCode/classrooms/:id', authenticate, verifyTenant, async (req
       `UPDATE school_classrooms SET nom=:nom,niveau=:niveau,capacite=:cap,professeur_principal_id=:prof,photo_url=COALESCE(:photo,photo_url) WHERE id=:id AND tenant_code=:code`,
       { replacements: { nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null, photo, id: req.params.id, code: req.params.tenantCode } }
     );
+    if (Array.isArray(req.body.enseignants)) await enregistrerEnseignantsClasse(req.params.tenantCode, req.params.id, req.body.enseignants, professeur_principal_id || professeur_id);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -565,8 +662,9 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
     await ensureLiensParentsEcole();
     const rows = await sequelize.query(
       `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo,u.tel1 AS telephone_compte,
-         COALESCE((SELECT json_agg(json_build_object('id',s.id,'prenom',s.prenom,'nom',s.nom) ORDER BY s.prenom)
+         COALESCE((SELECT json_agg(json_build_object('id',s.id,'prenom',s.prenom,'nom',s.nom,'numero_matricule',s.numero_matricule,'photo_url',s.photo_url,'classe',cl.nom) ORDER BY s.prenom)
                    FROM school_member_students l JOIN school_students s ON s.id=l.student_id AND s.tenant_code=l.tenant_code
+                   LEFT JOIN school_classrooms cl ON cl.id=s.classroom_id
                    WHERE l.tenant_code=m.tenant_code AND l.numero_h=m.numero_h), '[]'::json) AS enfants
        FROM school_members m LEFT JOIN users u ON m.numero_h=u.numero_h WHERE m.tenant_code=:code AND m.is_active=true ORDER BY m.role,m.created_at`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
@@ -585,6 +683,19 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
     if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
     const user = trouve.personne;
     const numero_h = user.numero_h;
+    // Enfants donnés par leur matricule (un ou plusieurs) : tous doivent être de CET établissement
+    const matricules = (Array.isArray(req.body.matricules) ? req.body.matricules : String(req.body.matricules || '').split(/[,;\s]+/))
+      .map((m) => String(m).trim()).filter(Boolean);
+    let enfantsParMatricule = [];
+    if (matricules.length) {
+      enfantsParMatricule = await sequelize.query(
+        `SELECT id, numero_matricule FROM school_students WHERE tenant_code=:code AND statut='actif' AND LOWER(numero_matricule) IN (:m)`,
+        { replacements: { code, m: matricules.map((m) => m.toLowerCase()) }, type: sequelize.QueryTypes.SELECT }
+      );
+      const trouves = new Set(enfantsParMatricule.map((e) => String(e.numero_matricule).toLowerCase()));
+      const inconnus = matricules.filter((m) => !trouves.has(m.toLowerCase()));
+      if (inconnus.length) return res.status(404).json({ success: false, message: `Matricule introuvable dans votre établissement : ${inconnus.join(', ')}.` });
+    }
     // L'élève relié doit appartenir à CET établissement
     let sid = null;
     if (linked_student_id !== undefined && linked_student_id !== null && linked_student_id !== '') {
@@ -596,20 +707,22 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
       sid = eleve.id;
     }
     await ensureLiensParentsEcole();
-    const nom_display = [user.prenom, user.nom].filter(Boolean).join(' ');
+    // Nom tapé par l'école (utile quand le parent n'a pas encore complété son compte)
+    const nomTape = String(req.body.nom_parent || '').trim().slice(0, 120);
+    const nom_display = nomTape || [user.prenom, user.nom].filter(Boolean).join(' ');
     const [rows] = await sequelize.query(
       `INSERT INTO school_members (tenant_code,numero_h,role,linked_student_id,nom_display,added_by)
        VALUES(:code,:n,:role,:sid,:nom,:by)
-       ON CONFLICT(tenant_code,numero_h) DO UPDATE SET role=EXCLUDED.role,linked_student_id=COALESCE(EXCLUDED.linked_student_id,school_members.linked_student_id),nom_display=EXCLUDED.nom_display,is_active=true
+       ON CONFLICT(tenant_code,numero_h) DO UPDATE SET role=EXCLUDED.role,linked_student_id=COALESCE(EXCLUDED.linked_student_id,school_members.linked_student_id),nom_display=COALESCE(NULLIF(:nomTape,''),school_members.nom_display,EXCLUDED.nom_display),is_active=true
        RETURNING *`,
-      { replacements: { code, n: numero_h, role: role || 'parent', sid, nom: nom_display, by: req.userId }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, n: numero_h, role: role || 'parent', sid: sid || enfantsParMatricule[0]?.id || null, nom: nom_display, nomTape, by: req.userId }, type: sequelize.QueryTypes.INSERT }
     );
     // Un enfant de plus : les liens déjà enregistrés sont conservés
-    if (sid) {
+    for (const id of new Set([sid, ...enfantsParMatricule.map((e) => e.id)].filter(Boolean))) {
       await sequelize.query(
         `INSERT INTO school_member_students (tenant_code,numero_h,student_id) VALUES(:code,:n,:sid)
          ON CONFLICT (tenant_code,numero_h,student_id) DO NOTHING`,
-        { replacements: { code, n: numero_h, sid } }
+        { replacements: { code, n: numero_h, sid: id } }
       );
     }
     await notifierMembreEtablissement(code, numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}). Suivez vos enfants dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}`, { url: `/gestion-ecole/${code}` });

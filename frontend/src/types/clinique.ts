@@ -55,6 +55,8 @@ export interface Patient {
   allergies?: string | null;
   solde_du?: Montant;
   created_at?: string;
+  /** Photo du patient (facultative), montrée sur sa carte */
+  photo_url?: string | null;
 }
 
 export interface Personnel {
@@ -235,6 +237,7 @@ export interface DemandeRendezVous {
 /** Formulaire commun des fenêtres d'ajout (patient, rendez-vous, facture…). */
 export interface FormClinique {
   id?: number;
+  photo_url?: string | null;
   nom?: string;
   prenom?: string;
   date_naissance?: string;

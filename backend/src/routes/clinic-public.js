@@ -2,7 +2,7 @@ import express from 'express';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
-import { ensurePharmacyTable, ensureAppointmentRequestsTable, ensureTenantExtraColumns, ensureReviewsTable } from './clinic-management.js';
+import { ensurePharmacyTable, ensureAppointmentRequestsTable, ensureTenantExtraColumns, ensureReviewsTable, preparerEnvoisPatient } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -146,10 +146,38 @@ router.get('/:tenantCode/my-portal', authenticate, async (req, res) => {
       ).catch(() => []),
     ]);
 
-    res.json({ success: true, clinic: tenant, patient, appointments, prescriptions, records, exams, vaccinations });
+    // Documents que la clinique lui a envoyés (carte, ordonnance, bilan), du plus récent au plus ancien
+    await preparerEnvoisPatient().catch(() => {});
+    const envois = await sequelize.query(
+      `SELECT e.id, e.type, e.ref_id, e.created_at,
+              CASE WHEN e.type = 'ordonnance' THEN (SELECT row_to_json(o) FROM (SELECT p.id, p.numero_ordo, p.medicaments, p.diagnostic, p.notes, p.created_at, s.prenom AS s_prenom, s.nom AS s_nom
+                     FROM clinic_prescriptions p LEFT JOIN clinic_staff s ON s.id = p.staff_id WHERE p.id = e.ref_id AND p.tenant_code = e.tenant_code) o)
+                   WHEN e.type = 'examen' THEN (SELECT row_to_json(x) FROM (SELECT id, categorie, type_examen, resultat, statut, date_prescription, date_resultat, (fichier IS NOT NULL AND fichier <> '') AS a_fichier
+                     FROM clinic_exams WHERE id = e.ref_id AND tenant_code = e.tenant_code) x)
+              END AS document
+         FROM clinic_envois e
+        WHERE e.tenant_code = :code AND e.patient_id = :pid
+        ORDER BY e.created_at DESC LIMIT 50`,
+      { replacements: { code: tenantCode, pid: patient.id }, type: sequelize.QueryTypes.SELECT }
+    ).catch(() => []);
+
+    res.json({ success: true, clinic: tenant, patient, appointments, prescriptions, records, exams, vaccinations, envois });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
+});
+
+// GET /api/clinic-public/:tenantCode/my-portal/exams/:id/fichier — le fichier d'un de SES examens
+router.get('/:tenantCode/my-portal/exams/:id/fichier', authenticate, async (req, res) => {
+  try {
+    const [x] = await sequelize.query(
+      `SELECT x.fichier FROM clinic_exams x JOIN clinic_patients p ON p.id = x.patient_id AND p.tenant_code = x.tenant_code
+        WHERE x.id = :id AND x.tenant_code = :code AND LOWER(TRIM(p.numero_h)) = LOWER(TRIM(:nh)) LIMIT 1`,
+      { replacements: { id: parseInt(req.params.id, 10) || 0, code: req.params.tenantCode, nh: req.userId }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!x?.fichier) return res.status(404).json({ success: false, message: 'Fichier introuvable.' });
+    res.json({ success: true, fichier: x.fichier });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // POST /api/clinic-public/:tenantCode/request-appointment — patient demande un RDV
