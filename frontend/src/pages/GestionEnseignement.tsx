@@ -570,7 +570,7 @@ export default function GestionEnseignement({ mode }: Props) {
             {!isMadrasa && (<>
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Classe")}</label>
-                <select value={form.classroom_id ?? ""} onChange={e=>setForm((f) =>({...f,classroom_id:e.target.value || null}))} className={inp} style={inpSt}>
+                <select value={form.classroom_id ?? ""} onChange={e=>{ const g = groupes.find(x => String(x.id) === e.target.value); setForm((f) =>({...f,classroom_id:e.target.value || null, ...(g?.niveau ? { niveau: g.niveau } : {})})); }} className={inp} style={inpSt}>
                   <option value="">{tr("— Aucune —")}</option>
                   {groupes.map(g=><option key={g.id} value={g.id}>{g.nom}</option>)}
                 </select>
@@ -878,7 +878,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
       {PARENTS}
       {toast && (
-        <div style={{ position: "fixed", top: 20, insetInlineEnd: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? V.color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", animation: "fadeIn 0.2s ease" }}>
+        <div style={{ position: "fixed", top: 20, insetInlineEnd: 20, maxWidth: "calc(100vw - 40px)", boxSizing: "border-box", zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? V.color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
         </div>
       )}
