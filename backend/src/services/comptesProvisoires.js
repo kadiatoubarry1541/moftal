@@ -79,3 +79,20 @@ export async function aEteAjoutee(numeroH) {
   }
   return false;
 }
+
+/**
+ * Compte préparé (« Nouveau membre ») pour une personne ajoutée par un
+ * établissement : il prend le nom que l'établissement a tapé, pour que la
+ * personne se reconnaisse dès sa première connexion. Un compte déjà complété
+ * par la personne elle-même n'est jamais modifié.
+ */
+export async function nommerComptePrepare(numeroH, prenom, nom) {
+  const p = String(prenom || '').trim().slice(0, 80);
+  const n = String(nom || '').trim().slice(0, 80);
+  if (!numeroH || !String(numeroH).startsWith('TMP-') || (!p && !n)) return;
+  await sequelize.query(
+    `UPDATE users SET prenom = COALESCE(NULLIF(:p, ''), prenom), nom_famille = COALESCE(NULLIF(:n, ''), nom_famille)
+      WHERE numero_h = :nh AND prenom = 'Nouveau' AND nom_famille = 'membre'`,
+    { replacements: { p, n, nh: String(numeroH) } }
+  ).catch((e) => console.error('Nom du compte préparé :', e.message));
+}

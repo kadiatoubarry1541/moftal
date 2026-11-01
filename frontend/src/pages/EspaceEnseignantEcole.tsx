@@ -5,19 +5,24 @@ import { heure, duree } from "../components/ecole/formatEcole";
 import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminConnexion } from "../utils/connexionRetour";
+import { getPhotoUrl } from "../utils/auth";
 
-// Espace de l'enseignant : il marque le début et la fin de chacun de ses cours.
+// Espace de l'enseignant : « Aujourd'hui » (début et fin de chaque cours),
+// « Mes classes » (matières, liste des apprenants avec photo et matricule) et
+// « Emploi du temps » (sa semaine dans toutes ses classes).
 // L'heure enregistrée est celle du serveur ; le directeur la voit dans
 // « Pointage des cours » de la gestion de l'école.
 
 const jeton = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-interface Creneau { heure_debut?: string; heure_fin?: string; matiere?: string }
-interface Classe { id: number; nom: string; niveau?: string; creneaux: Creneau[] }
+interface Creneau { jour?: string; heure_debut?: string; heure_fin?: string; matiere?: string }
+interface Apprenant { id: number; prenom: string; nom: string; photo_url?: string | null; numero_matricule?: string | null }
+interface Classe { id: number; nom: string; niveau?: string; creneaux: Creneau[]; semaine?: Creneau[]; matieres?: string[]; apprenants?: Apprenant[] }
+const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 interface Pointage { id: number; classroom_id: number; classe?: string; matiere?: string | null; debut: string; fin?: string | null }
 interface Donnees {
   ecole: { nom: string; logo_url?: string | null };
-  enseignant: { prenom: string; nom: string };
+  enseignant: { prenom: string; nom: string; specialite?: string | null };
   jour: string; classes: Classe[]; pointages: Pointage[]; enCours: Pointage | null;
 }
 
@@ -31,6 +36,8 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   const [erreur, setErreur] = useState("");
   const [occupe, setOccupe] = useState(false);
   const [, setTic] = useState(0);
+  const [onglet, setOnglet] = useState<"jour" | "classes" | "semaine">("jour");
+  const [ouverte, setOuverte] = useState<number | null>(null);
   const base = `${config.API_BASE_URL}/${madrasa ? "madrasa-mgmt" : "school-mgmt"}/${encodeURIComponent(tenantCode)}`;
 
   const charger = useCallback(() => {
@@ -79,9 +86,74 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
       <div className="max-w-xl mx-auto px-4 pt-4">
         <p className="font-bold text-slate-900">{tr("🧑‍🏫 Mes cours")}</p>
         <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {tr(d.jour)}</p>
+        <div className="flex gap-1 mt-3 bg-white rounded-xl border border-slate-100 p-1">
+          {([["jour", tr("Aujourd'hui")], ["classes", tr("Mes classes")], ["semaine", tr("Emploi du temps")]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setOnglet(id)} className="flex-1 py-2 rounded-lg text-xs font-bold"
+              style={onglet === id ? { background: VERT, color: "white" } : { color: "#475569" }}>{label}</button>
+          ))}
+        </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
+      {onglet === "classes" && (
+        <div className="max-w-xl mx-auto px-4 py-4 space-y-3">
+          {d.classes.length === 0 && <div className="bg-white rounded-xl border p-6 text-center text-sm text-slate-500">{tr("Aucune classe ne vous est attribuée pour le moment.")}</div>}
+          {d.classes.map((c) => (
+            <div key={c.id} className="bg-white rounded-xl border border-slate-100 p-4">
+              <button className="w-full flex items-center gap-3 text-start" onClick={() => setOuverte(ouverte === c.id ? null : c.id)}>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">{c.nom}{c.niveau ? <span className="text-xs font-semibold text-slate-500"> · {tr(c.niveau)}</span> : null}</p>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {(c.matieres && c.matieres.length ? c.matieres : d.enseignant.specialite ? [d.enseignant.specialite] : []).map(m => tr(m)).join(" · ") || tr("Matière à préciser dans l'emploi du temps")}
+                  </p>
+                </div>
+                {c.apprenants && <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: "#f0fdf4", color: VERT }}>{tr("{n} apprenant(s)", { n: c.apprenants.length })}</span>}
+                <span className="text-slate-400">{ouverte === c.id ? "▲" : "▼"}</span>
+              </button>
+              {ouverte === c.id && (
+                <div className="mt-3 divide-y divide-slate-100">
+                  {(c.apprenants || []).length === 0 && <p className="text-sm text-slate-500 py-2">{tr("Aucun apprenant dans cette classe pour le moment.")}</p>}
+                  {(c.apprenants || []).map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 py-2">
+                      <span className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold flex-shrink-0" style={{ background: VERT }}>
+                        {a.photo_url ? <img src={getPhotoUrl(a.photo_url) || ""} alt="" className="w-full h-full object-cover" /> : a.prenom?.charAt(0)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{a.prenom} {a.nom}</p>
+                        {a.numero_matricule && <p className="text-xs font-mono text-slate-500">{a.numero_matricule}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {onglet === "semaine" && (
+        <div className="max-w-xl mx-auto px-4 py-4 space-y-3">
+          {(() => {
+            const tous = d.classes.flatMap((c) => (c.semaine || []).map((cr) => ({ ...cr, classe: c.nom })));
+            if (!tous.length) return <div className="bg-white rounded-xl border p-6 text-center text-sm text-slate-500">{tr("Votre emploi du temps n'est pas encore rempli. Le directeur le remplit dans chaque classe.")}</div>;
+            return JOURS.filter((j) => tous.some((cr) => cr.jour === j)).map((j) => (
+              <div key={j} className="bg-white rounded-xl border border-slate-100 p-3">
+                <p className="font-bold text-sm mb-2" style={{ color: j === d.jour ? VERT : "#0f172a" }}>{tr(j)}{j === d.jour ? ` · ${tr("aujourd'hui")}` : ""}</p>
+                <div className="space-y-1.5">
+                  {tous.filter((cr) => cr.jour === j).sort((a, b) => String(a.heure_debut).localeCompare(String(b.heure_debut))).map((cr, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="font-mono text-xs font-bold text-slate-600 w-24">{cr.heure_debut}–{cr.heure_fin}</span>
+                      <span className="flex-1 text-slate-800">{cr.matiere ? tr(cr.matiere) : "—"}</span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "#f0fdf4", color: VERT }}>{cr.classe}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {onglet === "jour" && <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
         {enCours && (
           <div className="rounded-2xl p-4 text-white" style={{ background: VERT }}>
             <p className="text-xs opacity-80">{tr("Cours en cours")}</p>
@@ -133,7 +205,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -79,7 +79,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite, eco
       <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
         <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{tr("📸 Ajouter des photos à votre site")}</p>
         <p style={{ margin: "0 0 12px", fontSize: 12, color: "#64748b" }}>{ecole
-          ? tr("Les images parlent mieux : montrez vos locaux, vos élèves en activité, vos fêtes et vos résultats. Elles apparaissent sur votre site, visible par tout le monde.")
+          ? tr("Les images parlent mieux : montrez vos locaux, vos apprenants en activité, vos fêtes et vos résultats. Elles apparaissent sur votre site, visible par tout le monde.")
           : tr("Les images parlent mieux que les mots : montrez vos produits, vos services, vos réalisations et vos locaux. Elles apparaissent sur votre site, visible par tout le monde.")}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input value={legende} onChange={e => setLegende(e.target.value)} placeholder={tr("Légende (facultatif) — ex. Remise des prix 2026")} style={{ ...champ, flex: "1 1 220px" }} maxLength={255} />

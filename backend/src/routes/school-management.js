@@ -1,7 +1,7 @@
 import express from 'express';
 import { notifierMembreEtablissement, ajouterRouteNotificationsApp } from '../utils/notificationsEtablissement.js';
 import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
-import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
+import { trouverOuPreparerPersonne, nommerComptePrepare } from '../services/comptesProvisoires.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
@@ -283,6 +283,8 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
       if (pris) return res.status(409).json({ success: false, message: `Le matricule ${matChoisi} est déjà celui de ${pris.prenom} ${pris.nom}.` });
     }
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-eleve' });
+    // Le matricule est saisi par l'établissement (chaque école, chaque université a déjà le sien)
+    if (!matChoisi && !req.body.matricule_automatique) return res.status(400).json({ success: false, message: "Saisissez le matricule de l'apprenant (celui de votre établissement)." });
     const mat = matChoisi || await nouveauMatricule(code);
     const [rows] = await sequelize.query(
       `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h,photo_url) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh,:photo) RETURNING *`,
@@ -360,6 +362,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
       `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h,profil,sur_site) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh,:profil,COALESCE(:surSite,true)) RETURNING *`,
       { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo, nh, ...champsSitePersonnel(req.body) }, type: sequelize.QueryTypes.INSERT }
     );
+    await nommerComptePrepare(nh, prenom, nom);
     if (nh) {
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
       await notifierMembreEtablissement(code, nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}/enseignant`, { url: `/gestion-ecole/${code}` });
@@ -391,6 +394,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
        WHERE id=:id AND tenant_code=:code`,
       { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, ...champsSitePersonnel(req.body), id: req.params.id, code: req.params.tenantCode } }
     );
+    await nommerComptePrepare(nh, prenom, nom);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -703,13 +707,17 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
         `SELECT id FROM school_students WHERE id=:sid AND tenant_code=:code LIMIT 1`,
         { replacements: { sid: parseInt(linked_student_id, 10) || 0, code }, type: sequelize.QueryTypes.SELECT }
       );
-      if (!eleve) return res.status(404).json({ success: false, message: 'Élève introuvable dans cet établissement.' });
+      if (!eleve) return res.status(404).json({ success: false, message: 'Apprenant introuvable dans cet établissement.' });
       sid = eleve.id;
     }
     await ensureLiensParentsEcole();
     // Nom tapé par l'école (utile quand le parent n'a pas encore complété son compte)
     const nomTape = String(req.body.nom_parent || '').trim().slice(0, 120);
     const nom_display = nomTape || [user.prenom, user.nom].filter(Boolean).join(' ');
+    if (nomTape) {
+      const [pr, ...reste] = nomTape.split(/\s+/);
+      await nommerComptePrepare(numero_h, pr, reste.join(' '));
+    }
     const [rows] = await sequelize.query(
       `INSERT INTO school_members (tenant_code,numero_h,role,linked_student_id,nom_display,added_by)
        VALUES(:code,:n,:role,:sid,:nom,:by)
@@ -783,7 +791,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
       const children = await elevesLiesEcole(code, req.userId);
       const demande = req.query.student_id ? parseInt(req.query.student_id, 10) : null;
       if (req.query.student_id && !children.some(c => c.id === demande)) {
-        return res.status(403).json({ success: false, message: 'Cet élève n\'est pas relié à votre compte.' });
+        return res.status(403).json({ success: false, message: 'Cet apprenant n\'est pas relié à votre compte.' });
       }
       const studentId = demande || children[0]?.id || null;
       data = { children, student: null, grades: [], attendance: [], fees: [], bulletins: [] };

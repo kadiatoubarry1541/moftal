@@ -57,10 +57,13 @@ export default function ProfileCompletionPrompt() {
   const goComplete = () => { setBlockedMessage(null); navigate(PAGE_MAJ_PROFIL); };
   // Sur la page du profil, le formulaire est déjà là : pas de bannière par-dessus
   const onCompletePage = pathname.startsWith("/moi/profil");
+  // Dans l'application d'un établissement (école, clinique…) : c'est l'application
+  // de l'établissement, pas de rappel Moftal par-dessus (parents, enseignants, employés)
+  const dansAppEtablissement = /^\/gestion-/.test(pathname);
 
   return (
     <>
-      {provisional && !onCompletePage && !dismissed && !blockedMessage && (
+      {provisional && !onCompletePage && !dansAppEtablissement && !dismissed && !blockedMessage && (
         <div role="status" style={{ position: "fixed", left: 12, right: 12, bottom: 64, zIndex: 9998, maxWidth: 480, margin: "0 auto" }}
           className="flex items-center gap-3 rounded-2xl bg-white border border-amber-200 shadow-lg px-4 py-3">
           <span className="text-2xl">👤</span>
