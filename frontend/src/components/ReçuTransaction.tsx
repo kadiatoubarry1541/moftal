@@ -1,4 +1,5 @@
 ﻿import { useRef } from 'react';
+import { ouvrirDocument } from "../utils/documentImprimable";
 import { useTraduction } from '../i18n/traduction';
 
 /** Données d'un reçu (sans la fermeture) */
@@ -41,9 +42,7 @@ export function ReçuTransaction({
   const handlePrint = () => {
     const content = printRef.current?.innerHTML;
     if (!content) return;
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    ouvrirDocument(`<!DOCTYPE html><html><head><meta charset="utf-8">
       <title>${tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' })}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,9 +69,7 @@ export function ReçuTransaction({
         .footer { background: #f8fafc; padding: 14px; text-align: center; border-top: 1px dashed #ccc; }
         .footer p { font-size: 10px; color: #888; line-height: 1.6; }
         @media print { body { background: white; padding: 0; } }
-      </style></head><body>${content}</body></html>`);
-    win.document.close();
-    setTimeout(() => win.print(), 400);
+      </style></head><body>${content}</body></html>`, `recu-moftal-pay-${nomFamille || proNom || ""}`);
   };
 
   const refCourt = id.slice(0, 8).toUpperCase();

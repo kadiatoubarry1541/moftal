@@ -11,6 +11,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import { ouvrirDocument } from "../utils/documentImprimable";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelMessage";
 import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
@@ -63,8 +64,7 @@ function printBulletin(b: Bulletin, orgName: string, color: string, logoUrl?: st
 <div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${trHors(b.mention || "")}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">${trHors("Signature & Cachet")}</div></div>
 </body></html>`;
-  const w = window.open("", "_blank", "width=800,height=900");
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+  ouvrirDocument(html, `bulletin-${b.student_prenom || ""}-${b.student_nom || ""}-${b.periode || ""}`);
 }
 
 const PERIODES = ["Trim 1", "Trim 2", "Trim 3", "Sem 1", "Sem 2", "Annuel"];

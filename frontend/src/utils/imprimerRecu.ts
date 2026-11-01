@@ -5,6 +5,7 @@
 // Imprimé dans la langue choisie (arabe : document de droite à gauche).
 
 import { trHors as tr, langueCourante } from "../i18n/traduction";
+import { ouvrirDocument } from "./documentImprimable";
 
 export interface LigneRecu {
   libelle: string;
@@ -50,8 +51,6 @@ function absolu(url?: string | null) {
 }
 
 export function imprimerRecu(r: Recu) {
-  const w = window.open("", "_blank");
-  if (!w) { alert(tr("Autorisez l'ouverture des fenêtres pour imprimer le reçu.")); return; }
   const ar = langueCourante() === "ar";
   const debut = ar ? "right" : "left", fin = ar ? "left" : "right";
   const c = r.couleur || "#1a8f1a";
@@ -66,7 +65,7 @@ export function imprimerRecu(r: Recu) {
       <td class="r">${gnf(l.montant)}</td></tr>`).join("");
   const logo = absolu(e.logo_url);
 
-  w.document.write(`<!doctype html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  ouvrirDocument(`<!doctype html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echap(tr("{titre} n° {numero}", { titre: tr(r.titre), numero: r.numero }))}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -113,7 +112,5 @@ ${r.client || r.clientTelephone || r.details?.length ? `<div class="box">
 ${r.note ? `<div class="box" style="margin-top:14px">${echap(r.note)}</div>` : ""}
 <div class="pied"><div>${tr("Fait le {date}", { date: fmtDate(new Date()) })}</div><div class="sign">${tr("Signature et cachet")}</div></div>
 <div class="merci">${tr("Merci de votre confiance")}</div>
-<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script>
-</body></html>`);
-  w.document.close();
+</body></html>`, `${tr(r.titre)}-${r.numero}`);
 }

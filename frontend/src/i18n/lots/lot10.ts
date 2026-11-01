@@ -46,5 +46,10 @@ const lot: Lot = {
   "Ex : Enseignement bilingue": ["E.g. Bilingual teaching", "مثال: تعليم ثنائي اللغة", "Misali : Kalan kan fila la", "Misal : Jaŋde e ɗemɗe ɗiɗi"],
   "Ex : Suivi de chaque apprenant": ["E.g. Follow-up of every learner", "مثال: متابعة كل متعلم", "Misali : Kalanden kelen-kelen bɛɛ kɔlɔsili", "Misal : Jokkude kala jaŋngoowo"],
   "Ex : Discipline et respect": ["E.g. Discipline and respect", "مثال: الانضباط والاحترام", "Misali : Sariya labato ni bonya", "Misal : Ñaawoore e teddungal"],
+  "🖨️ Imprimer": ["🖨️ Print", "🖨️ طباعة", "🖨️ A gafe bɔ", "🖨️ Muuɓal"],
+  "⬇️ Télécharger en PDF": ["⬇️ Download as PDF", "⬇️ تنزيل بصيغة PDF", "⬇️ A jigin PDF ye", "⬇️ Aawto PDF"],
+  "⏳ Préparation du PDF…": ["⏳ Preparing the PDF…", "⏳ جارٍ تجهيز ملف PDF…", "⏳ PDF bɛ labɛn…", "⏳ PDF ina hebboo…"],
+  "✅ PDF téléchargé": ["✅ PDF downloaded", "✅ تم تنزيل PDF", "✅ PDF jiginna", "✅ PDF aawtaama"],
+  "Le PDF n'a pas pu être créé. Utilisez « Imprimer », puis « Enregistrer en PDF ».": ["The PDF could not be created. Use “Print”, then “Save as PDF”.", "تعذر إنشاء ملف PDF. استخدم «طباعة» ثم «حفظ بصيغة PDF».", "PDF ma se ka dilan. « A gafe bɔ » kɛ, o kɔ « A mara PDF ye ».", "PDF waawaa waɗeede. Huutoro « Muuɓal », refti « Danndu PDF »."],
 };
 export default lot;
