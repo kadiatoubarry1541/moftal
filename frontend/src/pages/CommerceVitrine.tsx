@@ -349,7 +349,9 @@ export default function CommerceVitrine() {
 
                   {/* Prix + unité */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: AMBER }}>{fmtMoney(+p.prix_vente)}</span>
+                    {+p.prix_vente > 0
+                      ? <span style={{ fontSize: 18, fontWeight: 800, color: AMBER }}>{fmtMoney(+p.prix_vente)}</span>
+                      : <span style={{ fontSize: 13, fontWeight: 700, color: "#b45309" }}>{p.audio_url ? tr("🎤 Prix dans le vocal") : tr("Prix sur demande")}</span>}
                     {p.unite && p.unite !== "pièce" && (
                       <span style={{ fontSize: 12, color: "#94a3b8" }}>/ {p.unite}</span>
                     )}

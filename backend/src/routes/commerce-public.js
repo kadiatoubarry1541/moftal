@@ -45,7 +45,7 @@ router.get('/:tenantCode/products', async (req, res) => {
     );
     // + les publications faites depuis le bouton « Publier » d'Échange
     const echange = (await publicationsEchangeDuSite(tenantCode)).map((e) => ({
-      id: e.id, nom: e.nom, categorie: e.categorie, prix_vente: e.prix, unite: e.unite, stock: e.stock, photo_url: e.photo,
+      id: e.id, nom: e.nom, categorie: e.categorie, prix_vente: e.prix, unite: e.unite, stock: e.stock, photo_url: e.photo, video_url: e.video, audio_url: e.audio,
     }));
     res.json({ success: true, products: [...products, ...echange] });
   } catch (e) {
