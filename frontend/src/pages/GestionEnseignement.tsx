@@ -19,6 +19,7 @@ import CoordonneesSite from "../components/CoordonneesSite";
 import NotificationsApp from "../components/ecole/NotificationsApp";
 import ParametreLangue from "../components/ParametreLangue";
 import EnvoiLien from "../components/EnvoiLien";
+import ValeursSite from "../components/ValeursSite";
 import { lienAppGestion } from "../utils/lienAppGestion";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
@@ -306,7 +307,7 @@ export default function GestionEnseignement({ mode }: Props) {
       if (modal === "add-apprenant") {
         if (!form.nom || !form.prenom) { showToast(tr("Nom et prénom obligatoires"), false); return; }
         // Le matricule est celui que l'établissement donne déjà à ses apprenants
-        if (!isMadrasa && !String(form.numero_matricule || "").trim()) { showToast(tr("Saisissez le matricule de l'apprenant (celui de votre établissement)."), false); return; }
+        if (!isMadrasa && !String(form.numero_matricule || "").trim()) { showToast(tr("Saisissez le matricule de l'apprenant."), false); return; }
         if (form.id) {
           const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || niveaux[0] });
           if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } as Apprenant : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Apprenant modifié(e)")); get("/students").then(r => r.students && setStudents(r.students)); }
@@ -593,7 +594,7 @@ export default function GestionEnseignement({ mode }: Props) {
               </div>
             </>)}
           </div>
-          {!isMadrasa && <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Le matricule de votre établissement relie l'apprenant à ses parents : tapez-le en ajoutant le parent.")}</p>}
+          {!isMadrasa && <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Le matricule de l'apprenant le relie à ses parents : tapez-le en ajoutant le parent.")}</p>}
         </>)}
 
         {modal === "add-parent" && (() => {
@@ -748,7 +749,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   style={{ order: 2, minWidth: 0, border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:13 }} />
                 <input type="time" value={slot.heure_fin||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_fin:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   style={{ order: 3, minWidth: 0, border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:13 }} />
-                <input value={slot.matiere||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],matiere:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                <input list="matieres-edt" value={slot.matiere||""} onChange={e=>setForm((f) =>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],matiere:e.target.value}; return {...f,emploi_du_temps:edt}; })}
                   placeholder={tr("Matière")} style={{ gridColumn:"1 / 2", order: 5, border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
                 <button onClick={()=>setForm((f) =>({...f,emploi_du_temps:f.emploi_du_temps.filter((_, idx) =>idx!==i)}))}
                   style={{ width:28,height:28,border:"none",background:"#fef2f2",color:"#ef4444",borderRadius:6,cursor:"pointer",fontWeight:700 }}>×</button>
@@ -761,6 +762,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 )}
               </div>
             ))}
+            <datalist id="matieres-edt">{V.matieres.filter(m => m !== "Autre").map(m => <option key={m} value={tr(m)} />)}</datalist>
             <button onClick={()=>setForm((f) =>({...f,emploi_du_temps:[...(f.emploi_du_temps||[]),{jour:"Lundi",heure_debut:"08:00",heure_fin:"09:00",matiere:""}]}))}
               style={{ padding:"8px", border:"1.5px dashed #cbd5e1", borderRadius:8, background:"transparent", color:V.color, cursor:"pointer", fontSize:12, fontWeight:600, marginTop:4 }}>
               {tr("+ Ajouter un créneau")}
@@ -1553,6 +1555,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               </div>
               <CoordonneesSite tenantCode={tenantCode} couleur={V.color} lienSite={`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />
+              <ValeursSite tenantCode={tenantCode} couleur={V.color} />
               <PhotosSite tenantCode={tenantCode} apiName={apiName} couleur={V.color} lienSite={`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />
             </div>
           )}

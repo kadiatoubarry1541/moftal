@@ -89,7 +89,7 @@ router.get('/:type/:tenantCode', async (req, res) => {
     await fillTenantsFromAccounts(tenantCode).catch(() => {});
     await ensureTenantExtraColumns();
     const [tenant] = await sequelize.query(
-      `SELECT mt.tenant_code, mt.type, mt.name, mt.logo_url, mt.address, mt.phone, mt.email, mt.description, mt.horaires, mt.phone_urgence
+      `SELECT mt.tenant_code, mt.type, mt.name, mt.logo_url, mt.address, mt.phone, mt.email, mt.description, mt.horaires, mt.phone_urgence, mt.valeurs
        FROM management_tenants mt
        WHERE mt.tenant_code = :code AND mt.type IN (:types) AND mt.is_active = true
          AND ${FILTRE_GESTION_INTERNE}

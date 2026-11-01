@@ -91,6 +91,7 @@ export async function ensureTenantExtraColumns() {
   await sequelize.query(`
     ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS horaires TEXT;
     ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS phone_urgence VARCHAR(50);
+    ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS valeurs JSONB;
   `);
 }
 

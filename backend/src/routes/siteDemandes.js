@@ -184,6 +184,31 @@ siteMgmtRouter.put('/:tenantCode/coordonnees', authenticate, verifyTenant, async
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ─── « Nos valeurs » : ce qui rend l'établissement différent ────────────────
+// Trois points au plus (titre + texte) écrits par le responsable ; le site les
+// montre à la place du texte général « Pourquoi nous choisir ? ».
+siteMgmtRouter.get('/:tenantCode/valeurs', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureTenantExtraColumns();
+    const [t] = await sequelize.query(`SELECT valeurs FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, valeurs: Array.isArray(t?.valeurs) ? t.valeurs : [] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+siteMgmtRouter.put('/:tenantCode/valeurs', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureTenantExtraColumns();
+    const liste = (Array.isArray(req.body?.valeurs) ? req.body.valeurs : [])
+      .map((v) => ({ titre: String(v?.titre || '').trim().slice(0, 80), texte: String(v?.texte || '').trim().slice(0, 300) }))
+      .filter((v) => v.titre || v.texte)
+      .slice(0, 3);
+    await sequelize.query(`UPDATE management_tenants SET valeurs = CAST(:v AS JSONB) WHERE tenant_code = :code`,
+      { replacements: { v: JSON.stringify(liste), code: req.params.tenantCode } });
+    res.json({ success: true, valeurs: liste });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ─── Photo de chaque article (produit, service, bien) ───────────────────────
 // Une case photo à côté de chaque article de la gestion ; la photo apparaît
 // sur le site. La table vient du secteur de l'établissement (jamais du client).
