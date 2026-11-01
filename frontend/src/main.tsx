@@ -30,6 +30,22 @@ keysToClean.forEach(key => {
   }
 });
 
+// Ancien compte administrateur (G0…), redevenu simple utilisateur : si son
+// ancien rôle « admin » est encore enregistré sur ce téléphone, on le retire
+// (plus de couronne ni de boutons d'administration, même avant de se reconnecter).
+try {
+  const brut = localStorage.getItem('session_user');
+  if (brut) {
+    const session = JSON.parse(brut);
+    const u = session?.userData || session;
+    if (u && String(u.numeroH || '').trim().replace(/\s+/g, ' ') === 'G0C0P0R0E0F0 0' && (u.role !== 'user' || u.isAdmin)) {
+      u.role = 'user';
+      u.isAdmin = false;
+      localStorage.setItem('session_user', JSON.stringify(session));
+    }
+  }
+} catch { /* session illisible : laissée telle quelle */ }
+
 const basename = '';
 
 // Sur gestions.moftal.com : récupérer la session transmise par Moftal.

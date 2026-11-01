@@ -123,7 +123,7 @@ export default function MesCours() {
   }, [navigate]);
 
   const checkAdminStatus = (user: UserData) => {
-    const isAdminUser = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
+    const isAdminUser = user.role === 'admin' || user.role === 'super-admin';
     setIsAdmin(isAdminUser);
   };
 

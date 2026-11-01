@@ -177,7 +177,7 @@ function isAdminUser(u: SessionUser | null): boolean {
   const role = u.role?.toLowerCase() || ''
   return (
     role === 'admin' || role === 'super-admin' || role === 'administrator' ||
-    u.isAdmin === true || u.numeroH === 'G0C0P0R0E0F0 0' || u.numeroH === 'G7C7P7R7E7F7 7'
+    u.isAdmin === true || u.numeroH === 'G7C7P7R7E7F7 7'
   )
 }
 

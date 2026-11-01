@@ -116,7 +116,7 @@ export default function Science() {
   }, [navigate]);
 
   const checkAdminStatus = (user: UserData) => {
-    const isAdminUser = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
+    const isAdminUser = user.role === 'admin' || user.role === 'super-admin';
     setIsAdmin(isAdminUser);
     // L'admin a toujours la permission de publier
     if (isAdminUser) {
@@ -128,7 +128,7 @@ export default function Science() {
 
   const checkPermission = async (user: UserData) => {
     // Ne pas vérifier si l'utilisateur est admin (déjà géré dans checkAdminStatus)
-    const isAdminUser = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
+    const isAdminUser = user.role === 'admin' || user.role === 'super-admin';
     if (isAdminUser) {
       return; // L'admin a déjà la permission, pas besoin de vérifier
     }

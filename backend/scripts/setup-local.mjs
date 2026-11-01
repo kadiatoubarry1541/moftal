@@ -35,7 +35,7 @@ INSERT OR REPLACE INTO users (
   (
     'G0C0P0R0E0F0 0',
     '${hash}',
-    'vivant', 'admin', 1, 1,
+    'vivant', 'user', 1, 1,
     'Admin', 'Principal', 'MASCULIN', 'G0',
     datetime('now'), datetime('now')
   );

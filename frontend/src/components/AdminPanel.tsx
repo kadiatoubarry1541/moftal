@@ -56,8 +56,8 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
   const [filterRole, setFilterRole] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   
-  // Vérifier si c'est l'administrateur principal
-  const isMasterAdmin = _userData?.numeroH === 'G0C0P0R0E0F0 0'
+  // Administrateur principal (compte 77)
+  const isMasterAdmin = _userData?.numeroH === 'G7C7P7R7E7F7 7'
 
   useEffect(() => {
     loadUsers()

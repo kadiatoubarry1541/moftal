@@ -5,13 +5,19 @@ import { config } from '../../config.js';
 import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion } from '../utils/accesEmployes.js';
 
 // NumeroH des comptes administrateurs spéciaux
-export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
+export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7'];
+
+// Anciens comptes administrateurs, redevenus de simples utilisateurs (décision de
+// la propriétaire) : jamais de droits d'admin, même si un rôle admin traîne en base.
+export const ANCIENS_ADMINS = ['G0C0P0R0E0F0 0'];
+export const estAncienAdmin = (numeroH) => ANCIENS_ADMINS.includes(String(numeroH || '').trim().replace(/\s+/g, ' '));
 
 // Inscription rapide (téléphone + mot de passe) : identifiant provisoire
 // jusqu'à la mise à jour du profil, qui attribue le vrai NuméroH.
 // Administrateur de la plateforme (rôle admin, ou comptes maîtres G7 / G0)
 export const estAdminUtilisateur = (user) => {
   if (!user) return false;
+  if (estAncienAdmin(user.numeroH)) return false;
   const role = String(user.role || '').toLowerCase();
   return user.isMasterAdmin === true || role === 'admin' || role === 'super-admin' || role === 'administrator'
     || MASTER_ADMIN_NUMEROS.includes(user.numeroH);
@@ -133,6 +139,11 @@ export const authenticate = async (req, res, next) => {
       }
 
       req.user = user;
+      // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base
+      if (estAncienAdmin(user.numeroH)) {
+        user.role = 'user';
+        if ('isAdmin' in user) user.isAdmin = false;
+      }
       req.userId = user.numeroH;
 
       // Compte créé avec seulement téléphone + mot de passe : il peut se
@@ -233,8 +244,8 @@ export const requireAdmin = async (req, res, next) => {
       });
     }
     
-    // Super admin (G7) et petit admin (G0) bypass les vérifications de rôle
-    if (req.user.numeroH === 'G7C7P7R7E7F7 7' || req.user.numeroH === 'G0C0P0R0E0F0 0') {
+    // Super admin (G7) : passe les vérifications de rôle
+    if (req.user.numeroH === 'G7C7P7R7E7F7 7') {
       next();
       return;
     }

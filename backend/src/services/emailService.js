@@ -20,7 +20,11 @@ const BREVO_API_KEY      = process.env.BREVO_API_KEY      || '';
 const FROM_EMAIL   = process.env.FROM_EMAIL   || 'noreply@moftal.com';
 const FROM_NAME    = process.env.FROM_NAME    || 'Moftal';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const ADMIN_H      = process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0';
+// Notifications d'administration : au compte administrateur (77). L'ancien compte
+// admin (G0…) est redevenu simple utilisateur : il ne reçoit plus rien d'admin,
+// même si ADMIN_NUMERO_H pointe encore vers lui chez l'hébergeur.
+const ADMIN_ENV    = (process.env.ADMIN_NUMERO_H || '').trim().replace(/\s+/g, ' ');
+const ADMIN_H      = ADMIN_ENV && ADMIN_ENV !== 'G0C0P0R0E0F0 0' ? ADMIN_ENV : 'G7C7P7R7E7F7 7';
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 

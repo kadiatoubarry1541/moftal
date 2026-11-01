@@ -372,7 +372,7 @@ export default function EchangePrimaire() {
     }
   };
 
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin';
 
   // Fonction pour filtrer les produits selon l'onglet actif
   const getFilteredProducts = () => {

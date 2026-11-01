@@ -215,7 +215,6 @@ export default function TerreAdam() {
       user.role === 'admin' ||
       user.role === 'super-admin' ||
       user.isAdmin === true ||
-      user.numeroH === 'G0C0P0R0E0F0 0' ||
       user.numeroH === 'G7C7P7R7E7F7 7';
     setIsAdmin(admin);
     // ✅ Vérifier si l'utilisateur est journaliste

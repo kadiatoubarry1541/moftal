@@ -124,8 +124,7 @@ router.post('/', async (req, res) => {
     if (
       isSectorPage &&
       req.user.role !== 'super-admin' &&
-      req.user.numeroH !== 'G7C7P7R7E7F7 7' &&
-      req.user.numeroH !== 'G0C0P0R0E0F0 0'
+      req.user.numeroH !== 'G7C7P7R7E7F7 7'
     ) {
       return res.status(403).json({
         success: false,
@@ -217,8 +216,7 @@ router.delete('/:id', async (req, res) => {
     if (
       isSectorPage &&
       req.user.role !== 'super-admin' &&
-      req.user.numeroH !== 'G7C7P7R7E7F7 7' &&
-      req.user.numeroH !== 'G0C0P0R0E0F0 0'
+      req.user.numeroH !== 'G7C7P7R7E7F7 7'
     ) {
       return res.status(403).json({
         success: false,

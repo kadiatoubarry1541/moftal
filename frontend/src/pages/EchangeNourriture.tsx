@@ -242,7 +242,7 @@ export default function EchangeNourriture() {
   };
 
 
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin';
 
   // Les produits viennent déjà filtrés par le backend (category: 'nourriture')
   const getFilteredProducts = () => {
