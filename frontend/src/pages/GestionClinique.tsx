@@ -5,6 +5,11 @@ import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
 import CartePatient from "../components/CartePatient";
 import { useImpressionCarte } from "../utils/impressionCarte";
 import { compressImage } from "../utils/compressImage";
+import EnvoiLien from "../components/EnvoiLien";
+import { lienAppGestion } from "../utils/lienAppGestion";
+import CoordonneesSite from "../components/CoordonneesSite";
+import ValeursSite from "../components/ValeursSite";
+import PhotosSite from "../components/ecole/PhotosSite";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import { goToMoftal } from "../utils/goToMoftal";
@@ -27,7 +32,7 @@ import {
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "exams" | "vaccinations" | "hospitalisation" | "avis" | "payments" | "factures" | "pharmacie" | "settings";
+type Section = "dashboard" | "patients" | "staff" | "site" | "appointments" | "prescriptions" | "records" | "exams" | "vaccinations" | "hospitalisation" | "avis" | "payments" | "factures" | "pharmacie" | "settings";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 const ROLES_CLINIC = ["Admin", "Médecin", "Spécialiste", "Infirmier(e)", "Sage-femme", "Laborantin", "Radiologue", "Secrétaire", "Comptable", "Autre"];
@@ -66,7 +71,7 @@ function calcTotal(lignes: LigneFacture[], remise: number) {
 
 // Droits par rôle : sections visibles pour chaque poste du personnel (Admin = accès complet)
 const ROLE_PERMISSIONS: Record<string, Section[]> = {
-  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","exams","vaccinations","hospitalisation","avis","payments","factures","pharmacie","settings"],
+  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","exams","vaccinations","hospitalisation","avis","payments","factures","pharmacie","site","settings"],
   "Médecin":      ["dashboard","patients","appointments","prescriptions","records","exams","vaccinations","hospitalisation"],
   "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records","exams","hospitalisation"],
   "Infirmier(e)": ["dashboard","patients","appointments","records","vaccinations","hospitalisation"],
@@ -92,6 +97,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "payments",      label: "Paiements",         icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
   { id: "factures",      label: "Factures",          icon: "M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" },
   { id: "pharmacie",     label: "Pharmacie",         icon: "M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" },
+  { id: "site",          label: "🌐 Mon site",        icon: "M21 12a9 9 0 11-18 0 9 9 0 0118 0zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18" },
   { id: "settings",      label: "Paramètres",        icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
 ];
 
@@ -170,6 +176,8 @@ export default function GestionClinique() {
   const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
   // Carte patient affichée (faite automatiquement depuis sa fiche)
   const [cartePatient, setCartePatient] = useState<Patient | null>(null);
+  // Envoyer le lien de l'application à un membre du personnel ajouté
+  const [lienPour, setLienPour] = useState<{ prenom: string; telephone?: string | null; email?: string | null; role: string } | null>(null);
   const impressionCarte = useImpressionCarte();
   const [envoiEnCours, setEnvoiEnCours] = useState("");
   const [historyRecords, setHistoryRecords] = useState<Consultation[]>([]);
@@ -380,7 +388,10 @@ export default function GestionClinique() {
       } else if (modal === "add-staff") {
         if (!form.nom || !form.prenom || !form.role) { showToast("Nom, prénom et rôle obligatoires", false); return; }
         const d = await post<ReponseAjoutPersonnel>("/staff", form);
-        if (d.success) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast("Personnel ajouté"); }
+        if (d.success) {
+          setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast("Personnel ajouté");
+          if (d.staff?.telephone || d.staff?.email) setLienPour({ prenom: d.staff.prenom, telephone: d.staff.telephone, email: d.staff.email, role: d.staff.role || "membre du personnel" });
+        }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-appointment") {
         if (!form.patient_id || !form.date_rdv) { showToast("Patient et date obligatoires", false); return; }
@@ -388,19 +399,19 @@ export default function GestionClinique() {
         if (!d.success && d.conflict && confirm(`${d.message}\n\nCréer quand même ce rendez-vous ?`)) {
           d = await post("/appointments", { ...form, force: true });
         }
-        if (d.success) { setAppointments(p => [d.appointment, ...p]); setModal(null); setForm({}); showToast("Rendez-vous créé"); }
+        if (d.success) { setAppointments(p => [d.appointment, ...p]); get("/appointments").then(r => r.appointments && setAppointments(r.appointments)); setModal(null); setForm({}); showToast("Rendez-vous créé"); }
         else if (!d.conflict) showToast(d.message || "Erreur", false);
       } else if (modal === "add-prescription") {
         if (!form.patient_id) { showToast("Patient obligatoire", false); return; }
         const meds = form.medicaments_text ? form.medicaments_text.split("\n").filter(Boolean).map((m: string) => ({ medicament: m.trim() })) : [];
         const d = await post("/prescriptions", { ...form, medicaments: meds });
-        if (d.success) { setPrescriptions(p => [d.prescription, ...p]); setModal(null); setForm({}); showToast("Ordonnance créée"); }
+        if (d.success) { setPrescriptions(p => [d.prescription, ...p]); get("/prescriptions").then(r => r.prescriptions && setPrescriptions(r.prescriptions)); setModal(null); setForm({}); showToast("Ordonnance créée"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-record") {
         if (!form.patient_id) { showToast("Patient obligatoire", false); return; }
         const d = await post("/records", form);
         if (d.success) {
-          setRecords(p => [d.record, ...p]);
+          setRecords(p => [d.record, ...p]); get("/records").then(r => r.records && setRecords(r.records));
           setModal(null);
           setForm({});
           showToast("Consultation enregistrée");
@@ -408,12 +419,12 @@ export default function GestionClinique() {
       } else if (modal === "add-exam") {
         if (!form.patient_id || !form.type_examen) { showToast("Patient et type d'examen obligatoires", false); return; }
         const d = await post("/exams", form);
-        if (d.success) { setExams(p => [d.exam, ...p]); setModal(null); setForm({}); showToast("Examen prescrit"); }
+        if (d.success) { setExams(p => [d.exam, ...p]); get("/exams").then(r => r.exams && setExams(r.exams)); setModal(null); setForm({}); showToast("Examen prescrit"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-vaccination") {
         if (!form.patient_id || !form.vaccin) { showToast("Patient et vaccin obligatoires", false); return; }
         const d = await post("/vaccinations", form);
-        if (d.success) { setVaccinations(p => [d.vaccination, ...p]); setModal(null); setForm({}); showToast("Vaccination enregistrée"); }
+        if (d.success) { setVaccinations(p => [d.vaccination, ...p]); get("/vaccinations").then(r => r.vaccinations && setVaccinations(r.vaccinations)); setModal(null); setForm({}); showToast("Vaccination enregistrée"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-bed") {
         if (!form.numero) { showToast("Numéro de chambre/lit obligatoire", false); return; }
@@ -424,14 +435,14 @@ export default function GestionClinique() {
         if (!form.patient_id) { showToast("Patient obligatoire", false); return; }
         const d = await post("/admissions", form);
         if (d.success) {
-          setAdmissions(p => [d.admission, ...p]);
+          setAdmissions(p => [d.admission, ...p]); get("/admissions").then(r => r.admissions && setAdmissions(r.admissions));
           if (form.bed_id) setBeds(bs => bs.map(b => b.id === +form.bed_id ? { ...b, statut: "occupe" } : b));
           setModal(null); setForm({}); showToast("Patient admis");
         } else showToast(d.message || "Erreur", false);
       } else if (modal === "add-payment") {
         if (!form.montant) { showToast("Montant obligatoire", false); return; }
         const d = await post("/payments", form);
-        if (d.success) { setPayments(p => [d.payment, ...p]); setModal(null); setForm({}); showToast("Paiement enregistré"); }
+        if (d.success) { setPayments(p => [d.payment, ...p]); get("/payments").then(r => r.payments && setPayments(r.payments)); setModal(null); setForm({}); showToast("Paiement enregistré"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-stock") {
         if (!form.nom) { showToast("Nom du médicament obligatoire", false); return; }
@@ -855,6 +866,10 @@ export default function GestionClinique() {
                       {s.email      && <div>✉ {s.email}</div>}
                       {s.matricule  && <div style={{ fontFamily: "monospace", color: "#94a3b8", fontSize: 11 }}>{s.matricule}</div>}
                     </div>
+                    {(s.telephone || s.email) && (
+                      <button onClick={() => setLienPour({ prenom: s.prenom, telephone: s.telephone, email: s.email, role: s.role || "membre du personnel" })}
+                        style={{ marginTop: 14, marginInlineEnd: 8, color: "#0369a1", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "4px 10px" }}>📲 Envoyer le lien</button>
+                    )}
                     <button onClick={async () => { if (confirm(`Retirer ${s.prenom} ${s.nom} du personnel ?`)) { const d = await del(`/staff/${s.id}`); if (d.success) { setStaff(ss => ss.filter(x => x.id !== s.id)); showToast("Personnel retiré"); } else showToast(d.message || "Erreur", false); }}} style={{ marginTop: 14, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, padding: "4px 10px" }}>Retirer</button>
                   </div>
                 );
@@ -1665,6 +1680,20 @@ export default function GestionClinique() {
           )}
 
           {/* ── PARAMÈTRES ── */}
+          {/* ── MON SITE : ce que tout le monde voit ── */}
+          {section === "site" && tenantCode && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
+                <p style={{ margin: "0 0 6px", fontWeight: 800, fontSize: 15, color: "#0f172a" }}>🌐 Votre site se remplit avec votre gestion</p>
+                <p style={{ margin: 0, fontSize: 13, color: "#475569" }}>Vos médecins (rubrique Personnel), vos services médicaux, votre pharmacie et les avis de vos patients y apparaissent tout seuls. Ici, écrivez votre présentation, vos valeurs, et ajoutez vos photos.</p>
+                <a href={`/clinique/${tenantCode}`} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 700, color: TEAL_DARK }}>👁️ Voir mon site →</a>
+              </div>
+              <CoordonneesSite tenantCode={tenantCode} couleur={TEAL} lienSite={`/clinique/${tenantCode}`} />
+              <ValeursSite tenantCode={tenantCode} couleur={TEAL} />
+              <PhotosSite tenantCode={tenantCode} apiName="site-mgmt" couleur={TEAL} lienSite={`/clinique/${tenantCode}`} ecole={false} />
+            </div>
+          )}
+
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
               <TenantCodeCard code={tenantCode} />
@@ -1843,7 +1872,8 @@ export default function GestionClinique() {
                   <div><label style={labelStyle}>Email</label><input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.email || ""} onChange={e => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
                 </div>
                 <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
-                  <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
+                  <p style={{ margin: "0 0 8px", fontSize: 12, color: "#156315", fontWeight: 600 }}>📲 Le téléphone suffit : après l'enregistrement, vous lui envoyez le lien de l'application. Même sans compte Moftal, la personne se connecte avec son numéro, choisit son mot de passe, et ne voit que les rubriques de son rôle.</p>
+                  <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (facultatif)</label>
                   <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345" value={form.numero_h || ""} onChange={e => setForm((f) => ({ ...f, numero_h: e.target.value }))} />
                   <p style={{ margin: "6px 0 0", fontSize: 11, color: "#156315" }}>Si renseigné, cette personne pourra se connecter avec son propre compte Moftal et n'aura accès qu'aux sections liées à son rôle ({form.role || "à choisir"}).</p>
                 </div>
@@ -2002,6 +2032,23 @@ export default function GestionClinique() {
       )}
 
       {/* ── MODAL : historique / courbe du patient ── */}
+      {lienPour && tenant && tenantCode && (() => {
+        const lien = lienAppGestion("clinic", tenantCode);
+        const tel = lienPour.telephone ? ` ${lienPour.telephone}` : "";
+        const message = `Bonjour ${lienPour.prenom || ""} ! ${tenant.name} vous a ajouté(e) comme ${lienPour.role} dans son application. Ouvrez ce lien, connectez-vous avec votre numéro${tel} (la première fois, vous choisissez votre mot de passe), puis installez l'application : ${lien}`;
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 65, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+            onClick={e => { if (e.target === e.currentTarget) setLienPour(null); }}>
+            <div style={{ background: "white", borderRadius: 16, padding: 22, width: "100%", maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+              <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 800 }}>📲 Envoyer le lien de l'application</h3>
+              <p style={{ margin: 0, fontSize: 13, color: "#475569" }}>{lienPour.prenom || "La personne"} ouvre ce lien, se connecte avec son numéro et choisit son mot de passe : elle arrive dans l'application de la clinique, avec seulement les rubriques de son rôle. Même sans compte Moftal.</p>
+              <EnvoiLien lien={lien} message={message} telephone={lienPour.telephone} email={lienPour.email} sujet={`Application de ${tenant.name}`} />
+              <button onClick={() => setLienPour(null)} style={{ marginTop: 12, width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #e2e8f0", background: "white", fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── CARTE PATIENT : imprimer ou envoyer au patient ── */}
       {cartePatient && tenant && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}

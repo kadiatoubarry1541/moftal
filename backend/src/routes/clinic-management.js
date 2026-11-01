@@ -8,7 +8,7 @@ import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { numeroHComplet } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
-import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
+import { trouverOuPreparerPersonne, nommerComptePrepare } from '../services/comptesProvisoires.js';
 import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
 
 const router = attraperErreursAsync(express.Router());
@@ -329,7 +329,28 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, refuserPersonnel, 
     const code = req.params.tenantCode;
     // NuméroH complet du compte Moftal (ex. saisie sans le compteur final) pour que
     // ce membre du personnel puisse ensuite se connecter à la gestion.
-    const nh = numero_h ? await numeroHComplet(numero_h) : null;
+    let nh = numero_h ? await numeroHComplet(numero_h) : null;
+    if (!String(nom || '').trim() || !String(prenom || '').trim() || !role) {
+      return res.status(400).json({ success: false, message: 'Nom, prénom et rôle obligatoires.' });
+    }
+    // Sans NuméroH : le téléphone (ou l'e-mail) suffit. La personne qui n'a pas de
+    // compte Moftal en reçoit un, préparé à son nom : elle choisit son mot de
+    // passe à sa première connexion, par le lien de l'application.
+    if (!nh && String(telephone || email || '').trim()) {
+      const trouve = await trouverOuPreparerPersonne(String(telephone || email).trim());
+      if (!trouve.personne) return res.status(trouve.statut || 400).json({ success: false, message: trouve.erreur || 'Téléphone ou e-mail invalide.' });
+      nh = trouve.personne.numero_h;
+      await nommerComptePrepare(nh, prenom, nom);
+    }
+    // Jamais deux fois la même personne dans le personnel (même téléphone ou même compte)
+    const tel9 = String(telephone || '').replace(/[^0-9]/g, '').slice(-9);
+    const [doublon] = await sequelize.query(
+      `SELECT prenom, nom FROM clinic_staff WHERE tenant_code=:code AND is_active=true
+         AND ((:tel <> '' AND RIGHT(REGEXP_REPLACE(COALESCE(telephone,''), '[^0-9]', '', 'g'), 9) = :tel)
+           OR (:nh <> '' AND LOWER(TRIM(COALESCE(numero_h,''))) = LOWER(TRIM(:nh)))) LIMIT 1`,
+      { replacements: { code, tel: tel9.length >= 8 ? tel9 : '', nh: nh || '' }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (doublon) return res.status(409).json({ success: false, message: `Cette personne est déjà dans votre personnel (${[doublon.prenom, doublon.nom].filter(Boolean).join(' ')}) : une personne n'est jamais enregistrée deux fois.` });
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `STAFF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(

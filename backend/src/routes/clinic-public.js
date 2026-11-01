@@ -16,7 +16,7 @@ router.get('/:tenantCode', async (req, res) => {
     await fillTenantsFromAccounts(tenantCode).catch(() => {});
     await ensureTenantExtraColumns();
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
+      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence, valeurs
        FROM management_tenants
        WHERE tenant_code = :code AND type = 'clinic' AND is_active = true
        LIMIT 1`,
