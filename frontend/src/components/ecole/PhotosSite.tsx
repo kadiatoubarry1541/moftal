@@ -29,7 +29,7 @@ export default function PhotosSite({ tenantCode, apiName, couleur, lienSite, eco
   const [photos, setPhotos] = useState<PhotoSite[] | null>(null);
   const [erreur, setErreur] = useState("");
   const [legende, setLegende] = useState("");
-  const [categorie, setCategorie] = useState(ecole ? "Vie scolaire" : "Nos produits");
+  const [categorie, setCategorie] = useState(ecole ? "Vie scolaire" : "Nos locaux");
   const [envoi, setEnvoi] = useState<string>("");
 
   const charger = useCallback(() => {
