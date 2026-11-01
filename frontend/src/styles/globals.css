@@ -17,14 +17,9 @@ body {
 .safe-area-inset-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 .safe-area-inset-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 
-/* Médias par défaut : éviter tout débordement horizontal sur petits écrans */
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
-  height: auto;
-}
+/* Médias par défaut (max-width: 100%, height: auto) : déjà donnés par la base de
+   Tailwind, à la bonne priorité. Ne pas les redonner ici : hors couche, ils
+   écraseraient h-full, h-36… et les photos déborderaient de leur cadre. */
 
 iframe {
   max-width: 100%;
