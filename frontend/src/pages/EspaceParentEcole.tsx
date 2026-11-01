@@ -111,7 +111,7 @@ export default function EspaceParentEcole({ mode }: Props) {
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Espace parent inaccessible")}</h2>
-        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error ? tr(error) : tr("Vous n'êtes pas encore relié(e) à un élève dans cet établissement. Contactez l'école pour vous inscrire.")}</p>
+        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error ? tr(error) : tr("Vous n'êtes pas encore relié(e) à un apprenant dans cet établissement. Contactez l'école pour vous inscrire.")}</p>
         <button onClick={() => setReloadKey(k => k + 1)} style={{ padding: "8px 20px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{tr("🔄 Réessayer")}</button>
         <div>
           <button onClick={() => { if (window.location.hostname.startsWith("gestions.")) window.location.href = "https://moftal.com/compte"; else navigate("/compte"); }}
@@ -172,7 +172,7 @@ export default function EspaceParentEcole({ mode }: Props) {
         {!student ? (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-            <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Aucun élève relié à votre compte pour le moment.")}</p>
+            <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Aucun apprenant relié à votre compte pour le moment.")}</p>
           </div>
         ) : (
           <>

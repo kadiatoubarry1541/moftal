@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { retourApresConnexion } from "../utils/connexionRetour";
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
 import { config } from '../config/api'
@@ -25,7 +26,7 @@ export function Login() {
   // Lien d'une application de gestion reçu sans être connecté : retour à cette
   // page après la connexion (seulement une adresse de ce site, jamais un autre)
   const redirectParam = new URLSearchParams(location.search).get('redirect')
-  const retour = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null
+  const retour = retourApresConnexion(redirectParam)
 
   // Auto-redirect si déjà connecté 
   useEffect(() => {

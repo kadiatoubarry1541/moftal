@@ -210,11 +210,13 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
         const miens = edt.filter((s) => String(s.enseignant_id || '') === String(enseignant.id));
         const principal = String(c.principal || '') === String(enseignant.id) || liees.has(String(c.id));
         if (!principal && miens.length === 0) return null;
-        // Créneaux du jour : les miens, sinon (professeur principal sans créneau attribué) ceux sans enseignant
-        const duJour = (miens.length ? miens : edt.filter((s) => !s.enseignant_id))
-          .filter((s) => s.jour === jour)
+        // Mes créneaux, sinon (professeur principal sans créneau attribué) ceux sans enseignant
+        const mesCreneaux = (miens.length ? miens : edt.filter((s) => !s.enseignant_id))
           .sort((a, b) => String(a.heure_debut).localeCompare(String(b.heure_debut)));
-        return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour };
+        const duJour = mesCreneaux.filter((s) => s.jour === jour);
+        // Ses matières dans cette classe (d'après l'emploi du temps)
+        const matieres = [...new Set(mesCreneaux.map((s) => s.matiere).filter(Boolean))];
+        return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour, semaine: mesCreneaux, matieres };
       })
       .filter(Boolean);
   }
@@ -230,10 +232,21 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
         { replacements: { code: e.tenant_code, sid: e.id, jour: aujourdhui() }, type: Q.SELECT }
       ),
     ]);
+    // École : la liste des apprenants de chacune de ses classes (photo, matricule)
+    if (T.enseignantsClasse && classes.length) {
+      const apprenants = await sequelize.query(
+        `SELECT s.id, s.prenom, s.nom, s.photo_url, s.numero_matricule, s.classroom_id, s.niveau
+           FROM ${T.eleves} s WHERE s.tenant_code = :code AND s.statut = 'actif' ORDER BY s.nom, s.prenom`,
+        { replacements: { code: e.tenant_code }, type: Q.SELECT }
+      ).catch(() => []);
+      for (const c of classes) {
+        c.apprenants = apprenants.filter((a) => String(a.classroom_id) === String(c.id) || (!a.classroom_id && c.niveau && a.niveau === c.niveau));
+      }
+    }
     res.json({
       success: true,
       ecole: { nom: req.tenant.name, logo_url: req.tenant.logo_url },
-      enseignant: { id: e.id, prenom: e.prenom, nom: e.nom },
+      enseignant: { id: e.id, prenom: e.prenom, nom: e.nom, specialite: e.specialite || null },
       jour: jourSemaine(),
       classes,
       pointages,

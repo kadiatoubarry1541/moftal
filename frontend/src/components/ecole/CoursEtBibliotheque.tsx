@@ -164,7 +164,7 @@ export function BibliothequeGestion({ tenantCode, apiName = "school-mgmt", coule
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-slate-600">{tr("Les livres PDF de l'établissement. Seuls ses membres (enseignants, élèves, parents) peuvent les lire.")}</p>
+        <p className="text-sm text-slate-600">{tr("Les livres PDF de l'établissement. Seuls ses membres (enseignants, apprenants, parents) peuvent les lire.")}</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-2">
