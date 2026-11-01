@@ -51,7 +51,6 @@ async function requireAdminOrSectorAdmin(req, res, next) {
 }
 
 const SUPER_ADMIN_7 = 'G7C7P7R7E7F7 7';
-const SUB_ADMIN_0 = 'G0C0P0R0E0F0 0';
 
 function isSuperAdmin7(user) {
   return user?.numeroH === SUPER_ADMIN_7;
@@ -63,8 +62,9 @@ function isAnyAdmin(user) {
   return !!(user?.isMasterAdmin || user?.role === 'admin' || user?.role === 'super-admin' || isSuperAdmin7(user));
 }
 
-function isSubAdmin0(user) {
-  return user?.numeroH === SUB_ADMIN_0;
+// L'ancien « petit admin » (G0) est redevenu un simple utilisateur : plus de vue admin partielle
+function isSubAdmin0() {
+  return false;
 }
 
 /** Filtre les comptes pro pour le petit admin (G0) : 50% par défaut + ceux accordés explicitement */

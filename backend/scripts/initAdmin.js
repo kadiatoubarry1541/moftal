@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
-const ADMIN_NUMERO_H = process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0';
+const ADMIN_NUMERO_H = process.env.ADMIN_NUMERO_H || 'G7C7P7R7E7F7 7'; // G0… n'est plus administrateur
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_ROLE = 'super-admin';
 

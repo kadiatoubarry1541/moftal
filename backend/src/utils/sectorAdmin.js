@@ -97,7 +97,7 @@ export function getSectorForProType(professionalType, subSector = null) {
 export function isGlobalAdmin(user) {
   if (!user) return false;
   // Comptes master administrateurs (NumeroH spéciaux) ou rôles admin
-  if (user.numeroH === 'G7C7P7R7E7F7 7' || user.numeroH === 'G0C0P0R0E0F0 0') return true;
+  if (user.numeroH === 'G7C7P7R7E7F7 7') return true;
   return user.role === 'admin' || user.role === 'super-admin';
 }
 

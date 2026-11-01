@@ -17,7 +17,7 @@ const client = new Client({
   password: process.env.DB_PASSWORD || '',
 });
 
-const NUMERO_H = 'G0C0P0R0E0F0 0';
+const NUMERO_H = 'G7C7P7R7E7F7 7'; // G0… n'est plus administrateur
 const PASSWORD = 'Neneyaya1';
 
 try {

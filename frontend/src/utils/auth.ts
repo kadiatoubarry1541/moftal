@@ -95,8 +95,14 @@ export function getSessionUser(): UserData | null {
  * @param user - Les données de l'utilisateur
  * @returns true si admin, false sinon
  */
+// Ancien compte administrateur (G0…), redevenu simple utilisateur : jamais admin,
+// même si un ancien rôle « admin » est encore enregistré sur le téléphone.
+export const ANCIENS_ADMINS = ["G0C0P0R0E0F0 0"];
+export const estAncienAdmin = (numeroH?: string | null) => ANCIENS_ADMINS.includes(String(numeroH || "").trim().replace(/\s+/g, " "));
+
 export function isAdmin(user: Partial<Pick<UserData, "role" | "isAdmin" | "numeroH">> | null): boolean {
   if (!user) return false;
+  if (estAncienAdmin(user.numeroH)) return false;
   
   const role = user.role?.toLowerCase() || '';
   return (
@@ -104,7 +110,6 @@ export function isAdmin(user: Partial<Pick<UserData, "role" | "isAdmin" | "numer
     role === 'super-admin' ||
     role === 'administrator' ||
     user.isAdmin === true ||
-    user.numeroH === 'G0C0P0R0E0F0 0' || // Comptes spéciaux admin
     user.numeroH === 'G7C7P7R7E7F7 7'
   );
 }
@@ -115,10 +120,9 @@ export function isAdmin(user: Partial<Pick<UserData, "role" | "isAdmin" | "numer
  * @returns true si admin principal, false sinon
  */
 export function isMasterAdmin(user: UserData | null): boolean {
-  if (!user) return false;
+  if (!user || estAncienAdmin(user.numeroH)) return false;
   const role = user.role?.toLowerCase() || '';
   return (
-    user.numeroH === 'G0C0P0R0E0F0 0' ||
     user.numeroH === 'G7C7P7R7E7F7 7' ||
     role === 'super-admin'
   );
@@ -130,10 +134,9 @@ export function isSuperAdmin7(user: UserData | null): boolean {
   return user.numeroH === 'G7C7P7R7E7F7 7';
 }
 
-/** Petit Admin (G0) : voit tout sauf 50% des comptes pro non accordés */
-export function isSubAdmin0(user: UserData | null): boolean {
-  if (!user) return false;
-  return user.numeroH === 'G0C0P0R0E0F0 0';
+/** L'ancien « petit admin » (G0) est redevenu un simple utilisateur */
+export function isSubAdmin0(_user: UserData | null): boolean {
+  return false;
 }
 
 /**

@@ -105,7 +105,7 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
 
   useEffect(() => { if (open) charger(); }, [open, charger]);
 
-  const estAdminPrincipal = myNumeroH === 'G0C0P0R0E0F0 0' || myNumeroH === 'G7C7P7R7E7F7 7';
+  const estAdminPrincipal = myNumeroH === 'G7C7P7R7E7F7 7';
 
   async function creerCompte() {
     if (!chef1) return alert('Le chef 1 est requis.');

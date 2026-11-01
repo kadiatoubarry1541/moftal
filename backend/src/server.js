@@ -1,4 +1,5 @@
 import http from 'http';
+import { ANCIENS_ADMINS } from './middleware/auth.js';
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -195,12 +196,17 @@ process.on('unhandledRejection', (raison) => {
 async function ensureAdmin() {
   const saltRounds = config.BCRYPT_ROUNDS || 12;
 
+  // Anciens comptes administrateurs (G0…) : redevenus de simples utilisateurs.
+  // Leur rôle admin est retiré en base à chaque démarrage (rien d'autre n'est touché).
+  try {
+    const [, meta] = await User.sequelize.query(
+      `UPDATE users SET role = 'user' WHERE numero_h IN (:anciens) AND LOWER(COALESCE(role, '')) IN ('admin', 'super-admin', 'administrator')`,
+      { replacements: { anciens: ANCIENS_ADMINS } }
+    );
+    if (meta?.rowCount) console.log(`👤 Ancien compte admin redevenu simple utilisateur (${meta.rowCount})`);
+  } catch (e) { console.warn('⚠️ Retrait des droits admin (ancien compte) :', e.message); }
+
   const admins = [
-    {
-      numeroH: (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' '),
-      password: process.env.ADMIN_PASSWORD || '',
-      generation: 'G0', prenom: 'Administrateur', nom: 'Principal'
-    },
     {
       numeroH: 'G7C7P7R7E7F7 7',
       password: process.env.SUPER_ADMIN_PASSWORD || '',

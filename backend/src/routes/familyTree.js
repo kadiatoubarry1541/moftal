@@ -754,7 +754,6 @@ router.get('/messages', async (req, res) => {
     const isAdmin =
       user.role === 'admin' ||
       user.role === 'super-admin' ||
-      user.numeroH === 'G0C0P0R0E0F0 0' ||
       user.isMasterAdmin ||
       user.canViewAll;
 

@@ -386,7 +386,7 @@ export default function EchangeSecondaire() {
     }
   };
 
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin';
 
   const getFilteredProducts = () => {
     if (!products || !Array.isArray(products)) return [];
