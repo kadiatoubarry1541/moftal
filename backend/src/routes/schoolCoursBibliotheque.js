@@ -203,6 +203,10 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
           { replacements: { code: enseignant.tenant_code, sid: enseignant.id }, type: Q.SELECT }
         ).catch(() => [])).map((r) => String(r.classroom_id)))
       : new Set();
+    const noms = new Map((await sequelize.query(
+      `SELECT id, prenom, nom FROM ${T.staff} WHERE tenant_code = :code`,
+      { replacements: { code: enseignant.tenant_code }, type: Q.SELECT }
+    ).catch(() => [])).map((p) => [String(p.id), [p.prenom, p.nom].filter(Boolean).join(' ')]));
     const jour = jourSemaine();
     return classes
       .map((c) => {
@@ -216,7 +220,9 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
         const duJour = mesCreneaux.filter((s) => s.jour === jour);
         // Ses matières dans cette classe (d'après l'emploi du temps)
         const matieres = [...new Set(mesCreneaux.map((s) => s.matiere).filter(Boolean))];
-        return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour, semaine: mesCreneaux, matieres };
+        // Emploi du temps complet de la classe (tous les cours, avec leur enseignant)
+        const emploi = edt.map((s) => ({ ...s, enseignant: noms.get(String(s.enseignant_id || '')) || null, moi: String(s.enseignant_id || '') === String(enseignant.id) }));
+        return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour, semaine: mesCreneaux, matieres, emploi };
       })
       .filter(Boolean);
   }

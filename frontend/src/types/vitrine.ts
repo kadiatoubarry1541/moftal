@@ -14,6 +14,8 @@ export interface EtablissementPublic {
   description?: string | null;
   horaires?: string | null;
   phone_urgence?: string | null;
+  /** « Nos valeurs » écrites par l'établissement (3 au plus) */
+  valeurs?: { titre: string; texte: string }[] | null;
 }
 
 /** Données d'un site : chiffres affichés et listes propres au secteur */

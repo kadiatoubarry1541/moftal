@@ -347,15 +347,18 @@ export default function EcoleVitrine() {
           <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Pourquoi choisir notre école ?")}</h2>
           <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Un cadre d'apprentissage moderne pour préparer les leaders de demain.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
-            {[
-              { icon: "📚", title: "Programme de qualité", desc: "Un curriculum complet et adapté aux standards nationaux avec des méthodes pédagogiques modernes." },
-              { icon: "👨‍🏫", title: "Enseignants qualifiés", desc: "Une équipe pédagogique diplômée et expérimentée, passionnée par l'enseignement." },
-              { icon: "🛡️", title: "Environnement sécurisé", desc: "Un cadre sûr et bienveillant où chaque élève peut s'épanouir librement." },
-            ].map((item, i) => (
+            {(Array.isArray(school?.valeurs) && school.valeurs.length
+              // Les valeurs écrites par l'établissement (gestion → Mon site → Nos valeurs)
+              ? school.valeurs.map((v, i) => ({ icon: ["⭐", "🎯", "🤝"][i] || "⭐", title: v.titre, desc: v.texte, propre: true }))
+              : [
+                { icon: "📚", title: "Programme de qualité", desc: "Un curriculum complet et adapté aux standards nationaux avec des méthodes pédagogiques modernes.", propre: false },
+                { icon: "👨‍🏫", title: "Enseignants qualifiés", desc: "Une équipe pédagogique diplômée et expérimentée, passionnée par l'enseignement.", propre: false },
+                { icon: "🛡️", title: "Environnement sécurisé", desc: "Un cadre sûr et bienveillant où chaque apprenant peut s'épanouir librement.", propre: false },
+              ]).map((item, i) => (
               <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{tr(item.title)}</h3>
-                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{item.propre ? item.title : tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{item.propre ? item.desc : tr(item.desc)}</p>
               </div>
             ))}
           </div>

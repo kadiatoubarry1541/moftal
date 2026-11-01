@@ -284,7 +284,7 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
     }
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-eleve' });
     // Le matricule est saisi par l'établissement (chaque école, chaque université a déjà le sien)
-    if (!matChoisi && !req.body.matricule_automatique) return res.status(400).json({ success: false, message: "Saisissez le matricule de l'apprenant (celui de votre établissement)." });
+    if (!matChoisi && !req.body.matricule_automatique) return res.status(400).json({ success: false, message: "Saisissez le matricule de l'apprenant." });
     const mat = matChoisi || await nouveauMatricule(code);
     const [rows] = await sequelize.query(
       `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h,photo_url) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh,:photo) RETURNING *`,
