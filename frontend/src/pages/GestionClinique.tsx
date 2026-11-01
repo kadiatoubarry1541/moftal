@@ -1,7 +1,10 @@
 ﻿import { Fragment, useState, useEffect, useCallback } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
+import CartePatient from "../components/CartePatient";
+import { useImpressionCarte } from "../utils/impressionCarte";
+import { compressImage } from "../utils/compressImage";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import { goToMoftal } from "../utils/goToMoftal";
@@ -165,6 +168,10 @@ export default function GestionClinique() {
   const [hospitalTab, setHospitalTab] = useState<"admissions"|"beds">("admissions");
   const [reviews, setReviews] = useState<AvisPatient[]>([]);
   const [historyPatient, setHistoryPatient] = useState<Patient | null>(null);
+  // Carte patient affichée (faite automatiquement depuis sa fiche)
+  const [cartePatient, setCartePatient] = useState<Patient | null>(null);
+  const impressionCarte = useImpressionCarte();
+  const [envoiEnCours, setEnvoiEnCours] = useState("");
   const [historyRecords, setHistoryRecords] = useState<Consultation[]>([]);
   const [payments, setPayments] = useState<Paiement[]>([]);
   const [invoices, setInvoices] = useState<Facture[]>([]);
@@ -226,6 +233,19 @@ export default function GestionClinique() {
     if (r.status === 401) { handleUnauthorized(); return { success: false }; }
     return r.json();
   }, [tenantCode, handleUnauthorized]);
+
+  // Envoyer au patient : sa carte, une ordonnance ou un bilan (rien n'est obligatoire)
+  const envoyerAuPatient = async (patientId: number | string | null | undefined, type: "carte" | "ordonnance" | "examen", refId?: number) => {
+    if (!patientId) return;
+    const cle = `${type}-${refId ?? patientId}`;
+    setEnvoiEnCours(cle);
+    try {
+      const d = await post(`/patients/${patientId}/envoyer`, { type, ref_id: refId });
+      if (d.success) showToast(type === "carte" ? "Carte envoyée au patient ✓" : type === "ordonnance" ? "Ordonnance envoyée au patient ✓" : "Résultat envoyé au patient ✓");
+      else showToast(d.message || "Envoi impossible", false);
+    } catch { showToast("Connexion impossible : rien n'a été envoyé. Réessayez.", false); }
+    finally { setEnvoiEnCours(""); }
+  };
 
   useEffect(() => {
     if (!localStorage.getItem("token")) {
@@ -348,9 +368,15 @@ export default function GestionClinique() {
     try {
       if (modal === "add-patient") {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
-        const d = await post("/patients", form);
-        if (d.success) { setPatients(p => [d.patient, ...p]); setModal(null); setForm({}); showToast("Patient ajouté"); }
-        else showToast(d.message || "Erreur", false);
+        if (form.id) {
+          const d = await put(`/patients/${form.id}`, form);
+          if (d.success) { setModal(null); setForm({}); showToast("Fiche du patient enregistrée"); get("/patients").then(r => r.patients && setPatients(r.patients)); }
+          else showToast(d.message || "Erreur", false);
+        } else {
+          const d = await post("/patients", form);
+          if (d.success) { setPatients(p => [d.patient, ...p]); setModal(null); setForm({}); showToast("Patient ajouté"); }
+          else showToast(d.message || "Erreur", false);
+        }
       } else if (modal === "add-staff") {
         if (!form.nom || !form.prenom || !form.role) { showToast("Nom, prénom et rôle obligatoires", false); return; }
         const d = await post<ReponseAjoutPersonnel>("/staff", form);
@@ -769,7 +795,7 @@ export default function GestionClinique() {
                         <td style={{ padding: "11px 16px", fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}>{p.numero_matricule}</td>
                         <td style={{ padding: "11px 16px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 30, height: 30, borderRadius: "50%", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{p.prenom?.charAt(0)}</div>
+                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>{p.photo_url ? <img src={getPhotoUrl(p.photo_url) || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : p.prenom?.charAt(0)}</div>
                             <span style={{ fontWeight: 600, color: "#0f172a" }}>{p.prenom} {p.nom}</span>
                           </div>
                         </td>
@@ -790,6 +816,8 @@ export default function GestionClinique() {
                               const d = await get(`/records?patient_id=${p.id}`);
                               if (d.success) setHistoryRecords(d.records);
                             }} style={{ color: TEAL_DARK, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📈 Historique</button>
+                            <button onClick={() => setCartePatient(p)} style={{ color: "#0369a1", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>🪪 Carte</button>
+                            <button onClick={() => { setForm({ id: p.id, nom: p.nom, prenom: p.prenom, date_naissance: p.date_naissance ? String(p.date_naissance).slice(0, 10) : "", sexe: p.sexe || "", telephone: p.telephone || "", adresse: p.adresse || "", groupe_sanguin: p.groupe_sanguin || "", allergies: p.allergies || "", photo_url: p.photo_url || null }); setModal("add-patient"); }} style={{ color: "#475569", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Modifier</button>
                             <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { const d = await del(`/patients/${p.id}`); if (d.success) { setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); } else showToast(d.message || "Erreur", false); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                           </div>
                         </td>
@@ -975,6 +1003,10 @@ export default function GestionClinique() {
                         <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         Imprimer
                       </button>
+                      <button onClick={() => envoyerAuPatient(p.patient_id, "ordonnance", p.id)} disabled={envoiEnCours === `ordonnance-${p.id}`}
+                        style={{ padding: "5px 12px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                        {envoiEnCours === `ordonnance-${p.id}` ? "…" : "📤 Envoyer au patient"}
+                      </button>
                     </div>
                   </div>
                   {p.diagnostic && <p style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}><strong>Diagnostic :</strong> {p.diagnostic}</p>}
@@ -1047,6 +1079,10 @@ export default function GestionClinique() {
                       <>
                         {e.resultat && <p style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>{e.resultat}</p>}
                         <p style={{ fontSize: 11, color: "#94a3b8" }}>Résultat rendu le {fmtDate(e.date_resultat)}</p>
+                        <button onClick={() => envoyerAuPatient(e.patient_id, "examen", e.id)} disabled={envoiEnCours === `examen-${e.id}`}
+                          style={{ marginTop: 8, padding: "6px 14px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                          {envoiEnCours === `examen-${e.id}` ? "…" : "📤 Envoyer le résultat au patient"}
+                        </button>
                       </>
                     ) : (
                       <button onClick={() => { setResultModalExam(e); setForm({ resultat: "", statut: "termine", date_resultat: new Date().toISOString().slice(0,10) }); }}
@@ -1729,7 +1765,7 @@ export default function GestionClinique() {
             <div style={{ height: 3, background: `linear-gradient(90deg,${TEAL},${TEAL_LIGHT})`, flexShrink: 0 }} />
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
-                {modal === "add-patient"      && "Enregistrer un patient"}
+                {modal === "add-patient"      && (form.id ? "Fiche du patient" : "Enregistrer un patient")}
                 {modal === "add-staff"        && "Ajouter un membre du personnel"}
                 {modal === "add-appointment"  && "Créer un rendez-vous"}
                 {modal === "add-prescription" && "Rédiger une ordonnance"}
@@ -1747,6 +1783,29 @@ export default function GestionClinique() {
             <div style={{ padding: "20px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
 
               {modal === "add-patient" && <>
+                {/* Photo du patient : facultative, elle apparaît sur sa carte */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "#f1f5f9", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 26 }}>
+                    {form.photo_url ? <img src={getPhotoUrl(form.photo_url) || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "📷"}
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Photo (facultative)</label>
+                    <label style={{ display: "inline-flex", marginTop: 6, padding: "7px 14px", border: `1px solid ${TEAL}`, color: TEAL_DARK, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      {form.photo_url ? "Changer la photo" : "Ajouter une photo"}
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!file) return;
+                        try {
+                          const petite = await compressImage(file, 600, 0.8);
+                          const reader = new FileReader();
+                          reader.onload = () => setForm((f) => ({ ...f, photo_url: reader.result as string }));
+                          reader.readAsDataURL(petite);
+                        } catch { showToast("Cette photo n'a pas pu être lue. Essayez une autre image.", false); }
+                      }} />
+                    </label>
+                  </div>
+                </div>
                 {/* Lien Moftal */}
                 <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
                   <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
@@ -1943,6 +2002,32 @@ export default function GestionClinique() {
       )}
 
       {/* ── MODAL : historique / courbe du patient ── */}
+      {/* ── CARTE PATIENT : imprimer ou envoyer au patient ── */}
+      {cartePatient && tenant && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget) setCartePatient(null); }}>
+          <div style={{ background: "white", borderRadius: 16, padding: 22, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>🪪 Carte patient</h3>
+              <button onClick={() => setCartePatient(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#94a3b8" }}>✕</button>
+            </div>
+            <div ref={impressionCarte.ref} style={{ display: "flex", justifyContent: "center" }}>
+              <CartePatient patient={cartePatient} clinique={{ name: tenant.name, logo_url: tenant.logo_url, phone: tenant.phone, address: tenant.address }} couleur={TEAL} />
+            </div>
+            <p style={{ fontSize: 12, color: "#64748b", margin: "12px 0" }}>
+              Faite automatiquement depuis la fiche du patient. Pour la changer, modifiez sa fiche (photo, groupe sanguin, allergies…).
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={impressionCarte.imprimer} style={{ flex: 1, padding: "10px 12px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}`, borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨️ Imprimer</button>
+              <button onClick={() => envoyerAuPatient(cartePatient.id, "carte")} disabled={envoiEnCours === `carte-${cartePatient.id}`}
+                style={{ flex: 1, padding: "10px 12px", background: TEAL, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                {envoiEnCours === `carte-${cartePatient.id}` ? "…" : "📤 Envoyer au patient"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {historyPatient && (() => {
         const chrono = [...historyRecords].filter(r => r.poids).sort((a, b) => new Date(a.date_visite || a.created_at).getTime() - new Date(b.date_visite || b.created_at).getTime());
         const W = 520, H = 140, PAD = 20;

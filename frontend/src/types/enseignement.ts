@@ -51,6 +51,9 @@ export interface Apprenant {
   is_active?: boolean;
   statut?: string;
   created_at?: string;
+  /** Classe de l'élève (école) */
+  classroom_id?: number | null;
+  classe?: string | null;
 }
 
 export interface MembreEquipe {
@@ -100,6 +103,8 @@ export interface Groupe {
   emploi_du_temps?: Creneau[];
   photo_url?: string | null;
   created_at?: string;
+  /** Tous les enseignants de la classe (école) — le professeur principal en fait partie */
+  enseignants?: { id: number; prenom?: string; nom?: string; photo_url?: string | null; specialite?: string | null }[];
 }
 
 /** Présence d'un apprenant pour la journée choisie */
@@ -208,7 +213,8 @@ export interface MembreEcole {
   prenom?: string | null;
   nom?: string | null;
   telephone_compte?: string | null;
-  enfants?: { id: number; prenom?: string; nom?: string }[];
+  enfants?: { id: number; prenom?: string; nom?: string; numero_matricule?: string | null; photo_url?: string | null; classe?: string | null }[];
+  photo?: string | null;
 }
 
 export interface ParametresEnseignement {
@@ -245,6 +251,12 @@ export interface FormEnseignement {
   photo_url?: string | null;
   capacite?: Nombre;
   enseignant_id?: Nombre;
+  /** Enseignants d'une classe (école) */
+  enseignants?: number[];
+  numero_matricule?: string | null;
+  classroom_id?: Nombre | null;
+  /** Matricules des enfants, en ajoutant un parent */
+  matricules?: string;
   emploi_du_temps?: Creneau[];
   student_id?: Nombre;
   periode?: string;

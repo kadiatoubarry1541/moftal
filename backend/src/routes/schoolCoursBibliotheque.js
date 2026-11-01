@@ -137,7 +137,7 @@ async function tenantDe(code) {
  *   staff, groupes (classes / halaqas), principal (enseignant principal du
  *   groupe), membres, eleves, staffActif (filtre des fiches actives).
  */
-export const TABLES_ECOLE = { staff: 'school_staff', groupes: 'school_classrooms', principal: 'professeur_principal_id', membres: 'school_members', eleves: 'school_students', staffActif: 'AND is_active = true' };
+export const TABLES_ECOLE = { staff: 'school_staff', groupes: 'school_classrooms', principal: 'professeur_principal_id', membres: 'school_members', eleves: 'school_students', staffActif: 'AND is_active = true', enseignantsClasse: 'school_classroom_teachers' };
 export const TABLES_MADRASA = { staff: 'madrasa_staff', groupes: 'madrasa_halaqas', principal: 'enseignant_id', membres: 'madrasa_members', eleves: 'madrasa_students', staffActif: '' };
 
 export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLES_ECOLE) {
@@ -196,12 +196,19 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
          FROM ${T.groupes} WHERE tenant_code = :code ORDER BY nom`,
       { replacements: { code: enseignant.tenant_code }, type: Q.SELECT }
     );
+    // Classes où la direction l'a mis parmi les enseignants (une classe peut en avoir plusieurs)
+    const liees = T.enseignantsClasse
+      ? new Set((await sequelize.query(
+          `SELECT classroom_id FROM ${T.enseignantsClasse} WHERE tenant_code = :code AND staff_id = :sid`,
+          { replacements: { code: enseignant.tenant_code, sid: enseignant.id }, type: Q.SELECT }
+        ).catch(() => [])).map((r) => String(r.classroom_id)))
+      : new Set();
     const jour = jourSemaine();
     return classes
       .map((c) => {
         const edt = Array.isArray(c.emploi_du_temps) ? c.emploi_du_temps : [];
         const miens = edt.filter((s) => String(s.enseignant_id || '') === String(enseignant.id));
-        const principal = String(c.principal || '') === String(enseignant.id);
+        const principal = String(c.principal || '') === String(enseignant.id) || liees.has(String(c.id));
         if (!principal && miens.length === 0) return null;
         // Créneaux du jour : les miens, sinon (professeur principal sans créneau attribué) ceux sans enseignant
         const duJour = (miens.length ? miens : edt.filter((s) => !s.enseignant_id))
