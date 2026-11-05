@@ -81,6 +81,16 @@
 }
 
 /* Boutons Noyau / Galerie / Solutions : plus bas dans le rectangle */
+/* Zoom : même allure que les autres boutons du rectangle */
+.view-zoom {
+  display: flex;
+}
+
+.view-zoom > .view-btn {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .tree-progress .view-btn {
   padding: 3px 8px;
   line-height: 1.3;
@@ -780,6 +790,12 @@
   }
 
   .view-btn {
+    flex: 1;
+    min-width: 60px;
+    max-width: 170px;
+  }
+
+  .view-zoom {
     flex: 1;
     min-width: 60px;
     max-width: 170px;
