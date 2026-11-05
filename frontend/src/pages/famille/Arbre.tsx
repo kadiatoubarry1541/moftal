@@ -637,7 +637,7 @@ const enhancedUser: UserData = useMemo(() => {
   }, [sharedItems])
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pb-6 pt-2">
+    <div className="max-w-6xl mx-auto px-4 pb-6 pt-1">
 
         {activeTab === 'arbre-conjoint' && partner && (
           <>

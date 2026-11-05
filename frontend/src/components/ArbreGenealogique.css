@@ -1,12 +1,13 @@
 ﻿/* Styles pour l'Arbre Généalogique */
 .arbre-genealogique {
-  padding: 20px;
+  /* Pas de marge en haut : le rectangle bleu se colle à la barre du haut */
+  padding: 0 20px 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .arbre-header {
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   text-align: center;
 }
 
@@ -80,6 +81,16 @@
 }
 
 /* Boutons Noyau / Galerie / Solutions : plus bas dans le rectangle */
+/* Zoom : même allure que les autres boutons du rectangle */
+.view-zoom {
+  display: flex;
+}
+
+.view-zoom > .view-btn {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .tree-progress .view-btn {
   padding: 3px 8px;
   line-height: 1.3;
@@ -267,7 +278,7 @@
 .tree-view-horizontal {
   background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
   border-radius: 15px;
-  padding: 4px 10px 10px;
+  padding: 0 10px 10px;
   /* Déplacement vertical plutôt qu'horizontal */
   overflow-x: hidden;
   overflow-y: auto;
@@ -779,6 +790,12 @@
   }
 
   .view-btn {
+    flex: 1;
+    min-width: 60px;
+    max-width: 170px;
+  }
+
+  .view-zoom {
     flex: 1;
     min-width: 60px;
     max-width: 170px;
