@@ -69,15 +69,10 @@ export default function Famille() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
-              onClick={() => {
-                if (activeTab) {
-                  setActiveTab(null)
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                } else {
-                  navigate('/compte')
-                }
-              }}
-              aria-label={activeTab ? 'Retour aux catégories Famille' : "Retour à l'accueil"}
+              // Depuis Héritage, Amitié, Récit, Solidarité ou les catégories :
+              // toujours retour direct à la page d'accueil.
+              onClick={() => navigate('/compte')}
+              aria-label="Retour à l'accueil"
               style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
