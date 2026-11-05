@@ -45,6 +45,20 @@
   font-size: 0.95rem;
 }
 
+.tree-progress-nombre {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #0C4A6E;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tree-progress-nombre:active {
+  opacity: 0.6;
+}
+
 .tree-progress-ajouter {
   padding: 3px 10px;
   border: none;
