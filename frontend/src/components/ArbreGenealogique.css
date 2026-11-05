@@ -6,8 +6,62 @@
 }
 
 .arbre-header {
-  margin-bottom: 30px;
+  margin-bottom: 12px;
   text-align: center;
+}
+
+/* Rectangle bleu : titre + nombre de membres + Ajouter, puis les boutons */
+.tree-progress {
+  padding: 10px 12px;
+  background-color: #E0F2FE;
+  border: 1px solid #0284C7;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tree-progress-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+}
+
+.tree-progress-titre {
+  color: #2c5530;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Le nombre et « + Ajouter » restent toujours collés */
+.tree-progress-compte {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  color: #0C4A6E;
+  font-size: 0.95rem;
+}
+
+.tree-progress-ajouter {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 999px;
+  background: #0284C7;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tree-progress-ajouter:active {
+  background: #0369A1;
+}
+
+.tree-progress .view-controls {
+  justify-content: center;
 }
 
 .arbre-header h3 {

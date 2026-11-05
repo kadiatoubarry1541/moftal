@@ -835,44 +835,29 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         </div>
       )}
 
+      {/* En-tête : un seul rectangle — titre + nombre de membres + Ajouter,
+          puis les boutons, pour que l'arbre commence plus haut. */}
       <div className="arbre-header">
-        <h3>🌳 Arbre Généalogique de {userData.prenom} {userData.nomFamille}</h3>
+        <div className="tree-progress">
+          <div className="tree-progress-ligne">
+            <span className="tree-progress-titre">🌳 Arbre généalogique</span>
+            <span className="tree-progress-compte">
+              <strong>
+                {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''}
+              </strong>
+              <button
+                type="button"
+                className="tree-progress-ajouter"
+                onClick={() => {
+                  setShowAddMemberForm(!showAddMemberForm)
+                  setAddMemberType(null)
+                }}
+              >
+                + Ajouter
+              </button>
+            </span>
+          </div>
 
-        {/* Indicateur de progression */}
-        <div className="tree-progress" style={{
-          marginBottom: '8px',
-          padding: '6px 10px',
-          backgroundColor: '#E0F2FE',
-          border: '1px solid #0284C7',
-          borderRadius: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          <strong style={{ color: '#0C4A6E' }}>
-            {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''}
-          </strong>
-          <button
-            onClick={() => {
-              setShowAddMemberForm(!showAddMemberForm)
-              setAddMemberType(null)
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              color: '#0284C7',
-              fontSize: '10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            ➕ Ajouter
-          </button>
-        </div>
-
-        <div className="arbre-controls">
           <div className="view-controls">
             <button
               className={`view-btn ${showStats ? 'active' : ''}`}
@@ -901,7 +886,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               🤝 Solutions
             </button>
           </div>
-
         </div>
       </div>
 
