@@ -1,6 +1,7 @@
 ﻿/* Styles pour l'Arbre Généalogique */
 .arbre-genealogique {
-  padding: 20px;
+  /* Pas de marge en haut : le rectangle bleu se colle à la barre du haut */
+  padding: 0 20px 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
