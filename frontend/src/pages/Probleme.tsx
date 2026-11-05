@@ -26,6 +26,8 @@ export default function Probleme() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [description, setDescription] = useState('');
+  // Toutes les explications détaillées sont regroupées dans une seule fenêtre
+  const [showAide, setShowAide] = useState(false);
 
   // Moftal Pay — paiement santé depuis problème familial
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -187,78 +189,48 @@ export default function Probleme() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header : titre, une phrase, et l'accès aux explications */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex justify-between items-start gap-3 py-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🤝 Solutions</h1>
-              <p className="mt-2 text-gray-600">
-                Page d&apos;entraide familiale : assistance santé et soutien aux membres dans le besoin (maladie, situations difficiles).
-                Quand quelqu&apos;un est malade, c&apos;est ici que l&apos;information et les preuves (vidéos, etc.) sont centralisées.
-              </p>
+              <h1 className="text-2xl font-bold text-gray-900">💰 Solutions</h1>
+              <p className="mt-1 text-sm text-gray-600">Aider ensemble un membre de la famille malade.</p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => navigate("/famille/moi/arbre")}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-              >
-                ← Mon arbre
-              </button>
-            </div>
+            <button
+              onClick={() => navigate("/famille/moi/arbre")}
+              className="shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-3 py-2 rounded-lg transition-colors"
+            >
+              ← Mon arbre
+            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowAide(true)}
+            className="mb-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold hover:bg-emerald-100"
+          >
+            ❓ Comment ça marche ?
+          </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Carte principale */}
-        <div className="text-left bg-white rounded-xl shadow-sm border border-red-100 p-5 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">🏥</span>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Problèmes de santé de la famille
-              </h2>
-              <p className="text-sm text-gray-600">
-                Centralise ici les informations et preuves (vidéos, etc.) quand un membre de la famille est malade.
-                Les détails se suivent dans le tableau d&apos;état ci‑dessous.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Numéro familial de solidarité (pour les contributions) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Numéro familial (pour les contributions) */}
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 sm:p-5">
-          <h2 className="text-lg sm:text-xl font-bold text-emerald-800 mb-2">
-            💳 Numéro familial de solidarité
-          </h2>
-          <p className="text-sm text-emerald-900 mb-3">
-            C&apos;est le <strong>numéro unique</strong> que la famille peut utiliser pour contribuer et assister un membre
-            malade. Partagez-le dans la famille pour que tout le monde sache où envoyer l&apos;aide.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-emerald-300 shadow-sm">
-              <span className="text-xs font-semibold text-emerald-700 mr-2">Numéro de solidarité</span>
-              <span className="font-mono text-sm sm:text-base text-emerald-900">
-                {userData.numeroH}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-emerald-700">
-              Plus tard, ce numéro pourra être relié à un compte (mobile money, banque, Zaka, etc.) pour les contributions.
-            </p>
+          <h2 className="text-lg font-bold text-emerald-800">💳 Numéro de la famille</h2>
+          <p className="text-sm text-emerald-900 mb-3">Partagez-le pour que chacun sache où envoyer l&apos;aide.</p>
+          <div className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-emerald-300 shadow-sm">
+            <span className="font-mono text-sm sm:text-base text-emerald-900">{userData.numeroH}</span>
           </div>
         </div>
 
         {/* Zone de partage des vidéos / preuves pour les problèmes de santé familiaux */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 space-y-4">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            🎥 Partage des vidéos des problèmes de santé de la famille
-          </h2>
-          <p className="text-sm text-gray-600">
-            Quand un membre de la famille est malade, vous pouvez publier ici une <strong>vidéo</strong> (ou photo) pour expliquer la
-            situation. Seuls les membres ayant le même nom de famille peuvent voir ces médias.
-          </p>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">🏥 Santé de la famille</h2>
+            <p className="text-sm text-gray-600">Montrez à la famille quand un membre est malade.</p>
+          </div>
 
           <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
             <div className="flex-1 w-full">
@@ -312,7 +284,7 @@ export default function Probleme() {
               <p className="text-sm text-gray-500">Chargement des vidéos de la famille...</p>
             ) : familyMedia.length === 0 ? (
               <p className="text-sm text-gray-500">
-                Aucune vidéo partagée pour le moment. Quand un membre est malade, partagez une vidéo ici pour informer toute la famille.
+                Aucune vidéo pour le moment.
               </p>
             ) : (
               familyMedia.map((m) => (
@@ -345,11 +317,11 @@ export default function Probleme() {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-3xl">💰</span>
             <div>
-              <h2 className="text-lg font-bold text-emerald-900">Moftal Pay — Paiement Santé</h2>
+              <h2 className="text-lg font-bold text-emerald-900">Moftal Pay — Santé</h2>
               <p className="text-sm text-emerald-700">
                 {fundCompte
                   ? <>Solde santé disponible : <strong>{(fundCompte.soldes?.sante || 0).toLocaleString()} GNF</strong></>
-                  : 'Système de paiement familial et professionnel'}
+                  : "Payer les soins avec l'argent de la famille."}
               </p>
             </div>
           </div>
@@ -367,7 +339,7 @@ export default function Probleme() {
             <>
               {!fundCompte.estAdmin && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                  ⚠️ Seuls les administrateurs du compte famille peuvent effectuer des paiements.
+                  ⚠️ Seuls les responsables du compte peuvent payer.
                 </p>
               )}
 
@@ -391,7 +363,7 @@ export default function Probleme() {
                         placeholder="Clinique / médecin (bénéficiaire)"
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
                       <input type="text" value={moftalContact} onChange={e => setMoftalContact(e.target.value)}
-                        placeholder="Numéro Orange Money du bénéficiaire"
+                        placeholder="Numéro de paiement mobile du bénéficiaire"
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
                       <textarea value={moftalRaison} onChange={e => setMoftalRaison(e.target.value)}
                         placeholder="Raison (ex: hospitalisation de Mamadou, 3 jours en clinique...)"
@@ -409,10 +381,78 @@ export default function Probleme() {
             </>
           ) : (
             <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              Vous n'avez pas encore de Compte Famille. Cliquez sur le bouton ci-dessus pour en créer un et commencer à gérer le budget familial.
+              Pas encore de Compte Famille : touchez le bouton ci-dessus.
             </p>
           )}
         </div>
+
+        {/* Fenêtre « Comment ça marche ? » : toutes les explications détaillées */}
+        {showAide && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
+            onClick={() => setShowAide(false)}
+          >
+            <div
+              className="w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-5 space-y-4 text-sm text-gray-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">❓ Comment ça marche ?</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAide(false)}
+                  aria-label="Fermer"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                >✕</button>
+              </div>
+
+              <section>
+                <h3 className="font-bold text-gray-900">💰 À quoi sert cette page ?</h3>
+                <p>
+                  C&apos;est la page d&apos;entraide de la famille : assistance santé et soutien aux membres dans le besoin
+                  (maladie, situations difficiles). Quand quelqu&apos;un est malade, c&apos;est ici que l&apos;information et les
+                  preuves (vidéos, photos) sont réunies.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-gray-900">💳 Numéro de la famille</h3>
+                <p>
+                  C&apos;est le <strong>numéro unique</strong> que la famille utilise pour contribuer et assister un membre
+                  malade. Partagez-le dans la famille pour que tout le monde sache où envoyer l&apos;aide.
+                </p>
+                <p className="mt-1">
+                  Plus tard, ce numéro pourra être relié à un compte (paiement mobile ou banque) pour les contributions.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-gray-900">🏥 Santé de la famille</h3>
+                <p>
+                  Quand un membre de la famille est malade, publiez une <strong>vidéo</strong> (ou une photo) pour expliquer
+                  la situation, avec une courte description si vous voulez.
+                </p>
+                <p className="mt-1">Seuls les membres qui ont le même nom de famille peuvent voir ces vidéos et photos.</p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-gray-900">💰 Moftal Pay — Santé</h3>
+                <p>
+                  Le <strong>Compte Famille</strong> réunit l&apos;argent déposé par les membres. Sa partie « santé » sert
+                  à payer directement une clinique ou un médecin.
+                </p>
+                <p className="mt-1">
+                  Seuls les responsables (administrateurs) du Compte Famille peuvent faire un paiement. Chaque paiement
+                  donne un reçu.
+                </p>
+                <p className="mt-1">
+                  Si la famille n&apos;a pas encore de Compte Famille, le bouton « Compte Famille Moftal Pay » permet
+                  d&apos;en créer un et de commencer à gérer le budget familial.
+                </p>
+              </section>
+            </div>
+          </div>
+        )}
 
         {/* Reçu Moftal Pay */}
         {moftalReçu && (
