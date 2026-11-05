@@ -842,9 +842,14 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           <div className="tree-progress-ligne">
             <span className="tree-progress-titre">🌳 Arbre généalogique</span>
             <span className="tree-progress-compte">
-              <strong>
-                {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''}
-              </strong>
+              {/* Toucher le nombre ouvre la fenêtre « Aperçu » : nombres + liste des membres */}
+              <button
+                type="button"
+                className="tree-progress-nombre"
+                onClick={() => setShowStats(true)}
+              >
+                {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''} ›
+              </button>
               <button
                 type="button"
                 className="tree-progress-ajouter"
@@ -859,12 +864,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           </div>
 
           <div className="view-controls">
-            <button
-              className={`view-btn ${showStats ? 'active' : ''}`}
-              onClick={() => setShowStats(!showStats)}
-            >
-              📊 Aperçu
-            </button>
             <button
               className="view-btn"
               onClick={() => navigate('/famille/noyau')}
