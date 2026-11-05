@@ -884,6 +884,63 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             >
               🤝 Solutions
             </button>
+            {/* ── Zoom : dans le rectangle, pour que l'arbre soit collé à l'en-tête ── */}
+            <div ref={zoomMenuRef} className="view-zoom relative">
+              <button
+                type="button"
+                onClick={() => setShowZoomMenu(v => !v)}
+                className={`view-btn no-touch-target ${showZoomMenu ? 'active' : ''}`}
+              >
+                🔍 {Math.round(zoom * 100)}%
+              </button>
+              {showZoomMenu && (
+                <div className="absolute right-0 top-8 z-20 text-left flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase">Zoom</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowZoomMenu(false)}
+                      aria-label="Fermer"
+                      className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-sm leading-none"
+                    >✕</button>
+                  </div>
+                  <div className="inline-flex items-center rounded-full border border-gray-200 overflow-hidden shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
+                      className="w-9 h-9 shrink-0 flex items-center justify-center text-gray-600 font-bold text-lg leading-none active:bg-gray-100"
+                    >−</button>
+                    <span className="px-2 min-w-[44px] shrink-0 text-center text-xs font-bold text-gray-700">{Math.round(zoom * 100)}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
+                      className="w-9 h-9 shrink-0 flex items-center justify-center text-emerald-600 font-bold text-lg leading-none active:bg-gray-100"
+                    >+</button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setZoom(1.0)}
+                    className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
+                  >↺ Normal</button>
+                  <button
+                    type="button"
+                    onClick={() => setZoom(0.4)}
+                    className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
+                  >🔍 Vue globale</button>
+                  {filtres && (
+                    <>
+                      <span className="text-[11px] font-bold text-gray-400 uppercase px-1 pt-1">Afficher</span>
+                      {filtres.options.map(o => (
+                        <button key={o.cle} type="button" onClick={() => { filtres.onChange(o.cle); setShowZoomMenu(false) }}
+                          className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold shadow-sm text-left ${filtres.valeur === o.cle ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 active:bg-gray-50'}`}>
+                          {filtres.valeur === o.cle ? '✓ ' : ''}{o.libelle}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -981,64 +1038,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
       {/* Vue arbre généalogique : couleurs par genre, dates, boutons "+" */}
 
-      {/* ── Zoom : un seul bouton qui ouvre un petit menu avec les 3 réglages ── */}
-      <div ref={zoomMenuRef} className="relative flex items-center justify-end mb-1">
-        <button
-          type="button"
-          onClick={() => setShowZoomMenu(v => !v)}
-          className="no-touch-target shrink-0 h-7 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
-        >
-          🔍 Zoom ({Math.round(zoom * 100)}%)
-        </button>
-        {showZoomMenu && (
-          <div className="absolute right-0 top-9 z-20 flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-[11px] font-bold text-gray-400 uppercase">Zoom</span>
-              <button
-                type="button"
-                onClick={() => setShowZoomMenu(false)}
-                aria-label="Fermer"
-                className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-sm leading-none"
-              >✕</button>
-            </div>
-            <div className="inline-flex items-center rounded-full border border-gray-200 overflow-hidden shrink-0">
-              <button
-                type="button"
-                onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
-                className="w-9 h-9 shrink-0 flex items-center justify-center text-gray-600 font-bold text-lg leading-none active:bg-gray-100"
-              >−</button>
-              <span className="px-2 min-w-[44px] shrink-0 text-center text-xs font-bold text-gray-700">{Math.round(zoom * 100)}%</span>
-              <button
-                type="button"
-                onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
-                className="w-9 h-9 shrink-0 flex items-center justify-center text-emerald-600 font-bold text-lg leading-none active:bg-gray-100"
-              >+</button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setZoom(1.0)}
-              className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
-            >↺ Normal</button>
-            <button
-              type="button"
-              onClick={() => setZoom(0.4)}
-              className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
-            >🔍 Vue globale</button>
-            {filtres && (
-              <>
-                <span className="text-[11px] font-bold text-gray-400 uppercase px-1 pt-1">Afficher</span>
-                {filtres.options.map(o => (
-                  <button key={o.cle} type="button" onClick={() => { filtres.onChange(o.cle); setShowZoomMenu(false) }}
-                    className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold shadow-sm text-left ${filtres.valeur === o.cle ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 active:bg-gray-50'}`}>
-                    {filtres.valeur === o.cle ? '✓ ' : ''}{o.libelle}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
       <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
        {(() => {
         // ── Constantes de mise en page ──
@@ -1078,7 +1077,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const SVG_H = hasG3 ? 680 : 580
         // Sans grands-parents, la bande du haut (y < 160) est vide : on la coupe
         // pour que l'arbre commence juste sous le bouton Zoom.
-        const SVG_TOP = hasGP ? 0 : 175
+        const SVG_TOP = hasGP ? 0 : 184
         const SVG_VISIBLE_H = SVG_H - SVG_TOP
 
         // ── G1 : centré sur SVG_W ──
