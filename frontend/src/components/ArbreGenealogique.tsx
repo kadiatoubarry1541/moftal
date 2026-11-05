@@ -982,16 +982,16 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       {/* Vue arbre généalogique : couleurs par genre, dates, boutons "+" */}
 
       {/* ── Zoom : un seul bouton qui ouvre un petit menu avec les 3 réglages ── */}
-      <div ref={zoomMenuRef} className="relative flex items-center justify-end mb-2.5">
+      <div ref={zoomMenuRef} className="relative flex items-center justify-end mb-1">
         <button
           type="button"
           onClick={() => setShowZoomMenu(v => !v)}
-          className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
+          className="no-touch-target shrink-0 h-7 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
         >
           🔍 Zoom ({Math.round(zoom * 100)}%)
         </button>
         {showZoomMenu && (
-          <div className="absolute right-0 top-11 z-20 flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
+          <div className="absolute right-0 top-9 z-20 flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
             <div className="flex items-center justify-between gap-2 px-1">
               <span className="text-[11px] font-bold text-gray-400 uppercase">Zoom</span>
               <button
@@ -1078,7 +1078,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const SVG_H = hasG3 ? 680 : 580
         // Sans grands-parents, la bande du haut (y < 160) est vide : on la coupe
         // pour que l'arbre commence juste sous le bouton Zoom.
-        const SVG_TOP = hasGP ? 0 : 160
+        const SVG_TOP = hasGP ? 0 : 175
         const SVG_VISIBLE_H = SVG_H - SVG_TOP
 
         // ── G1 : centré sur SVG_W ──

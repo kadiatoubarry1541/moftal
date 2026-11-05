@@ -6,7 +6,7 @@
 }
 
 .arbre-header {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   text-align: center;
 }
 
@@ -267,7 +267,7 @@
 .tree-view-horizontal {
   background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
   border-radius: 15px;
-  padding: 10px;
+  padding: 4px 10px 10px;
   /* Déplacement vertical plutôt qu'horizontal */
   overflow-x: hidden;
   overflow-y: auto;
