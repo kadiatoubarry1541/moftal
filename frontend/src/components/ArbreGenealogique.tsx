@@ -845,14 +845,14 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               {/* Toucher le nombre ouvre la fenêtre « Aperçu » : nombres + liste des membres */}
               <button
                 type="button"
-                className="tree-progress-nombre"
+                className="tree-progress-nombre no-touch-target"
                 onClick={() => setShowStats(true)}
               >
                 {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''} ›
               </button>
               <button
                 type="button"
-                className="tree-progress-ajouter"
+                className="tree-progress-ajouter no-touch-target"
                 onClick={() => {
                   setShowAddMemberForm(!showAddMemberForm)
                   setAddMemberType(null)
@@ -865,21 +865,21 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
           <div className="view-controls">
             <button
-              className="view-btn"
+              className="view-btn no-touch-target"
               onClick={() => navigate('/famille/noyau')}
             >
               🧬 Noyau
             </button>
             {onOpenGallery && (
               <button
-                className="view-btn"
+                className="view-btn no-touch-target"
                 onClick={onOpenGallery}
               >
                 📷 Galerie
               </button>
             )}
             <button
-              className="view-btn"
+              className="view-btn no-touch-target"
               onClick={() => navigate('/probleme')}
             >
               🤝 Solutions
@@ -1076,6 +1076,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const SVG_W = Math.max(g1RowW + 2 * MARGIN, g2RowW + 2 * MARGIN, hasGP ? 1100 : 600)
         // ── Hauteur SVG — grandit si G3 (petits-enfants) existe ──
         const SVG_H = hasG3 ? 680 : 580
+        // Sans grands-parents, la bande du haut (y < 160) est vide : on la coupe
+        // pour que l'arbre commence juste sous le bouton Zoom.
+        const SVG_TOP = hasGP ? 0 : 160
+        const SVG_VISIBLE_H = SVG_H - SVG_TOP
 
         // ── G1 : centré sur SVG_W ──
         const g1StartX = Math.round((SVG_W - g1RowW) / 2)
@@ -1153,7 +1157,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         }
 
         return (
-        <svg className="tree-svg" width={SVG_W * zoom} height={SVG_H * zoom} viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ display: 'block' }}>
+        <svg className="tree-svg" width={SVG_W * zoom} height={SVG_VISIBLE_H * zoom} viewBox={`0 ${SVG_TOP} ${SVG_W} ${SVG_VISIBLE_H}`} style={{ display: 'block' }}>
           {/* ── G-1 : Grands-parents ── */}
           {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">
