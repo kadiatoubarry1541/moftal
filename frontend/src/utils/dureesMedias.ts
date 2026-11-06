@@ -3,6 +3,7 @@
  *
  *  - Vidéo : 1 minute au maximum, partout (galerie, Terre d'Adam…).
  *  - Audio : 5 secondes au maximum, partout.
+ *  - Message vocal (micro des discussions) : 30 secondes au maximum.
  *  - Certains endroits sont plus stricts : santé (Caisse) 10 s,
  *    vente 5 s, vidéo d'un défunt 10 s.
  *
@@ -16,6 +17,8 @@
 
 export const DUREE_MAX_VIDEO = 60
 export const DUREE_MAX_AUDIO = 5
+/** Message vocal envoyé avec le micro d'une discussion */
+export const DUREE_MAX_VOCAL_MESSAGE = 30
 export const DUREE_MAX_VIDEO_SANTE = 10
 export const DUREE_MAX_VIDEO_VENTE = 5
 export const DUREE_MAX_VIDEO_DEFUNT = 10

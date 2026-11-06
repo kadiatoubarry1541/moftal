@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { config } from '../../config/api';
 import PaymentModal from '../../components/PaymentModal';
 import type { MessageOrganisation } from '../../types/arbre';
+import { creerEnregistreurAudio, fichierAudio, messageErreurMicro } from '../../utils/enregistrementAudio';
+import { DUREE_MAX_AUDIO } from '../../utils/dureesMedias';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
 
@@ -263,18 +265,18 @@ export default function Inspir() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [visibleSections, userData]);
 
-  // Audio recording avec timer 3 min
+  // Enregistrement audio : 5 secondes au maximum (règle commune)
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      let recorder: MediaRecorder;
+      try { recorder = creerEnregistreurAudio(stream); } catch (e) { stream.getTracks().forEach(t => t.stop()); throw e; }
       const chunks: Blob[] = [];
       let seconds = 0;
 
       recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        setMediaFile(new File([blob], 'audio.webm', { type: 'audio/webm' }));
+        setMediaFile(fichierAudio(recorder, chunks, 'audio'));
         stream.getTracks().forEach(t => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
         setAudioTimer(0);
@@ -285,19 +287,19 @@ export default function Inspir() {
       setIsRecording(true);
       setAudioTimer(0);
 
-      // Stop auto à 3 min (180s)
+      // Arrêt automatique à 5 secondes
       timerRef.current = setInterval(() => {
         seconds++;
         setAudioTimer(seconds);
-        if (seconds >= 180) {
+        if (seconds >= DUREE_MAX_AUDIO) {
           recorder.stop();
           setIsRecording(false);
           setMediaRecorder(null);
           if (timerRef.current) clearInterval(timerRef.current);
         }
       }, 1000);
-    } catch {
-      alert("Impossible d'accéder au microphone. Vérifiez les permissions.");
+    } catch (err) {
+      alert(messageErreurMicro(err));
     }
   };
 
@@ -323,13 +325,13 @@ export default function Inspir() {
     const type = typeDuFichier(file);
     if (!type) { alert('Choisissez une photo, une vidéo ou un audio.'); return; }
     if (type === 'image') { setMediaFile(file); return; }
-    const max = type === 'video' ? 10 : 180;
+    const max = type === 'video' ? 10 : DUREE_MAX_AUDIO;
     const el = document.createElement(type === 'video' ? 'video' : 'audio');
     el.preload = 'metadata';
     el.onloadedmetadata = () => {
       URL.revokeObjectURL(el.src);
       if (isFinite(el.duration) && el.duration > max) {
-        alert(type === 'video' ? 'La vidéo ne doit pas dépasser 10 secondes.' : "L'audio ne doit pas dépasser 3 minutes.");
+        alert(type === 'video' ? 'La vidéo ne doit pas dépasser 10 secondes.' : `L'audio ne doit pas dépasser ${DUREE_MAX_AUDIO} secondes.`);
         return;
       }
       setMediaFile(file);
@@ -497,7 +499,7 @@ export default function Inspir() {
               ) : isRecording ? (
                 <div className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-200">
                   <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
-                  <span className="text-red-700 text-sm font-bold">{formatTime(audioTimer)} / 03:00</span>
+                  <span className="text-red-700 text-sm font-bold">{formatTime(audioTimer)} / {formatTime(DUREE_MAX_AUDIO)}</span>
                   <button onClick={stopRecording} className="ml-auto px-3 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold">⏹ Arrêter</button>
                 </div>
               ) : (

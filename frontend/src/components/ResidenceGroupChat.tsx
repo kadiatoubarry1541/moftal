@@ -3,6 +3,7 @@ import { findLocationByCode } from '../utils/worldGeography'
 import { AudioRecorder } from './AudioRecorder'
 import { useI18n } from '../i18n/useI18n'
 import { useConversationLue } from '../utils/messagesNonLus'
+import MicroVocal from './MicroVocal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 const MAX_VIDEO_SECONDS = 5
@@ -139,7 +140,10 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroup.id])
 
-  const sendMessage = async () => {
+  // Message saisi dans la barre (le message vocal du micro, lui, est envoyé directement)
+  const messageSaisi = newMessage
+  const sendMessage = async (vocal?: File) => {
+    const newMessage = vocal ? { ...messageSaisi, content: '', messageType: 'audio', mediaFile: vocal } : messageSaisi
     if (newMessage.messageType === 'text' && !newMessage.content.trim()) {
       alert('Veuillez entrer un message')
       return
@@ -367,10 +371,10 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
             </div>
           </div>
         )}
-        <div className="flex gap-2 items-center px-3 py-3">
+        <div className="relative flex gap-2 items-center px-3 py-3">
           {newMessage.messageType === 'audio' && !newMessage.mediaFile ? (
             <div className="flex-1 min-w-0">
-              <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob: Blob) => {
+              <AudioRecorder compact maxDuration={30} onAudioRecorded={(blob: Blob) => {
                 const file = new File([blob], 'vocal.webm', { type: blob.type })
                 setNewMessage({ ...newMessage, messageType: 'audio', mediaFile: file })
               }} />
@@ -383,7 +387,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
               <button type="button" onClick={() => setNewMessage({ ...newMessage, messageType: 'text', mediaFile: null })} className="text-red-500 text-xs font-medium flex-shrink-0">✕</button>
               <button
                 type="button"
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 className="w-7 h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
                 title={t('btn.send')}
               >
@@ -440,7 +444,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
               </label>
               <button
                 type="button"
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={!newMessage.content.trim()}
                 title={t('btn.send')}
                 className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
@@ -450,14 +454,12 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
             </div>
           )}
           {newMessage.messageType !== 'audio' && !newMessage.mediaFile && (
-            <button
-              type="button"
-              onClick={() => setNewMessage({ ...newMessage, messageType: 'audio', mediaFile: null })}
-              className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl leading-none transition-colors"
-              title={t('terre_adam.send_voice')}
-            >
-              🎤
-            </button>
+            // Micro : touche → enregistre, ➤ envoie (30 s max)
+            <MicroVocal
+              onEnvoyer={(f) => sendMessage(f)}
+              couleur="#059669"
+              className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl leading-none transition-colors disabled:opacity-50"
+            />
           )}
         </div>
       </div>

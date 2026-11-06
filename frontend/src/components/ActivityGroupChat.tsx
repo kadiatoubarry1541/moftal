@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { AudioRecorder } from './AudioRecorder'
 import { hideIncrement } from '../utils/formatNumeroH'
 import { useConversationLue } from '../utils/messagesNonLus'
+import MicroVocal from './MicroVocal'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '') + '/api'
 
@@ -94,7 +95,10 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group.id])
 
-  const sendMessage = async () => {
+  // Publication saisie dans la barre (le message vocal du micro, lui, est envoyé directement)
+  const postSaisi = newPost
+  const sendMessage = async (vocal?: File) => {
+    const newPost = vocal ? { ...postSaisi, content: '', type: 'audio', mediaFile: vocal } : postSaisi
     if (newPost.type === 'text' && !newPost.content.trim()) return
     if (newPost.type !== 'text' && !newPost.mediaFile) return
 
@@ -207,7 +211,7 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
       </div>
 
       {!loading && (
-        <div className="bg-gray-200 px-3 py-2 border-t flex items-center gap-2">
+        <div className="relative bg-gray-200 px-3 py-2 border-t flex items-center gap-2">
           <label className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors" title="Envoyer une photo ou une vidéo">
             📷
             <input type="file" accept="image/*,video/*" className="hidden"
@@ -222,7 +226,7 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
 
           <div className="flex-1 min-w-0 relative">
             {newPost.type === 'audio' && !newPost.mediaFile ? (
-              <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
+              <AudioRecorder compact maxDuration={30} onAudioRecorded={(blob) => {
                 const file = new File([blob], 'vocal.webm', { type: blob.type })
                 setNewPost(prev => ({ ...prev, mediaFile: file }))
               }} />
@@ -261,11 +265,12 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
           </div>
 
           {newPost.type !== 'audio' && !newPost.mediaFile && (
-            <button type="button" onClick={() => setNewPost(prev => ({ ...prev, type: 'audio', mediaFile: null }))}
-              className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 transition-colors"
-              title="Message vocal">
-              🎤
-            </button>
+            // Micro : touche → enregistre, ➤ envoie (30 s max)
+            <MicroVocal
+              onEnvoyer={(f) => sendMessage(f)}
+              couleur="#16a34a"
+              className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-50"
+            />
           )}
 
           {(newPost.content.trim() || newPost.mediaFile) && (
