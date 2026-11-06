@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { BackToMoftalBadge } from "../components/InstallAppButton";
 import { reconcileInstalledFlag } from "../utils/reconcileInstalledFlag";
 import ErreurChargement from "../components/ErreurChargement";
+import { creerEnregistreurAudio, formatFichierAudio, messageErreurMicro } from '../utils/enregistrementAudio';
+import { DUREE_MAX_AUDIO } from '../utils/dureesMedias';
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
@@ -179,19 +181,30 @@ function Mic({ card, setCard }: { card: CardState; setCard: React.Dispatch<React
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-      const mr = new MediaRecorder(stream);
+      let mr: MediaRecorder;
+      try { mr = creerEnregistreurAudio(stream); } catch (e) { stream.getTracks().forEach(t => t.stop()); throw e; }
       recRef.current = mr;
       mr.ondataavailable = e => chunksRef.current.push(e.data);
       mr.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(chunksRef.current as Blob[], { type: formatFichierAudio(mr).type });
         const r = new FileReader();
         r.onload = ev => setCard(p => ({ ...p, audioUrl: ev.target?.result as string, audioDuration: sec }));
         r.readAsDataURL(blob);
       };
       mr.start(); setRec(true); setSec(0);
-      timerRef.current = setInterval(() => setSec(s => { if (s >= 59) { stop(); return 60; } return s + 1; }), 1000);
-    } catch { alert("Microphone inaccessible."); }
+      // Arrêt automatique : 5 secondes au maximum
+      let secs = 0;
+      timerRef.current = setInterval(() => {
+        secs++;
+        setSec(secs);
+        if (secs >= DUREE_MAX_AUDIO) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (mr.state !== "inactive") mr.stop();
+          setRec(false);
+        }
+      }, 1000);
+    } catch (err) { alert(messageErreurMicro(err)); }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, [sec]);
 

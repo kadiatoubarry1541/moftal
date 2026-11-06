@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { config } from '../config/api';
+import { creerEnregistreurAudio, formatFichierAudio, messageErreurMicro } from '../utils/enregistrementAudio';
+import { DUREE_MAX_AUDIO, DUREE_MAX_VIDEO } from '../utils/dureesMedias';
 
 const API_BASE_URL = config.API_BASE_URL;
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
@@ -295,9 +297,17 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       setRecordingStream(stream);
       setRecordingType(context);
       
-      const recorder = new MediaRecorder(stream, {
-        mimeType: type === 'audio' ? 'audio/webm' : 'video/webm'
-      });
+      // Format selon le téléphone (webm sur Android, mp4 sur iPhone)
+      let recorder: MediaRecorder;
+      try {
+        recorder = type === 'audio'
+          ? creerEnregistreurAudio(stream)
+          : (MediaRecorder.isTypeSupported?.('video/webm') ? new MediaRecorder(stream, { mimeType: 'video/webm' }) : new MediaRecorder(stream));
+      } catch (e) {
+        stream.getTracks().forEach(track => track.stop());
+        setRecordingStream(null);
+        throw e;
+      }
       
       const chunks: Blob[] = [];
       
@@ -308,7 +318,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: type === 'audio' ? 'audio/webm' : 'video/webm' });
+        const blob = new Blob(chunks, { type: type === 'audio' ? formatFichierAudio(recorder, chunks).type : ((recorder.mimeType || 'video/webm').split(';')[0]) });
         setRecordedBlob(blob);
         const url = URL.createObjectURL(blob);
         setRecordedUrl(url);
@@ -321,9 +331,18 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
+      // Arrêt automatique : audio 5 s, vidéo 1 min (règle commune)
+      const limite = (type === 'audio' ? DUREE_MAX_AUDIO : DUREE_MAX_VIDEO) * 1000;
+      setTimeout(() => {
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+          setIsRecording(false);
+          setMediaRecorder(null);
+        }
+      }, limite);
       addLog('system', `Enregistrement ${type === 'audio' ? 'audio' : 'vidéo'} démarré`);
     } catch (error) {
-      addLog('system', `Erreur: ${(error as Error).message || 'Impossible d\'accéder au microphone/caméra'}`);
+      addLog('system', `Erreur : ${messageErreurMicro(error)}`);
     }
   };
 

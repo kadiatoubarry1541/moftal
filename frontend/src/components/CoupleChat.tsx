@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket } from '../services/socket'
 import { useConversationLue } from '../utils/messagesNonLus'
+import { creerEnregistreurAudio, fichierAudio, messageErreurMicro } from '../utils/enregistrementAudio'
+import { DUREE_MAX_AUDIO } from '../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -164,22 +166,32 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
     if (isRecording) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      // Format selon le téléphone (webm sur Android, mp4 sur iPhone)
+      let mr: MediaRecorder
+      try { mr = creerEnregistreurAudio(stream) } catch (e) { stream.getTracks().forEach(t => t.stop()); throw e }
       audioChunksRef.current = []
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const file = new File([blob], `vocal-${Date.now()}.webm`, { type: 'audio/webm' })
-        await sendMediaMessage(file)
+        await sendMediaMessage(fichierAudio(mr, audioChunksRef.current))
       }
       mediaRecorderRef.current = mr
-      mr.start()
+      mr.start(200)
       setIsRecording(true)
       setRecordingSeconds(0)
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
-    } catch {
-      alert("Impossible d'accéder au micro. Vérifiez les permissions.")
+      let secs = 0
+      // Arrêt automatique : un audio ne dépasse jamais 5 secondes
+      recordingTimerRef.current = setInterval(() => {
+        secs++
+        setRecordingSeconds(secs)
+        if (secs >= DUREE_MAX_AUDIO) {
+          if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+          setIsRecording(false)
+          if (mr.state !== 'inactive') mr.stop()
+        }
+      }, 1000)
+    } catch (err) {
+      alert(messageErreurMicro(err))
     }
   }, [isRecording, sendMediaMessage])
 

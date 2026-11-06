@@ -1,4 +1,5 @@
 import { DUREE_MAX_AUDIO } from '../utils/dureesMedias';
+import { creerEnregistreurAudio, formatFichierAudio, messageErreurMicro } from '../utils/enregistrementAudio';
 import { useState, useRef, useEffect } from 'react';
 
 /** Navigateurs intégrés des autres applications (réseaux sociaux,
@@ -48,10 +49,8 @@ export function AudioRecorder({ onAudioRecorded, maxDuration: maxDemande = 10, c
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
+      // Format choisi selon le téléphone (webm sur Android, mp4 sur iPhone)
+      const recorder = creerEnregistreurAudio(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -60,7 +59,7 @@ export function AudioRecorder({ onAudioRecorded, maxDuration: maxDemande = 10, c
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const blob = new Blob(chunksRef.current, { type: formatFichierAudio(recorder, chunksRef.current).type });
         onAudioRecorded(blob);
         setIsRecording(false);
         setDuration(0);
@@ -81,19 +80,16 @@ export function AudioRecorder({ onAudioRecorded, maxDuration: maxDemande = 10, c
         });
       }, 1000);
     } catch (err) {
+      // Libère le micro s'il avait été ouvert
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       const name = (err as { name?: string })?.name;
-      if (estNavigateurIntegre()) {
+      if (estNavigateurIntegre() && (name === 'NotAllowedError' || name === 'SecurityError' || !navigator.mediaDevices)) {
         setError(
           "Le micro ne fonctionne pas ici car ce lien s'est ouvert dans le navigateur intégré d'une autre application, pas dans Chrome directement. Ouvre le menu (⋮ ou ⋯) en haut de l'écran et choisis \"Ouvrir dans le navigateur\" ou \"Ouvrir dans Chrome\"."
         );
-      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-        setError("Aucun micro trouvé sur cet appareil.");
-      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
-        setError("Le micro est déjà utilisé par une autre application.");
       } else {
-        setError(
-          "Micro refusé. Vérifie les autorisations (appuie sur le cadenas/icône à côté de l'adresse du site, puis autorise le micro) — ou essaie d'ouvrir ce lien directement dans Chrome."
-        );
+        setError(messageErreurMicro(err));
       }
       console.error(err);
     }
