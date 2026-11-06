@@ -396,7 +396,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     maritalStatus: '',
     children: 0,
     languages: [],
-    profilePicture: userData?.photo || '',
+    profilePicture: String(userData?.photo || ''),
     isPublic: true
   });
 
@@ -681,13 +681,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
       alert('Erreur lors de la mise à jour');
     }
   };
-
-  // Personne trouvée déjà liée : pas d'invitation (famille, voisin, déjà amis)
-  const dejaLie = (lien?: string | null) =>
-    lien === 'famille' ? `🏠 ${t('lien.deja_famille')}`
-      : lien === 'voisin' ? `🏘️ ${t('lien.deja_voisins')}`
-      : lien === 'connaissance' || lien === 'precieux' ? `👥 ${t('lien.deja_amis')}`
-      : null;
 
   // 💎 Activer / retirer précieux de son côté (enregistré sur le serveur)
   const changerPrecieux = async (friend: Friend, actif: boolean) => {

@@ -191,7 +191,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const removePublisher = async (id: string) => {
     try {
       const r = await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
-      if (!r.ok) { const d = await r.json().catch(() => null); alert(d?.message || "La suppression n'a pas été enregistrée."); }
+      if (!r.ok) { const d = await r.json().catch((): null => null); alert(d?.message || "La suppression n'a pas été enregistrée."); }
       loadPublishers();
     } catch { alert("Connexion coupée : rien n'a été supprimé. Réessayez."); }
   };
@@ -318,7 +318,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     if (!confirm('Supprimer cette actualité ?')) return;
     try {
       const r = await fetch(api(`/actualites/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
-      if (!r.ok) { const d = await r.json().catch(() => null); alert(d?.message || "La suppression n'a pas été enregistrée."); }
+      if (!r.ok) { const d = await r.json().catch((): null => null); alert(d?.message || "La suppression n'a pas été enregistrée."); }
     } catch { alert("Connexion coupée : rien n'a été supprimé. Réessayez."); }
     loadActualites();
   };

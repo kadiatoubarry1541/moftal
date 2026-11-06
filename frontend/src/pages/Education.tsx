@@ -620,7 +620,7 @@ export default function Education() {
         setShowProfessorRequestForm(false);
         loadMyRequests();
       } else {
-        const d = await response.json().catch(() => null);
+        const d = await response.json().catch((): null => null);
         alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
@@ -652,7 +652,7 @@ export default function Education() {
         setShowStageRequestForm(false);
         loadMyStageRequests();
       } else {
-        const d = await response.json().catch(() => null);
+        const d = await response.json().catch((): null => null);
         alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {

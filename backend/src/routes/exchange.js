@@ -77,7 +77,7 @@ async function getVendorSubscriptionStatus(numeroH, subSector) {
   const [acc] = await sequelize.query(
     `SELECT id, subscription_status, subscription_valid_until
      FROM professional_accounts
-     WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector=:s LIMIT 1`,
+     WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND is_active IS NOT FALSE AND sub_sector=:s LIMIT 1`,
     { replacements: { n: numeroH, s: subSector }, type: sequelize.QueryTypes.SELECT }
   ).catch(() => [null]);
   if (!acc) return { approved: false, aAcces: false, accountId: null };
@@ -144,7 +144,7 @@ router.get('/vendor-status', async (req, res) => {
 
     const accounts = await sequelize.query(
       `SELECT id, sub_sector, status, name, subscription_status, subscription_valid_until FROM professional_accounts
-       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending')`,
+       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending') AND is_active IS NOT FALSE`,
       { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
     );
 
