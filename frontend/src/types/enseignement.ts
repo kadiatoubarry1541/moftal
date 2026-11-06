@@ -304,7 +304,7 @@ export interface ReponseEnseignement {
   halaqa?: Groupe;
 }
 
-export interface ReponseAjoutEquipe { success?: boolean; message?: string; staff?: MembreEquipe }
+export interface ReponseAjoutEquipe { success?: boolean; message?: string; staff?: MembreEquipe; codePremiereConnexion?: string | null }
 
 /** Ce que voit un parent (/my-access) : ses enfants et le suivi de l'enfant choisi */
 export interface SuiviParent {

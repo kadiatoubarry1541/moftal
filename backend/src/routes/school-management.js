@@ -12,6 +12,7 @@ import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { prochainNumero } from '../utils/prochainNumero.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -158,7 +159,7 @@ export async function elevesLiesEcole(code, numeroH) {
   return sequelize.query(
     `SELECT s.id, s.prenom, s.nom, s.niveau, c.nom AS classe
      FROM school_students s
-     LEFT JOIN school_classrooms c ON c.id = s.classroom_id
+     LEFT JOIN school_classrooms c ON c.id = s.classroom_id AND c.tenant_code = s.tenant_code
      WHERE s.tenant_code = :code
        AND EXISTS (SELECT 1 FROM school_members m WHERE m.tenant_code = :code AND m.numero_h = :nh AND m.is_active = true)
        AND (s.id IN (SELECT l.student_id FROM school_member_students l WHERE l.tenant_code = :code AND l.numero_h = :nh)
@@ -260,7 +261,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   try {
     const { search, classroom_id } = req.query;
-    let q = `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.tenant_code=:code AND s.statut='actif'`;
+    let q = `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE s.tenant_code=:code AND s.statut='actif'`;
     if (search) q += ` AND (s.nom ILIKE :s OR s.prenom ILIKE :s OR s.numero_matricule ILIKE :s)`;
     if (classroom_id) q += ` AND s.classroom_id=:cid`;
     q += ` ORDER BY s.nom`;
@@ -346,15 +347,14 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     if (!String(telephone || email || numero_h || '').trim() && !(req.body.nom && req.body.prenom)) {
       return res.status(400).json({ success: false, message: "Indiquez au moins le téléphone, l'e-mail ou le nom de l'enseignant." });
     }
-    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nh, personne, codePremiereConnexion } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const code = req.params.tenantCode;
     const doublon = await personnelEnDouble(code, { telephone, numeroH: nh });
     if (doublon) return res.status(409).json({ success: false, message: messageDoublonPersonnel(doublon), staffId: doublon.id });
     const refus = await definirAccesPersonnel(req, { numeroH: nh, nom: `${prenom} ${nom}`.trim(), poste: role || 'Enseignant', niveau: req.body.acces_gestion });
     if (refus.erreur) return res.status(403).json({ success: false, message: refus.erreur });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
+    const mat = await prochainNumero('school_staff', code, `PROF-${code.slice(-4)}-`, 3);
     const mats = matieres || (specialite ? [specialite] : []);
     await preparerColonnesSite('school_staff');
     const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-personnel' });
@@ -367,7 +367,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
       await notifierMembreEtablissement(code, nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}/enseignant`, { url: `/gestion-ecole/${code}` });
     }
-    res.json({ success: true, staff: rows[0] });
+    res.json({ success: true, staff: rows[0], codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -375,7 +375,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
   try {
     await ensureStaffPhotoColumn();
     const { role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
-    const { nh, personne } = await personnelRelie({ numero_h, telephone, email });
+    const { nh, personne, codePremiereConnexion } = await personnelRelie({ numero_h, telephone, email });
     const { nom, prenom } = nomPersonnel({ ...req.body }, personne);
     const doublon = await personnelEnDouble(req.params.tenantCode, { telephone, numeroH: nh }, req.params.id);
     if (doublon) return res.status(409).json({ success: false, message: messageDoublonPersonnel(doublon), staffId: doublon.id });
@@ -395,7 +395,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
       { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, ...champsSitePersonnel(req.body), id: req.params.id, code: req.params.tenantCode } }
     );
     await nommerComptePrepare(nh, prenom, nom);
-    res.json({ success: true });
+    res.json({ success: true, codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -422,7 +422,7 @@ router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, re
                         FROM school_staff e WHERE e.tenant_code=c.tenant_code AND e.is_active=true
                           AND (e.id=c.professeur_principal_id OR e.id IN (SELECT t.staff_id FROM school_classroom_teachers t WHERE t.classroom_id=c.id))), '[]'::json) AS enseignants
        FROM school_classrooms c
-       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id
+       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id AND s.tenant_code=c.tenant_code
        LEFT JOIN school_students st ON st.tenant_code=c.tenant_code AND st.statut='actif'
          AND (st.classroom_id=c.id OR (st.classroom_id IS NULL AND st.niveau=c.niveau))
        WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
@@ -495,7 +495,7 @@ router.get('/:tenantCode/attendance', authenticate, verifyTenant, async (req, re
     const d = date || new Date().toISOString().split('T')[0];
     let q = `SELECT a.*,COALESCE(a.statut, CASE WHEN a.est_present THEN 'present' ELSE 'absent' END) as statut,
                     s.nom,s.prenom,s.numero_matricule
-             FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id
+             FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id AND s.tenant_code=a.tenant_code
              WHERE a.tenant_code=:code AND a.date_presence=:date`;
     if (classroom_id) q += ` AND a.classroom_id=:cid`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, date: d, cid: classroom_id || null }, type: sequelize.QueryTypes.SELECT });
@@ -554,7 +554,7 @@ router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async 
 router.get('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
   try {
     const { student_id, classroom_id, periode } = req.query;
-    let q = `SELECT g.*,s.nom as student_nom,s.prenom as student_prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id WHERE g.tenant_code=:code`;
+    let q = `SELECT g.*,s.nom as student_nom,s.prenom as student_prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id AND s.tenant_code=g.tenant_code WHERE g.tenant_code=:code`;
     if (student_id) q += ` AND g.student_id=:sid`;
     if (classroom_id) q += ` AND g.classroom_id=:cid`;
     if (periode) q += ` AND g.periode=:periode`;
@@ -600,7 +600,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
+      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id AND s.tenant_code=f.tenant_code WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, fees: rows });
@@ -734,7 +734,7 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
       );
     }
     await notifierMembreEtablissement(code, numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}). Suivez vos enfants dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}`, { url: `/gestion-ecole/${code}` });
-    res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom } });
+    res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom }, codePremiereConnexion: trouve.codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -798,7 +798,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
       if (studentId) {
         const rep = { replacements: { sid: studentId, code }, type: sequelize.QueryTypes.SELECT };
         const [student] = await sequelize.query(
-          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.id=:sid AND s.tenant_code=:code LIMIT 1`, rep
+          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE s.id=:sid AND s.tenant_code=:code LIMIT 1`, rep
         );
         const grades = await sequelize.query(
           `SELECT * FROM school_grades WHERE student_id=:sid AND tenant_code=:code ORDER BY created_at DESC LIMIT 50`, rep
@@ -826,7 +826,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   try {
     const { periode, student_id } = req.query;
-    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
+    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id AND s.tenant_code=b.tenant_code LEFT JOIN school_classrooms c ON s.classroom_id=c.id AND c.tenant_code=s.tenant_code WHERE b.tenant_code=:code`;
     if (periode)    q += ` AND b.periode=:periode`;
     if (student_id) q += ` AND b.student_id=:sid`;
     q += ` ORDER BY s.nom`;
@@ -922,8 +922,7 @@ router.put('/:tenantCode/enroll-requests/:id/convert', authenticate, verifyTenan
     const code = req.params.tenantCode;
     const [reqRow] = await sequelize.query(`SELECT * FROM school_enroll_requests WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
     if (!reqRow) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const mat = await prochainNumero('school_students', code, `ELV-${code.slice(-4)}-${new Date().getFullYear()}-`, 4);
     const nameParts = (reqRow.nom_enfant || '').trim().split(/\s+/);
     const prenom = nameParts.shift() || reqRow.nom_enfant;
     const nom = nameParts.join(' ') || '—';

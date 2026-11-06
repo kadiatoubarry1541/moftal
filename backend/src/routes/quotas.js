@@ -367,6 +367,7 @@ router.post('/consume-infowallou', async (req, res) => {
       SET points_disponibles = points_disponibles - 2,
           updated_at = NOW()
       WHERE numero_h = :numeroH AND points_disponibles >= 2
+        AND (expires_at IS NULL OR expires_at >= NOW())
       RETURNING points_disponibles
     `, { replacements: { numeroH: req.user.numeroH }, type: sequelize.QueryTypes.UPDATE });
 

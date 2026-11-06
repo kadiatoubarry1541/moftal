@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import Payment from '../models/Payment.js';
-import { computeAmountForPurpose, handlePostPayment } from './payment.js';
+import { computeAmountForPurpose, debloquerPaiement } from './payment.js';
 
 const router = express.Router();
 
@@ -65,6 +65,15 @@ async function getBearerToken() {
 }
 
 // Formater le numéro de téléphone guinéen en format international 00224XXXXXXXXX
+// Retour après paiement : sur le site d'où vient le client (moftal.com ou
+// gestions.moftal.com), page qui vérifie le paiement auprès du serveur
+function urlsRetour(req, ref) {
+  const origine = String(req.headers.origin || '');
+  const base = /^https:\/\/([a-z0-9-]+\.)?moftal\.com$/.test(origine) ? origine : 'https://moftal.com';
+  const page = `${base}/paiement/resultat?txRef=${encodeURIComponent(ref)}`;
+  return { returnUrl: page, cancelUrl: `${page}&status=cancelled` };
+}
+
 function formatPhone(phone) {
   if (!phone) return '';
   const clean = phone.replace(/\D/g, '');
@@ -86,7 +95,7 @@ async function completeIfNeeded(payment) {
     { where: { id: payment.id, status: { [Op.ne]: 'completed' } } }
   );
   payment.status = 'completed';
-  if (nb === 1) await handlePostPayment(payment);
+  if (nb === 1) await debloquerPaiement(payment);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,8 +140,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       countryCode: 'GN',
       description: description || 'Paiement Moftal',
       merchantPaymentReference: ref,
-      returnUrl:  'https://moftal.com/payment/success',
-      cancelUrl:  'https://moftal.com/payment/cancel',
+      ...urlsRetour(req, ref),
       metadata:   { userId: user.numeroH, ref }
     };
 
@@ -204,8 +212,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       allowedPaymentMethods: allowedPaymentMethods || ['OM', 'MOMO', 'CARD', 'PAYCARD'],
       description: description || 'Paiement Moftal',
       merchantPaymentReference: ref,
-      returnUrl:  'https://moftal.com/payment/success',
-      cancelUrl:  'https://moftal.com/payment/cancel',
+      ...urlsRetour(req, ref),
       metadata:   { userId: user.numeroH, ref }
     };
 
@@ -258,7 +265,7 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
     const token = await getBearerToken();
 
     const { ok: djomyOk, data } = await djomyFetch(
-      `${DJOMY_BASE_URL}/v1/payments/${req.params.transactionId}/status`,
+      `${DJOMY_BASE_URL}/v1/payments/${encodeURIComponent(req.params.transactionId)}/status`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -272,7 +279,13 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
       const payment = await Payment.findOne({
         where: { gatewayRef: req.params.transactionId, payerNumeroH: req.user.numeroH }
       });
-      await completeIfNeeded(payment);
+      // Comme le webhook : rien n'est débloqué si le montant payé est inférieur au montant dû
+      const paye = data.paidAmount ?? data.data?.paidAmount;
+      if (payment && paye != null && Number(paye) < Number(payment.amount)) {
+        console.warn(`djomy/status: montant insuffisant (${paye} < ${payment.amount}) pour`, req.params.transactionId);
+      } else {
+        await completeIfNeeded(payment);
+      }
     }
 
     res.json({ success: djomyOk, ...data });

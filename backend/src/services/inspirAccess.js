@@ -1,6 +1,5 @@
-import { Op } from 'sequelize';
-import Payment from '../models/Payment.js';
 import { MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
+import { finAbonnementPaye, DUREES_LIVRES } from '../utils/finAbonnement.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inspir — qui voit quoi.
@@ -42,19 +41,10 @@ export function allowedInspirSections(user) {
   return ['parents', 'enfants'];
 }
 
-// Bibliothèque (livres) : abonnement annuel actif, ou administrateur
+// Bibliothèque (livres) : abonnement annuel actif, ou administrateur.
+// Renvoie la date de fin de l'abonnement (ou true pour un admin), sinon null.
 export async function hasLivresAccess(user) {
   if (isInspirAdmin(user)) return true;
-  const unAnAvant = new Date();
-  unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-  const pass = await Payment.findOne({
-    where: {
-      payerNumeroH: user.numeroH,
-      purpose: 'subscription_livres_an',
-      status: 'completed',
-      createdAt: { [Op.gte]: unAnAvant },
-    },
-    order: [['createdAt', 'DESC']],
-  });
-  return pass;
+  const { fin } = await finAbonnementPaye(user?.numeroH, DUREES_LIVRES);
+  return fin && fin > new Date() ? fin : null;
 }

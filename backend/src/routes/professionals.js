@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
 import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
 import { refusNomReserve } from '../utils/nomsReserves.js';
-import ProfessionalAccount from '../models/ProfessionalAccount.js';
+import ProfessionalAccount, { STATUTS_VISIBLES } from '../models/ProfessionalAccount.js';
+import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import PageAdmin, { preparerPageAdmin } from '../models/PageAdmin.js';
 import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
@@ -301,8 +302,8 @@ router.get('/approved', async (req, res) => {
       accounts = await ProfessionalAccount.getApprovedByType(type);
     } else {
       accounts = await ProfessionalAccount.findAll({
-        // Visible publiquement UNIQUEMENT si approuvé + actif + abonnement actif
-        where: { status: 'approved', isActive: true, subscriptionStatus: 'active' },
+        // Visible publiquement si approuvé + actif + abonnement actif ou en délai de grâce
+        where: { status: 'approved', isActive: true, subscriptionStatus: { [Op.in]: STATUTS_VISIBLES } },
         order: [['name', 'ASC']]
       });
     }
@@ -787,14 +788,24 @@ router.post('/:id/connect-client', authenticate, async (req, res) => {
     const { clientNumeroH } = req.body;
     if (!clientNumeroH) return res.status(400).json({ success: false, message: 'clientNumeroH requis' });
 
-    // Notifier le client
-    await Notification.create({
-      recipientNumeroH: clientNumeroH,
-      senderNumeroH: req.userId,
-      type: 'pro_connection',
-      message: `${account.name} vous a connecté à son espace professionnel.`,
-      isRead: false
-    }).catch(() => {}); // non bloquant si le champ type n'est pas dans l'ENUM
+    // Le client est vraiment relié au compte (liste des membres, rôle « client ») :
+    // avant, seul un message était envoyé et rien n'était enregistré.
+    const client = await User.findByNumeroH(String(clientNumeroH).trim());
+    if (!client) return res.status(404).json({ success: false, message: 'Aucun membre avec ce NuméroH.' });
+    await sequelize.query(
+      `INSERT INTO professional_account_members (professional_account_id, numero_h, role, nom_display, added_by)
+       VALUES (:id, :n, 'client', :nom, :by)
+       ON CONFLICT (professional_account_id, numero_h) DO UPDATE SET is_active = true`,
+      { replacements: { id: account.id, n: client.numeroH, nom: `${client.prenom || ''} ${client.nomFamille || ''}`.trim(), by: req.userId } }
+    );
+
+    await Notification.createNotification({
+      recipientNumeroH: client.numeroH,
+      type: 'pro_member_added',
+      title: 'Nouvel établissement',
+      message: `${account.name} vous a ajouté(e) à ses clients. Vous le retrouverez dans « Mes établissements liés » sur votre profil.`,
+      relatedId: account.id
+    }).catch(() => {});
 
     res.json({ success: true, message: `Client connecté à ${account.name} avec succès.` });
   } catch (e) {
@@ -968,7 +979,8 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous ne pouvez pas approuver votre propre compte.' });
     }
 
-    if (account.status === 'rejected' && account.approvedAt) {
+    const dejaApprouve = account.status === 'rejected' && !!account.approvedAt;
+    if (dejaApprouve) {
       // Déjà approuvé une fois puis rejeté : on rétablit le compte sans relancer
       // l'essai gratuit (l'abonnement garde ses dates).
       await account.update({ status: 'approved', approvedBy: req.userId, rejectionReason: null });
@@ -996,7 +1008,10 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       recipientNumeroH: account.ownerNumeroH,
       type: 'account_approved',
       title: 'Compte approuvé !',
-      message: `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" a été approuvé ! Vous bénéficiez de 3 mois d'essai gratuit. Profitez-en pour explorer votre espace professionnel, recevoir des rendez-vous et gérer votre activité.`,
+      // Un compte rétabli (déjà approuvé une fois) garde ses dates : pas de nouvel essai
+      message: dejaApprouve
+        ? `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" est de nouveau approuvé. Votre abonnement garde ses dates.`
+        : `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" a été approuvé ! Vous bénéficiez de 3 mois d'essai gratuit. Profitez-en pour explorer votre espace professionnel, recevoir des rendez-vous et gérer votre activité.`,
       relatedId: account.id
     });
 

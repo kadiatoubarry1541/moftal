@@ -14,7 +14,7 @@ import { lienAppGestionIci } from "../utils/lienAppGestion";
 // Les règles sont appliquées par le serveur (utils/accesEmployes.js).
 
 type Employe = { id: number; numero_h: string; nom: string | null; poste: string | null; niveau: "total" | "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
-type Invitation = { nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean };
+type Invitation = { nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean; code?: string | null };
 
 const NIVEAUX = [
   { v: "limite", titre: "Limité", detail: "Voir, ajouter (ventes, patients, élèves…) et changer un statut. Ne peut ni modifier ni supprimer." },
@@ -50,7 +50,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
       setForm({ numero_h: "", poste: "", niveau: "limite" });
       // Le lien de l'application, à lui envoyer tout de suite
       const estEmail = identifiant.includes("@");
-      setInvitation({ nom: d.employe.nom || identifiant, nouveauCompte: d.nouveauCompte,
+      setInvitation({ nom: d.employe.nom || identifiant, nouveauCompte: d.nouveauCompte, code: d.codePremiereConnexion || null,
         telephone: estEmail || /[a-z]/i.test(identifiant) ? (d.employe.telephone || null) : identifiant, email: estEmail ? identifiant : null });
       charger();
     } catch {
@@ -59,7 +59,20 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
       setEnvoi(false);
     }
   };
-  const envoyerLien = (e: Employe) => setInvitation({ nom: e.nom || e.numero_h, telephone: e.telephone, email: e.email });
+  // Employé qui n'a pas encore choisi son mot de passe : un code neuf est donné
+  // avec le lien (le précédent ne sert plus)
+  const envoyerLien = async (e: Employe) => {
+    let code: string | null = null;
+    const m = base.match(/^(.*\/api)\/[a-z]+-mgmt\/([^/?]+)/);
+    if (m) {
+      try {
+        const r = await fetch(`${m[1]}/auth/code-premiere-connexion`, { method: "POST", headers: headers(), body: JSON.stringify({ numeroH: e.numero_h, tenantCode: decodeURIComponent(m[2]) }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.success) code = d.code;
+      } catch { /* sans connexion : le lien seul */ }
+    }
+    setInvitation({ nom: e.nom || e.numero_h, telephone: e.telephone, email: e.email, code, nouveauCompte: !!code });
+  };
   const changerNiveau = async (e: Employe, niveau: string) => {
     if (await envoyerGestion(`${base}/acces-employes/${e.id}`, { method: "PUT", headers: headers(), body: JSON.stringify({ niveau }) })) charger();
   };
@@ -80,11 +93,17 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
           <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#166534" }}>✅ Envoyez ce lien à {invitation.nom}</div>
             <div style={{ fontSize: 12, color: "#334155", marginTop: 4 }}>
-              {invitation.nouveauCompte
-                ? "Il ouvre le lien, se connecte avec ce téléphone / cet e-mail et choisit son mot de passe la première fois. Il n'a que les droits donnés ici."
+              {invitation.code
+                ? "Il ouvre le lien, se connecte avec ce téléphone / cet e-mail, saisit le code ci-dessous et choisit son mot de passe la première fois. Il n'a que les droits donnés ici."
                 : "Il ouvre le lien et se connecte avec son téléphone / e-mail et son mot de passe habituel. Il n'a que les droits donnés ici."}
             </div>
-            <EnvoiLien lien={lienApp} message={messageLienApplication(nomEtablissement || "notre établissement", lienApp)}
+            {invitation.code && (
+              <div style={{ marginTop: 8, padding: "8px 12px", background: "white", border: "1px dashed #16a34a", borderRadius: 10, fontSize: 13 }}>
+                🔑 Code de première connexion : <b style={{ fontSize: 18, letterSpacing: 3 }}>{invitation.code}</b>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>À lui donner : sans ce code, personne d'autre ne peut prendre son compte.</div>
+              </div>
+            )}
+            <EnvoiLien lien={lienApp} message={messageLienApplication(nomEtablissement || "notre établissement", lienApp) + (invitation.code ? `\nCode de première connexion : ${invitation.code}` : "")}
               telephone={invitation.telephone} email={invitation.email} sujet={`Application — ${nomEtablissement || "Moftal"}`} />
             <button onClick={() => setInvitation(null)} style={{ marginTop: 10, background: "none", border: "none", color: "#64748b", fontSize: 12, cursor: "pointer" }}>Masquer</button>
           </div>

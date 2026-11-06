@@ -2,11 +2,12 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
-import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { fondsDe } from '../utils/fondsFamille.js';
+import { compteMoftalPayPro, MOFTAL_PAY_PRO_TYPES } from '../utils/compteMoftalPayPro.js';
 
 // Commission prélevée par la plateforme sur chaque dépôt externe (via Djomy)
 // Les transferts internes (famille → pro) sont GRATUITS — pas de commission
@@ -18,28 +19,25 @@ const router = attraperErreursAsync(express.Router());
 // GET /api/moftal-pay/mon-moftal-pay-pro
 // Récupère le compte Moftal Pay Pro du professionnel connecté
 // ─────────────────────────────────────────
-// Types autorisés à accéder au Moftal Pay Pro pour l'instant
-const MOFTAL_PAY_PRO_TYPES = ['clinic', 'supplier'];
-
 router.get('/mon-moftal-pay-pro', authenticate, async (req, res) => {
   try {
     const { numeroH } = req.user;
 
-    // Chercher le compte pro approuvé de cet utilisateur
-    const proAccount = await ProfessionalAccount.findOne({
-      where: { ownerNumeroH: numeroH, status: 'approved', isActive: true }
-    });
+    // Le compte pro du Moftal Pay Pro (le même que celui crédité par les dépôts)
+    const proAccount = await compteMoftalPayPro(numeroH);
     if (!proAccount) {
-      return res.status(404).json({ success: false, message: 'Aucun compte professionnel approuvé trouvé.' });
-    }
-
-    // Moftal Pay Pro disponible uniquement pour Santé (clinic) et Alimentation (supplier)
-    if (!MOFTAL_PAY_PRO_TYPES.includes(proAccount.type)) {
+      const autre = await ProfessionalAccount.findOne({ where: { ownerNumeroH: numeroH, status: 'approved', isActive: true } });
+      if (!autre) {
+        return res.status(404).json({ success: false, message: 'Aucun compte professionnel approuvé trouvé.' });
+      }
+      // Moftal Pay Pro : Santé (clinic) et Alimentation (supplier), formule Gestion Interne
       return res.status(403).json({
         success: false,
         restricted: true,
-        typePro: proAccount.type,
-        message: 'Le Moftal Pay Pro est disponible uniquement pour les comptes Santé et Alimentation pour le moment.'
+        typePro: autre.type,
+        message: MOFTAL_PAY_PRO_TYPES.includes(autre.type)
+          ? "Le Moftal Pay Pro fait partie de la formule Visibilité + Gestion Interne."
+          : 'Le Moftal Pay Pro est disponible uniquement pour les comptes Santé et Alimentation pour le moment.'
       });
     }
 
@@ -104,7 +102,7 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
   try {
     const { proAccountId, categorie, description } = req.body;
     // categorie = 'sante' | 'nourriture' | 'urgence' | 'projet'
-    const { numeroH, nomFamille } = req.user;
+    const { numeroH } = req.user;
     // Montant converti en nombre entier : une valeur texte (« 1000 ») était
     // collée au solde au lieu d'y être ajoutée (argent créé de rien).
     const montant = Number(req.body.montant);
@@ -135,10 +133,8 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
 
     // Débit de la famille et crédit du pro : tout ou rien, comptes verrouillés
     const resultat = await sequelize.transaction(async (transaction) => {
-      const fund = await FamilyFund.findOne({
-        where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true },
-        transaction, lock: transaction.LOCK.UPDATE,
-      });
+      // Compte de l'arbre familial de la personne (jamais celui d'un homonyme)
+      const { fund } = await fondsDe(req.user, { transaction, lock: true });
       if (!fund) return { statut: 404, message: 'Compte famille introuvable.' };
       if (fund.gerant1NumeroH !== numeroH && fund.gerant2NumeroH !== numeroH) {
         return { statut: 403, message: 'Seuls les gérants peuvent effectuer ce paiement.' };
@@ -198,7 +194,7 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
 router.get('/mes-transactions', authenticate, async (req, res) => {
   try {
     const { numeroH } = req.user;
-    const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: numeroH } });
+    const proAccount = await compteMoftalPayPro(numeroH);
     if (!proAccount) return res.json({ success: true, transactions: [] });
 
     const comptePro = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });

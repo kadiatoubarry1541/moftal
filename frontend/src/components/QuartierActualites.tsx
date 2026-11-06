@@ -142,10 +142,11 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
 
   const removePublisher = async (id: string) => {
     try {
-      await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } })
+      const r = await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } })
+      if (!r.ok) { const d = await r.json().catch(() => null); alert(d?.message || "La suppression n'a pas été enregistrée.") }
       loadPublishers()
     } catch {
-      // non bloquant
+      alert("Connexion coupée : rien n'a été supprimé. Réessayez.")
     }
   }
 
@@ -226,7 +227,10 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
 
   const supprimerActualite = async (id: string) => {
     if (!confirm('Supprimer cette actualité ?')) return
-    await fetch(api(`/actualites/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } })
+    try {
+      const r = await fetch(api(`/actualites/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } })
+      if (!r.ok) { const d = await r.json().catch(() => null); alert(d?.message || "La suppression n'a pas été enregistrée.") }
+    } catch { alert("Connexion coupée : rien n'a été supprimé. Réessayez.") }
     loadActualites()
   }
 

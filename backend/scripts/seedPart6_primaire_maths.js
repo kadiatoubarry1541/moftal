@@ -118,14 +118,14 @@ Continue comme ça ! 💪`,
 
 **POSER UNE DIVISION : 253 ÷ 4**
 
-```
+\`\`\`
 253 | 4
 ───   ──
    25 ÷ 4 = 6 (6×4=24), reste 1 → on descend le 3
    13 ÷ 4 = 3 (3×4=12), reste 1
 
    Résultat : Quotient = 63, Reste = 1
-```
+\`\`\`
 Vérification : 4 × 63 + 1 = 252 + 1 = 253 ✅
 
 ---

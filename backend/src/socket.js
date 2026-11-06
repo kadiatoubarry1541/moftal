@@ -22,9 +22,9 @@ export function initSocket(httpServer, corsOrigins) {
       const decoded = jwt.verify(token, config.JWT_SECRET);
       if (decoded.purpose) return next(new Error('Invalid token')); // jeton de récupération : jamais une session
       // Compte réel et actif (désactivé ou supprimé → plus de temps réel)
-      const { findUserFollowingAlias } = await import('./middleware/auth.js');
+      const { findUserFollowingAlias, sessionRevoquee } = await import('./middleware/auth.js');
       const user = await findUserFollowingAlias(decoded.numeroH);
-      if (!user || !user.isActive) return next(new Error('Invalid token'));
+      if (!user || !user.isActive || sessionRevoquee(user, decoded)) return next(new Error('Invalid token'));
       socket.user = { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, role: user.role };
       next();
     } catch {
@@ -66,8 +66,8 @@ export function initSocket(httpServer, corsOrigins) {
     // Room personnelle
     socket.join(`user-${numeroH}`);
 
-    // Informer les autres que l'utilisateur est en ligne
-    socket.broadcast.emit('user-online', { numeroH, prenom, nomFamille });
+    // Pas d'annonce « en ligne » à tous les connectés : nom et présence de
+    // chacun n'ont pas à être envoyés à tout le site
 
     // Rejoindre la room familiale
     // Seulement SA famille (même nom de famille que la messagerie familiale)
@@ -133,7 +133,6 @@ export function initSocket(httpServer, corsOrigins) {
     // ──── Déconnexion ─────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
       onlineUsers.delete(numeroH);
-      socket.broadcast.emit('user-offline', { numeroH });
     });
   });
 

@@ -19,6 +19,7 @@ import { Op } from 'sequelize';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
 import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
+import { sequelize } from '../config/database.js';
 import {
   sendSubscriptionExpiringSoonEmail,
   sendSubscriptionCutoffWarningEmail,
@@ -47,7 +48,30 @@ async function resolveProEmail(account) {
 
 // ─── Vérification principale ──────────────────────────────────────────────────
 
+// Une seule vérification par jour, même si le serveur redémarre plusieurs fois
+// (avant, chaque redémarrage renvoyait les mêmes e-mails).
+async function premiereFoisAujourdhui() {
+  await sequelize.query(`CREATE TABLE IF NOT EXISTS taches_quotidiennes (nom VARCHAR(50) NOT NULL, jour DATE NOT NULL, PRIMARY KEY (nom, jour))`);
+  const [lignes] = await sequelize.query(
+    `INSERT INTO taches_quotidiennes (nom, jour) VALUES ('abonnements', CURRENT_DATE) ON CONFLICT DO NOTHING RETURNING nom`
+  );
+  return lignes.length > 0;
+}
+
+function finDeGrace(validUntil, account) {
+  const fin = new Date(validUntil);
+  if (account.type === 'moftal_vendor') fin.setDate(fin.getDate() + 1);
+  else fin.setMonth(fin.getMonth() + GRACE_MOIS_VISIBILITE);
+  return fin;
+}
+
 async function runSubscriptionCheck() {
+  try {
+    if (!(await premiereFoisAujourdhui())) return;
+  } catch (err) {
+    console.error('❌ [SubscriptionChecker] Registre du jour :', err.message);
+    return;
+  }
   console.log(`\n📧 [SubscriptionChecker] Vérification quotidienne — ${new Date().toLocaleDateString('fr-FR')}`);
 
   try {
@@ -71,12 +95,14 @@ async function runSubscriptionCheck() {
       console.log(`  ⏰ J-3 → ${account.name} (${proEmail})`);
     }
 
-    // ── 2. Comptes expirés hier → email "coupure dans 24h" + overdue ─────────
-    const { start: yStart, end: yEnd } = dayRange(-1);
+    // ── 2. Comptes expirés (hier, ou pendant un arrêt du serveur) → overdue ──
+    // Tous les comptes encore « actifs » dont la date est passée : un jour sans
+    // vérification ne laisse plus un compte actif pour toujours.
+    const { start: todayStart } = dayRange(0);
     const expiredYesterday = await ProfessionalAccount.findAll({
       where: {
         subscriptionStatus: 'active',
-        subscriptionValidUntil: { [Op.between]: [yStart, yEnd] },
+        subscriptionValidUntil: { [Op.lt]: todayStart },
       },
     });
 
@@ -91,6 +117,7 @@ async function runSubscriptionCheck() {
         proEmail,
         proName,
         expiredAt: account.subscriptionValidUntil,
+        coupureLe: finDeGrace(account.subscriptionValidUntil, account),
       }).catch(err => console.error(`[J+0 overdue] ${account.name}:`, err.message));
       console.log(`  🚨 Coupure 24h → ${account.name} (${proEmail})`);
     }
@@ -160,9 +187,10 @@ export function startSubscriptionChecker() {
   // Lancer immédiatement au démarrage du serveur
   runSubscriptionCheck();
 
-  // Puis toutes les 24 heures
-  const INTERVAL_MS = 24 * 60 * 60 * 1000;
+  // Puis toutes les heures : la vérification ne tourne qu'une fois par jour
+  // (registre en base), même si le serveur a redémarré entre-temps
+  const INTERVAL_MS = 60 * 60 * 1000;
   setInterval(runSubscriptionCheck, INTERVAL_MS);
 
-  console.log('✅ [SubscriptionChecker] Démarré — vérification toutes les 24h');
+  console.log('✅ [SubscriptionChecker] Démarré — vérification une fois par jour');
 }

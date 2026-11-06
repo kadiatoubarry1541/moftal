@@ -63,11 +63,30 @@ async function canPublishActualite(user, scope, location) {
 }
 
 // ─── COTISATIONS (quartier + sous-préfecture uniquement) ────────────────────
+// Table créée si besoin, avec le statut de paiement : un don ne compte dans les
+// totaux qu'une fois PAYÉ (avant, une simple promesse était comptée comme versée).
+let tableDonsPrete = null;
+function preparerTableDons() {
+  if (!tableDonsPrete) {
+    tableDonsPrete = DeveloppementDon.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS developpement_dons (
+        id UUID PRIMARY KEY, numero_h VARCHAR(255) NOT NULL, amount DECIMAL(15,2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'FG', domaine VARCHAR(50) DEFAULT 'general', domaine_label VARCHAR(100),
+        message TEXT, scope VARCHAR(30) NOT NULL, location VARCHAR(100) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE developpement_dons ADD COLUMN IF NOT EXISTS statut VARCHAR(20) NOT NULL DEFAULT 'en_attente';
+      ALTER TABLE developpement_dons ADD COLUMN IF NOT EXISTS paye_le TIMESTAMPTZ;
+    `).catch((e) => { tableDonsPrete = null; throw e; });
+  }
+  return tableDonsPrete;
+}
 
 router.get('/stats', authenticate, async (req, res) => {
   try {
+    await preparerTableDons();
     const { scope = 'mondial', location = 'mondial' } = req.query;
-    const dons = await DeveloppementDon.findAll({ where: { scope, location: location.toLowerCase() } });
+    const dons = await DeveloppementDon.findAll({ where: { scope, location: location.toLowerCase(), statut: 'paye' } });
     const totalCollecte = dons.reduce((sum, d) => sum + parseFloat(d.amount), 0);
     const nbDonneurs = new Set(dons.map(d => d.numeroH)).size;
     const parDomaine = {};
@@ -80,6 +99,7 @@ router.get('/stats', authenticate, async (req, res) => {
 
 router.get('/mes-dons', authenticate, async (req, res) => {
   try {
+    await preparerTableDons();
     const { scope, location } = req.query;
     const where = { numeroH: req.user.numeroH };
     if (scope) where.scope = scope;
@@ -91,24 +111,30 @@ router.get('/mes-dons', authenticate, async (req, res) => {
   }
 });
 
+// Prépare le don (en attente) ; il est réglé ensuite par paiement Djomy
+// (objet « don_developpement », relatedId = id du don, voir payment.js)
 router.post('/donate', authenticate, async (req, res) => {
   try {
-    const { amount, currency, domaine, domaineLabel, message, scope, location } = req.body;
-    if (!amount || parseFloat(amount) <= 0)
-      return res.status(400).json({ success: false, message: 'Montant invalide' });
-    if (!scope || !location)
-      return res.status(400).json({ success: false, message: 'Scope et location requis' });
+    await preparerTableDons();
+    const { domaine, domaineLabel, message } = req.body;
+    const montant = Math.round(Number(req.body?.amount));
+    if (!Number.isFinite(montant) || montant < 1000)
+      return res.status(400).json({ success: false, message: 'Montant minimum : 1 000 GNF.' });
+    // Sans lieu précisé : le fonds général (le même que les totaux affichés par défaut)
+    const scope = String(req.body?.scope || 'mondial').slice(0, 30);
+    const location = String(req.body?.location || 'mondial').toLowerCase().slice(0, 100);
     const don = await DeveloppementDon.create({
       numeroH: req.user.numeroH,
-      amount: parseFloat(amount),
-      currency: currency || 'FG',
+      amount: montant,
+      currency: 'GNF',
       domaine: domaine || 'general',
       domaineLabel: domaineLabel || 'Fonds Général',
       message: message || null,
       scope,
-      location: location.toLowerCase(),
+      location,
+      statut: 'en_attente',
     });
-    res.json({ success: true, don });
+    res.json({ success: true, don, donId: don.id, montant });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

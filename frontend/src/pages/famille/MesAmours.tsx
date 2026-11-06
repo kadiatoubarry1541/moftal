@@ -396,7 +396,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     maritalStatus: '',
     children: 0,
     languages: [],
-    profilePicture: '',
+    profilePicture: userData?.photo || '',
     isPublic: true
   });
 

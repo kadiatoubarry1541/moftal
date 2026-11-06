@@ -1,6 +1,7 @@
 ﻿import { useRef } from 'react';
 import { ouvrirDocument } from "../utils/documentImprimable";
 import { useTraduction } from '../i18n/traduction';
+import { echap } from "../utils/echapperHtml";
 
 /** Données d'un reçu (sans la fermeture) */
 export type DonneesReçu = Omit<ReçuProps, "onClose">;
@@ -43,7 +44,7 @@ export function ReçuTransaction({
     const content = printRef.current?.innerHTML;
     if (!content) return;
     ouvrirDocument(`<!DOCTYPE html><html><head><meta charset="utf-8">
-      <title>${tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' })}</title>
+      <title>${echap(tr("Reçu Moftal Pay — {nom}", { nom: nomFamille || proNom || '' }))}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; color: #111; }
@@ -85,6 +86,7 @@ export function ReçuTransaction({
           <div className="recu">
             {/* Header */}
             <div className="header" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', padding: '24px', textAlign: 'center', color: 'white' }}>
+              {/* Logo de l'établissement en entier (jamais rogné ni remplacé par un emoji) */}
               {logoUrl ? (
                 <img src={logoUrl} alt={proNom} className="logo" style={{ width: 72, height: 72, objectFit: 'contain', background: 'white', borderRadius: 12, border: '3px solid rgba(255,255,255,0.5)', marginBottom: 10, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
               ) : (
