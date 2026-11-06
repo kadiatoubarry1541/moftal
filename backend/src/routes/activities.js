@@ -59,7 +59,8 @@ router.get('/my-group', async (req, res) => {
       });
     } else {
       // Auto-rejoindre si pas encore membre
-      const members = group.members || [];
+      // Copie : modifier le tableau en place n'est jamais enregistré
+      const members = [...(group.members || [])];
       if (!members.includes(req.user.numeroH)) {
         members.push(req.user.numeroH);
         await group.update({ members });
@@ -169,7 +170,8 @@ router.post('/groups/:id/join', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(numeroH)) {
       await group.update({ members: [...members, numeroH] });
     }
@@ -205,7 +207,8 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     }
     
     // Vérifier si l'utilisateur est membre, sinon l'ajouter automatiquement
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(user.numeroH)) {
       members.push(user.numeroH);
       await group.update({ members });
@@ -227,6 +230,33 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       mediaUrl
     });
     notifierNouveauMessage({ destinataires: group.members || [], expediteur: user, convKey: `activity:${group.id}`, message, groupe: group.name || group.activity || 'Activité' });
+
+    // Publication des pages Activité (atelier, collaboration, spectacle…) : elle
+    // est aussi rangée dans les publications du groupe, avec ses détails, pour
+    // être affichée et rejointe (avant, elle n'apparaissait jamais).
+    if (req.body.type) {
+      const lireDetails = (cle) => { try { return req.body[cle] ? JSON.parse(req.body[cle]) : undefined; } catch { return undefined; } };
+      const publication = {
+        id: String(message.id),
+        author: user.numeroH,
+        authorName: `${user.prenom || ''} ${user.nomFamille || ''}`.trim(),
+        content: content || '',
+        type: String(req.body.type).slice(0, 30),
+        mediaUrl,
+        likes: [],
+        comments: [],
+        createdAt: new Date().toISOString(),
+      };
+      for (const cle of ['meetingDetails', 'workshopDetails', 'collaborationDetails', 'exhibitionDetails', 'performanceDetails', 'projectDetails']) {
+        const d = lireDetails(cle);
+        if (d && typeof d === 'object') {
+          // Les inscrits viennent toujours du serveur, jamais du formulaire
+          publication[cle] = { ...d, participants: [], performers: [], artists: [] };
+        }
+      }
+      const frais = await ActivityGroup.findByPk(id);
+      await frais.update({ posts: [publication, ...(Array.isArray(frais.posts) ? frais.posts : [])].slice(0, 300) });
+    }
     
     // Récupérer le nom de l'auteur
     const author = await User.findOne({ where: { numero_h: user.numeroH } });
@@ -349,7 +379,8 @@ router.get('/groups/:id/messages', async (req, res) => {
       });
     }
     
-    const members = group.members || [];
+    // Copie : modifier le tableau en place n'est jamais enregistré
+    const members = [...(group.members || [])];
     if (!members.includes(req.user.numeroH)) {
       return res.status(403).json({
         success: false,

@@ -1,3 +1,6 @@
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { config } from '../../config.js';
 import { sequelize } from '../config/database.js';
 
 /**
@@ -35,8 +38,19 @@ function nettoyer() {
 }
 
 export async function idempotence(req, res, next) {
-  const cle = String(req.headers['x-idempotency-key'] || '');
-  if (!cle || !METHODES.has(req.method) || !CLE_RE.test(cle)) return next();
+  const brute = String(req.headers['x-idempotency-key'] || '');
+  if (!brute || !METHODES.has(req.method) || !CLE_RE.test(brute)) return next();
+  // Clé liée à la personne (jeton) et à l'opération : la même clé envoyée par
+  // quelqu'un d'autre, ou pour une autre adresse, ne renvoie jamais la réponse
+  // enregistrée d'un autre envoi.
+  let qui = '';
+  const auth = String(req.headers.authorization || '');
+  if (auth.startsWith('Bearer ')) {
+    try { qui = jwt.verify(auth.slice(7), config.JWT_SECRET)?.numeroH || ''; } catch { /* jeton invalide : refusé plus loin */ }
+  }
+  const cle = crypto.createHash('sha256')
+    .update(`${brute}|${req.method}|${req.originalUrl}|${qui}`)
+    .digest('hex');
   try {
     await preparerTable();
     nettoyer();

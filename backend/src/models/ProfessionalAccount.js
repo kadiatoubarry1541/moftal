@@ -1,6 +1,10 @@
 import { DataTypes, Model, Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 
+// Visible publiquement : abonnement actif, ou expiré mais encore dans le délai
+// de grâce (« overdue » : le compte n'est bloqué qu'après 3 mois sans paiement)
+export const STATUTS_VISIBLES = ['active', 'overdue'];
+
 class ProfessionalAccount extends Model {
   static async getPendingAccounts() {
     return await this.findAll({
@@ -11,7 +15,7 @@ class ProfessionalAccount extends Model {
 
   static async getApprovedByType(type) {
     return await this.findAll({
-      where: { type, status: 'approved', isActive: true, subscriptionStatus: 'active' },
+      where: { type, status: 'approved', isActive: true, subscriptionStatus: { [Op.in]: STATUTS_VISIBLES } },
       order: [['name', 'ASC']]
     });
   }
@@ -27,7 +31,7 @@ class ProfessionalAccount extends Model {
     const where = {
       status: 'approved',
       isActive: true,
-      subscriptionStatus: 'active',
+      subscriptionStatus: { [Op.in]: STATUTS_VISIBLES },
       [Op.or]: [
         { name: { [Op.iLike]: `%${query}%` } },
         { description: { [Op.iLike]: `%${query}%` } },

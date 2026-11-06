@@ -2,12 +2,12 @@ import express from 'express';
 import { Op } from 'sequelize';
 import IaKnowledge from '../models/IaKnowledge.js';
 import IaConversation from '../models/IaConversation.js';
-import Payment from '../models/Payment.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { TERMINALE_KNOWLEDGE } from '../data/iaKnowledgeTerminale.js';
 import { BIOLOGIE_KNOWLEDGE } from '../data/iaKnowledgeBiologie.js';
 import { FRANCAIS_AVANCE_KNOWLEDGE } from '../data/iaKnowledgeFrancaisAvance.js';
 import { GEOMETRIE_KNOWLEDGE } from '../data/iaKnowledgeGeometrie.js';
+import { finAbonnementPaye, DUREES_IA } from '../utils/finAbonnement.js';
 
 /** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
  *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
@@ -70,21 +70,10 @@ async function seedGeometrieKnowledge() {
 }
 seedGeometrieKnowledge();
 
-/** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
+/** Vérifie si l'utilisateur a un abonnement Professeur IA actif (passes cumulés) */
 async function verifierAbonnementIA(numeroH) {
-  const maintenant = new Date();
-  const unMoisAvant = new Date(maintenant); unMoisAvant.setMonth(unMoisAvant.getMonth() - 1);
-  const unAnAvant   = new Date(maintenant); unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-
-  const passMois = await Payment.findOne({
-    where: { payerNumeroH: numeroH, purpose: 'subscription_ia_mois', status: 'completed', createdAt: { [Op.gte]: unMoisAvant } }
-  });
-  if (passMois) return true;
-
-  const passAn = await Payment.findOne({
-    where: { payerNumeroH: numeroH, purpose: 'subscription_ia_an', status: 'completed', createdAt: { [Op.gte]: unAnAvant } }
-  });
-  return !!passAn;
+  const { fin } = await finAbonnementPaye(numeroH, DUREES_IA);
+  return !!fin && fin > new Date();
 }
 
 const router = express.Router();
@@ -1590,11 +1579,12 @@ router.post('/log', authenticate, async function(req, res) {
     if (!question || !response) {
       return res.status(400).json({ success: false, message: 'Les champs "question" et "response" sont obligatoires.' });
     }
+    // Route ouverte sans connexion : tailles bornées (jamais des mégaoctets en base)
     await IaConversation.create({
-      sessionId: sessionId || null,
+      sessionId: sessionId ? String(sessionId).slice(0, 100) : null,
       userMessage: String(question).slice(0, 5000),
       botResponse: String(response).slice(0, 20000),
-      source: source || 'professeur_ia',
+      source: String(source || 'professeur_ia').slice(0, 50),
     });
     return res.json({ success: true, message: 'Conversation IA enregistree.' });
   } catch (error) {

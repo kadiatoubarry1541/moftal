@@ -49,6 +49,19 @@ async function accesActif(tenantCode, numeroH) {
   return row || null;
 }
 
+/** L'utilisateur a-t-il un accès employé actif dans au moins un établissement ? */
+export async function aUnAccesEmploye(numeroH) {
+  if (!numeroH) return false;
+  try {
+    await preparerTableAcces();
+    const [row] = await sequelize.query(
+      `SELECT 1 FROM management_staff_access WHERE LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`,
+      { replacements: { nh: numeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+    return !!row;
+  } catch { return false; }
+}
+
 // L'utilisateur est-il employé actif de l'établissement visé par cette URL
 // de gestion (/api/<secteur>-mgmt/<code>/…) ?
 export async function estEmployeDeLaGestion(numeroH, url) {
@@ -259,7 +272,7 @@ export function ajouterRoutesAccesEmployes(router, [authentifier, verifierPropri
          RETURNING id, numero_h, nom, poste, niveau, is_active, created_at`,
         { replacements: { code: req.params.tenantCode, nh: user.numero_h, nom, poste, niveau, par: req.userId || null } }
       );
-      res.json({ success: true, employe: rows[0], nouveauCompte: userCree });
+      res.json({ success: true, employe: rows[0], nouveauCompte: userCree, codePremiereConnexion: trouve.codePremiereConnexion || null });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
   });
 

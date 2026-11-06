@@ -30,8 +30,15 @@ import type {
   Frais, Groupe, LignePresence, ResumePresence, MembreEcole, MembreEquipe, Note, ParametresEnseignement, PresenceEnregistree,
   ReponseAjoutEquipe, ReponseEnseignement, StatsEnseignement,
 } from "../types/enseignement";
+import { echap } from "../utils/echapperHtml";
 
 interface Props { mode: "school" | "madrasa"; }
+
+// Personne ajoutée qui n'a pas encore de mot de passe : le code à lui donner
+// pour sa première connexion (sans lui, personne d'autre ne peut prendre son compte)
+function afficherCodePremiereConnexion(code?: string | null) {
+  if (code) alert(trHors("Code de première connexion à donner à cette personne : {code}\n\nElle se connecte avec son téléphone / e-mail, saisit ce code et choisit son mot de passe.", { code }));
+}
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -52,16 +59,16 @@ function printFeeReceipt(f: Frais, tenant: EtablissementEnseignement | null, col
   });
 }
 
-const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
+const logoHtml = (url?: string | null) => url ? `<img src="${echap(/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url)}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
 function printBulletin(b: Bulletin, orgName: string, color: string, logoUrl?: string | null) {
   const ar = langueCourante() === "ar";
-  const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${trHors("Bulletin {nom}", { nom: b.student_nom })}</title>
+  const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${echap(trHors("Bulletin {nom}", { nom: b.student_nom }))}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
-<div class="header"><div class="title">${logoHtml(logoUrl)}${orgName}</div><div style="text-align:end;font-size:12px;color:#64748b">${trHors(b.periode || "")} — ${b.annee_scolaire || ""}</div></div>
+<div class="header"><div class="title">${logoHtml(logoUrl)}${echap(orgName)}</div><div style="text-align:end;font-size:12px;color:#64748b">${echap(trHors(b.periode || ""))} — ${echap(b.annee_scolaire)}</div></div>
 <h2 style="margin-bottom:16px">${trHors("Bulletin de progression")}</h2>
-<div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${trHors(b.niveau || b.classe || "")}</span></div>
-<div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${trHors(b.mention || "")}</div></div>
+<div class="box"><strong>${echap(b.student_prenom)} ${echap(b.student_nom)}</strong><br><span style="color:#64748b;font-size:13px">${echap(trHors(b.niveau || b.classe || ""))}</span></div>
+<div class="moy">${echap(b.moyenne_generale)}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${echap(trHors(b.mention || ""))}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">${trHors("Signature & Cachet")}</div></div>
 </body></html>`;
   ouvrirDocument(html, `bulletin-${b.student_prenom || ""}-${b.student_nom || ""}-${b.periode || ""}`);
@@ -337,13 +344,14 @@ export default function GestionEnseignement({ mode }: Props) {
         }
         if (form.id) {
           const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1] });
-          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); }
+          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Enseignant modifié(e)", "Professeur modifié(e)")); afficherCodePremiereConnexion(d.codePremiereConnexion); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post<ReponseAjoutEquipe>("/staff", { ...form, role: form.role || V.roles[1] });
           if (d.staff) {
             setStaff(p => [{ ...d.staff, acces_gestion: form.acces_gestion || "aucun" }, ...p]); setModal(null); setForm({}); showToast(M("Enseignant ajouté(e)", "Professeur ajouté(e)"));
             if (d.staff.telephone || d.staff.email) setLienPour({ prenom: d.staff.prenom, telephone: d.staff.telephone, email: d.staff.email, role: tr(d.staff.role || "Enseignant") });
+            afficherCodePremiereConnexion(d.codePremiereConnexion);
           }
           else showToast(tr(d.message || "Erreur"), false);
         }
@@ -454,6 +462,7 @@ export default function GestionEnseignement({ mode }: Props) {
       const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
       if (!d.success) { showToast(tr(d.message || "Erreur"), false); return; }
       showToast(d.user ? tr("Parent relié ({nom})", { nom: `${d.user.prenom} ${d.user.nom}` }) : tr("Parent relié"));
+      afficherCodePremiereConnexion(d.codePremiereConnexion);
       setNhParent(""); await chargerMembres();
     } catch { showToast(tr("Erreur de connexion. Réessayez."), false); }
     finally { setParentsBusy(false); }

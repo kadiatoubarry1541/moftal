@@ -931,7 +931,8 @@ async function initAllTables() {
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "fingerprint" TEXT;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_photo1" TEXT;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_photo2" TEXT;`,
-    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_video" TEXT;`
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_video" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sessions_valides_depuis" TIMESTAMPTZ;`
   ];
   for (const sql of userAlters) {
     await sequelize.query(sql).catch(() => {});
@@ -1876,6 +1877,8 @@ async function initAllTables() {
     // le webhook, mais absent de la table créée à l'origine — le webhook ne retrouvait donc
     // jamais le paiement et ne débloquait jamais ce que le client venait de payer.
     await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "gateway_ref" VARCHAR(200);`).catch(() => {});
+    // Paiement encaissé dont le déblocage a échoué : gardé pour être relancé par l'admin
+    await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "deblocage_erreur" TEXT;`).catch(() => {});
     await sequelize.query(`CREATE INDEX IF NOT EXISTS "idx_payments_gateway_ref" ON "payments" ("gateway_ref");`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
@@ -2838,7 +2841,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:", "https://api.moftal.com", "https://moftal.com", "https://gestion.moftal.com", "http://localhost:5002", "http://localhost:7777", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      connectSrc: ["'self'", "wss:", "ws:", "https://api.moftal.com", "https://moftal.com", "https://gestion.moftal.com", "https://gestions.moftal.com", "http://localhost:5002", "http://localhost:7777", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", "data:", "blob:"],
@@ -2858,6 +2861,7 @@ const rawOrigins = [
   'https://moftal.com',
   'https://www.moftal.com',
   'https://gestion.moftal.com',
+  'https://gestions.moftal.com',
   'http://localhost:3000',
   'http://localhost:5173',
 ].filter(Boolean);
@@ -2908,11 +2912,18 @@ app.use('/api', limiter);
 // Limite élevée pour enregistrement vivant (photo + vidéo en base64)
 // rawBody : texte exact reçu, nécessaire pour vérifier la signature des
 // notifications de paiement Djomy (le JSON re-sérialisé peut différer).
-app.use(express.json({
-  limit: '200mb',
-  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); }
-}));
-app.use(express.urlencoded({ extended: true, limit: '200mb' }));
+// 200 Mo seulement pour une personne connectée (photos / vidéos en base64) et
+// pour l'inscription avec vidéo ; 5 Mo pour toute autre requête anonyme (sinon
+// n'importe qui pouvait envoyer 200 Mo à n'importe quelle route publique).
+const verifierCorps = (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); };
+const jsonGrand = express.json({ limit: '200mb', verify: verifierCorps });
+const jsonPetit = express.json({ limit: '5mb', verify: verifierCorps });
+const formGrand = express.urlencoded({ extended: true, limit: '200mb' });
+const formPetit = express.urlencoded({ extended: true, limit: '5mb' });
+const corpsGrandPermis = (req) => String(req.headers.authorization || '').startsWith('Bearer ')
+  || /^\/api\/auth\/register(\/|$|\?)/.test(req.originalUrl || '');
+app.use((req, res, next) => (corpsGrandPermis(req) ? jsonGrand : jsonPetit)(req, res, next));
+app.use((req, res, next) => (corpsGrandPermis(req) ? formGrand : formPetit)(req, res, next));
 
 // Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
 // n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois
@@ -2952,6 +2963,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin/badges', badgeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/badges', badgeRoutes);
+// Adresse utilisée par la gestion des badges de l'admin (BadgeManager)
+app.use('/api/admin/badges', badgeRoutes);
 app.use('/api/logos', logoRoutes);
 app.use('/api/page-admins', pageAdminRoutes);
 app.use('/api/activities', activityRoutes);
@@ -3165,7 +3178,7 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
     const proId = req.params.id;
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/${encodeURIComponent(proId)}?origin=${originePage(req)}">`
+      () => `<link rel="manifest" href="/api/professionals/pro-manifest/${encodeURIComponent(proId)}?origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');
@@ -3175,12 +3188,14 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   // Pages gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.) — manifest par tenantCode
   // Couvre tous les types : clinique, école, mosquée, mairie, transport, restaurant…
   app.get(/^\/gestion-[^/]+\/([^/?]+)/, (req, res) => {
-    const tenantCode = req.params[0];
+    // Code de l'établissement pris dans l'adresse : toujours encodé avant d'être
+    // mis dans la page (sinon une adresse piégée y injectait un script).
+    const tenantCode = encodeURIComponent(req.params[0]);
     // Racine de la gestion seulement (comme main.tsx) : une seule app par établissement
     const startUrl = encodeURIComponent(req.path.match(/^\/gestion-[^/]+\/[^/?]+/)[0]);
     const html = indexHtml.replace(
       /<link rel="manifest"[^>]*>/,
-      `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}&origin=${originePage(req)}">`
+      () => `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}&origin=${originePage(req)}">`
     );
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'no-store');

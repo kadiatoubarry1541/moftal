@@ -604,17 +604,14 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/request-professor`, {
+      const response = await fetch(`${config.API_BASE_URL}/education/professors/${encodeURIComponent(selectedProfessor.id)}/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          professorId: selectedProfessor.id,
-          studentNumeroH: userData?.numeroH || professorRequestForm.numeroH,
-          subject: professorRequestForm.subject,
-          message: professorRequestForm.message
+          requestMessage: [professorRequestForm.subject, professorRequestForm.message].filter(Boolean).join(' — ')
         })
       });
       
@@ -623,7 +620,8 @@ export default function Education() {
         setShowProfessorRequestForm(false);
         loadMyRequests();
       } else {
-        alert('Erreur lors de l\'envoi de la demande');
+        const d = await response.json().catch(() => null);
+        alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
       console.error('Erreur lors de la demande:', error);
@@ -638,17 +636,14 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/request-stage`, {
+      const response = await fetch(`${config.API_BASE_URL}/education/stages/${encodeURIComponent(selectedStage.id)}/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          stageId: selectedStage.id,
-          studentNumeroH: numeroH,
-          subject: stageRequestForm.subject,
-          message: stageRequestForm.message
+          motivation: [stageRequestForm.subject, stageRequestForm.message].filter(Boolean).join(' — ')
         })
       });
       
@@ -657,7 +652,8 @@ export default function Education() {
         setShowStageRequestForm(false);
         loadMyStageRequests();
       } else {
-        alert('Erreur lors de l\'envoi de la demande');
+        const d = await response.json().catch(() => null);
+        alert(d?.message || 'Erreur lors de l\'envoi de la demande');
       }
     } catch (error) {
       console.error('Erreur lors de la demande de stage:', error);

@@ -59,3 +59,6 @@ export function listDecetCodes(max: number = MAX_INDEX): `D${number}`[] {
   const m = Math.min(max, MAX_INDEX)
   return Array.from({ length: m }, (_, i) => `D${i + 1}` as const)
 }
+
+// Le NuméroH / NuméroHD définitif est toujours attribué par le serveur (numéro
+// d'ordre suivant) : plus de compteur gardé dans le téléphone.

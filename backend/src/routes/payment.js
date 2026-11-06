@@ -1,10 +1,11 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { isInspirAdmin, hasLivresAccess } from '../services/inspirAccess.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
+import DeveloppementDon from '../models/DeveloppementDon.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import QuartierFund from '../models/QuartierFund.js';
@@ -16,6 +17,9 @@ import {
   sendSubscriptionRenewedEmail,
 } from '../services/emailService.js';
 import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
+import { fondsDe } from '../utils/fondsFamille.js';
+import { compteMoftalPayPro } from '../utils/compteMoftalPayPro.js';
+import { finAbonnementPaye, DUREES_IA } from '../utils/finAbonnement.js';
 import { elevesLiesEcole } from './school-management.js';
 import { elevesLiesMadrasa } from './madrasa-management.js';
 
@@ -546,28 +550,11 @@ router.get('/prix-outils', authenticate, (req, res) => {
  */
 router.get('/acces-ia', authenticate, async (req, res) => {
   try {
-    const maintenant = new Date();
-    const unMoisAvant = new Date(maintenant); unMoisAvant.setMonth(unMoisAvant.getMonth() - 1);
-    const unAnAvant   = new Date(maintenant); unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-
-    const passMois = await Payment.findOne({
-      where: { payerNumeroH: req.user.numeroH, purpose: 'subscription_ia_mois', status: 'completed', createdAt: { [Op.gte]: unMoisAvant } },
-      order: [['createdAt', 'DESC']]
-    });
-    const passAn = await Payment.findOne({
-      where: { payerNumeroH: req.user.numeroH, purpose: 'subscription_ia_an', status: 'completed', createdAt: { [Op.gte]: unAnAvant } },
-      order: [['createdAt', 'DESC']]
-    });
-
-    const paiement = passMois || passAn;
-    let expireAt = null;
-    if (passMois) {
-      expireAt = new Date(passMois.createdAt); expireAt.setMonth(expireAt.getMonth() + 1);
-    } else if (passAn) {
-      expireAt = new Date(passAn.createdAt); expireAt.setFullYear(expireAt.getFullYear() + 1);
-    }
-
-    res.json({ success: true, aAcces: !!paiement, expireAt, type: passMois ? 'mensuel' : passAn ? 'annuel' : null });
+    // Chaque pass prolonge le précédent (mensuel ou annuel)
+    const { fin, dernier } = await finAbonnementPaye(req.user.numeroH, DUREES_IA);
+    const aAcces = !!fin && fin > new Date();
+    const type = aAcces && dernier ? (dernier.purpose === 'subscription_ia_mois' ? 'mensuel' : 'annuel') : null;
+    res.json({ success: true, aAcces, expireAt: aAcces ? fin : null, type });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -733,14 +720,12 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     }
     // Jamais d'encaissement sans compte pour recevoir l'argent
     if (purpose === 'wallet_depot_famille') {
-      const fund = user?.nomFamille
-        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: String(user.nomFamille).trim() }, isActive: true } })
-        : null;
+      const { fund } = await fondsDe(user);
       if (!fund) return { error: 'Aucun compte famille actif : créez d\'abord le compte de votre famille.' };
     }
     if (purpose === 'wallet_depot_pro') {
-      const pro = await ProfessionalAccount.findOne({ where: { ownerNumeroH: user?.numeroH, status: 'approved' }, order: [['created_at', 'ASC']] });
-      if (!pro) return { error: 'Aucun compte professionnel approuvé pour recevoir ce dépôt.' };
+      const pro = await compteMoftalPayPro(user?.numeroH);
+      if (!pro) return { error: 'Aucun compte Moftal Pay Pro (Santé ou Alimentation, formule Gestion Interne) pour recevoir ce dépôt.' };
     }
     amount = montantDepot;
   }
@@ -785,9 +770,60 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = +fee.montant;
   }
 
+  // Don « Développement » préparé par /api/developpement/donate — relatedId = id
+  // du don en attente ; le montant vient toujours du don enregistré.
+  if (purpose === 'don_developpement') {
+    const don = relatedId ? await DeveloppementDon.findByPk(relatedId).catch(() => null) : null;
+    if (!don) return { error: 'Don introuvable.' };
+    if (don.numeroH !== user?.numeroH) return { error: 'Ce don ne vous appartient pas.' };
+    if (don.statut === 'paye') return { error: 'Ce don est déjà payé.' };
+    amount = Math.round(Number(don.amount));
+  }
+
   if (!amount || !purpose) return { error: 'Montant et objet requis' };
   return { amount };
 }
+
+/**
+ * Débloque ce qui a été payé ; si cela échoue, le paiement (déjà encaissé) est
+ * marqué « à traiter » au lieu d'être oublié. Renvoie true si tout est débloqué.
+ */
+export async function debloquerPaiement(payment) {
+  try {
+    await handlePostPayment(payment);
+    await sequelize.query(`UPDATE payments SET deblocage_erreur = NULL WHERE id = :id`, { replacements: { id: payment.id } }).catch(() => {});
+    return true;
+  } catch (err) {
+    console.error(`🚨 PAIEMENT ENCAISSÉ NON DÉBLOQUÉ — ${payment.txRef} (${payment.purpose}) : ${err.message}`);
+    await sequelize.query(
+      `UPDATE payments SET deblocage_erreur = :e WHERE id = :id`,
+      { replacements: { e: String(err.message || err).slice(0, 1000), id: payment.id } }
+    ).catch(() => {});
+    return false;
+  }
+}
+
+// GET /api/payment/admin/a-traiter — paiements encaissés dont le déblocage a échoué
+router.get('/admin/a-traiter', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const paiements = await sequelize.query(
+      `SELECT id, tx_ref, payer_numero_h, amount, purpose, related_id, created_at, deblocage_erreur
+         FROM payments WHERE status = 'completed' AND deblocage_erreur IS NOT NULL ORDER BY created_at DESC LIMIT 200`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, paiements });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// POST /api/payment/admin/relancer/:id — refaire le déblocage (après correction)
+router.post('/admin/relancer/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id);
+    if (!payment || payment.status !== 'completed') return res.status(404).json({ success: false, message: 'Paiement encaissé introuvable.' });
+    const ok = await debloquerPaiement(payment);
+    res.status(ok ? 200 : 500).json({ success: ok, message: ok ? 'Déblocage effectué.' : 'Le déblocage a encore échoué (voir le message enregistré).' });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
 
 /**
  * GET /api/payment/verify/:txRef
@@ -835,7 +871,8 @@ const TENANT_PREFIX = {
   scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU',
   vendor: 'VENT', producer: 'PROD', broker: 'BROK',
   restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU', lawyer: 'AVOC', legal_advisor: 'JURI',
-  artisan: 'ARTI', mairie: 'MAIR',
+  // Mêmes préfixes que la création de la gestion (professionals.js, ensure-tenant)
+  artisan: 'ARTIS', mairie: 'MAIR', immobilier: 'IMMO', reseau: 'RESEAU',
 };
 
 // Commission plateforme (1%) prélevée sur chaque dépôt externe Moftal Pay
@@ -924,8 +961,12 @@ export async function handlePostPayment(payment) {
       const periode = payment.purpose === 'visibilite_mois' ? 'mois' : payment.purpose === 'visibilite_3mois' ? 'troisMois' : 'an';
       const actuel = await ProfessionalAccount.findByPk(payment.relatedId);
       const expiration = calculerExpiration(periode, actuel?.subscriptionValidUntil);
+      // Payer la Visibilité = formule Visibilité + Rendez-vous : un compte en
+      // formule complète passe en Visibilité (avant, il gardait sa Gestion
+      // Interne pour le prix, plus bas, de la Visibilité). Une Gestion Interne
+      // déjà payée à part reste valable jusqu'à sa date.
       await ProfessionalAccount.update(
-        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false },
+        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false, planType: 'visibility' },
         { where: { id: payment.relatedId } }
       );
       console.log(`✅ Visibilité activée (${periode}) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);
@@ -998,7 +1039,10 @@ export async function handlePostPayment(payment) {
     if (payment.purpose === 'publication_formation' && payment.relatedId) {
       // relatedId = id de la formation_annonce (créée en statut 'en_attente')
       await sequelize.query(
-        `UPDATE formation_annonces SET is_active = true, fedapay_ref = :ref WHERE id = :id`,
+        // La durée choisie compte à partir du paiement (pas de la préparation de l'annonce)
+        `UPDATE formation_annonces SET is_active = true, fedapay_ref = :ref,
+                expire_le = NOW() + (COALESCE(duree_jours, 7) || ' days')::interval
+          WHERE id = :id`,
         { replacements: { ref: payment.txRef, id: payment.relatedId } }
       ).catch(() => {});
       console.log(`✅ Annonce formation activée — id: ${payment.relatedId} | txRef: ${payment.txRef}`);
@@ -1082,10 +1126,10 @@ export async function handlePostPayment(payment) {
     if (payment.purpose === 'wallet_depot_famille') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
       const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
-      const fund = user?.nomFamille
-        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: user.nomFamille.trim() }, isActive: true } })
-        : null;
-      if (fund) {
+      // Compte de l'arbre familial du payeur, verrouillé pendant le crédit
+      const credite = await sequelize.transaction(async (transaction) => {
+        const { fund } = await fondsDe(user, { transaction, lock: true });
+        if (!fund) return false;
         const repartition = FamilyFund.repartir(montantNet);
         await fund.update({
           solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
@@ -1094,17 +1138,21 @@ export async function handlePostPayment(payment) {
           solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
           solde_projet:     Number(fund.solde_projet)     + repartition.projet,
           total_depose:     Number(fund.total_depose)     + montantNet,
-        });
+        }, { transaction });
         await FamilyFundTransaction.create({
           fundId: fund.id, acteurNumeroH: payment.payerNumeroH,
           acteurNom: `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim(),
           type: 'depot', montant: montantNet, repartition, fedapayRef: payment.txRef, statut: 'confirme',
           description: `Dépôt Moftal Pay — ${montantNet.toLocaleString()} GNF (${Number(payment.amount).toLocaleString()} - commission 1% : ${commission.toLocaleString()} GNF) — réf: ${payment.txRef}`
-        });
+        }, { transaction });
+        return true;
+      });
+      if (credite) {
         await enregistrerCommissionPlateforme('depot_famille', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_famille sans compte famille trouvé pour ${payment.payerNumeroH}`);
+        // Encaissé sans compte à créditer : à traiter par l'admin (jamais oublié)
+        throw new Error(`Dépôt wallet_depot_famille sans compte famille pour ${payment.payerNumeroH}`);
       }
     }
 
@@ -1126,31 +1174,45 @@ export async function handlePostPayment(payment) {
         await enregistrerCommissionPlateforme('depot_quartier_fund', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt Compte Solidarité — ${montantNet.toLocaleString()} GNF crédités (50/20/30) | ${scope}/${location} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_quartier_fund sans compte trouvé pour relatedId=${payment.relatedId}`);
+        throw new Error(`Dépôt wallet_depot_quartier_fund sans compte pour relatedId=${payment.relatedId}`);
       }
     }
 
     // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
     if (payment.purpose === 'wallet_depot_pro') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
-      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' }, order: [['created_at', 'ASC']] });
+      // Même compte que celui affiché dans Moftal Pay Pro ; crédit verrouillé
+      // (un retrait validé en même temps ne fait plus perdre de dépôt)
+      const proAccount = await compteMoftalPayPro(payment.payerNumeroH);
       if (proAccount) {
-        let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
-        if (!wallet) {
-          wallet = await ProfessionalWallet.create({
-            proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
-            nomPro: proAccount.name, typePro: proAccount.type,
-          });
-        }
-        await wallet.update({
-          solde:     Number(wallet.solde)     + montantNet,
-          totalRecu: Number(wallet.totalRecu) + montantNet,
+        await ProfessionalWallet.sequelize.transaction(async (transaction) => {
+          let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id }, transaction, lock: transaction.LOCK.UPDATE });
+          if (!wallet) {
+            wallet = await ProfessionalWallet.create({
+              proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
+              nomPro: proAccount.name, typePro: proAccount.type,
+            }, { transaction });
+          }
+          await wallet.update({
+            solde:     Number(wallet.solde)     + montantNet,
+            totalRecu: Number(wallet.totalRecu) + montantNet,
+          }, { transaction });
         });
         await enregistrerCommissionPlateforme('depot_pro', payment.txRef, payment.amount, commission, payment.payerNumeroH);
         console.log(`✅ Dépôt wallet pro — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {
-        console.warn(`⚠️ Dépôt wallet_depot_pro sans compte professionnel approuvé pour ${payment.payerNumeroH}`);
+        // Encaissé sans compte à créditer : à traiter par l'admin (jamais oublié)
+        throw new Error(`Dépôt wallet_depot_pro sans compte Moftal Pay Pro pour ${payment.payerNumeroH}`);
       }
+    }
+
+    // ── Don « Développement » payé : il compte désormais dans les totaux ──
+    if (payment.purpose === 'don_developpement' && payment.relatedId) {
+      await DeveloppementDon.update(
+        { statut: 'paye', payeLe: new Date() },
+        { where: { id: payment.relatedId, statut: { [Op.ne]: 'paye' } } }
+      );
+      console.log(`✅ Don développement payé — ${payment.relatedId} | txRef: ${payment.txRef}`);
     }
 
     // ── Dépôt compte Zakat — pas de commission plateforme (argent religieux) ──
@@ -1175,6 +1237,8 @@ export async function handlePostPayment(payment) {
     }
   } catch (err) {
     console.error('Erreur handlePostPayment:', err);
+    // L'appelant doit savoir que rien n'a été débloqué (jamais un échec silencieux)
+    throw err;
   }
 }
 
@@ -1189,14 +1253,8 @@ router.get('/acces-livres', authenticate, async (req, res) => {
       return res.json({ success: true, aAcces: true, expireAt: null, admin: true });
     }
 
-    const passAn = await hasLivresAccess(req.user);
-
-    let expireAt = null;
-    if (passAn) {
-      expireAt = new Date(new Date(passAn.createdAt).setFullYear(new Date(passAn.createdAt).getFullYear() + 1));
-    }
-
-    res.json({ success: true, aAcces: !!passAn, expireAt });
+    const fin = await hasLivresAccess(req.user);
+    res.json({ success: true, aAcces: !!fin, expireAt: fin instanceof Date ? fin : null });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

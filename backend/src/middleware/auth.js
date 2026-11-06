@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
-import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion } from '../utils/accesEmployes.js';
+import { estEmployeDeLaGestion, estMembreEcoleDeLaGestion, aUnAccesEmploye } from '../utils/accesEmployes.js';
 
 // NumeroH des comptes administrateurs spéciaux
 export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7'];
@@ -79,6 +79,7 @@ const PROVISIONAL_PRO_SPACE_ROUTES = [
   /^\/api\/payment\//,                 // abonnement de la gestion
   /^\/api\/djomy\/(initiate|gateway|status\/)/, // paiement Djomy (PaymentModal) : payer / débloquer son abonnement
   /^\/api\/education/,                  // outils de la gestion école
+  /^\/api\/upload\/?(\?|$)/,             // envoi d'une photo / vidéo depuis la gestion
 ];
 
 async function ownsApprovedProAccount(numeroH) {
@@ -86,6 +87,12 @@ async function ownsApprovedProAccount(numeroH) {
     const n = await ProfessionalAccount.count({ where: { ownerNumeroH: numeroH, status: 'approved', isActive: true } });
     return n > 0;
   } catch { return false; }
+}
+
+/** Session ouverte avant le dernier changement de mot de passe : refusée. */
+export function sessionRevoquee(user, decoded) {
+  const depuis = user?.sessionsValidesDepuis ? new Date(user.sessionsValidesDepuis).getTime() : 0;
+  return !!depuis && (!decoded?.iat || decoded.iat * 1000 < depuis);
 }
 
 // Alias pour authenticateToken (compatibilité)
@@ -138,6 +145,14 @@ export const authenticate = async (req, res, next) => {
         });
       }
 
+      if (sessionRevoquee(user, decoded)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Mot de passe changé : reconnectez-vous.',
+          expired: true
+        });
+      }
+
       req.user = user;
       // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base,
       // et compte de consultation seulement : il se connecte et regarde, mais ne
@@ -168,7 +183,9 @@ export const authenticate = async (req, res, next) => {
           // même si son propre profil n'est pas encore complété.
           && !(await estEmployeDeLaGestion(user.numeroH, req.originalUrl))
           // Enseignant, parent ou élève ajouté par l'école : pareil, dans cette école
-          && !(await estMembreEcoleDeLaGestion(user.numeroH, req.originalUrl))) {
+          && !(await estMembreEcoleDeLaGestion(user.numeroH, req.originalUrl))
+          // Envoi d'un fichier (photo, vidéo) par un employé, depuis sa gestion
+          && !(/^\/api\/upload\/?(\?|$)/.test(req.originalUrl || '') && await aUnAccesEmploye(user.numeroH))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',

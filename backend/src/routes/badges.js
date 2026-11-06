@@ -3,25 +3,25 @@ import Badge from '../models/Badge.js';
 import UserBadge from '../models/UserBadge.js';
 import User from '../models/User.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { sequelize as sequelizeBadges } from '../config/database.js';
-
-// Les modèles des badges n'étaient initialisés nulle part : toute la gestion
-// des badges plantait. On les initialise ici, et leurs tables sont créées au
-// premier usage (rien n'est modifié si elles existent déjà).
-Badge.init(sequelizeBadges);
-UserBadge.init(sequelizeBadges);
-UserBadge.belongsTo(Badge, { foreignKey: 'badgeId', as: 'badge', constraints: false });
-let tablesBadges = null;
-const preparerBadges = () => (tablesBadges ||= Badge.sync().then(() => UserBadge.sync()).catch((e) => { tablesBadges = null; throw e; }));
+import { sequelize } from '../config/database.js';
 
 const router = express.Router();
+
+// Les modèles des badges n'étaient jamais initialisés : toutes les routes
+// plantaient (« Cannot convert undefined or null to object »). Initialisés ici,
+// tables créées au premier usage.
+if (!Badge.sequelize) Badge.init(sequelize);
+if (!UserBadge.sequelize) UserBadge.init(sequelize);
+if (!UserBadge.associations?.badge) UserBadge.belongsTo(Badge, { foreignKey: 'badgeId', as: 'badge', constraints: false });
+let tablesPretes = null;
+const preparerTables = () => (tablesPretes ||= Badge.sync().then(() => UserBadge.sync()).catch((e) => { tablesPretes = null; throw e; }));
 
 // Toutes les routes nécessitent l'authentification et les privilèges admin
 router.use(authenticate);
 router.use(requireAdmin);
-router.use(async (_req, res, next) => {
-  try { await preparerBadges(); next(); }
-  catch (e) { console.error('badges : tables', e); res.status(500).json({ success: false, message: 'Erreur serveur' }); }
+router.use(async (req, res, next) => {
+  try { await preparerTables(); next(); }
+  catch (e) { console.error('Tables des badges :', e.message); res.status(500).json({ success: false, message: 'Badges indisponibles pour le moment.' }); }
 });
 
 // @route   GET /api/admin/badges

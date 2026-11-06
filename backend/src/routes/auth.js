@@ -16,10 +16,10 @@ import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
-import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAncienAdmin } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAncienAdmin, estAdminUtilisateur } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
-import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion } from '../services/comptesProvisoires.js';
+import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion, empreinteCodePremiereConnexion, donnerCodePremiereConnexion } from '../services/comptesProvisoires.js';
 
 const router = Router();
 
@@ -157,7 +157,8 @@ async function createActivityGroupsForUser(user) {
           });
         } else {
           // Ajouter l'utilisateur au groupe existant s'il n'est pas déjà membre
-          const members = group.members || [];
+          // Copie : modifier le tableau en place n'est jamais enregistré
+          const members = [...(group.members || [])];
           if (!members.includes(user.numeroH)) {
             members.push(user.numeroH);
             await group.update({ members });
@@ -344,12 +345,16 @@ router.post('/register', validateUser, async (req, res) => {
       delete userWithoutPassword.password;
 
       // ✅ RÉPONSE IMMÉDIATE (< 1 s) : l'utilisateur voit tout de suite le succès
-      res.status(201).json({
-        success: true,
-        message: 'Utilisateur créé avec succès',
-        user: userWithoutPassword,
-        token
-      });
+      // (si le délai d'attente a déjà répondu, le compte est quand même créé et
+      // les tâches ci-dessous doivent quand même tourner)
+      if (!res.headersSent) {
+        res.status(201).json({
+          success: true,
+          message: 'Utilisateur créé avec succès',
+          user: userWithoutPassword,
+          token
+        });
+      }
 
       // Tâches lourdes en arrière-plan (ne bloquent plus la réponse)
       setImmediate(() => {
@@ -367,10 +372,14 @@ router.post('/register', validateUser, async (req, res) => {
       await Promise.race([registerWork, timeoutPromise]);
     } catch (dbError) {
       if (dbError?.message === 'TIMEOUT' && !res.headersSent) {
+        // L'enregistrement continue en arrière-plan : on ne dit jamais « rien
+        // n'a été enregistré » (la personne recommençait et se voyait refuser
+        // son propre téléphone)
         console.error('❌ Inscription: timeout (réponse trop lente)');
         return res.status(503).json({
           success: false,
-          message: 'Le serveur met trop de temps à répondre. Réessayez dans un moment.'
+          code: 'INSCRIPTION_EN_COURS',
+          message: "Le serveur est lent : votre inscription est peut-être déjà enregistrée. Essayez d'abord de vous connecter avec votre téléphone et votre mot de passe avant de recommencer."
         });
       }
       // Erreur de contrainte d'unicité (email ou téléphone déjà utilisé)
@@ -646,17 +655,74 @@ router.post('/premiere-connexion/verifier', async (req, res) => {
   }
 });
 
-// POST /api/auth/premiere-connexion { identifiant, password } → connecté
+// POST /api/auth/code-premiere-connexion { numeroH, tenantCode } → { code }
+// Nouveau code pour une personne ajoutée par CET établissement qui n'a pas
+// encore choisi son mot de passe (code perdu). Responsable de l'établissement
+// (propriétaire ou co-responsable « tous les droits ») ou administrateur.
+router.post('/code-premiere-connexion', authenticate, async (req, res) => {
+  try {
+    const numeroH = String(req.body?.numeroH || '').trim();
+    const tenantCode = String(req.body?.tenantCode || '').trim();
+    if (!numeroH || !tenantCode) return res.status(400).json({ success: false, message: 'Personne et établissement requis.' });
+    const q = (sql, rep) => User.sequelize.query(sql, { replacements: rep, type: User.sequelize.QueryTypes.SELECT }).catch(() => []);
+    if (!estAdminUtilisateur(req.user)) {
+      const [proprio] = await q('SELECT 1 FROM management_tenants WHERE tenant_code = :c AND owner_numero_h = :me LIMIT 1', { c: tenantCode, me: req.user.numeroH });
+      const [coResp] = proprio ? [true] : await q(`SELECT 1 FROM management_staff_access WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:me) AND niveau = 'total' AND is_active = true LIMIT 1`, { c: tenantCode, me: req.user.numeroH });
+      if (!proprio && !coResp) return res.status(403).json({ success: false, message: "Seul le responsable de l'établissement peut donner un code." });
+      const liens = await Promise.all([
+        q('SELECT 1 FROM management_staff_access WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM school_members WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM madrasa_members WHERE tenant_code = :c AND LOWER(numero_h) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM school_staff WHERE tenant_code = :c AND LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+        q('SELECT 1 FROM madrasa_staff WHERE tenant_code = :c AND LOWER(TRIM(numero_h)) = LOWER(:nh) LIMIT 1', { c: tenantCode, nh: numeroH }),
+      ]);
+      if (!liens.some((r) => r.length)) return res.status(404).json({ success: false, message: "Cette personne n'a pas été ajoutée par votre établissement." });
+    }
+    const code = await donnerCodePremiereConnexion(numeroH);
+    if (!code) return res.status(400).json({ success: false, message: 'Cette personne a déjà choisi son mot de passe : elle se connecte normalement.' });
+    res.json({ success: true, code });
+  } catch (e) {
+    console.error('code-premiere-connexion:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/auth/premiere-connexion { identifiant, code, password } → connecté
+// Le code à 6 chiffres est remis par l'établissement qui a ajouté la personne :
+// sans lui, quiconque connaissait le téléphone prenait le compte.
+const essaisPremiere = new Map(); // numeroH → { n, t }
 router.post('/premiere-connexion', async (req, res) => {
   try {
     const password = String(req.body?.password || '');
+    const code = String(req.body?.code || '').replace(/\s+/g, '');
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
     const nh = await compteAPremiereConnexion(req.body?.identifiant);
     if (!nh) return res.status(400).json({ success: false, message: 'Ce compte a déjà un mot de passe : connectez-vous normalement.' });
+    if (!/^[0-9]{6}$/.test(code)) {
+      return res.status(400).json({ success: false, code: 'CODE_REQUIS', message: "Saisissez le code de première connexion (6 chiffres) que l'établissement vous a donné." });
+    }
+    const essai = essaisPremiere.get(nh);
+    const recent = essai && Date.now() - essai.t < 15 * 60 * 1000;
+    if (recent && essai.n >= 5) {
+      return res.status(429).json({ success: false, message: "Trop d'essais. Réessayez dans 15 minutes, ou demandez un nouveau code à l'établissement." });
+    }
+    const [ligne] = await User.sequelize.query(
+      'SELECT code_premiere_connexion FROM users WHERE numero_h = :nh LIMIT 1',
+      { replacements: { nh }, type: User.sequelize.QueryTypes.SELECT }
+    );
+    const attendu = Buffer.from(String(ligne?.code_premiere_connexion || ''), 'utf8');
+    const donne = Buffer.from(empreinteCodePremiereConnexion(nh, code), 'utf8');
+    if (!ligne?.code_premiere_connexion || attendu.length !== donne.length || !crypto.timingSafeEqual(attendu, donne)) {
+      essaisPremiere.set(nh, { n: (recent ? essai.n : 0) + 1, t: Date.now() });
+      return res.status(400).json({ success: false, code: 'CODE_INCORRECT', message: "Code incorrect. Vérifiez le code donné par l'établissement (ou demandez-lui un nouveau code)." });
+    }
+    essaisPremiere.delete(nh);
     const user = await User.findByPk(nh);
     if (!user) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
     user.password = await bcrypt.hash(password, config.BCRYPT_ROUNDS);
     await user.save();
+    // Le code ne sert qu'une fois
+    await User.sequelize.query('UPDATE users SET code_premiere_connexion = NULL WHERE numero_h = :nh', { replacements: { nh } }).catch(() => {});
     const donnees = { ...user.dataValues };
     delete donnees.password;
     res.json({ success: true, message: 'Mot de passe enregistré', user: donnees, token: signToken(nh), profileIncomplete: true });
@@ -835,6 +901,7 @@ setInterval(() => {
   const limite = Date.now() - 15 * 60 * 1000; // un code expire après 10 min
   for (const [k, t] of demandesRecuperation) if (t < limite) demandesRecuperation.delete(k);
   for (const [k, v] of essaisCode) if (v.t < limite) essaisCode.delete(k);
+  for (const [k, v] of essaisPremiere) if (v.t < limite) essaisPremiere.delete(k);
 }, 10 * 60 * 1000).unref();
 
 // @route   POST /api/auth/forgot-password/verify
@@ -1211,6 +1278,18 @@ router.put('/profile', authenticate, async (req, res) => {
       updates[champ] = req.body[cle];
     });
 
+    // Une adresse e-mail = un seul compte : message clair au lieu d'une erreur serveur
+    if (updates.email !== undefined) {
+      const email = String(updates.email || '').trim();
+      updates.email = email || null;
+      if (email) {
+        const autre = await User.findOne({ where: { email: { [Op.iLike]: email.replace(/[\\%_]/g, '\\$&') }, numeroH: { [Op.ne]: user.numeroH } } });
+        if (autre) {
+          return res.status(409).json({ success: false, message: 'Cette adresse email est déjà associée à un autre compte.' });
+        }
+      }
+    }
+
     // Un numéro de téléphone = un seul compte (même écrit autrement)
     const nouveauTel = String(updates.tel1 || updates.telephone || '').replace(/[^0-9]/g, '');
     if (nouveauTel.length >= 6) {
@@ -1502,7 +1581,8 @@ router.put('/change-password', authenticate, [
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
 
-    res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+    // Les autres appareils sont déconnectés ; celui-ci reçoit une nouvelle session
+    res.json({ success: true, message: 'Mot de passe modifié avec succès. Vos autres appareils ont été déconnectés.', token: signToken(user.numeroH) });
   } catch (error) {
     console.error('Erreur lors du changement de mot de passe:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

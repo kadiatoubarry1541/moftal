@@ -6,6 +6,7 @@
 
 import { trHors as tr, langueCourante } from "../i18n/traduction";
 import { ouvrirDocument } from "./documentImprimable";
+import { echap } from "./echapperHtml";
 
 export interface LigneRecu {
   libelle: string;
@@ -31,8 +32,6 @@ export interface Recu {
   couleur?: string;
 }
 
-const echap = (v: unknown) =>
-  String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 // Chiffres latins même en arabe
 const locale = () => (langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR");
