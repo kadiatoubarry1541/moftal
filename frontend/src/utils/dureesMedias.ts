@@ -1,7 +1,7 @@
 /**
  * Durées maximum des vidéos et des audios — une seule règle pour tout Moftal.
  *
- *  - Vidéo : 3 minutes au maximum, partout (galerie, Terre d'Adam…).
+ *  - Vidéo : 1 minute au maximum, partout (galerie, Terre d'Adam…).
  *  - Audio : 30 secondes au maximum, partout.
  *  - Certains endroits sont plus stricts : santé (Solutions) 10 s,
  *    vente 30 s, vidéo d'un défunt 30 s.
@@ -14,7 +14,7 @@
  * refusé avec un message, avant que la page ne le reçoive.
  */
 
-export const DUREE_MAX_VIDEO = 180
+export const DUREE_MAX_VIDEO = 60
 export const DUREE_MAX_AUDIO = 30
 export const DUREE_MAX_VIDEO_SANTE = 10
 export const DUREE_MAX_VIDEO_VENTE = 30

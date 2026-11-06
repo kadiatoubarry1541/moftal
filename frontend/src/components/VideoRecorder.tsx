@@ -9,7 +9,7 @@ interface VideoRecorderProps {
 }
 
 export function VideoRecorder({ onVideoRecorded, maxDuration: maxDemande = 30, compact = false }: VideoRecorderProps) {
-  // Une vidéo ne dépasse jamais 3 minutes, où qu'elle soit enregistrée
+  // Une vidéo ne dépasse jamais 1 minute, où qu'elle soit enregistrée
   const maxDuration = Math.min(maxDemande, DUREE_MAX_VIDEO)
   const [error, setError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)

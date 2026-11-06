@@ -145,7 +145,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function initAndRender() {
   // Santé & Éducation : données gardées sur l'appareil + envoi différé hors connexion
   installOfflineSync();
-  // Vidéos 3 min max, audios 30 s max — vérifié pour tous les champs fichier
+  // Vidéos 1 min max, audios 30 s max — vérifié pour tous les champs fichier
   installerLimiteDureesMedias();
 
   if ('serviceWorker' in navigator) {
