@@ -3,8 +3,7 @@ import { getSocket } from '../services/socket'
 import { useI18n } from '../i18n/useI18n'
 import CallModal from './CallModal'
 import { useConversationLue } from '../utils/messagesNonLus'
-import { creerEnregistreurAudio, fichierAudio, messageErreurMicro } from '../utils/enregistrementAudio'
-import { DUREE_MAX_AUDIO } from '../utils/dureesMedias'
+import MicroVocal from './MicroVocal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -74,11 +73,6 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingSeconds, setRecordingSeconds] = useState(0)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [partner, setPartner] = useState<Partner | null>(null)
@@ -216,49 +210,6 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
       setIsSending(false)
     }
   }, [newMessageCategory])
-
-  const startRecording = useCallback(async () => {
-    if (isRecording) return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      // Format selon le téléphone (webm sur Android, mp4 sur iPhone)
-      let mr: MediaRecorder
-      try { mr = creerEnregistreurAudio(stream) } catch (e) { stream.getTracks().forEach(t => t.stop()); throw e }
-      audioChunksRef.current = []
-      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        await sendFamilyMediaMessage(fichierAudio(mr, audioChunksRef.current))
-        setRecordingSeconds(0)
-      }
-      mr.start(200)
-      mediaRecorderRef.current = mr
-      setIsRecording(true)
-      let secs = 0
-      recordingTimerRef.current = setInterval(() => {
-        secs++
-        setRecordingSeconds(secs)
-        // Arrêt automatique : un audio ne dépasse jamais 5 secondes.
-        // (Arrêt fait ici directement : la fonction stopRecording vue par ce
-        // minuteur date d'avant l'enregistrement et ne ferait rien.)
-        if (secs >= DUREE_MAX_AUDIO) {
-          if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
-          setIsRecording(false)
-          if (mr.state !== 'inactive') mr.stop()
-        }
-      }, 1000)
-    } catch (err) {
-      alert(messageErreurMicro(err))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecording, sendFamilyMediaMessage])
-
-  const stopRecording = useCallback(() => {
-    if (!isRecording) return
-    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
-    mediaRecorderRef.current?.stop()
-    setIsRecording(false)
-  }, [isRecording])
 
   const startCall = useCallback((to: string, toName: string, callType: 'audio' | 'video') => {
     setOutgoingCall({ to, toName, callType })
@@ -409,13 +360,7 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
         </div>
 
         <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
-          {isRecording && (
-            <div className="flex items-center gap-2 mb-2 px-2 py-1 bg-red-50 rounded-full border border-red-200">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs text-red-600 font-medium">🎤 {recordingSeconds}s / 30s — relâchez pour envoyer</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <div className="flex-1 min-w-0 relative">
               <button
                 type="button"
@@ -481,20 +426,13 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
               )}
             </div>
 
-            <button
-              type="button"
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onTouchStart={(e) => { e.preventDefault(); startRecording() }}
-              onTouchEnd={(e) => { e.preventDefault(); stopRecording() }}
-              disabled={isSending}
-              className={`flex-shrink-0 w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-xl leading-none transition-all ${
-                isRecording ? 'bg-red-500 scale-110 shadow-lg text-white' : 'bg-gray-200 hover:bg-green-100 text-gray-600 hover:text-green-700'
-              }`}
-              title={t('heritage.hold_voice_message')}
-            >
-              🎤
-            </button>
+            {/* Micro : touche → enregistre, ➤ envoie (30 s max) */}
+            <MicroVocal
+              onEnvoyer={sendFamilyMediaMessage}
+              desactive={isSending}
+              couleur="#16a34a"
+              className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-xl leading-none transition-all bg-gray-200 hover:bg-green-100 text-gray-600 hover:text-green-700 disabled:opacity-50"
+            />
           </div>
         </div>
       </div>
