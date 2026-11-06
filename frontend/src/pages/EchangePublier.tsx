@@ -329,7 +329,7 @@ export default function EchangePublier() {
                   onPrix={(v) => { setProduct(p => ({ ...p, price: v })); setErrors(e => ({ ...e, price: '' })); }}
                   devise={product.currency}
                   dureeVideo={5}
-                  dureeVocal={10}
+                  dureeVocal={5}
                   desactive={submitting}
                   erreurs={{ medias: errors.medias, nom: errors.title, prix: errors.price }}
                 />

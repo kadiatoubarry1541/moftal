@@ -280,7 +280,7 @@ export function DeceasedWizard() {
               <div className="col-3"><Field label={t('label.daughters')}><input type="number" min={0} value={state.nbFilles||0} onChange={e=>set({ nbFilles: Number(e.target.value) })} /></Field></div>
               <div className="col-3"><Field label={t('label.sons')}><input type="number" min={0} value={state.nbGarcons||0} onChange={e=>set({ nbGarcons: Number(e.target.value) })} /></Field></div>
               <div className="col-3"><Field label={t('label.proof_photo')}><FilePicker accept="image/*" onFile={(f)=>set({ preuve: f })} /></Field></div>
-              <div className="col-3"><Field label={t('label.video_1min')}><FilePicker accept="video/*" dureeMaxVideo={30} onFile={(f)=>set({ video: f })} /></Field></div>
+              <div className="col-3"><Field label={t('label.video_1min')}><FilePicker accept="video/*" dureeMaxVideo={10} onFile={(f)=>set({ video: f })} /></Field></div>
             </div>
             <div className="row">
               <div className="col-6"><Field label={t('label.generation_auto')}><input value={generation} readOnly /></Field></div>
