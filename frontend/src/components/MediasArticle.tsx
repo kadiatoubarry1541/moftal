@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { AudioRecorder } from "./AudioRecorder";
+import { DUREE_MAX_VIDEO_VENTE } from "../utils/dureesMedias";
 import { useTraduction } from "../i18n/traduction";
 
 /**
@@ -22,8 +23,8 @@ const dureeVideo = (f: File) => new Promise<number>((resolve) => {
   v.src = URL.createObjectURL(f);
 });
 
-// Vente : vidéo 30 s, audio 30 s
-const DUREE_MAX_VIDEO = 30;
+// Vente : vidéo 5 s, audio 30 s
+const DUREE_MAX_VIDEO = DUREE_MAX_VIDEO_VENTE;
 
 export default function MediasArticle({ tenantCode, articleId, videoUrl, audioUrl, couleur, taille = 72 }: {
   tenantCode: string;

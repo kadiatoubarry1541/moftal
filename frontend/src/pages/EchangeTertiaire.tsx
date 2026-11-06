@@ -435,7 +435,7 @@ export default function EchangeTertiaire() {
               <div className="lg:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.video_label')}</label>
                 <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4">
-                  <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
+                  <VideoRecorder maxDuration={5} onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct(prev => ({ ...prev, videos: [file, ...prev.videos] }));
                   }} />

@@ -4,7 +4,7 @@
  *  - Vidéo : 1 minute au maximum, partout (galerie, Terre d'Adam…).
  *  - Audio : 30 secondes au maximum, partout.
  *  - Certains endroits sont plus stricts : santé (Solutions) 10 s,
- *    vente 30 s, vidéo d'un défunt 30 s.
+ *    vente 5 s, vidéo d'un défunt 30 s.
  *
  * Pour un champ fichier plus strict, on ajoute simplement sur l'<input> :
  *   data-duree-max-video="30"   (et/ou)   data-duree-max-audio="10"
@@ -17,7 +17,7 @@
 export const DUREE_MAX_VIDEO = 60
 export const DUREE_MAX_AUDIO = 30
 export const DUREE_MAX_VIDEO_SANTE = 10
-export const DUREE_MAX_VIDEO_VENTE = 30
+export const DUREE_MAX_VIDEO_VENTE = 5
 export const DUREE_MAX_VIDEO_DEFUNT = 30
 
 /** Durée d'une vidéo ou d'un audio, en secondes (NaN si elle ne peut pas être lue). */

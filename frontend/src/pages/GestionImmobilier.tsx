@@ -347,7 +347,7 @@ export default function GestionImmobilier() {
                   <label style={{ width: VIGNETTE, boxSizing: "border-box", aspectRatio: "1 / 1", borderRadius: 10, border: `2px dashed ${AMBER}`, background: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: AMBER, fontWeight: 700, fontSize: 12, textAlign: "center", cursor: media.envoi ? "wait" : "pointer", padding: 4 }}>
                     <span style={{ fontSize: 24 }}>{media.envoi ? "⏳" : "＋"}</span>
                     {media.envoi ? "Envoi de la vidéo…" : media.images.length ? "Ajouter" : "Photos / vidéo"}
-                    <input type="file" accept="image/*,video/*" data-duree-max-video="30" multiple style={{ display: "none" }} disabled={media.envoi}
+                    <input type="file" accept="image/*,video/*" data-duree-max-video="5" multiple style={{ display: "none" }} disabled={media.envoi}
                       onChange={e => { const fs = Array.from(e.target.files || []); e.target.value = ""; if (fs.length) choisirMedias(fs); }} />
                   </label>
                 )}
