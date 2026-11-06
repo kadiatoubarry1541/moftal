@@ -55,6 +55,27 @@ Friend.init({
     type: DataTypes.JSON,
     defaultValue: [],
     comment: 'Intérêts communs'
+  },
+  // 💎 Précieux : chacun l'active de son côté. L'amitié est précieuse quand
+  // les deux l'ont activé ; sinon elle reste une simple connaissance.
+  precieuxUser: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'precieux_user',
+    comment: 'Précieux activé par user_numero_h'
+  },
+  // 'invitation' : vraie amitié (demande acceptée) ; 'messagerie' : simple
+  // conversation ouverte depuis la messagerie (même activité) — pas un ami.
+  origine: {
+    type: DataTypes.STRING,
+    defaultValue: 'invitation',
+    field: 'origine'
+  },
+  precieuxFriend: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'precieux_friend',
+    comment: 'Précieux activé par friend_numero_h'
   }
 }, {
   sequelize,
