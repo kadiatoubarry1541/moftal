@@ -436,6 +436,7 @@ export default function EchangeNourriture() {
                   capture="environment"
                   accept="image/*,video/*,audio/*"
                   data-duree-max-video="5"
+                  data-duree-max-audio="10"
                   multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
@@ -454,6 +455,7 @@ export default function EchangeNourriture() {
                   id="media-gallery"
                   accept="image/*,video/*,audio/*"
                   data-duree-max-video="5"
+                  data-duree-max-audio="10"
                   multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
