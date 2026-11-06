@@ -1,3 +1,4 @@
+import { DUREE_MAX_AUDIO } from '../utils/dureesMedias'
 import { useState, useRef } from 'react'
 
 interface MediaUploaderProps {
@@ -5,7 +6,8 @@ interface MediaUploaderProps {
   onUpload: (mediaData: { type: 'photo' | 'video' | 'audio', url: string, caption?: string }) => void
 }
 
-const MAX_DURATION = 60 // 1 minute, vidéo et audio
+const MAX_DURATION = 60 // vidéo : 1 minute
+const MAX_DURATION_AUDIO = DUREE_MAX_AUDIO // audio : 30 secondes
 
 export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'audio'>('photo')
@@ -38,8 +40,9 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
       const el = document.createElement(file.type.startsWith('video/') ? 'video' : 'audio')
       el.preload = 'metadata'
       el.onloadedmetadata = () => {
-        if (el.duration > MAX_DURATION) {
-          alert(`Durée trop longue : ${Math.round(el.duration)} secondes.\nMaximum autorisé : ${MAX_DURATION} secondes (1 minute).`)
+        const max = file.type.startsWith('video/') ? MAX_DURATION : MAX_DURATION_AUDIO
+        if (el.duration > max) {
+          alert(`Durée trop longue : ${Math.round(el.duration)} secondes.\nMaximum autorisé : ${max} secondes.`)
           URL.revokeObjectURL(url)
           if (fileInputRef.current) fileInputRef.current.value = ''
           return
@@ -165,9 +168,9 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
       setRecordedSeconds(0)
       recordingTimerRef.current = setInterval(() => {
         setRecordedSeconds(s => {
-          if (s + 1 >= MAX_DURATION) {
+          if (s + 1 >= MAX_DURATION_AUDIO) {
             stopAudioRecording()
-            return MAX_DURATION
+            return MAX_DURATION_AUDIO
           }
           return s + 1
         })
@@ -368,7 +371,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
                   <div className="inline-flex items-center gap-3 bg-red-50 border-2 border-red-200 rounded-lg px-6 py-4 mb-4">
                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                     <span className="text-red-700 font-semibold">
-                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION}s (1 min max)
+                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION_AUDIO}s (30 s max)
                     </span>
                   </div>
                   <div>

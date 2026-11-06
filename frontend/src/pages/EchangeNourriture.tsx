@@ -419,7 +419,7 @@ export default function EchangeNourriture() {
               <p className="text-xs text-gray-500 mb-2">{t('echange_nourriture.video_desc')}</p>
               <div className="rounded-xl border-2 border-green-200 bg-green-50/50 p-4 mb-4">
                 <VideoRecorder
-                  maxDuration={10}
+                  maxDuration={5}
                   onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-10s-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));
@@ -435,6 +435,7 @@ export default function EchangeNourriture() {
                   id="media-capture"
                   capture="environment"
                   accept="image/*,video/*,audio/*"
+                  data-duree-max-video="5"
                   multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
@@ -452,6 +453,7 @@ export default function EchangeNourriture() {
                   type="file"
                   id="media-gallery"
                   accept="image/*,video/*,audio/*"
+                  data-duree-max-video="5"
                   multiple
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);

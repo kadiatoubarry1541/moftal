@@ -1,3 +1,4 @@
+import { DUREE_MAX_AUDIO } from '../utils/dureesMedias';
 import { useState, useRef, useEffect } from 'react';
 
 /** Navigateurs intégrés des autres applications (réseaux sociaux,
@@ -20,7 +21,9 @@ interface AudioRecorderProps {
   autoStart?: boolean;
 }
 
-export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = false, autoStart = false }: AudioRecorderProps) {
+export function AudioRecorder({ onAudioRecorded, maxDuration: maxDemande = 10, compact = false, autoStart = false }: AudioRecorderProps) {
+  // Un audio ne dépasse jamais 30 secondes, où qu'il soit enregistré
+  const maxDuration = Math.min(maxDemande, DUREE_MAX_AUDIO);
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);

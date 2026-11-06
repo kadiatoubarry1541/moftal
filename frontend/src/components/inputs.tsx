@@ -51,7 +51,7 @@ export function CheckboxGroup({ options, values, onChange }: { options: string[]
   )
 }
 
-export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file: File | null)=>void }) {
+export function FilePicker({ accept, onFile, dureeMaxVideo }: { accept?: string, onFile: (file: File | null)=>void, dureeMaxVideo?: number }) {
   const { tr } = useTraduction();
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<string | null>(null);
@@ -111,6 +111,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
         type="file"
         id="file-picker-gallery"
         accept={accept || "image/*,video/*,audio/*"}
+        data-duree-max-video={dureeMaxVideo}
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
@@ -119,6 +120,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
         id="file-picker-capture"
         capture="environment"
         accept={accept || "image/*,video/*,audio/*"}
+        data-duree-max-video={dureeMaxVideo}
         onChange={handleCaptureChange}
         style={{ display: 'none' }}
       />

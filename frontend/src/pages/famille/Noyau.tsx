@@ -367,7 +367,7 @@ function AddEntryModal({ onClose, onSave }: {
         )}
         {type === 'audio' && (
           <div className="mb-3">
-            <AudioRecorder onAudioRecorded={handleMedia} maxDuration={120} />
+            <AudioRecorder onAudioRecorded={handleMedia} maxDuration={30} />
             {media && <audio controls src={media} className="w-full mt-2" />}
           </div>
         )}
