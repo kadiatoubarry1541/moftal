@@ -45,7 +45,7 @@ export default function BarreMessage({ onEnvoyer, placeholder, desactive }: {
       )}
       {enregistre && !fichier && (
         <div className="flex items-center gap-2">
-          <AudioRecorder compact maxDuration={60} onAudioRecorded={(blob) => {
+          <AudioRecorder compact maxDuration={30} onAudioRecorded={(blob) => {
             setFichier(new File([blob], `vocal-${Date.now()}.webm`, { type: blob.type || "audio/webm" }));
             setEnregistre(false);
           }} />

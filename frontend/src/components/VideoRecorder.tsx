@@ -1,3 +1,4 @@
+import { DUREE_MAX_VIDEO } from '../utils/dureesMedias'
 import { useState, useRef, useEffect } from 'react'
 
 interface VideoRecorderProps {
@@ -7,7 +8,9 @@ interface VideoRecorderProps {
   compact?: boolean
 }
 
-export function VideoRecorder({ onVideoRecorded, maxDuration = 30, compact = false }: VideoRecorderProps) {
+export function VideoRecorder({ onVideoRecorded, maxDuration: maxDemande = 30, compact = false }: VideoRecorderProps) {
+  // Une vidéo ne dépasse jamais 3 minutes, où qu'elle soit enregistrée
+  const maxDuration = Math.min(maxDemande, DUREE_MAX_VIDEO)
   const [error, setError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)

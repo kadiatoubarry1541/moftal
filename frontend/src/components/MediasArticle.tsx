@@ -22,7 +22,8 @@ const dureeVideo = (f: File) => new Promise<number>((resolve) => {
   v.src = URL.createObjectURL(f);
 });
 
-const DUREE_MAX_VIDEO = 60;
+// Vente : vidéo 30 s, audio 30 s
+const DUREE_MAX_VIDEO = 30;
 
 export default function MediasArticle({ tenantCode, articleId, videoUrl, audioUrl, couleur, taille = 72 }: {
   tenantCode: string;
@@ -99,7 +100,7 @@ export default function MediasArticle({ tenantCode, articleId, videoUrl, audioUr
         )}
       </div>
       {enregistrer && !vocal && (
-        <AudioRecorder maxDuration={60} onAudioRecorded={(blob) => { setEnregistrer(false); void envoyer("vocal", blob); }} />
+        <AudioRecorder maxDuration={30} onAudioRecorded={(blob) => { setEnregistrer(false); void envoyer("vocal", blob); }} />
       )}
     </div>
   );

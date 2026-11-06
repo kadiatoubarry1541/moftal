@@ -249,27 +249,14 @@ export default function Probleme() {
                 <input
                   type="file"
                   accept="video/*,image/*"
+                  data-duree-max-video="10"
                   className="hidden"
                   disabled={uploading}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    if (file.type.startsWith('video/')) {
-                      const vid = document.createElement('video');
-                      vid.preload = 'metadata';
-                      vid.onloadedmetadata = () => {
-                        URL.revokeObjectURL(vid.src);
-                        if (vid.duration > 10) {
-                          setUploadError('La vidéo ne doit pas dépasser 1 minute.');
-                          e.target.value = '';
-                          return;
-                        }
-                        handleUpload(file);
-                      };
-                      vid.src = URL.createObjectURL(file);
-                    } else {
-                      handleUpload(file);
-                    }
+                    // Vidéo : 10 secondes au maximum (vérifié par data-duree-max-video)
+                    handleUpload(file);
                   }}
                 />
               </label>

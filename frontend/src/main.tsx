@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 import { installOfflineSync } from "./utils/offlineSync";
+import { installerLimiteDureesMedias } from "./utils/dureesMedias";
 import { echangerCodeOuverture } from "./utils/codeOuverture";
 import { noterLancementApp, appPlayInstallee } from "./utils/appMoftalInstallee";
 
@@ -144,6 +145,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function initAndRender() {
   // Santé & Éducation : données gardées sur l'appareil + envoi différé hors connexion
   installOfflineSync();
+  // Vidéos 3 min max, audios 30 s max — vérifié pour tous les champs fichier
+  installerLimiteDureesMedias();
 
   if ('serviceWorker' in navigator) {
     // En développement : enregistrement manuel (VitePWA désactivé en dev)
