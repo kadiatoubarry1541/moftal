@@ -5,6 +5,8 @@ import { sequelize } from '../config/database.js';
 import User from '../models/User.js';
 import PublishedStory from '../models/PublishedStory.js';
 import Friend from '../models/Friend.js';
+import { liensDe, lienAvec } from '../utils/liens.js';
+import { estCompteAdmin } from '../utils/compteAdmin.js';
 import { authenticate, estAdminUtilisateur } from '../middleware/auth.js';
 
 // Stockage en mémoire → conversion en base64 et stockage en DB
@@ -337,13 +339,15 @@ router.get('/mes-amours/feed', async (req, res) => {
       }
     });
 
-    const numeros = new Set([user.numeroH]);
+    // Amis, mais aussi famille et voisins : vous êtes déjà liés, leurs
+    // stories s'affichent ici avec l'étiquette de ce lien.
+    const liens = await liensDe(user);
+    const numeros = new Set([user.numeroH, ...liens.famille, ...liens.voisin]);
+    const amitieAvec = new Map();
     for (const f of friends) {
-      if (f.userNumeroH === user.numeroH) {
-        numeros.add(f.friendNumeroH);
-      } else {
-        numeros.add(f.userNumeroH);
-      }
+      const autre = f.userNumeroH === user.numeroH ? f.friendNumeroH : f.userNumeroH;
+      numeros.add(autre);
+      amitieAvec.set(autre, f);
     }
 
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -361,13 +365,19 @@ router.get('/mes-amours/feed', async (req, res) => {
     // confondre avec l'image ou la vidéo publiée, qui remplit la carte.
     const auteurs = await User.findAll({
       where: { numeroH: { [Op.in]: [...new Set(stories.map(s => s.numeroH))] } },
-      attributes: ['numeroH', 'photo', 'manPhoto']
+      attributes: ['numeroH', 'photo', 'manPhoto', 'role']
     });
     const photoAuteur = new Map(auteurs.map(u => [u.numeroH, u.photo || u.manPhoto || null]));
+    // Compte de l'administration : 100 % isolé, ses stories ne sont montrées à aucun membre
+    const auteursAdmin = new Set(estCompteAdmin(user) ? [] : auteurs.filter(estCompteAdmin).map(u => u.numeroH));
 
     res.json({
       success: true,
-      stories: stories.map(s => ({ ...s.toJSON(), authorPhoto: photoAuteur.get(s.numeroH) || null }))
+      stories: stories.filter(s => !auteursAdmin.has(s.numeroH)).map(s => ({
+        ...s.toJSON(),
+        authorPhoto: photoAuteur.get(s.numeroH) || null,
+        lien: s.numeroH === user.numeroH ? null : lienAvec(liens, s.numeroH, amitieAvec.get(s.numeroH))
+      }))
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du feed Mes Amours:', error);

@@ -15,11 +15,9 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
-import { FamilyTree } from '../models/additional.js';
-import CoupleLink from '../models/CoupleLink.js';
-import ParentChildLink from '../models/ParentChildLink.js';
-import ResidenceGroup from '../models/ResidenceGroup.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { estCompteAdmin, sansComptesAdmin } from '../utils/compteAdmin.js';
+import { normalizeLoc, getImmediateFamilyNumeroHs, findMyFamilyTree, findMyQuartierGroups, liensDe, lienAvec, LIEN_MESSAGE } from '../utils/liens.js';
 
 // Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
 const uploadFriendMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -56,53 +54,62 @@ function estDansLAmitie(friend, numeroH) {
   return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
 }
 
-// Normalise un nom de lieu : minuscule + sans accents (même règle que résidences)
-function normalizeLoc(str) {
-  if (!str) return '';
-  const n = String(str).trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  // « Non spécifié » (compte sans quartier) n'est pas un lieu : jamais de salle commune
-  return n === 'non specifie' ? '' : n;
-}
-
-/** NumeroH exclus de "famille élargie" : soi-même, parents, conjoint(s), enfants — ils ont déjà leur propre messagerie dédiée. */
-async function getImmediateFamilyNumeroHs(numeroH) {
-  const excluded = new Set([numeroH]);
-  const [parentLinks, childLinks, coupleLinks] = await Promise.all([
-    ParentChildLink.getMyParents(numeroH),
-    ParentChildLink.getMyChildren(numeroH),
-    CoupleLink.findAll({
-      where: {
-        [Op.or]: [{ husbandNumeroH: numeroH }, { wifeNumeroH: numeroH }],
-        status: 'active', isActive: true, isArchived: false
-      }
-    })
-  ]);
-  parentLinks.forEach(l => excluded.add(l.parentNumeroH));
-  childLinks.forEach(l => excluded.add(l.childNumeroH));
-  coupleLinks.forEach(l => excluded.add(l.husbandNumeroH === numeroH ? l.wifeNumeroH : l.husbandNumeroH));
-  return excluded;
-}
-
-/** Arbre familial (élargi) de l'utilisateur, ou null. */
-async function findMyFamilyTree(numeroH) {
-  return FamilyTree.findOne({
+/** Lien avec une personne trouvée (recherche) : famille, voisin, ami… ou null. */
+async function lienAvecPersonne(moi, numeroH) {
+  const friend = await Friend.findOne({
     where: {
+      status: 'accepted',
       [Op.or]: [
-        { rootMember: numeroH },
-        { members: { [Op.contains]: [numeroH] } },
-        { chefFamille1: numeroH },
-        { chefFamille2: numeroH }
-      ],
-      isActive: true
+        { userNumeroH: moi.numeroH, friendNumeroH: numeroH },
+        { userNumeroH: numeroH, friendNumeroH: moi.numeroH }
+      ]
     }
   });
+  return lienAvec(await liensDe(moi), numeroH, friend);
 }
 
-/** Groupes de quartier (Terre ADAM) de l'utilisateur, d'après ses lieux de résidence enregistrés. */
-async function findMyQuartierGroups(user) {
-  const locations = [user?.lieu1, user?.lieu2, user?.lieu3].map(normalizeLoc).filter(Boolean);
-  if (locations.length === 0) return [];
-  return ResidenceGroup.findAll({ where: { location: { [Op.in]: locations }, isActive: true } });
+// ─── 💎 Précieux ─────────────────────────────────────────────────────────────
+// Tout ami est une connaissance. Chacun peut activer « précieux » pour un ami
+// du même sexe ; l'amitié devient précieuse quand les deux l'ont activé.
+const MAX_PRECIEUX = 10;
+
+/** Même sexe, connu des deux côtés (HOMME/FEMME). */
+function memeSexe(a, b) {
+  const ga = String(a?.genre || '').toUpperCase();
+  return (ga === 'HOMME' || ga === 'FEMME') && ga === String(b?.genre || '').toUpperCase();
+}
+
+/** Qui a activé précieux dans cette amitié, vu par numeroH. */
+function precieuxVuPar(friend, numeroH) {
+  const moiCoteUser = friend.userNumeroH === numeroH;
+  const parMoi = !!(moiCoteUser ? friend.precieuxUser : friend.precieuxFriend);
+  const parLui = !!(moiCoteUser ? friend.precieuxFriend : friend.precieuxUser);
+  return { parMoi, parLui, mutuel: parMoi && parLui };
+}
+
+/** Amitié acceptée, précieuse des deux côtés et toujours entre même sexe. */
+async function estAmitiePrecieuse(friend) {
+  if (!friend || friend.status !== 'accepted' || !friend.precieuxUser || !friend.precieuxFriend) return false;
+  const [a, b] = await Promise.all([User.findByNumeroH(friend.userNumeroH), User.findByNumeroH(friend.friendNumeroH)]);
+  return memeSexe(a, b);
+}
+
+async function ensureFriendSouvenirsTable() {
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "friend_souvenirs" (
+        "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        "link_id"     UUID         NOT NULL,
+        "numero_h"    VARCHAR(255) NOT NULL,
+        "media_type"  VARCHAR(20)  NOT NULL DEFAULT 'image',
+        "media_url"   TEXT         NOT NULL,
+        "caption"     TEXT,
+        "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `);
+  } catch (err) {
+    console.warn('⚠️ ensureFriendSouvenirsTable:', err.message);
+  }
 }
 
 /**
@@ -119,26 +126,6 @@ function isAdmin(user) {
 function estAdminOuRole(user) {
   return isAdmin(user) || ['admin', 'super-admin', 'superadmin', 'administrator'].includes(String(user?.role || '').toLowerCase());
 }
-
-/**
- * Comptes de l'administration : secrets, jamais montrés ni trouvables par les
- * membres (suggestions, recherches par nom / téléphone / e-mail / NuméroH).
- * Rôle admin, NuméroH maîtres, ou NuméroH de génération réservée G0–G90
- * (aucun vivant ne peut l'avoir : les vivants sont en G96).
- */
-const ROLES_ADMIN = ['admin', 'super-admin', 'superadmin', 'administrator'];
-const RESERVE_RE = /^G([0-9]|[1-8][0-9]|90)C/i;
-function estCompteAdmin(u) {
-  if (!u) return false;
-  return ROLES_ADMIN.includes(String(u.role || '').toLowerCase())
-    || MASTER_ADMIN_NUMEROS.includes(u.numeroH)
-    || RESERVE_RE.test(String(u.numeroH || ''));
-}
-// Même règle en SQL (prefixe = alias de table, ex. '"User".')
-const sansComptesAdmin = (prefixe = '') => `NOT (
-  LOWER(COALESCE(${prefixe}role, 'user')) IN (${ROLES_ADMIN.map((x) => `'${x}'`).join(', ')})
-  OR ${prefixe}numero_h IN (${MASTER_ADMIN_NUMEROS.map((x) => `'${x}'`).join(', ')})
-  OR ${prefixe}numero_h ~* '^G([0-9]|[1-8][0-9]|90)C')`;
 
 /**
  * Comptes Moftal dont le numéro (tel1 ou tel2) correspond — on compare les chiffres
@@ -227,6 +214,9 @@ router.use((req, res, next) => { reparerDemandesAnciensIdentifiants().finally(ne
 router.get('/list', async (req, res) => {
   try {
     const numeroH = req.user.numeroH;
+    // Le compte administrateur n'a pas d'amis
+    if (estCompteAdmin(req.user)) return res.json({ success: true, friends: [] });
+    const liens = await liensDe(req.user);
     const friendships = await Friend.findAll({
       where: {
         [Op.or]: [
@@ -247,6 +237,10 @@ router.get('/list', async (req, res) => {
           : friendship.userNumeroH;
 
         const friendUser = await User.findByNumeroH(friendNumeroH);
+        // Compte de l'administration : 100 % isolé, jamais montré à un membre
+        if (estCompteAdmin(friendUser)) return null;
+        const precieux = precieuxVuPar(friendship, numeroH);
+        const sexeCommun = memeSexe(req.user, friendUser);
 
         return {
           id: friendship.id,
@@ -262,12 +256,23 @@ router.get('/list', async (req, res) => {
           requestedAt: friendship.requestedAt,
           acceptedAt: friendship.acceptedAt,
           mutualFriends: friendship.mutualFriends || 0,
-          commonInterests: friendship.commonInterests || []
+          commonInterests: friendship.commonInterests || [],
+          // Lien unique : famille / voisin / activite / precieux / connaissance.
+          // La page Amitié ne montre que connaissance et precieux ; la
+          // messagerie montre tout, avec l'étiquette du lien.
+          lien: (() => {
+            const l = lienAvec(liens, friendNumeroH, friendship);
+            return l === 'precieux' && !sexeCommun ? 'connaissance' : l;
+          })(),
+          memeSexe: sexeCommun,
+          precieuxParMoi: sexeCommun && precieux.parMoi,
+          precieuxParLui: sexeCommun && precieux.parLui,
+          precieux: sexeCommun && precieux.mutuel
         };
       })
     );
 
-    res.json({ success: true, friends: friendsWithInfo });
+    res.json({ success: true, friends: friendsWithInfo.filter(Boolean) });
   } catch (error) {
     console.error('Erreur /friends/list:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -277,6 +282,7 @@ router.get('/list', async (req, res) => {
 // ─── GET /api/friends/requests → demandes en attente reçues ──────────────────
 router.get('/requests', async (req, res) => {
   try {
+    if (estCompteAdmin(req.user)) return res.json({ success: true, requests: [] });
     const requests = await FriendRequest.findAll({
       where: { toUser: req.user.numeroH, status: 'pending' },
       // Colonne réelle « created_at » (createdAt est renommé dans le modèle) :
@@ -287,16 +293,16 @@ router.get('/requests', async (req, res) => {
     // Enrichir avec les infos de l'expéditeur si fromUserName manquant
     const enriched = await Promise.all(requests.map(async (r) => {
       const data = r.toJSON();
-      if (!data.fromUserName) {
-        const sender = await User.findByNumeroH(data.fromUser);
-        if (sender) {
-          data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
-        }
+      const sender = await User.findByNumeroH(data.fromUser);
+      // Compte de l'administration : jamais montré à un membre
+      if (estCompteAdmin(sender)) return null;
+      if (!data.fromUserName && sender) {
+        data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
       }
       return data;
     }));
 
-    res.json({ success: true, requests: enriched });
+    res.json({ success: true, requests: enriched.filter(Boolean) });
   } catch (error) {
     console.error('Erreur /friends/requests:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -307,6 +313,9 @@ router.get('/requests', async (req, res) => {
 router.post('/send-request', async (req, res) => {
   try {
     const fromUser = req.user.numeroH;
+    if (estCompteAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Le compte administrateur n\'a pas d\'amis.' });
+    }
     const { message, ref } = req.body;
     // Invitation depuis « Personnes que vous pourriez connaître » : code protégé
     const toUser = ref ? lireSuggestion(ref) : req.body.toUser;
@@ -324,7 +333,9 @@ router.post('/send-request', async (req, res) => {
     // Si on stockait toUserTrimmed tel quel, la requête GET /requests du
     // destinataire — qui compare toUser à son numeroH canonique par égalité
     // stricte — ne la retrouverait jamais : la demande semblerait "perdue".
-    const targetUser = await trouverDestinataire(toUserTrimmed, fromUser, req.user);
+    const trouve = await trouverDestinataire(toUserTrimmed, fromUser, req.user);
+    // Le compte administrateur : introuvable, personne ne peut le demander en ami
+    const targetUser = estCompteAdmin(trouve) ? null : trouve;
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NuméroH, cet e-mail ou ce numéro de téléphone' });
     }
@@ -332,6 +343,12 @@ router.post('/send-request', async (req, res) => {
 
     if (fromUser === toUserCanonical) {
       return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous ajouter vous-même' });
+    }
+
+    // Famille et voisins sont déjà liés : ils ne deviennent jamais aussi amis
+    const lienExistant = lienAvec(await liensDe(req.user), toUserCanonical);
+    if (LIEN_MESSAGE[lienExistant]) {
+      return res.status(400).json({ success: false, lien: lienExistant, message: LIEN_MESSAGE[lienExistant] });
     }
 
     // Vérifier si une demande est déjà en cours (dans les deux sens)
@@ -354,7 +371,8 @@ router.post('/send-request', async (req, res) => {
           { userNumeroH: fromUser, friendNumeroH: toUserCanonical },
           { userNumeroH: toUserCanonical, friendNumeroH: fromUser }
         ],
-        status: 'accepted'
+        status: 'accepted',
+        origine: { [Op.ne]: 'messagerie' }
       }
     });
     if (alreadyFriends) {
@@ -406,6 +424,11 @@ router.post('/respond-request', async (req, res) => {
     if (request.toUser !== req.user.numeroH) {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
+    // Aucune amitié avec le compte administrateur
+    if (estCompteAdmin(req.user) || estCompteAdmin(await User.findByNumeroH(request.fromUser))) {
+      await request.update({ status: 'rejected' });
+      return res.status(404).json({ success: false, message: 'Demande non trouvée' });
+    }
 
     const status = action === 'accept' ? 'accepted' : 'rejected';
     await request.update({ status });
@@ -421,11 +444,15 @@ router.post('/respond-request', async (req, res) => {
         }
       });
 
-      if (!existing) {
+      if (existing) {
+        // Simple conversation de messagerie qui devient une vraie amitié
+        await existing.update({ status: 'accepted', origine: 'invitation', acceptedAt: existing.acceptedAt || new Date() });
+      } else {
         await Friend.create({
           userNumeroH: request.fromUser,
           friendNumeroH: request.toUser,
           status: 'accepted',
+          origine: 'invitation',
           requestedAt: request.createdAt,
           acceptedAt: new Date(),
           mutualFriends: 0,
@@ -463,6 +490,7 @@ router.get('/suggestions', async (req, res) => {
   try {
     const me = req.user;
     const numeroH = me.numeroH;
+    if (estCompteAdmin(me)) return res.json({ success: true, suggestions: [], hasMore: false });
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
@@ -472,6 +500,10 @@ router.get('/suggestions', async (req, res) => {
     ]);
     const exclus = new Set([numeroH]);
     liens.forEach((f) => exclus.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+    // Famille et voisins : déjà liés, rien à leur proposer ici
+    const { famille, voisin } = await liensDe(me);
+    famille.forEach((nh) => exclus.add(nh));
+    voisin.forEach((nh) => exclus.add(nh));
     demandes.forEach((d) => exclus.add(d.fromUser === numeroH ? d.toUser : d.fromUser));
 
     // Score de proximité (colonnes réelles lues dans le modèle)
@@ -479,10 +511,12 @@ router.get('/suggestions', async (req, res) => {
     const norm = (a) => `LOWER(TRIM(COALESCE(${col(a)}, '')))`;
     const val = (v) => (normalizeLoc(v) ? String(v).trim().toLowerCase() : '');
     const parts = [];
+    // Même quartier = voisins : déjà liés, jamais proposés ici
     const mesLieux = [me.lieu1, me.lieu2, me.lieu3].map(val).filter(Boolean);
+    const sansVoisins = [];
     if (mesLieux.length && ['lieu1', 'lieu2', 'lieu3'].every((a) => User.rawAttributes[a])) {
       const liste = mesLieux.map((l) => sequelize.escape(l)).join(', ');
-      parts.push(`CASE WHEN ${norm('lieu1')} IN (${liste}) OR ${norm('lieu2')} IN (${liste}) OR ${norm('lieu3')} IN (${liste}) THEN 4 ELSE 0 END`);
+      sansVoisins.push(sequelize.literal(`NOT (${norm('lieu1')} IN (${liste}) OR ${norm('lieu2')} IN (${liste}) OR ${norm('lieu3')} IN (${liste}))`));
     }
     for (const [attr, poids] of [['nomFamille', 3], ['activite1', 2], ['regionOrigine', 1], ['pays', 1]]) {
       if (!User.rawAttributes[attr]) continue;
@@ -495,7 +529,7 @@ router.get('/suggestions', async (req, res) => {
       where: {
         numeroH: { [Op.notIn]: [...exclus], [Op.notLike]: 'TMP-%' },
         isActive: true,
-        [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))]
+        [Op.and]: [sequelize.literal(sansComptesAdmin('"User".')), ...sansVoisins]
       },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'lieu1', 'lieu2', 'lieu3', 'treeVisibility'],
       order: [[sequelize.literal(score), 'DESC'], ['created_at', 'DESC']],
@@ -503,11 +537,9 @@ router.get('/suggestions', async (req, res) => {
       offset
     });
 
-    const mesLieuxSet = new Set(mesLieux);
     const suggestions = users.slice(0, limit).map((u) => {
       const vis = u.treeVisibility || 'name_photo_numeroH';
-      const raison = [u.lieu1, u.lieu2, u.lieu3].map(val).some((l) => l && mesLieuxSet.has(l)) ? 'Même quartier'
-        : val(u.nomFamille) && val(u.nomFamille) === val(me.nomFamille) ? 'Même famille'
+      const raison = val(u.nomFamille) && val(u.nomFamille) === val(me.nomFamille) ? 'Même nom de famille'
         : val(u.activite1) && val(u.activite1) === val(me.activite1) ? 'Même activité'
         : null;
       return {
@@ -542,7 +574,7 @@ router.get('/trouver-personne', async (req, res) => {
     if (u.numeroH === req.user.numeroH) {
       return res.status(400).json({ success: false, message: "C'est votre propre compte" });
     }
-    res.json({ success: true, user: { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo || null, genre: u.genre || null } });
+    res.json({ success: true, user: { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo || null, genre: u.genre || null, lien: await lienAvecPersonne(req.user, u.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/trouver-personne:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -568,7 +600,7 @@ router.get('/search-by-phone', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce numéro' });
     }
     const user = await User.findByNumeroH(trouve);
-    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, lien: await lienAvecPersonne(req.user, user.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/search-by-phone:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -598,6 +630,9 @@ router.post('/match-phones', async (req, res) => {
         FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' } })
       ]);
       existingFriends.forEach(f => excluded.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+      const { famille, voisin } = await liensDe(req.user);
+      famille.forEach(nh => excluded.add(nh));
+      voisin.forEach(nh => excluded.add(nh));
       pendingRequests.forEach(r => excluded.add(r.fromUser === numeroH ? r.toUser : r.fromUser));
     }
 
@@ -627,7 +662,7 @@ router.get('/search-by-email', async (req, res) => {
     if (user.numeroH === req.user.numeroH) {
       return res.status(400).json({ success: false, message: "C'est votre propre email" });
     }
-    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille, lien: await lienAvecPersonne(req.user, user.numeroH) } });
   } catch (error) {
     console.error('Erreur /friends/search-by-email:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -677,7 +712,7 @@ router.get('/family-contacts', async (req, res) => {
     if (memberNumeroHs.length === 0) return res.json({ success: true, contacts: [] });
 
     const users = await User.findAll({
-      where: { numeroH: { [Op.in]: memberNumeroHs } },
+      where: { numeroH: { [Op.in]: memberNumeroHs }, [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))] },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
     });
     res.json({ success: true, contacts: users });
@@ -741,7 +776,7 @@ router.post('/start-conversation', async (req, res) => {
       User.findOne({ where: { numeroH } }),
       User.findOne({ where: { numeroH: toUser } })
     ]);
-    if (!target) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+    if (!target || estCompteAdmin(target) || estCompteAdmin(me)) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
 
     let eligible = false;
 
@@ -782,6 +817,7 @@ router.post('/start-conversation', async (req, res) => {
         userNumeroH: numeroH,
         friendNumeroH: toUser,
         status: 'accepted',
+        origine: 'messagerie',
         acceptedAt: new Date()
       });
     }
@@ -812,16 +848,18 @@ router.get('/admin/all-links', async (req, res) => {
     const numeroHs = [...new Set(links.flatMap(l => [l.userNumeroH, l.friendNumeroH]))];
     const users = await User.findAll({
       where: { numeroH: { [Op.in]: numeroHs } },
-      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'role']
     });
     const byNumeroH = Object.fromEntries(users.map(u => [u.numeroH, u]));
     res.json({
       success: true,
-      links: links.map(l => ({
+      links: links.filter(l => !estCompteAdmin(byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH }) && !estCompteAdmin(byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH })).map(l => ({
         id: l.id,
         userA: byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH },
         userB: byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH },
-        acceptedAt: l.acceptedAt
+        acceptedAt: l.acceptedAt,
+        // 💎 seulement le type de lien — jamais le contenu de la galerie
+        precieux: !!(l.precieuxUser && l.precieuxFriend)
       }))
     });
   } catch (error) {
@@ -933,6 +971,153 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
   }
 });
 
+// ─── 💎 PRÉCIEUX + GALERIE SOUVENIRS (déclarées avant "/:numeroH") ───────────
+
+// POST /api/friends/precieux { linkId, actif } — activer / retirer précieux de son côté
+router.post('/precieux', async (req, res) => {
+  try {
+    const moi = req.user.numeroH;
+    const { linkId } = req.body;
+    const actif = !!req.body.actif;
+    const friend = await Friend.findByPk(linkId);
+    if (!estDansLAmitie(friend, moi) || friend.status !== 'accepted') {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const autreNumeroH = friend.userNumeroH === moi ? friend.friendNumeroH : friend.userNumeroH;
+    const autre = await User.findByNumeroH(autreNumeroH);
+    if (actif && ['famille', 'voisin', 'activite'].includes(lienAvec(await liensDe(req.user), autreNumeroH, friend))) {
+      return res.status(400).json({ success: false, message: 'Précieux est réservé à vos amis.' });
+    }
+    if (actif && !memeSexe(req.user, autre)) {
+      return res.status(400).json({ success: false, message: 'Précieux est réservé aux amis du même sexe.' });
+    }
+    const avant = precieuxVuPar(friend, moi);
+    if (actif && !avant.parMoi) {
+      const nb = await Friend.count({
+        where: {
+          status: 'accepted',
+          [Op.or]: [
+            { userNumeroH: moi, precieuxUser: true },
+            { friendNumeroH: moi, precieuxFriend: true }
+          ]
+        }
+      });
+      if (nb >= MAX_PRECIEUX) {
+        return res.status(400).json({ success: false, message: `Tu as déjà ${MAX_PRECIEUX} amis précieux. Ce qui est précieux reste rare 💎` });
+      }
+    }
+    // Retirer remet l'amitié en simple connaissance des deux côtés (la galerie
+    // est cachée, pas effacée) ; activer ne touche que son propre côté.
+    await friend.update(actif
+      ? (friend.userNumeroH === moi ? { precieuxUser: true } : { precieuxFriend: true })
+      : { precieuxUser: false, precieuxFriend: false });
+    const apres = precieuxVuPar(friend, moi);
+
+    // Retirer se fait en silence ; activer prévient l'autre (« Moi aussi » d'un geste)
+    if (actif && !avant.parMoi) {
+      const nom = [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || moi;
+      try {
+        await Notification.createNotification(apres.mutuel ? {
+          recipientNumeroH: autreNumeroH,
+          type: 'friend_precieux',
+          title: '💎 Amis précieux',
+          message: `${nom} et toi êtes maintenant amis précieux. Votre galerie souvenirs est ouverte 🖼️`,
+          relatedId: friend.id
+        } : {
+          recipientNumeroH: autreNumeroH,
+          type: 'friend_precieux',
+          title: '💎 Précieux',
+          message: `${nom} t'a choisi(e) comme ami(e) précieux(se).`,
+          relatedId: friend.id
+        });
+      } catch (e) { console.error('Notif friend_precieux:', e.message); }
+    }
+
+    res.json({ success: true, precieuxParMoi: apres.parMoi, precieuxParLui: apres.parLui, precieux: apres.mutuel });
+  } catch (error) {
+    console.error('Erreur /friends/precieux:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/friends/souvenirs?linkId= — galerie des deux amis précieux
+router.get('/souvenirs', async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const friend = await Friend.findByPk(req.query.linkId);
+    if (!estDansLAmitie(friend, req.user.numeroH) || !(await estAmitiePrecieuse(friend))) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const souvenirs = await sequelize.query(
+      `SELECT id, numero_h AS "numeroH", media_type AS "mediaType", media_url AS "mediaUrl", caption, created_at AS "createdAt"
+       FROM friend_souvenirs WHERE link_id = :linkId ORDER BY created_at DESC`,
+      { replacements: { linkId: friend.id }, type: 'SELECT' }
+    );
+    res.json({ success: true, souvenirs });
+  } catch (error) {
+    console.error('Erreur /friends/souvenirs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/friends/souvenirs — ajouter une photo / vidéo
+router.post('/souvenirs', uploadFriendMedia.single('media'), async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const friend = await Friend.findByPk(req.body.linkId);
+    if (!estDansLAmitie(friend, req.user.numeroH) || !(await estAmitiePrecieuse(friend))) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
+    const mime = req.file.mimetype || '';
+    if (!mime.startsWith('image/') && !mime.startsWith('video/')) {
+      return res.status(400).json({ success: false, message: 'Photo ou vidéo uniquement.' });
+    }
+    const mediaType = mime.startsWith('video/') ? 'video' : 'image';
+    const mediaUrl = mediaType === 'image'
+      ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'friend-souvenirs')
+      : await uploadToR2(req.file.buffer, req.file.originalname, mime, 'friend-souvenirs');
+    if (!mediaUrl) return res.status(500).json({ success: false, message: 'Envoi du fichier impossible.' });
+    uploadToIDrive(req.file.buffer, req.file.originalname, mime, 'friend-souvenirs').catch(() => {});
+
+    const [souvenir] = await sequelize.query(
+      `INSERT INTO friend_souvenirs (link_id, numero_h, media_type, media_url, caption)
+       VALUES (:linkId, :numeroH, :mediaType, :mediaUrl, :caption)
+       RETURNING id, numero_h AS "numeroH", media_type AS "mediaType", media_url AS "mediaUrl", caption, created_at AS "createdAt"`,
+      {
+        replacements: {
+          linkId: friend.id,
+          numeroH: req.user.numeroH,
+          mediaType,
+          mediaUrl,
+          caption: String(req.body.caption || '').trim().slice(0, 300) || null
+        },
+        type: 'SELECT'
+      }
+    );
+    res.status(201).json({ success: true, souvenir });
+  } catch (error) {
+    console.error('Erreur ajout souvenir:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/friends/souvenirs/:id — chacun ne retire que ses propres souvenirs
+router.delete('/souvenirs/:id', async (req, res) => {
+  try {
+    await ensureFriendSouvenirsTable();
+    const supprimes = await sequelize.query(
+      `DELETE FROM friend_souvenirs WHERE id = :id AND numero_h = :numeroH RETURNING id`,
+      { replacements: { id: req.params.id, numeroH: req.user.numeroH }, type: 'SELECT' }
+    );
+    if (!supprimes.length) return res.status(404).json({ success: false, message: 'Souvenir introuvable.' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.get('/:numeroH', async (req, res) => {
   try {
     // Seul l'intéressé (ou l'admin) peut lire sa liste d'amis
@@ -970,6 +1155,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
     await friend.destroy();
+    await sequelize.query('DELETE FROM friend_souvenirs WHERE link_id = :id', { replacements: { id: friend.id } }).catch(() => {});
     res.json({ success: true, message: 'Ami supprimé' });
   } catch (error) {
     console.error('Erreur lors de la suppression de l\'ami:', error);

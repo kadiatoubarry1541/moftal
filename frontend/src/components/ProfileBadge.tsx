@@ -15,6 +15,8 @@ interface Props {
   vitrinePhoto2?: string | null;
   vitrineVideo?: string | null;
   className?: string;
+  // Si fourni, le clic ouvre la fiche de la page (une seule fiche de profil)
+  onOpen?: () => void;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * Rien n'est affiché si la personne n'a rien mis dans sa vitrine.
  */
 export default function ProfileBadge({
-  numeroH, prenom, nomFamille, activite1, vitrinePhoto1, vitrinePhoto2, vitrineVideo, className = ''
+  numeroH, prenom, nomFamille, activite1, vitrinePhoto1, vitrinePhoto2, vitrineVideo, className = '', onOpen
 }: Props) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -39,7 +41,7 @@ export default function ProfileBadge({
     <>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => { e.stopPropagation(); if (onOpen) onOpen(); else setOpen(true); }}
         title={t('profile_badge.title')}
         aria-label={t('profile_badge.title')}
         className={`relative inline-flex items-center justify-center w-6 h-6 !min-h-0 !min-w-0 p-0 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm hover:brightness-110 flex-shrink-0 transition ${className}`}

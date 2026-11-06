@@ -25,6 +25,7 @@ const TYPE_ICONS: Record<string, string> = {
   account_rejected: "🚫",
   new_appointment: "📅",
   friend_request: "👥",
+  friend_precieux: "💎",
   couple_request: "💑",
   tree_request: "🌳",
   parent_request: "👨‍👩‍👧",
@@ -42,6 +43,7 @@ function getNavigationPath(type: string): string | null {
     case "account_approved":
     case "account_rejected": return "/mes-comptes-pro";
     case "friend_request": return "/famille/mes-amours?tab=requests";
+    case "friend_precieux": return "/famille/mes-amours";
     case "couple_request": return "/couple";
     case "tree_request":
     case "parent_request": return "/famille/parents";

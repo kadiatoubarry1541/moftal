@@ -601,6 +601,28 @@ async function initAllTables() {
         `CREATE INDEX IF NOT EXISTS idx_fr_friend ON "friends" ("friend_numero_h");`,
         `CREATE INDEX IF NOT EXISTS idx_fr_status ON "friends" ("status");`
       ],
+      // 💎 Précieux : activé par chacun des deux amis
+      alters: [
+        `ALTER TABLE "friends" ADD COLUMN IF NOT EXISTS "precieux_user" BOOLEAN DEFAULT false;`,
+        `ALTER TABLE "friends" ADD COLUMN IF NOT EXISTS "precieux_friend" BOOLEAN DEFAULT false;`
+      ]
+    },
+    {
+      // Galerie souvenirs : n'appartient qu'aux deux amis précieux
+      name: 'friend_souvenirs',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "friend_souvenirs" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "link_id"     UUID         NOT NULL,
+          "numero_h"    VARCHAR(255) NOT NULL,
+          "media_type"  VARCHAR(20)  NOT NULL DEFAULT 'image',
+          "media_url"   TEXT         NOT NULL,
+          "caption"     TEXT,
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_fs_link ON "friend_souvenirs" ("link_id");`
+      ],
       alters: []
     },
     {
@@ -2644,6 +2666,30 @@ async function initAllTables() {
     if (colonnes.length) console.log(`✅ tenant_code élargi à 50 caractères : ${colonnes.length} table(s)`);
   } catch (err) {
     console.warn('⚠️ initAllTables [tenant_code]:', err.message);
+  }
+
+  // ── Amitié : d'où vient chaque lien. Les conversations ouvertes depuis la
+  //    messagerie créaient un lien « ami » sans demande d'amitié : à l'ajout de
+  //    la colonne, ceux sans demande acceptée sont marqués « messagerie ». ────
+  try {
+    const [colonne] = await sequelize.query(
+      `SELECT 1 FROM information_schema.columns WHERE table_name = 'friends' AND column_name = 'origine'`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    if (!colonne) {
+      await sequelize.query(`ALTER TABLE "friends" ADD COLUMN "origine" VARCHAR(20) DEFAULT 'invitation'`);
+      await sequelize.query(`
+        UPDATE "friends" f SET "origine" = 'messagerie'
+        WHERE NOT EXISTS (
+          SELECT 1 FROM "friend_requests" r
+          WHERE r.status = 'accepted'
+            AND ((r.from_user = f.user_numero_h AND r.to_user = f.friend_numero_h)
+              OR (r.from_user = f.friend_numero_h AND r.to_user = f.user_numero_h))
+        )`);
+      console.log('✅ friends.origine ajoutée');
+    }
+  } catch (err) {
+    console.warn('⚠️ initAllTables [friends.origine]:', err.message);
   }
 
   // ── Gestion interne : compléter les infos vides (email, téléphone, logo…) avec
