@@ -3,7 +3,7 @@
  *
  *  - Vidéo : 1 minute au maximum, partout (galerie, Terre d'Adam…).
  *  - Audio : 5 secondes au maximum, partout.
- *  - Certains endroits sont plus stricts : santé (Solutions) 10 s,
+ *  - Certains endroits sont plus stricts : santé (Caisse) 10 s,
  *    vente 5 s, vidéo d'un défunt 10 s.
  *
  * Pour un champ fichier plus strict, on ajoute simplement sur l'<input> :

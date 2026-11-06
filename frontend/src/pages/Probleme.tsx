@@ -180,7 +180,7 @@ export default function Probleme() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-24 w-24 border-b-2 border-red-600 mx-auto" />
           <p className="mt-4 text-gray-600">
-            Chargement de vos solutions familiales...
+            Chargement de la caisse familiale...
           </p>
         </div>
       </div>
@@ -194,7 +194,7 @@ export default function Probleme() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-start gap-3 py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">💰 Solutions</h1>
+              <h1 className="text-2xl font-bold text-gray-900">💰 Caisse</h1>
               <p className="mt-1 text-sm text-gray-600">Aider ensemble un membre de la famille malade.</p>
             </div>
             <button
