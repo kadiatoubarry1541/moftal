@@ -110,7 +110,7 @@ const SITE_KNOWLEDGE = [
       'généalogie', 'construire arbre', 'creer arbre', 'voir arbre', 'afficher arbre',
       'visualiser famille', 'foyer', 'mairie', 'galerie famille', 'messages famille'
     ],
-    response: `**Héritage** 🌳\n\nEn ouvrant "Héritage" depuis la page Famille, vous arrivez directement sur **Messages**, et 6 boutons sont disponibles sur une seule ligne :\n\n💬 **Messages** — messagerie familiale (ouvert par défaut)\n🏠 **Foyer** — informations sur votre foyer\n🚨 **Problèmes** — signaler un problème\n📷 **Galerie** — photos partagées de la famille\n🌳 **Arbre** — votre arbre généalogique (numéro de sang, chefs de lignée, membres)\n🏛️ **Mairie** — professionnels de mairie près de chez vous\n\n**Activation de l'arbre :**\n💰 100 000 GNF pour 5 ans (options : 5/10/15/20 ans)\n\n**Compte Famille automatique** dès 5 membres dans l'arbre, avec un **Numéro Sang** unique (ex : F2S1).`,
+    response: `**Héritage** 🌳\n\nEn ouvrant "Héritage" depuis la page Famille, vous arrivez directement sur **Messages**, et 6 boutons sont disponibles sur une seule ligne :\n\n💬 **Messages** — messagerie familiale (ouvert par défaut)\n🏠 **Foyer** — informations sur votre foyer\n💰 **Caisse** — l'argent de la famille pour aider un membre malade\n📷 **Galerie** — photos partagées de la famille\n🌳 **Arbre** — votre arbre généalogique (numéro de sang, chefs de lignée, membres)\n🏛️ **Mairie** — professionnels de mairie près de chez vous\n\n**Activation de l'arbre :**\n💰 100 000 GNF pour 5 ans (options : 5/10/15/20 ans)\n\n**Compte Famille automatique** dès 5 membres dans l'arbre, avec un **Numéro Sang** unique (ex : F2S1).`,
     links: [{ label: 'Ma Famille', path: '/famille' }]
   },
 

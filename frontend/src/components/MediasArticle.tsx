@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { AudioRecorder } from "./AudioRecorder";
-import { DUREE_MAX_VIDEO_VENTE } from "../utils/dureesMedias";
+import { DUREE_MAX_VIDEO_VENTE, DUREE_MAX_AUDIO } from "../utils/dureesMedias";
 import { useTraduction } from "../i18n/traduction";
 
 /**
@@ -23,7 +23,7 @@ const dureeVideo = (f: File) => new Promise<number>((resolve) => {
   v.src = URL.createObjectURL(f);
 });
 
-// Vente : vidéo 5 s, audio 30 s
+// Vente : vidéo 5 s, audio 5 s (comme partout)
 const DUREE_MAX_VIDEO = DUREE_MAX_VIDEO_VENTE;
 
 export default function MediasArticle({ tenantCode, articleId, videoUrl, audioUrl, couleur, taille = 72 }: {
@@ -101,7 +101,7 @@ export default function MediasArticle({ tenantCode, articleId, videoUrl, audioUr
         )}
       </div>
       {enregistrer && !vocal && (
-        <AudioRecorder maxDuration={30} onAudioRecorded={(blob) => { setEnregistrer(false); void envoyer("vocal", blob); }} />
+        <AudioRecorder maxDuration={DUREE_MAX_AUDIO} onAudioRecorded={(blob) => { setEnregistrer(false); void envoyer("vocal", blob); }} />
       )}
     </div>
   );

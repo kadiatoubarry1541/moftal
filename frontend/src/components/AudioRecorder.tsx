@@ -22,7 +22,7 @@ interface AudioRecorderProps {
 }
 
 export function AudioRecorder({ onAudioRecorded, maxDuration: maxDemande = 10, compact = false, autoStart = false }: AudioRecorderProps) {
-  // Un audio ne dépasse jamais 30 secondes, où qu'il soit enregistré
+  // Un audio ne dépasse jamais 5 secondes, où qu'il soit enregistré
   const maxDuration = Math.min(maxDemande, DUREE_MAX_AUDIO);
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);

@@ -882,7 +882,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               className="view-btn no-touch-target"
               onClick={() => navigate('/probleme')}
             >
-              💰 Solutions
+              💰 Caisse
             </button>
           </div>
         </div>

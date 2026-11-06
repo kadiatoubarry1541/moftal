@@ -41,7 +41,7 @@ const dureeVideoFichier = (f: File) =>
 
 export default function ChampPublication({
   medias, onMedias, nom, onNom, prix, onPrix, devise,
-  maxImages = 8, dureeVideo = 30, dureeVocal = 30, desactive, erreurs = {},
+  maxImages = 8, dureeVideo = 30, dureeVocal = 5, desactive, erreurs = {},
 }: Props) {
   const { tr } = useTraduction();
   const fichierRef = useRef<HTMLInputElement>(null);

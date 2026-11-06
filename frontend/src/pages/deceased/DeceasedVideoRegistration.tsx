@@ -448,7 +448,7 @@ export function DeceasedVideoRegistration() {
         <div className="card">
           <VideoRecorder
             onVideoRecorded={handleVideoRecorded}
-            maxDuration={30}
+            maxDuration={10}
           />
 
           {deceasedData.video && !loading && (

@@ -7,7 +7,7 @@ interface MediaUploaderProps {
 }
 
 const MAX_DURATION = 60 // vidéo : 1 minute
-const MAX_DURATION_AUDIO = DUREE_MAX_AUDIO // audio : 30 secondes
+const MAX_DURATION_AUDIO = DUREE_MAX_AUDIO // audio : 5 secondes
 
 export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'audio'>('photo')
@@ -371,7 +371,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
                   <div className="inline-flex items-center gap-3 bg-red-50 border-2 border-red-200 rounded-lg px-6 py-4 mb-4">
                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                     <span className="text-red-700 font-semibold">
-                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION_AUDIO}s (30 s max)
+                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION_AUDIO}s ({MAX_DURATION_AUDIO} s max)
                     </span>
                   </div>
                   <div>
