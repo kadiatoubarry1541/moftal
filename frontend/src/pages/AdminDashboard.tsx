@@ -18,6 +18,7 @@ import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderPr
 import type { UserData } from "../utils/auth";
 import type { ResponsablePage } from "../utils/adminApi";
 import AdminResponsables from "../components/AdminResponsables";
+import AdminActivitesBloquees from "../components/AdminActivitesBloquees";
 
 interface ProfessionalAccount {
   id: string;
@@ -715,6 +716,7 @@ export default function AdminDashboard() {
       { id: "gestion-interne",   label: "Gestion Interne",  icon: "🔧" },
       { id: "sector-admins",     label: "Admins secteurs",  icon: "🏛️" },
       { id: "responsables",      label: "Chefs & maires",   icon: "👑" },
+      { id: "activites-bloquees", label: "Bloquer activité", icon: "🚫" },
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
       { id: "echecs-synchro",    label: "Échecs hors ligne", icon: "⚠️" },
     ] : []),
@@ -2294,6 +2296,7 @@ export default function AdminDashboard() {
 
           {/* ========== CHEFS DE QUARTIER, MAIRES… À VALIDER ========== */}
           {adminSection === "responsables" && <AdminResponsables />}
+          {adminSection === "activites-bloquees" && <AdminActivitesBloquees />}
 
           {/* ========== ADMINS DE SECTEURS (super-admin uniquement) ========== */}
           {adminSection === "sector-admins" && (
