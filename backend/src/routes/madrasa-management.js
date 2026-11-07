@@ -37,6 +37,10 @@ const router = attraperErreursAsync(express.Router());
 // Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
 const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
 const verifyMember = avecAccesEmployes(verifyMemberProprietaire);
+// Listes complètes de l'institut (élèves, personnel, halaqas, présences, notes,
+// frais, bulletins) : réservées au directeur et à son personnel (verifyTenant),
+// comme pour l'école. Un parent ou un apprenant ne voit que ce qui le concerne,
+// par /my-access (avant, tout membre pouvait lire les fiches de tout l'institut).
 
 // Année scolaire en cours (elle commence en septembre) : « 2026-2027 », etc.
 function anneeScolaireCourante() {
@@ -256,7 +260,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 });
 
 // ── Étudiants ──────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/students', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const search = req.query.search || '';
   const [students] = await sequelize.query(
@@ -311,7 +315,7 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 });
 
 // ── Personnel enseignant ───────────────────────────────────────────────────────
-router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
     await preparerColonnesSite('madrasa_staff');
     // Le personnel est aussi la liste des employés : chacun avec son accès à la gestion
@@ -383,7 +387,7 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 });
 
 // ── Halaqas (classes) ─────────────────────────────────────────────────────────
-router.get('/:tenantCode/halaqas', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res) => {
   const [halaqas] = await sequelize.query(
     `SELECT h.*, COUNT(s.id) AS student_count
      FROM madrasa_halaqas h
@@ -442,7 +446,7 @@ router.delete('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req
 });
 
 // ── Présences ─────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const date = req.query.date || new Date().toISOString().slice(0, 10);
   const [attendance] = await sequelize.query(
@@ -473,7 +477,7 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
 });
 
 // ── Notes / Progression ───────────────────────────────────────────────────────
-router.get('/:tenantCode/grades', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const [grades] = await sequelize.query(
     `SELECT g.*, s.prenom AS student_prenom, s.nom AS student_nom
@@ -518,7 +522,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 });
 
 // ── Frais ─────────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/fees', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const [fees] = await sequelize.query(
     `SELECT f.*, s.prenom AS student_prenom, s.nom AS student_nom, s.telephone_parent
@@ -699,7 +703,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 });
 
 // ── Bulletins de progression ───────────────────────────────────────────────────
-router.get('/:tenantCode/bulletins', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const periode = req.query.periode;
   const [bulletins] = await sequelize.query(
