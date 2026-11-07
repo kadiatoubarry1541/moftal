@@ -11,6 +11,8 @@ import AjouterEnfantModal from './AjouterEnfantModal'
 import ChampPersonne from './ChampPersonne'
 import type { UserData } from '../utils/auth'
 import type { ArbreConjoint, DefuntServeur, LienParent, PersonneLiee } from '../types/arbre'
+import Pastille from './Pastille'
+import { useNouveautes } from '../utils/nouveautes'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -44,6 +46,8 @@ interface ArbreGenealogiqueProps {
 }
 
 export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery, filtres, onSignalerDeces }: ArbreGenealogiqueProps) {
+  // Pastille sur « Galerie » : photos et vidéos ajoutées par la famille depuis la dernière visite
+  const nouveautes = useNouveautes()
   const { t } = useI18n()
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
@@ -874,9 +878,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             </button>
             {onOpenGallery && (
               <button
-                className="view-btn no-touch-target"
+                className="view-btn no-touch-target relative"
                 onClick={onOpenGallery}
               >
+                <Pastille className="absolute -top-3 -right-2.5" n={nouveautes.galerie} />
                 📷 Galerie
               </button>
             )}

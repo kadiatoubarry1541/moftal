@@ -13,6 +13,7 @@ import PhotoProfil from '../components/PhotoProfil';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 import { useI18n } from '../i18n/useI18n';
 import { PAGE_MAJ_PROFIL } from '../utils/profilPage';
+import { useMarquerVu } from '../utils/nouveautes';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -85,6 +86,7 @@ function lieuReel(v: unknown): string | null {
 
 export default function TerreAdam() {
   const { t } = useI18n();
+  useMarquerVu('terreAdam');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'lieux' | 'sous-prefecture' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
