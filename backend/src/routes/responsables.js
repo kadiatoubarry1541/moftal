@@ -5,6 +5,7 @@ import QuartierFund from '../models/QuartierFund.js';
 import DevPublisher from '../models/DevPublisher.js';
 import User from '../models/User.js';
 import { normaliserLieu } from '../utils/responsablesQuartier.js';
+import { premiereActiviteBloquee, messageActiviteBloquee, preparerTableActivitesBloquees } from '../utils/activitesBloquees.js';
 
 /**
  * Responsables d'une localité : chef de quartier, maire, sous-préfet, préfet,
@@ -25,10 +26,12 @@ router.use(authenticate);
 /** Rôle → activité du profil qui y donne droit, et niveau de la localité. */
 export const ROLES_RESPONSABLE = {
   chef_quartier: { libelle: 'Chef de quartier', activites: ['Chef de quartier', 'Chef de secteur', 'Chef de village', 'Chef de district'], scope: 'quartier' },
-  maire: { libelle: 'Maire', activites: ['Maire'], scope: 'sous-prefecture' },
+  maire: { libelle: 'Maire', activites: ['Maire', 'Adjoint au maire', 'Président de CRD'], scope: 'sous-prefecture' },
   sous_prefet: { libelle: 'Sous-préfet', activites: ['Sous-préfet'], scope: 'sous-prefecture' },
-  prefet: { libelle: 'Préfet', activites: ['Préfet'], scope: 'prefecture' },
+  prefet: { libelle: 'Préfet', activites: ['Préfet', 'Secrétaire général de préfecture'], scope: 'prefecture' },
   gouverneur: { libelle: 'Gouverneur', activites: ['Gouverneur'], scope: 'region' },
+  ministre: { libelle: 'Ministre', activites: ['Premier ministre', 'Ministre'], scope: 'pays' },
+  president: { libelle: 'Président de la République', activites: ['Président de la République', 'Vice-président'], scope: 'pays' },
 };
 
 const activitesDe = (u) => [u.activite1, u.activite2, u.activite3].filter(Boolean).map(String);
@@ -82,6 +85,8 @@ router.post('/demande', async (req, res) => {
     if (!def.activites.some((a) => activitesDe(req.user).includes(a))) {
       return res.status(403).json({ success: false, message: `Choisissez d'abord « ${def.libelle} » dans les activités de votre profil.` });
     }
+    const bloquee = await premiereActiviteBloquee(req.user.numeroH, def.activites.filter((a) => activitesDe(req.user).includes(a)));
+    if (bloquee) return res.status(403).json({ success: false, message: messageActiviteBloquee(bloquee) });
     const loc = String(location || '').trim();
     if (!loc) return res.status(400).json({ success: false, message: 'Lieu manquant : complétez votre lieu de résidence.' });
 
@@ -215,6 +220,110 @@ router.post('/admin/:id/refuser', requireAdmin, async (req, res) => {
     res.json({ success: true, message: 'Demande refusée.' });
   } catch (e) {
     console.error('responsables/refuser:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// ── Bloquer l'activité d'une personne (faux président, faux maire…) ─────────
+
+// GET /api/responsables/admin/personne/:numeroH — ses activités et ce qui est bloqué
+router.get('/admin/personne/:numeroH', requireAdmin, async (req, res) => {
+  try {
+    await preparerTableActivitesBloquees();
+    const u = await User.findOne({ where: { numeroH: req.params.numeroH.trim() }, attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'activite2', 'activite3'] });
+    if (!u) return res.status(404).json({ success: false, message: 'Aucun compte avec ce NuméroH.' });
+    const bloquees = await sequelize.query(
+      `SELECT activite, raison, created_at AS "createdAt" FROM activites_bloquees WHERE numero_h = :nh ORDER BY created_at DESC`,
+      { replacements: { nh: u.numeroH }, type: Q().SELECT }
+    );
+    res.json({ success: true, personne: { numeroH: u.numeroH, nom: `${u.prenom || ''} ${u.nomFamille || ''}`.trim(), photo: u.photo, activites: activitesDe(u) }, bloquees });
+  } catch (e) {
+    console.error('responsables/personne:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// GET /api/responsables/admin/bloquees — toutes les activités bloquées
+router.get('/admin/bloquees', requireAdmin, async (req, res) => {
+  try {
+    await preparerTableActivitesBloquees();
+    const bloquees = await sequelize.query(
+      `SELECT b.numero_h AS "numeroH", b.activite, b.raison, b.created_at AS "createdAt",
+              TRIM(COALESCE(u.prenom, '') || ' ' || COALESCE(u.nom_famille, '')) AS nom, u.photo
+         FROM activites_bloquees b LEFT JOIN users u ON u.numero_h = b.numero_h
+        ORDER BY b.created_at DESC LIMIT 300`,
+      { type: Q().SELECT }
+    );
+    res.json({ success: true, bloquees });
+  } catch (e) {
+    console.error('responsables/bloquees:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/responsables/admin/bloquer { numeroH, activite, raison }
+// L'activité est retirée du profil, ne peut plus être choisie, et les droits
+// qu'elle donnait (publier, responsable du quartier) sont retirés.
+router.post('/admin/bloquer', requireAdmin, async (req, res) => {
+  try {
+    await Promise.all([preparerTable(), preparerTableActivitesBloquees()]);
+    const numeroH = String(req.body?.numeroH || '').trim();
+    const activite = String(req.body?.activite || '').trim();
+    if (!numeroH || !activite) return res.status(400).json({ success: false, message: 'NuméroH et activité requis.' });
+    const raison = String(req.body?.raison || '').slice(0, 500) || null;
+    await sequelize.transaction(async (transaction) => {
+      const u = await User.findOne({ where: { numeroH }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!u) throw Object.assign(new Error('Aucun compte avec ce NuméroH.'), { statut: 404 });
+      await sequelize.query(
+        `INSERT INTO activites_bloquees (numero_h, activite, raison, bloque_par) VALUES (:nh, :a, :r, :par)
+         ON CONFLICT (numero_h, activite) DO UPDATE SET raison = EXCLUDED.raison, bloque_par = EXCLUDED.bloque_par, created_at = NOW()`,
+        { replacements: { nh: numeroH, a: activite, r: raison, par: req.user.numeroH }, transaction }
+      );
+      // 1. Retirée du profil
+      const maj = {};
+      for (const c of ['activite1', 'activite2', 'activite3']) {
+        if (u[c] && u[c].trim().toLowerCase() === activite.toLowerCase()) maj[c] = null;
+      }
+      if (Object.keys(maj).length) await u.update(maj, { transaction });
+      // 2. Les droits que donnait cette activité
+      for (const [role, def] of Object.entries(ROLES_RESPONSABLE)) {
+        if (!def.activites.some((a) => a.toLowerCase() === activite.toLowerCase())) continue;
+        await sequelize.query(
+          `UPDATE demandes_responsable SET statut = 'refuse', motif_refus = 'Activité bloquée par l''administrateur', decide_par = :par, decide_le = NOW()
+            WHERE numero_h = :nh AND role = :role AND statut IN ('en_attente', 'approuve')`,
+          { replacements: { nh: numeroH, role, par: req.user.numeroH }, transaction }
+        );
+        await DevPublisher.destroy({ where: { numeroH, role: def.libelle }, transaction });
+        if (role === 'chef_quartier') {
+          for (const i of [1, 2, 3]) {
+            await sequelize.query(
+              `UPDATE quartier_funds SET chef${i}_numero_h = NULL, chef${i}_nom = NULL, chef${i}_photo = NULL WHERE chef${i}_numero_h = :nh`,
+              { replacements: { nh: numeroH }, transaction }
+            );
+          }
+        }
+      }
+    });
+    res.json({ success: true, message: `Activité « ${activite} » bloquée pour ${numeroH}.` });
+  } catch (e) {
+    if (e.statut) return res.status(e.statut).json({ success: false, message: e.message });
+    console.error('responsables/bloquer:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/responsables/admin/debloquer { numeroH, activite }
+router.post('/admin/debloquer', requireAdmin, async (req, res) => {
+  try {
+    await preparerTableActivitesBloquees();
+    const [r] = await sequelize.query(
+      `DELETE FROM activites_bloquees WHERE numero_h = :nh AND LOWER(activite) = LOWER(:a) RETURNING numero_h`,
+      { replacements: { nh: String(req.body?.numeroH || '').trim(), a: String(req.body?.activite || '').trim() }, type: Q().SELECT }
+    );
+    if (!r) return res.status(404).json({ success: false, message: 'Rien à débloquer.' });
+    res.json({ success: true, message: 'Activité débloquée : la personne peut la choisir à nouveau.' });
+  } catch (e) {
+    console.error('responsables/debloquer:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });

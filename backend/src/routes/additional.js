@@ -14,6 +14,7 @@ import {
   HealthProduct,
   DocumentPermission
 } from '../models/index.js';
+import { premiereActiviteBloquee, messageActiviteBloquee } from '../utils/activitesBloquees.js';
 
 const router = express.Router();
 
@@ -341,7 +342,11 @@ router.post('/user/update-info', authenticateToken, async (req, res) => {
 
     const { location, occupation, birthDate, maritalStatus, languages } = req.body;
     if (location !== undefined) user.lieu1 = location;
-    if (occupation !== undefined) user.activite1 = occupation;
+    if (occupation !== undefined) {
+      const bloquee = await premiereActiviteBloquee(user.numeroH, [occupation]);
+      if (bloquee) return res.status(403).json({ success: false, message: messageActiviteBloquee(bloquee) });
+      user.activite1 = occupation;
+    }
     if (birthDate !== undefined) user.dateNaissance = birthDate;
     if (maritalStatus !== undefined) user.statutSocial = maritalStatus;
     if (languages !== undefined) user.langues = Array.isArray(languages) ? languages : [];

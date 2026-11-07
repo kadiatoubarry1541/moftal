@@ -12,17 +12,33 @@ export const ACTIVITES_PROFIL: { groupe: string; activites: string[] }[] = [
     "Professeur/Formateur", "Directeur/Directrice d'école", "Maître coranique",
     "Chercheur/Scientifique",
   ] },
-  { groupe: "Autorités & Administration", activites: [
+  // Titres officiels : l'administrateur peut bloquer une activité choisie à tort
+  // (écran admin « Chefs & maires »). Les valeurs déjà enregistrées restent.
+  { groupe: "État & Gouvernement", activites: [
+    "Président de la République", "Vice-président", "Premier ministre", "Ministre",
+    "Président de l'Assemblée nationale", "Député", "Sénateur",
+    "Secrétaire général de ministère", "Chef de cabinet", "Conseiller à la présidence",
+    "Conseiller de ministre", "Directeur national", "Diplomate/Ambassadeur", "Consul",
+    "Magistrat/Juge", "Procureur",
+  ] },
+  { groupe: "Autorités locales", activites: [
+    "Gouverneur", "Préfet", "Secrétaire général de préfecture", "Sous-préfet",
+    "Maire", "Adjoint au maire", "Président de CRD", "Conseiller régional", "Conseiller communal",
+    "Directeur régional", "Directeur préfectoral", "Chef de canton",
     "Chef de quartier", "Chef de secteur", "Chef de village", "Chef de district",
-    "Sous-préfet", "Préfet", "Gouverneur", "Maire", "Conseiller communal",
-    "Député", "Ministre", "Président", "Diplomate/Ambassadeur", "Magistrat/Juge",
-    "Administration", "Secrétaire",
+  ] },
+  { groupe: "Notables & Communauté", activites: [
+    "Chef coutumier", "Sage/Notable", "Doyen du quartier", "Président des jeunes",
+    "Présidente des femmes", "Responsable d'association", "Responsable d'ONG",
+  ] },
+  { groupe: "Administration", activites: [
+    "Président", "Administration", "Fonctionnaire", "Agent municipal", "Inspecteur", "Secrétaire",
   ] },
   { groupe: "Religion", activites: [
     "Imam/Prédicateur", "Muezzin", "Prêtre/Pasteur", "Chef religieux",
   ] },
   { groupe: "Défense & Sécurité", activites: [
-    "Militaire", "Gendarme", "Policier/Policière", "Douanier", "Pompier", "Sécurité",
+    "Militaire", "Officier (armée)", "Général", "Gendarme", "Commissaire de police", "Policier/Policière", "Douanier", "Pompier", "Sécurité",
   ] },
   { groupe: "Droit, Finance & Gestion", activites: [
     "Avocat/Juriste", "Comptable/Auditeur", "Économiste", "Banque/Finance", "Assurance",

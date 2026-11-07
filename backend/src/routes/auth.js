@@ -20,6 +20,7 @@ import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNu
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion, empreinteCodePremiereConnexion, donnerCodePremiereConnexion } from '../services/comptesProvisoires.js';
+import { premiereActiviteBloquee, messageActiviteBloquee } from '../utils/activitesBloquees.js';
 
 const router = Router();
 
@@ -1297,6 +1298,12 @@ router.put('/profile', authenticate, async (req, res) => {
       if (titulaire && titulaire !== user.numeroH) {
         return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà associé à un autre compte.' });
       }
+    }
+
+    // Activité bloquée par l'administrateur (ex. faux « Président ») : refusée
+    if (['activite1', 'activite2', 'activite3'].some((c) => c in updates)) {
+      const bloquee = await premiereActiviteBloquee(user.numeroH, [updates.activite1, updates.activite2, updates.activite3]);
+      if (bloquee) return res.status(403).json({ success: false, message: messageActiviteBloquee(bloquee) });
     }
 
     await user.update(updates);
