@@ -20,6 +20,9 @@ interface Residence1Group {
   description: string;
   location: string;
   members: UserData[];
+  /** Envoyés par le serveur : la liste n'est donnée qu'aux responsables du quartier */
+  membersCount?: number;
+  estMembre?: boolean;
   posts: Residence1Post[];
   isActive: boolean;
   createdBy: string;
@@ -310,7 +313,7 @@ export default function LieuResidence1() {
           </div>
           <div className="bg-green-50 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-green-600 mb-1">
-              {groups.reduce((total, g) => total + g.members.length, 0)}
+              {groups.reduce((total, g) => total + (g.membersCount ?? g.members.length), 0)}
             </div>
             <div className="text-sm text-green-800">Résidents</div>
           </div>
@@ -570,7 +573,7 @@ export default function LieuResidence1() {
                   <p className="text-sm text-gray-600">{group.location}</p>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {group.members.length} membres
+                  {group.membersCount ?? group.members.length} membres
                 </div>
               </div>
               
@@ -598,7 +601,7 @@ export default function LieuResidence1() {
                 >
                   💬 Discussions
                 </button>
-                {!group.members.find(m => m.numeroH === userData?.numeroH) && (
+                {!(group.estMembre ?? group.members.some(m => m.numeroH === userData?.numeroH)) && (
                   <button
                     onClick={() => joinGroup(group.id)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm"

@@ -22,6 +22,10 @@ export interface ResidenceGroupInfo {
   logoUrl?: string | null
   location?: string
   members?: ResidenceMember[]
+  /** Nombre de membres (envoyé même sans la liste) */
+  membersCount?: number
+  /** Responsable du quartier : lui seul reçoit et voit la liste des membres */
+  estResponsable?: boolean
 }
 
 interface ResidenceMessage {
@@ -87,6 +91,8 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
   const [feedFilter, setFeedFilter] = useState<string>('all')
   const [showCategoryGrid, setShowCategoryGrid] = useState(false)
   const [showMembersList, setShowMembersList] = useState(false)
+  // Nombre de membres : envoyé même quand la liste est réservée aux responsables
+  const nb = selectedGroup.membersCount ?? selectedGroup.members?.length ?? 0
   const [newMessage, setNewMessage] = useState({
     content: '',
     messageType: 'text' as 'text' | 'image' | 'video' | 'audio',
@@ -239,7 +245,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
         <div className="px-4 py-[4px] flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setShowMembersList(true)}
+            onClick={() => { if (selectedGroup.estResponsable) setShowMembersList(true) }}
             className="relative w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden cursor-pointer"
           >
             {logoSrc ? <img src={logoSrc} alt="" className="w-full h-full object-cover" /> : (selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()}
@@ -247,7 +253,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-sm truncate">{selectedGroup.title || selectedGroup.name}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
+              {nb} membre{nb > 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -465,13 +471,13 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
       </div>
 
       {/* Modal — Liste des membres */}
-      {showMembersList && (
+      {showMembersList && selectedGroup.estResponsable && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowMembersList(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-white font-bold text-base">{t('terre_adam.group_members')}</h2>
-                <p className="text-emerald-200 text-xs mt-0.5">{selectedGroup.members?.length ?? 0} personne{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}</p>
+                <p className="text-emerald-200 text-xs mt-0.5">{nb} personne{nb > 1 ? 's' : ''}</p>
               </div>
               <button onClick={() => setShowMembersList(false)} className="text-white text-2xl font-bold leading-none">×</button>
             </div>

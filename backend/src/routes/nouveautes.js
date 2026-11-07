@@ -1,12 +1,13 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { liensDe } from '../utils/liens.js';
 
 /**
  * Pastilles « nouveautés » : ce que les AUTRES ont publié dans une rubrique
  * depuis la dernière visite de la personne.
  *
- *   GET  /api/nouveautes          → { terreAdam, recit, galerie }  (chaque nombre plafonné à 11 :
+ *   GET  /api/nouveautes          → { terreAdam, recit, galerie, amitie }  (chaque nombre plafonné à 11 :
  *                                    l'écran affiche « 10+ » au-delà de 10)
  *   POST /api/nouveautes/vu       { rubrique } → la rubrique est vue maintenant
  *
@@ -17,7 +18,7 @@ import { authenticate } from '../middleware/auth.js';
 const router = express.Router();
 router.use(authenticate);
 
-export const RUBRIQUES = ['terreAdam', 'recit', 'galerie'];
+export const RUBRIQUES = ['terreAdam', 'recit', 'galerie', 'amitie'];
 const PLAFOND = 11;
 const Q = sequelize.QueryTypes;
 
@@ -64,7 +65,18 @@ router.get('/', async (req, res) => {
     )).map((r) => [r.rubrique, r.vu_le]));
 
     const quartiers = quartiersDe(u);
-    const [terreAdam, recit, galerie] = await Promise.all([
+    // Amitié : amis acceptés + famille + voisins (les mêmes que le fil d'Amitié)
+    const [amis, liens] = await Promise.all([
+      sequelize.query(
+        `SELECT CASE WHEN user_numero_h = :nh THEN friend_numero_h ELSE user_numero_h END AS autre
+           FROM friends WHERE status = 'accepted' AND (user_numero_h = :nh OR friend_numero_h = :nh)`,
+        { replacements: { nh }, type: Q.SELECT }
+      ).catch(() => []),
+      liensDe(u).catch(() => ({ famille: new Set(), voisin: new Set() })),
+    ]);
+    const proches = [...new Set([...amis.map((a) => a.autre), ...liens.famille, ...liens.voisin])].filter((x) => x && x !== nh);
+
+    const [terreAdam, recit, galerie, amitie] = await Promise.all([
       // Actualités de ses quartiers : publiées là, ou partagées vers là
       quartiers.length ? compter(
         `SELECT a.id FROM dev_actualites a
@@ -76,7 +88,8 @@ router.get('/', async (req, res) => {
       ).catch(() => 0) : 0,
       // Récits publiés par les autres
       compter(
-        `SELECT id FROM published_stories WHERE is_published = true AND COALESCE(published_at, created_at) > :vu AND numero_h <> :nh`,
+        `SELECT id FROM published_stories WHERE is_published = true AND section_id <> 'mes_amours_story'
+            AND COALESCE(published_at, created_at) > :vu AND numero_h <> :nh`,
         { vu: vues.recit, nh }
       ).catch(() => 0),
       // Photos et vidéos ajoutées à la galerie de sa famille par les autres
@@ -84,8 +97,18 @@ router.get('/', async (req, res) => {
         `SELECT id FROM family_gallery WHERE family_name = :fam AND created_at > :vu AND uploader_numero_h <> :nh`,
         { fam: u.nomFamille, vu: vues.galerie, nh }
       ).catch(() => 0) : 0,
+      // Amitié : stories des proches (encore visibles, 24 h) + demandes d'amis reçues
+      compter(
+        `SELECT id::text FROM published_stories
+          WHERE section_id = 'mes_amours_story' AND is_published = true
+            AND COALESCE(published_at, created_at) > GREATEST(:vu, NOW() - INTERVAL '24 hours')
+            AND numero_h IN (:proches)
+         UNION ALL
+         SELECT id::text FROM friends WHERE friend_numero_h = :nh AND status = 'pending' AND created_at > :vu`,
+        { vu: vues.amitie, nh, proches: proches.length ? proches : ['—'] }
+      ).catch(() => 0),
     ]);
-    res.json({ success: true, terreAdam, recit, galerie });
+    res.json({ success: true, terreAdam, recit, galerie, amitie });
   } catch (e) {
     console.error('nouveautes GET:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

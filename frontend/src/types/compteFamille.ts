@@ -46,7 +46,12 @@ export interface TransactionFamille {
 }
 
 /** Compte famille de l'utilisateur (/mon-compte) */
-export interface CompteFamille extends Omit<CompteFamilleAdmin, "creeLe">, Omit<import("./arbre").ChefsArbre, "gerant1" | "gerant2"> {
+export interface CompteFamille extends Omit<CompteFamilleAdmin, "creeLe" | "soldes" | "totalDepose" | "totalDepense">, Omit<import("./arbre").ChefsArbre, "gerant1" | "gerant2"> {
+  /** Solde et totaux : envoyés seulement aux 3 chefs de la famille (null pour les autres) */
+  soldes: SoldesFamille | null;
+  totalDepose: number | null;
+  totalDepense: number | null;
+  voitSolde?: boolean;
   familyCode?: string | null;
   bloodNumber?: string | null;
   conseiller?: string | null;

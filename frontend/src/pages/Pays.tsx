@@ -21,6 +21,7 @@ interface RegionGroup {
   description: string;
   region: 'Communauté';
   members: string[];
+  estMembre?: boolean;
   posts: RegionPost[];
   isActive: boolean;
   createdBy: string;
@@ -54,6 +55,7 @@ interface ResidenceGroup {
   location: string;
   type: 'lieu1' | 'lieu2';
   members: string[];
+  estMembre?: boolean;
   posts: ResidencePost[];
   isActive: boolean;
   createdBy: string;
@@ -657,7 +659,7 @@ export default function Pays() {
       if (groups.length > 0 && (!selectedResidenceGroup || currentSelectedType !== residenceActiveTab)) {
         const firstGroup = groups[0];
         // Rejoindre automatiquement le groupe si pas déjà membre
-        if (!firstGroup.members.includes(userData?.numeroH || '')) {
+        if (!(firstGroup.estMembre ?? firstGroup.members.includes(userData?.numeroH || ''))) {
           try {
             await joinResidenceGroup(firstGroup.id);
             // Recharger les groupes après avoir rejoint
@@ -985,7 +987,7 @@ export default function Pays() {
                         key={group.id}
                         onClick={async () => {
                           // Rejoindre automatiquement le groupe si pas déjà membre
-                          if (!group.members.includes(userData?.numeroH || '')) {
+                          if (!(group.estMembre ?? group.members.includes(userData?.numeroH || ''))) {
                             await joinResidenceGroup(group.id);
                           }
                           setSelectedResidenceGroup(group);

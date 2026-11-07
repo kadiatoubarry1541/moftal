@@ -14,6 +14,7 @@ import DeveloppementGouvernemental from '../components/DeveloppementGouvernement
 import { useI18n } from '../i18n/useI18n';
 import { PAGE_MAJ_PROFIL } from '../utils/profilPage';
 import { useMarquerVu } from '../utils/nouveautes';
+import DemandeResponsable from '../components/DemandeResponsable';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -65,6 +66,11 @@ interface ResidenceGroup {
   posts?: unknown[];
   isActive?: boolean;
   admin?: string;
+  /** L'un des 3 responsables du quartier (chefs de la caisse) ou admin Moftal :
+   *  lui seul reçoit la liste des membres et voit la caisse totale */
+  estResponsable?: boolean;
+  /** Nombre de membres (toujours envoyé, même quand la liste ne l'est pas) */
+  membersCount?: number;
   logoUrl?: string | null;
   createdBy?: string;
   createdAt?: string;
@@ -83,6 +89,9 @@ function lieuReel(v: unknown): string | null {
   if (!t || ['non spécifié', 'non specifie'].includes(t.toLowerCase())) return null;
   return t;
 }
+
+/** Nombre de membres du groupe : le serveur l'envoie même sans la liste */
+const nbMembres = (g: ResidenceGroup) => g.membersCount ?? g.members?.length ?? 0;
 
 export default function TerreAdam() {
   const { t } = useI18n();
@@ -691,7 +700,7 @@ export default function TerreAdam() {
                           <div className="bg-gray-800 text-white flex-shrink-0">
                             <div className="px-4 py-[4px] flex items-center gap-3 relative">
                               {(() => {
-                                const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
+                                const canEditLogo = isAdmin || !!selectedGroup.estResponsable;
                                 const logoSrc = selectedGroup.logoUrl
                                   ? (selectedGroup.logoUrl.startsWith('http') ? selectedGroup.logoUrl : `${API_BASE}${selectedGroup.logoUrl}`)
                                   : null;
@@ -732,7 +741,7 @@ export default function TerreAdam() {
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-bold text-sm truncate">{selectedGroup.title || selectedGroup.name}</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                  {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
+                                  {nbMembres(selectedGroup)} membre{nbMembres(selectedGroup) > 1 ? 's' : ''}
                                 </p>
                               </div>
                               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
@@ -934,7 +943,7 @@ export default function TerreAdam() {
       {/* Page entière — Infos du quartier (ouverte en cliquant sur sa photo,
           comme la photo de profil, pour ne pas mélanger ça avec le chat) */}
       {showQuartierMenu && selectedGroup && (() => {
-        const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
+        const canEditLogo = isAdmin || !!selectedGroup.estResponsable;
         const logoSrc = selectedGroup.logoUrl
           ? (selectedGroup.logoUrl.startsWith('http') ? selectedGroup.logoUrl : `${API_BASE}${selectedGroup.logoUrl}`)
           : null;
@@ -966,16 +975,19 @@ export default function TerreAdam() {
                 </button>
               )}
               <p className="text-gray-500 text-sm -mt-2">
-                {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
+                {nbMembres(selectedGroup)} membre{nbMembres(selectedGroup) > 1 ? 's' : ''}
               </p>
               <div className="w-full max-w-sm space-y-3">
-                <button
-                  onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
-                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
-                >
-                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">{t('terre_adam.members_list')}</span>
-                  <span className="text-gray-400">›</span>
-                </button>
+                {/* Liste des membres : seulement les 3 responsables du quartier */}
+                {(isAdmin || selectedGroup.estResponsable) && (
+                  <button
+                    onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
+                    className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+                  >
+                    <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">{t('terre_adam.members_list')}</span>
+                    <span className="text-gray-400">›</span>
+                  </button>
+                )}
                 {canEditLogo && (
                   <button
                     onClick={() => quartierLogoInputRef.current?.click()}
@@ -990,7 +1002,9 @@ export default function TerreAdam() {
                   onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
                 >
-                  <span className="flex items-center gap-3 font-bold text-white text-sm">{t('terre_adam.caisse')}</span>
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">
+                    {isAdmin || selectedGroup.estResponsable ? t('terre_adam.caisse') : '💰 Déposer pour le quartier'}
+                  </span>
                   <span className="text-white/80">›</span>
                 </button>
                 <button
@@ -1007,6 +1021,12 @@ export default function TerreAdam() {
                   <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📄 {t('terre_adam.my_residence_proof')}</span>
                   <span className="text-gray-400">›</span>
                 </button>
+
+                {/* Chef de quartier, maire… : demander la validation (si son profil porte ce rôle) */}
+                <DemandeResponsable lieux={[
+                  { scope: 'quartier', location: activeQuartierCode || '', locationName: activeQuartierName || selectedGroup.title || selectedGroup.name || '' },
+                  ...geoLevels.map(l => ({ scope: l.scope, location: l.location, locationName: l.label })),
+                ]} />
 
                 <button
                   onClick={() => { setShowQuartierMenu(false); reglesQuartierRef.current?.open(); }}
@@ -1043,13 +1063,13 @@ export default function TerreAdam() {
 
       {/* Modal — Partager un message vers un niveau au-dessus */}
       {/* Modal — Liste des membres du quartier */}
-      {showMembersList && selectedGroup && (
+      {showMembersList && selectedGroup && (isAdmin || selectedGroup.estResponsable) && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowMembersList(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-white font-bold text-base">{t('terre_adam.group_members')}</h2>
-                <p className="text-emerald-200 text-xs mt-0.5">{selectedGroup.members?.length ?? 0} personne{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}</p>
+                <p className="text-emerald-200 text-xs mt-0.5">{nbMembres(selectedGroup)} personne{nbMembres(selectedGroup) > 1 ? 's' : ''}</p>
               </div>
               <button onClick={() => setShowMembersList(false)} className="text-white text-2xl font-bold leading-none">×</button>
             </div>
@@ -1061,7 +1081,7 @@ export default function TerreAdam() {
                   const prenom = member.prenom as string | undefined;
                   const nomFamille = member.nomFamille as string | undefined;
                   const photo = member.photo as string | undefined;
-                  const canViewMemberProofs = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
+                  const canViewMemberProofs = isAdmin || !!selectedGroup.estResponsable;
                   return (
                     <div key={index} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="bg-emerald-600 px-4 py-3 flex items-center gap-3">

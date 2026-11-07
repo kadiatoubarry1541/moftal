@@ -109,8 +109,12 @@ router.get('/mon-compte', async (req, res) => {
     // Remplir les photos manquantes des gérants
     try { await remplirPhotosManquantes(fund); } catch { /* non bloquant */ }
 
+    // Sécurité : seuls les 3 chefs (Patriarche, Porte-parole, Délégué) voient
+    // le solde, les totaux et tout l'historique. Les autres membres peuvent
+    // déposer et ne voient que LEURS dépôts (leurs reçus).
+    const voitSolde = estAdmin(fund, numeroH);
     const transactions = await FamilyFundTransaction.findAll({
-      where: { fundId: fund.id },
+      where: voitSolde ? { fundId: fund.id } : { fundId: fund.id, acteurNumeroH: numeroH },
       order: [['created_at', 'DESC']],
       limit: 20
     });
@@ -130,7 +134,7 @@ router.get('/mon-compte', async (req, res) => {
         nomFamille: fund.nomFamille,
         familyCode,
         bloodNumber,
-        soldes: {
+        soldes: voitSolde ? {
           reserve:    Number(fund.solde_reserve),
           sante:      Number(fund.solde_sante),
           nourriture: Number(fund.solde_nourriture),
@@ -139,9 +143,10 @@ router.get('/mon-compte', async (req, res) => {
           total:      Number(fund.solde_reserve) + Number(fund.solde_sante) +
                       Number(fund.solde_nourriture) + Number(fund.solde_urgence) +
                       Number(fund.solde_projet)
-        },
-        totalDepose:   Number(fund.total_depose),
-        totalDepense:  Number(fund.total_depense),
+        } : null,
+        totalDepose:   voitSolde ? Number(fund.total_depose) : null,
+        totalDepense:  voitSolde ? Number(fund.total_depense) : null,
+        voitSolde,
         gerant1:        fund.gerant1NumeroH,
         gerant1Nom:     fund.gerant1Nom,
         gerant1Photo:   fund.gerant1Photo,

@@ -17,6 +17,7 @@ import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
 import type { UserData } from "../utils/auth";
 import type { ResponsablePage } from "../utils/adminApi";
+import AdminResponsables from "../components/AdminResponsables";
 
 interface ProfessionalAccount {
   id: string;
@@ -713,6 +714,7 @@ export default function AdminDashboard() {
       { id: "services",          label: "Rendez-vous",      icon: "📅" },
       { id: "gestion-interne",   label: "Gestion Interne",  icon: "🔧" },
       { id: "sector-admins",     label: "Admins secteurs",  icon: "🏛️" },
+      { id: "responsables",      label: "Chefs & maires",   icon: "👑" },
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
       { id: "echecs-synchro",    label: "Échecs hors ligne", icon: "⚠️" },
     ] : []),
@@ -2289,6 +2291,9 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ========== CHEFS DE QUARTIER, MAIRES… À VALIDER ========== */}
+          {adminSection === "responsables" && <AdminResponsables />}
 
           {/* ========== ADMINS DE SECTEURS (super-admin uniquement) ========== */}
           {adminSection === "sector-admins" && (

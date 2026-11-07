@@ -12,13 +12,16 @@ interface Props {
 interface Chef { numeroH: string; nom: string; photo: string | null }
 interface Compte {
   id: string;
-  soldes: { sante: number; orphelins: number; developpement: number; disponible: number; total: number };
-  totalDepose: number;
-  totalDepense: number;
+  /** Caisse totale : envoyée seulement aux 3 chefs (null pour les habitants) */
+  soldes: { sante: number; orphelins: number; developpement: number; disponible: number; total: number } | null;
+  totalDepose: number | null;
+  totalDepense: number | null;
   chefs: Chef[];
   seuilConfirmation: number;
   estChef: boolean;
 }
+/** Un dépôt de la personne connectée (son reçu) */
+interface MonDepot { id: string; montant: number; date: string; reference: string | null }
 interface Demande {
   id: string;
   type: 'sante' | 'orphelins';
@@ -56,6 +59,7 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
   const [peutCreer, setPeutCreer] = useState(false);
   const [compte, setCompte] = useState<Compte | null>(null);
   const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [mesDepots, setMesDepots] = useState<MonDepot[]>([]);
   const [erreur, setErreur] = useState('');
   const myNumeroH = getMyNumeroH();
 
@@ -92,6 +96,7 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
         if (d.existe) {
           setCompte(d.compte);
           setDemandes(d.demandes || []);
+          setMesDepots(d.mesDepots || []);
         }
       } else {
         setErreur(d.message || 'Erreur.');
@@ -212,7 +217,7 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setOpen(false)}>
           <div
             className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[88vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
@@ -262,7 +267,15 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
 
               {existe && compte && (
                 <>
-                  {/* Solde global, détail dépliable */}
+                  {/* Caisse totale : seulement les 3 chefs. Les habitants déposent sans la voir. */}
+                  {!compte.soldes && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
+                      <div className="text-3xl mb-1">🔒</div>
+                      <p className="text-sm font-bold text-amber-900">Seuls les responsables du quartier voient la caisse.</p>
+                      <p className="text-xs text-amber-700 mt-1">💵 Vous pouvez déposer de l'argent. Vos reçus restent ici.</p>
+                    </div>
+                  )}
+                  {compte.soldes && (<>
                   <div className="bg-cyan-50 rounded-xl p-4 text-center">
                     <div className="text-xs text-cyan-700 font-bold">💰 Solde total</div>
                     <div className="text-2xl font-black text-cyan-900">{fmt(compte.soldes.total)} GNF</div>
@@ -289,8 +302,9 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
                   )}
                   <p className="text-[11px] text-gray-400 text-center">
                     Chaque dépôt est réparti automatiquement : 50% santé, 20% orphelins, 30% projets (bloqué pour le moment).
-                    Jamais de retrait en argent. Total déposé depuis le début : {fmt(compte.totalDepose)} GNF.
+                    Jamais de retrait en argent. Total déposé depuis le début : {fmt(compte.totalDepose ?? 0)} GNF.
                   </p>
+                  </>)}
 
                   {/* Chefs */}
                   <div className="bg-gray-50 rounded-xl p-3">
@@ -318,6 +332,19 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
                       <button onClick={deposer} className="px-4 py-2 rounded-lg bg-cyan-700 text-white text-sm font-bold">Déposer</button>
                     </div>
                   </div>
+
+                  {/* Mes dépôts (reçus) — chaque habitant voit les siens */}
+                  {mesDepots.length > 0 && (
+                    <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
+                      <p className="text-xs font-bold text-gray-600">🧾 Mes dépôts</p>
+                      {mesDepots.map(m => (
+                        <div key={m.id} className="flex items-center justify-between text-sm bg-white rounded-lg px-3 py-2 border">
+                          <span className="text-gray-500 text-xs">{new Date(m.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                          <span className="font-bold text-green-700">+{fmt(m.montant)} GNF</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Demande de paiement (chef seulement) */}
                   {compte.estChef && (

@@ -604,7 +604,7 @@ function App() {
                     onClick={() => item.id === "famille" ? setFamilyMenuOpen(true) : navigate(item.path)}
                     className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50 ${item.id === "famille" && familyMenuOpen ? "bg-emerald-50" : ""}`}
                   >
-                    <Pastille className="absolute top-0 right-1" n={item.id === "terre-adam" ? nouveautes.terreAdam : item.id === "famille" ? nouveautes.recit + nouveautes.galerie : 0} />
+                    <Pastille className="absolute top-0 right-1" n={item.id === "terre-adam" ? nouveautes.terreAdam : item.id === "famille" ? nouveautes.recit + nouveautes.galerie + nouveautes.amitie : 0} />
                     {item.id === "echanges"
                       ? <SalesIcon size={20} className="text-gray-500" />
                       : <span className="text-lg leading-none">{item.icon}</span>
@@ -634,7 +634,7 @@ function App() {
                         onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
                         className="relative flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
                       >
-                        <Pastille className="absolute top-2 right-2" n={item.id === "heritage" ? nouveautes.galerie : item.id === "recit" ? nouveautes.recit : 0} />
+                        <Pastille className="absolute top-2 right-2" n={item.id === "heritage" ? nouveautes.galerie : item.id === "recit" ? nouveautes.recit : item.id === "amitie" ? nouveautes.amitie : 0} />
                         <span className="text-3xl leading-none">{item.emoji}</span>
                         <span className="text-sm font-bold text-gray-900 text-center">{t(item.labelKey)}</span>
                       </button>

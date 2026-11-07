@@ -10,6 +10,7 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { estResponsableQuartier } from '../utils/responsablesQuartier.js';
 
 const router = express.Router();
 
@@ -144,13 +145,24 @@ router.get('/groups', async (req, res) => {
         }])
       );
     }
-    const hydratedGroups = groups.map(g => {
+    // La liste des membres n'est montrée qu'aux 3 responsables du quartier
+    // (et aux administrateurs de Moftal) ; les autres voient seulement le nombre.
+    const hydratedGroups = await Promise.all(groups.map(async (g) => {
       const plain = g.toJSON ? g.toJSON() : g;
+      const estResponsable = await estResponsableQuartier(req.user, plain.location);
+      const membres = plain.members || [];
       return {
         ...plain,
-        members: (plain.members || []).map(nh => usersByNumeroH[nh] || { numeroH: nh, prenom: '', nomFamille: '' })
+        // L'ancien « admin » (premier venu du groupe) n'a plus de droits : on ne l'expose plus
+        admin: undefined,
+        estResponsable,
+        membersCount: membres.length,
+        estMembre: membres.includes(req.user.numeroH),
+        members: estResponsable
+          ? membres.map(nh => usersByNumeroH[nh] || { numeroH: nh, prenom: '', nomFamille: '' })
+          : []
       };
-    });
+    }));
 
     res.json({
       success: true,
@@ -234,10 +246,11 @@ router.post('/groups/:id/join', async (req, res) => {
     members.push(req.user.numeroH);
     await group.update({ members });
     
+    // Jamais la liste des membres ici : seuls les responsables la voient
     res.json({
       success: true,
       message: 'Vous avez rejoint le organisation avec succès',
-      group
+      group: { id: group.id, location: group.location, title: group.title, membersCount: members.length }
     });
   } catch (error) {
     console.error('Erreur lors de l\'adhésion au organisation:', error);
@@ -396,7 +409,7 @@ router.get('/stats', requireAdmin, async (req, res) => {
 
 // @route   POST /api/residences/groups/:id/logo
 // @desc    Uploader ou remplacer le logo d'un groupe de quartier
-// @access  Admin du groupe (le premier habitant à l'avoir rejoint) ou admin Moftal
+// @access  Les 3 responsables du quartier ou admin Moftal
 router.post('/groups/:id/logo', uploadLogo.single('logo'), async (req, res) => {
   try {
     await ensureLogoColumn();
@@ -407,8 +420,8 @@ router.post('/groups/:id/logo', uploadLogo.single('logo'), async (req, res) => {
       return res.status(404).json({ success: false, message: 'Groupe non trouvé' });
     }
 
-    if (!isPlatformAdmin(req.user) && group.admin !== req.user.numeroH) {
-      return res.status(403).json({ success: false, message: 'Seul l\'administrateur de ce groupe peut changer le logo' });
+    if (!(await estResponsableQuartier(req.user, group.location))) {
+      return res.status(403).json({ success: false, message: 'Seuls les responsables du quartier peuvent changer le logo' });
     }
 
     if (!req.file) {
@@ -439,8 +452,8 @@ router.delete('/groups/:id/logo', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Groupe non trouvé' });
     }
 
-    if (!isPlatformAdmin(req.user) && group.admin !== req.user.numeroH) {
-      return res.status(403).json({ success: false, message: 'Seul l\'administrateur de ce groupe peut retirer le logo' });
+    if (!(await estResponsableQuartier(req.user, group.location))) {
+      return res.status(403).json({ success: false, message: 'Seuls les responsables du quartier peuvent retirer le logo' });
     }
 
     await group.update({ logoUrl: null });
