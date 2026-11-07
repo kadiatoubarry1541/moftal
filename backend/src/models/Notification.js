@@ -66,6 +66,8 @@ class Notification extends Model {
     // Web Push — pour notifier même quand le navigateur est en arrière-plan
     try {
       const webpush = (await import('web-push')).default;
+      const { preparerClesPush } = await import('../utils/clesPush.js');
+      if (!(await preparerClesPush())) throw new Error('clés absentes');
       const { default: PushSubscription } = await import('./PushSubscription.js');
       const { OPTIONS_PUSH } = await import('../services/notificationMessages.js');
       const subs = await PushSubscription.getForUser(recipientNumeroH);

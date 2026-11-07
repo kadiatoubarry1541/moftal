@@ -1,24 +1,20 @@
 import express from 'express';
-import webpush from 'web-push';
 import { authenticate } from '../middleware/auth.js';
 import PushSubscription from '../models/PushSubscription.js';
+import { preparerClesPush } from '../utils/clesPush.js';
 
 const router = express.Router();
 
-const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT     = process.env.VAPID_SUBJECT     || 'mailto:noreply@moftal.com';
-
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-}
+// Clés prêtes dès le démarrage (hébergeur, sinon base — voir utils/clesPush.js)
+preparerClesPush();
 
 // GET /api/push/vapid-key — retourne la clé publique VAPID
-router.get('/vapid-key', (req, res) => {
-  if (!VAPID_PUBLIC_KEY) {
+router.get('/vapid-key', async (req, res) => {
+  const publicKey = await preparerClesPush();
+  if (!publicKey) {
     return res.status(503).json({ success: false, message: 'Push non configuré' });
   }
-  res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
+  res.json({ success: true, publicKey });
 });
 
 // POST /api/push/subscribe — enregistre un abonnement push

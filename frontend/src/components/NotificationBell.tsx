@@ -5,6 +5,7 @@ import { getSocket } from "../services/socket";
 import InstallAppButton from "./InstallAppButton";
 import { appPlayInstallee } from "../utils/appMoftalInstallee";
 import { chargerMessagesNonLus, EVENEMENT_MESSAGES_LUS } from "../utils/messagesNonLus";
+import { texteCompteur } from "../utils/compteur";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -374,7 +375,7 @@ export default function NotificationBell() {
         </svg>
         {displayCount > 0 && (
           <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[20px] h-5 px-1 text-[11px] font-bold text-white bg-red-500 rounded-full leading-none">
-            {displayCount > 99 ? "99+" : displayCount}
+            {texteCompteur(displayCount)}
           </span>
         )}
       </button>
