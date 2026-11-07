@@ -89,6 +89,7 @@ import { erreursDonnees } from './middleware/erreursDonnees.js';
 import { idempotence } from './middleware/idempotence.js';
 import { echecsSynchro } from './middleware/echecsSynchro.js';
 import quotasRoutes from './routes/quotas.js';
+import nouveautesRoutes from './routes/nouveautes.js';
 import infoCardsRoutes from './routes/infoCards.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
@@ -2987,6 +2988,7 @@ app.use('/api/parent-child', parentChildRoutes);
 app.use('/api/sibling', siblingRoutes);
 app.use('/api/couple', coupleRoutes);
 app.use('/api/unread', unreadRoutes); // messages non lus du bouton 💬
+app.use('/api/nouveautes', nouveautesRoutes); // pastilles « nouveautés » des rubriques
 app.use('/api/family-core', familyCoreRoutes);
 app.use('/api/science', scienceRoutes);
 app.use('/api/reality', realityRoutes);

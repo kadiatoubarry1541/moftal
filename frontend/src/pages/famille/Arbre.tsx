@@ -7,6 +7,7 @@ import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
 import type { ChefsArbre, DefuntDetail, DefuntServeur, InfosArbre, PersonneLiee } from '../../types/arbre'
+import { marquerVu } from '../../utils/nouveautes'
 
 interface UserData {
   numeroH: string
@@ -436,6 +437,7 @@ const enhancedUser: UserData = useMemo(() => {
   }
 
   const openGallery = () => {
+    marquerVu('galerie')
     setShowGallery(true)
     loadSharedGallery()
   }
