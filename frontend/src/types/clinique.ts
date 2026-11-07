@@ -86,11 +86,18 @@ export interface RendezVous extends AvecPatient, AvecPersonnel {
 }
 
 /** Médicament d'une ordonnance (les plus anciennes ordonnances en gardent juste le nom). */
-export type MedicamentPrescrit = string | { medicament?: string; quantite?: number; stock_id?: number | null };
+export type MedicamentPrescrit = string | {
+  medicament?: string; quantite?: number; stock_id?: number | null;
+  // Ancien format d'ordonnance : nom, dosage, fréquence, durée
+  nom?: string; dosage?: string; frequence?: string; duree?: string;
+};
 
+/** Texte d'un médicament d'ordonnance, quel que soit son format enregistré. */
 export function nomMedicament(m: MedicamentPrescrit | null | undefined): string {
   if (!m) return "";
-  return typeof m === "string" ? m : m.medicament || "";
+  if (typeof m !== "object") return String(m);
+  if (m.medicament) return m.medicament;
+  return [m.nom, m.dosage, m.frequence, m.duree].filter(Boolean).join(" — ");
 }
 
 export interface Ordonnance extends AvecPatient, AvecPersonnel {

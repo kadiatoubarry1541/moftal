@@ -1026,7 +1026,7 @@ export default function GestionClinique() {
                     </div>
                   </div>
                   {p.diagnostic && <p style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}><strong>Diagnostic :</strong> {p.diagnostic}</p>}
-                  {p.medicaments?.length > 0 && (
+                  {Array.isArray(p.medicaments) && p.medicaments.length > 0 && (
                     <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 14px" }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Médicaments</p>
                       {p.medicaments.map((m, i) => <div key={i} style={{ fontSize: 13, color: "#475569", padding: "2px 0" }}>◆ {nomMedicament(m)}</div>)}
