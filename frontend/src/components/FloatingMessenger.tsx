@@ -110,6 +110,8 @@ interface RawResidenceGroup {
   name?: string
   logoUrl?: string | null
   members?: unknown[]
+  membersCount?: number
+  estResponsable?: boolean
 }
 
 interface RawActivityGroup {
@@ -441,7 +443,7 @@ export function FloatingMessenger() {
         seenGroupIds.add(g.id)
         const displayName = findLocationByCode(g.location) ? getLocationGroupTitle(g.location) : (g.title || g.name)
         const logoSrc = g.logoUrl ? (String(g.logoUrl).startsWith('http') ? g.logoUrl : `${API_BASE}${g.logoUrl}`) : null
-        const info: ResidenceGroupInfo = { id: g.id, name: displayName, title: displayName, logoUrl: g.logoUrl, location: g.location, members: g.members || [] }
+        const info: ResidenceGroupInfo = { id: g.id, name: displayName, title: displayName, logoUrl: g.logoUrl, location: g.location, members: g.members || [], membersCount: g.membersCount, estResponsable: g.estResponsable }
         groupsByKey[g.id] = info
         base.push({ key: `residence-${g.id}`, type: 'residence', linkId: g.id, numeroH: '', label: displayName, photo: logoSrc, icon: ICONS.residence })
       })

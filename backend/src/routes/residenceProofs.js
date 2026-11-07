@@ -5,9 +5,10 @@ import ResidenceProof from '../models/ResidenceProof.js';
 import ResidenceGroup from '../models/ResidenceGroup.js';
 import { uploadToR2, deleteFromR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { estResponsableQuartier } from '../utils/responsablesQuartier.js';
 
 // Papiers de résidence : chaque membre téléverse un justificatif prouvant qu'il
-// habite bien le quartier déclaré. L'admin du quartier (ResidenceGroup.admin)
+// habite bien le quartier déclaré. Les responsables du quartier (les 3 chefs de sa caisse)
 // peut les consulter depuis la liste des membres pour vérifier l'appartenance réelle.
 
 const router = express.Router();
@@ -29,8 +30,9 @@ function isPlatformAdmin(user) {
   return !!(user && (user.role === 'admin' || user.role === 'super-admin' || user.isMasterAdmin || user.canViewAll));
 }
 
-function canViewMember(user, group, numeroH) {
-  return user.numeroH === numeroH || isPlatformAdmin(user) || (group && group.admin === user.numeroH);
+// Ses propres papiers, ou ceux d'un habitant pour les 3 responsables du quartier
+async function canViewMember(user, group, numeroH) {
+  return user.numeroH === numeroH || isPlatformAdmin(user) || (!!group && await estResponsableQuartier(user, group.location));
 }
 
 // GET /api/residence-proofs/mine?groupId= — mes propres justificatifs pour un quartier
@@ -57,7 +59,7 @@ router.get('/member/:numeroH', async (req, res) => {
     if (!groupId) return res.status(400).json({ success: false, message: 'groupId requis.' });
     const group = await ResidenceGroup.findByPk(groupId);
     if (!group) return res.status(404).json({ success: false, message: 'Groupe introuvable.' });
-    if (!canViewMember(req.user, group, req.params.numeroH)) {
+    if (!(await canViewMember(req.user, group, req.params.numeroH))) {
       return res.status(403).json({ success: false, message: 'Non autorisé.' });
     }
     const proofs = await ResidenceProof.findAll({

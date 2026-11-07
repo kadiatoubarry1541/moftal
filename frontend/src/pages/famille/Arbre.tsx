@@ -1030,84 +1030,65 @@ const enhancedUser: UserData = useMemo(() => {
         </div>
       )}
 
-      {/* ── GALERIE FAMILLE PAR ALBUMS (vue en deux colonnes) ── */}
-      {showGallery && (
-        <div className="fixed inset-0 bg-white flex flex-col z-50">
+      {/* ── GALERIE FAMILLE : comme la galerie d'un téléphone ──
+           1. les albums en grandes vignettes ; 2. un album ouvert = ses photos
+           sur toute la largeur ; 3. une photo ouverte en plein écran
+           (GalerieAlbum). Supprimer reste caché dans le menu « ⋮ ». */}
+      {showGallery && (() => {
+        const albumCfg = ALBUM_CONFIG.find(c => c.key === activeAlbum)
+        const fermerGalerie = () => { setShowGallery(false); setGalleryView('list') }
+        return (
+        <div className="fixed inset-0 bg-white flex flex-col z-[60]">
 
-          {/* Header (style clair) */}
           <div
-            className="flex items-center justify-between px-4 py-3 bg-white text-gray-900 border-b border-gray-200"
-            style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
+            className="flex items-center gap-2 px-3 py-2.5 bg-white text-gray-900 border-b border-gray-200 flex-shrink-0"
+            style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}
           >
-            {galleryView === 'detail' ? (
-              <button
-                onClick={() => setGalleryView('list')}
-                className="flex items-center gap-2 text-gray-900 active:opacity-70"
-              >
-                <span className="text-xl leading-none">←</span>
-                <span className="font-semibold text-base">
-                  {ALBUM_CONFIG.find(c => c.key === activeAlbum)?.emoji}{' '}
-                  {ALBUM_CONFIG.find(c => c.key === activeAlbum)?.label}
-                </span>
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowGallery(false)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm text-gray-800"
-                >
-                  <span className="text-lg leading-none">←</span>
-                  <span>{t('heritage.back_to_tree')}</span>
-                </button>
-                <h3 className="text-base font-bold">{t('heritage.gallery_title')}</h3>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => (galleryView === 'detail' ? setGalleryView('list') : fermerGalerie())}
+              aria-label={t('btn.back')}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 text-2xl leading-none flex-shrink-0"
+            >
+              ←
+            </button>
+            <h3 className="flex-1 min-w-0 text-base font-bold truncate">
+              {galleryView === 'detail' && albumCfg
+                ? `${albumCfg.emoji} ${albumCfg.label}`
+                : `📷 ${t('heritage.gallery_title')}`}
+            </h3>
+            {galleryView === 'detail' && (
               <label
-                  className={`cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    uploading
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-500 active:scale-95'
-                  }`}
-                >
-                  {uploading ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Envoi...
-                    </>
-                  ) : (
-                    <>＋ Ajouter</>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    className="hidden"
-                    disabled={uploading}
-                    onChange={async e => {
-                      const files = Array.from(e.target.files || [])
-                      for (const file of files) {
-                        await uploadToSharedGallery(file)
-                      }
-                      e.target.value = ''
-                    }}
-                  />
-                </label>
-              <button
-                onClick={() => {
-                  setShowGallery(false)
-                  setGalleryView('list')
-                }}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg"
+                className={`cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold flex-shrink-0 ${
+                  uploading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white active:scale-95'
+                }`}
               >
-                ✕
-              </button>
-            </div>
+                {uploading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Envoi...
+                  </>
+                ) : (
+                  <>＋ Ajouter</>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={async e => {
+                    const files = Array.from(e.target.files || [])
+                    for (const file of files) {
+                      await uploadToSharedGallery(file)
+                    }
+                    e.target.value = ''
+                  }}
+                />
+              </label>
+            )}
           </div>
 
-          {/* Corps */}
           {sharedLoading ? (
             <div className="flex-1 flex items-center justify-center bg-white">
               <div className="flex flex-col items-center gap-3 text-gray-500">
@@ -1115,86 +1096,61 @@ const enhancedUser: UserData = useMemo(() => {
                 <span className="text-sm">Chargement...</span>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-1 bg-[#f0f2f5]">
-              {/* Colonne gauche : liste des albums */}
-              <div className="w-64 border-r border-gray-200 overflow-y-auto bg-white">
-                <div className="divide-y divide-gray-200">
-                  {ALBUM_CONFIG.map(cfg => {
-                    const albumItems = albums[cfg.key] || []
-                    const count = albumItems.length
-                    const thumb = albumItems[0]
-                    const isActive = activeAlbum === cfg.key
-                    return (
-                      <button
-                        key={cfg.key}
-                        onClick={() => {
-                          setActiveAlbum(cfg.key)
-                          setGalleryView('detail')
-                        }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                          isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                          {thumb ? (
-                            thumb.type === 'video' || isVideo(thumb.url) ? (
-                              <video
-                                src={buildMediaUrl(thumb.url)}
-                                className="w-full h-full object-cover"
-                                muted
-                              />
-                            ) : (
-                              <img
-                                src={buildMediaUrl(thumb.url)}
-                                alt={cfg.label}
-                                className="w-full h-full object-cover"
-                              />
-                            )
+          ) : galleryView === 'list' ? (
+            /* 1. Les albums */
+            <div className="flex-1 overflow-y-auto p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {ALBUM_CONFIG.map(cfg => {
+                  const albumItems = albums[cfg.key] || []
+                  const count = albumItems.length
+                  const thumb = albumItems[0]
+                  return (
+                    <button
+                      key={cfg.key}
+                      type="button"
+                      onClick={() => { setActiveAlbum(cfg.key); setGalleryView('detail') }}
+                      className="text-left active:scale-[0.98] transition-transform"
+                    >
+                      <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
+                        {thumb ? (
+                          thumb.type === 'video' || isVideo(thumb.url) ? (
+                            <video src={buildMediaUrl(thumb.url)} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl text-gray-400">
-                              {cfg.emoji}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {cfg.label}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {count === 0 ? 'Vide' : `${count} élément${count > 1 ? 's' : ''}`}
-                          </p>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Colonne droite : contenu de l'album sélectionné */}
-              <div className="flex-1 overflow-y-auto bg-[#f0f2f5]">
-                {/* Galerie comme celle du téléphone : un appui ouvre, la suppression passe par « Sélectionner » */}
-                <div className="p-3">
-                  <GalerieAlbum
-                    elements={(albums[activeAlbum] || []).map((item) => ({
-                      cle: item.id, url: buildMediaUrl(item.url), video: item.type === 'video' || isVideo(item.url),
-                      auteur: item.uploaderName, supprimable: item.uploaderNumeroH === user?.numeroH,
-                    }))}
-                    onSupprimer={supprimerMediasGalerie}
-                    vide={
-                      <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-                        <span className="text-7xl mb-4 opacity-20">{ALBUM_CONFIG.find(c => c.key === activeAlbum)?.emoji}</span>
-                        <p className="text-sm font-medium text-gray-500">{t('heritage.gallery_empty')}</p>
-                        <p className="text-xs text-gray-600 mt-1">Appuyez sur "＋ Ajouter" pour commencer</p>
+                            <img src={buildMediaUrl(thumb.url)} alt={cfg.label} loading="lazy" className="w-full h-full object-cover" />
+                          )
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-5xl opacity-40">{cfg.emoji}</div>
+                        )}
                       </div>
-                    }
-                  />
-                </div>
+                      <p className="mt-1.5 px-0.5 text-sm font-bold text-gray-900 truncate">{cfg.emoji} {cfg.label}</p>
+                      <p className="px-0.5 text-xs text-gray-500">{count === 0 ? 'Vide' : `${count} élément${count > 1 ? 's' : ''}`}</p>
+                    </button>
+                  )
+                })}
               </div>
+            </div>
+          ) : (
+            /* 2. Les photos de l'album, sur toute la largeur */
+            <div className="flex-1 overflow-y-auto">
+              <GalerieAlbum
+                elements={(albums[activeAlbum] || []).map((item) => ({
+                  cle: item.id, url: buildMediaUrl(item.url), video: item.type === 'video' || isVideo(item.url),
+                  auteur: item.uploaderName, supprimable: item.uploaderNumeroH === user?.numeroH,
+                }))}
+                onSupprimer={supprimerMediasGalerie}
+                vide={
+                  <div className="flex flex-col items-center justify-center py-20 px-6 text-center text-gray-600">
+                    <span className="text-7xl mb-4 opacity-30">{albumCfg?.emoji}</span>
+                    <p className="text-sm font-medium text-gray-500">{t('heritage.gallery_empty')}</p>
+                    <p className="text-xs text-gray-500 mt-1">Appuyez sur « ＋ Ajouter » pour commencer</p>
+                  </div>
+                }
+              />
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* ── MODAL APPEL WebRTC ─────────────────────────────────────────────── */}
     </div>

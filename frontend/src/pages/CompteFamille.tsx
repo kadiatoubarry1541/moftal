@@ -26,13 +26,6 @@ const TYPE_MAP: Record<string, string> = {
   reserve_deblocage:   'Déblocage réserve',
 };
 
-function calculerAge(dateNaissance: string | undefined): number {
-  if (!dateNaissance) return 99;
-  const dn = new Date(dateNaissance);
-  if (isNaN(dn.getTime())) return 99;
-  return Math.floor((Date.now() - dn.getTime()) / (365.25 * 24 * 3600 * 1000));
-}
-
 export default function CompteFamille() {
   const navigate = useNavigate();
   const devise: DeviseInfo = getDeviseUtilisateur();
@@ -45,7 +38,6 @@ export default function CompteFamille() {
   const [msgErreur, setMsgErreur] = useState('');
 
   // Âge de l'utilisateur (restriction budget < 40 ans)
-  const [userAge, setUserAge] = useState(99);
 
   // Dépôt
   const [montantDepot, setMontantDepot] = useState('');
@@ -73,13 +65,6 @@ export default function CompteFamille() {
 
   const token = localStorage.getItem('token');
 
-  // Calcul de l'âge depuis la session
-  useEffect(() => {
-    const session = JSON.parse(localStorage.getItem('session_user') || '{}');
-    const u = session.userData || session;
-    const dn = u?.dateNaissance || u?.date_naissance;
-    if (dn) setUserAge(calculerAge(dn));
-  }, []);
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
@@ -238,8 +223,9 @@ export default function CompteFamille() {
     } finally { setLoadingPayerPro(false); }
   }
 
-  // Peut voir le budget ? (18 ans ou plus)
-  const peutVoirBudget = userAge >= 18 || compte?.estAdmin;
+  // Le solde n'est envoyé par le serveur qu'aux 3 chefs de la famille
+  // (Patriarche, Porte-parole, Délégué) : les autres déposent sans le voir.
+  const peutVoirBudget = !!compte?.estAdmin && !!compte?.soldes;
 
   if (loading) return (
     <div className="min-h-screen flex flex-col" style={{ background: '#0d2040' }}>
@@ -370,22 +356,22 @@ export default function CompteFamille() {
         {/* Compte existant */}
         {existe && compte && (
           <>
-            {/* ─── Restriction âge < 40 ans ─── */}
+            {/* ─── Solde caché : seuls les 3 chefs le voient ─── */}
             {!peutVoirBudget && (
               <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-amber-100">
                 <div className="text-5xl mb-3">🔒</div>
-                <h2 className="font-bold text-amber-900 text-lg mb-2">Accès restreint</h2>
+                <h2 className="font-bold text-amber-900 text-lg mb-2">Solde protégé</h2>
                 <p className="text-amber-700 text-sm">
-                  Le budget familial est réservé aux membres adultes de <strong>18 ans et plus</strong>.
+                  Seuls les <strong>3 chefs de la famille</strong> voient le solde.
                 </p>
-                <p className="text-gray-400 text-xs mt-3">
-                  Vous pouvez quand même faire des dépôts pour alimenter la caisse familiale.
+                <p className="text-gray-500 text-xs mt-3">
+                  💵 Vous pouvez déposer de l'argent. Vos reçus restent ici.
                 </p>
               </div>
             )}
 
-            {/* Solde total (visible 40+ ou admin) */}
-            {peutVoirBudget && (
+            {/* Solde total (3 chefs seulement) */}
+            {peutVoirBudget && compte.soldes && (
               <>
                 <div className="rounded-2xl p-6 text-white"
                   style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
@@ -410,11 +396,11 @@ export default function CompteFamille() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.12)' }}>
                       <p className="text-blue-200 text-xs mb-0.5">Total déposé</p>
-                      <p className="text-white font-black text-base">{formaterMontant(compte.totalDepose, devise)}</p>
+                      <p className="text-white font-black text-base">{formaterMontant(compte.totalDepose ?? 0, devise)}</p>
                     </div>
                     <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.12)' }}>
                       <p className="text-blue-200 text-xs mb-0.5">Total dépensé</p>
-                      <p className="text-white font-black text-base">{formaterMontant(compte.totalDepense, devise)}</p>
+                      <p className="text-white font-black text-base">{formaterMontant(compte.totalDepense ?? 0, devise)}</p>
                     </div>
                   </div>
 
@@ -441,7 +427,7 @@ export default function CompteFamille() {
                               style={{ background: cat.color }}>{cat.pct}%</span>
                           </div>
                           <p className="font-black text-lg" style={{ color: cat.color }}>
-                            {formaterMontant(compte.soldes[cat.key] || 0, devise)}
+                            {formaterMontant(compte.soldes?.[cat.key] || 0, devise)}
                           </p>
                           {cat.key === 'reserve' && (
                             <p className="text-xs text-gray-400 mt-0.5">🔒 Bloqué — vote unanime requis</p>
@@ -539,7 +525,7 @@ export default function CompteFamille() {
                   <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 space-y-3">
                     <h3 className="font-bold text-gray-900">Paiement vers une clinique</h3>
                     <p className="text-xs text-blue-700 font-semibold bg-blue-50 rounded-lg px-3 py-2">
-                      💸 Transfert interne <strong>100% gratuit</strong> · Budget santé : {compte.soldes.sante.toLocaleString()} FG
+                      💸 Transfert interne <strong>100% gratuit</strong> · Budget santé : {(compte.soldes?.sante ?? 0).toLocaleString()} FG
                     </p>
 
                     {/* Recherche */}
@@ -646,7 +632,7 @@ export default function CompteFamille() {
                   <div className="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 space-y-3">
                     <h3 className="font-bold text-gray-900">Achat de riz</h3>
                     <p className="text-xs text-amber-700 font-semibold bg-amber-50 rounded-lg px-3 py-2">
-                      🌾 Vendu directement par l'administrateur · Budget alimentation : {compte.soldes.nourriture.toLocaleString()} FG
+                      🌾 Vendu directement par l'administrateur · Budget alimentation : {(compte.soldes?.nourriture ?? 0).toLocaleString()} FG
                     </p>
 
                     {!rizInfo || !rizInfo.disponible ? (
@@ -688,10 +674,10 @@ export default function CompteFamille() {
               </>
             )}
 
-            {/* ─── Historique (visible 40+ ou admin) ─── */}
-            {peutVoirBudget && transactions.length > 0 && (
+            {/* ─── Historique : tout pour les 3 chefs, ses propres dépôts pour les autres ─── */}
+            {transactions.length > 0 && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-3">Historique récent</h3>
+                <h3 className="font-bold text-gray-900 mb-3">{peutVoirBudget ? 'Historique récent' : '🧾 Mes dépôts'}</h3>
                 <div className="space-y-3">
                   {transactions.map(t => (
                     <div key={t.id} className="flex items-start gap-3 pb-3 border-b border-gray-50 last:border-0">

@@ -7,10 +7,10 @@ import { config } from "../config/api";
  * serveur (jamais gardés seulement dans le téléphone). Un seul relevé partagé
  * par tous les écrans, mis à jour chaque minute et au retour sur l'application.
  */
-export type Rubrique = "terreAdam" | "recit" | "galerie";
+export type Rubrique = "terreAdam" | "recit" | "galerie" | "amitie";
 export type Nouveautes = Record<Rubrique, number>;
 
-const VIDE: Nouveautes = { terreAdam: 0, recit: 0, galerie: 0 };
+const VIDE: Nouveautes = { terreAdam: 0, recit: 0, galerie: 0, amitie: 0 };
 let etat: Nouveautes = VIDE;
 const abonnes = new Set<(n: Nouveautes) => void>();
 let minuteur: ReturnType<typeof setInterval> | null = null;
@@ -29,7 +29,7 @@ export async function rafraichirNouveautes() {
   try {
     const r = await fetch(`${config.API_BASE_URL}/nouveautes`, { headers: h });
     const d = await r.json().catch((): null => null);
-    if (r.ok && d?.success) publier({ terreAdam: +d.terreAdam || 0, recit: +d.recit || 0, galerie: +d.galerie || 0 });
+    if (r.ok && d?.success) publier({ terreAdam: +d.terreAdam || 0, recit: +d.recit || 0, galerie: +d.galerie || 0, amitie: +d.amitie || 0 });
   } catch { /* sans connexion : on garde les derniers nombres */ }
   finally { enCours = false; }
 }

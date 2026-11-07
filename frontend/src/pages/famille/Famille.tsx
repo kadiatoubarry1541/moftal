@@ -63,6 +63,7 @@ export default function Famille() {
   const current = MENU_ITEMS.find(m => m.id === activeTab)
   const nouveautes = useNouveautes()
   useMarquerVu('recit', activeTab === 'recit')
+  useMarquerVu('amitie', activeTab === 'amitie')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -138,7 +139,7 @@ export default function Famille() {
                 onClick={() => handleSelect(item.id)}
                 className="relative flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
               >
-                <Pastille className="absolute top-2 right-2" n={item.id === 'heritage' ? nouveautes.galerie : item.id === 'recit' ? nouveautes.recit : 0} />
+                <Pastille className="absolute top-2 right-2" n={item.id === 'heritage' ? nouveautes.galerie : item.id === 'recit' ? nouveautes.recit : item.id === 'amitie' ? nouveautes.amitie : 0} />
                 <span className="text-3xl leading-none">{item.emoji}</span>
                 <span className="text-sm font-bold text-gray-900 text-center">{t(item.labelKey)}</span>
               </button>

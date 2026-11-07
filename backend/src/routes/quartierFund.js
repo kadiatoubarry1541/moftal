@@ -5,6 +5,9 @@ import QuartierFundRequest from '../models/QuartierFundRequest.js';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
 import { RIZ_TENANT_CODE } from './familyFund.js';
+import Payment from '../models/Payment.js';
+import { Op } from 'sequelize';
+import { estAdminPlateforme } from '../utils/responsablesQuartier.js';
 
 // Compte Solidarité — uniquement quartier et sous-préfecture (on ne peut pas
 // cibler tous les secteurs). Deux volets seulement : santé (paiement direct
@@ -77,6 +80,34 @@ router.get('/mon-compte', async (req, res) => {
       });
     }
 
+    // Sécurité : seuls les 3 chefs (et les administrateurs de Moftal) voient
+    // la caisse totale et les demandes de paiement. Les habitants peuvent
+    // déposer et ne voient que LEURS dépôts (leurs reçus).
+    const voitCaisse = fund.estChef(req.user.numeroH) || estAdminPlateforme(req.user);
+    const mesDepots = await Payment.findAll({
+      where: {
+        payerNumeroH: req.user.numeroH,
+        purpose: 'wallet_depot_quartier_fund',
+        relatedId: { [Op.iLike]: `${scope}:${String(location).replace(/[%_\\]/g, '')}:%` },
+        status: { [Op.in]: ['completed', 'success'] }
+      },
+      order: [['createdAt', 'DESC']],
+      limit: 30
+    }).catch(() => []);
+    const recus = mesDepots.map((p) => ({ id: p.id, montant: Number(p.amount), date: p.createdAt, reference: p.txRef || null }));
+
+    if (!voitCaisse) {
+      const c = formatFund(fund, req.user.numeroH);
+      return res.json({
+        success: true,
+        existe: true,
+        voitCaisse: false,
+        compte: { ...c, soldes: null, totalDepose: null, totalDepense: null },
+        demandes: [],
+        mesDepots: recus
+      });
+    }
+
     const demandes = await QuartierFundRequest.findAll({
       where: { fundId: fund.id },
       order: [['created_at', 'DESC']],
@@ -86,6 +117,8 @@ router.get('/mon-compte', async (req, res) => {
     res.json({
       success: true,
       existe: true,
+      voitCaisse: true,
+      mesDepots: recus,
       compte: formatFund(fund, req.user.numeroH),
       demandes: demandes.map(d => ({
         id: d.id,
