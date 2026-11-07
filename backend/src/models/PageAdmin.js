@@ -52,13 +52,13 @@ class PageAdmin extends Model {
         {
           unique: true,
           // Utiliser les noms de colonnes en base (snake_case) pour éviter l'erreur "pagePath" n'existe pas
-          fields: ['page_path', 'admin_numero_h']
+          fields: ['pagePath', 'adminNumeroH']
         },
         {
-          fields: ['page_path']
+          fields: ['pagePath']
         },
         {
-          fields: ['admin_numero_h']
+          fields: ['adminNumeroH']
         }
       ]
     });

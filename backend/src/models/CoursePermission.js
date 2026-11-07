@@ -89,7 +89,7 @@ CoursePermission.init({
       fields: ['courseType']
     },
     {
-      fields: ['is_active']
+      fields: ['isActive']
     }
   ]
 });

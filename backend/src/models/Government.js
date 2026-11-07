@@ -74,7 +74,7 @@ class Government extends Model {
           fields: ['country']
         },
         {
-          fields: ['is_active']
+          fields: ['isActive']
         }
       ]
     });
