@@ -776,30 +776,9 @@ const enhancedUser: UserData = useMemo(() => {
             {treeInfo && (
               <div className="mb-4">
                 {/* Le choix Vivants / Décédés / Tous est dans le menu du bouton Zoom de l'arbre */}
-                {/* Liste membres vivants */}
-                {(filtreArbre === 'vivants' || filtreArbre === 'tous') && (treeInfo.members || []).length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
-                    {(treeInfo.members || []).map((m) => (
-                      <div key={m.numeroH} className="flex flex-col items-center gap-1 rounded-xl border border-emerald-100 bg-emerald-50 p-2 text-center relative">
-                        {m.photo
-                          ? <img src={m.photo} alt={m.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-emerald-200" />
-                          : <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center font-bold text-emerald-700">{(m.prenom || '?').charAt(0)}</div>
-                        }
-                        <p className="text-[11px] font-bold text-emerald-900 truncate w-full">{m.prenom} {m.nomFamille}</p>
-                        <p className="text-[9px] text-gray-400">#{hideIncrement(m.numeroH)}</p>
-                        {m.numeroH !== effectiveUser.numeroH && (
-                          <button
-                            onClick={() => { setMemberToReport(m); setShowDecesModal(true); setMsgDeces('') }}
-                            className="mt-1 text-[9px] px-2 py-0.5 rounded-full border border-gray-300 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
-                          >
-                            Signaler décès
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
+                {/* Les vivants sont dans l'arbre lui-même (une case par personne) : plus de
+                    liste de cartes en double au-dessus. « Signaler décès » est dans la fiche
+                    qui s'ouvre en touchant une case. */}
                 {/* Liste membres décédés — cliquables pour voir les détails */}
                 {(filtreArbre === 'defunts' || filtreArbre === 'tous') && (treeInfo.deceasedMembers || []).length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
@@ -841,6 +820,12 @@ const enhancedUser: UserData = useMemo(() => {
                 ],
               } : undefined}
               onOpenGallery={openGallery}
+              onSignalerDeces={(m) => {
+                // Seulement un vrai membre de l'arbre (jamais soi-même)
+                const membre = (treeInfo?.members || []).find((x) => x.numeroH === m.numeroH)
+                if (!membre || membre.numeroH === effectiveUser.numeroH) return
+                setMemberToReport(membre); setShowDecesModal(true); setMsgDeces('')
+              }}
               treeHidden={treeHidden}
               onTreeHiddenChange={async (newList) => {
                 setTreeHidden(newList)
