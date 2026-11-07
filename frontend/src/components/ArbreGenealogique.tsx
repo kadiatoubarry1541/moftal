@@ -39,9 +39,11 @@ interface ArbreGenealogiqueProps {
   onOpenGallery?: () => void
   /** Filtres proposés dans le menu du bouton Zoom (ex. Vivants / Décédés / Tous) */
   filtres?: { valeur: string; options: { cle: string; libelle: string }[]; onChange: (cle: string) => void }
+  /** Signaler le décès d'un membre vivant de l'arbre (fiche ouverte en touchant sa case) */
+  onSignalerDeces?: (membre: { numeroH: string; prenom: string; nomFamille: string }) => void
 }
 
-export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery, filtres }: ArbreGenealogiqueProps) {
+export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery, filtres, onSignalerDeces }: ArbreGenealogiqueProps) {
   const { t } = useI18n()
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
@@ -1440,6 +1442,15 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 </div>
                 
                 <div className="detail-info">
+                  {onSignalerDeces && !isCurrentUser && !selectedMember.isDeceased && selectedMember.numeroH && selectedMember.numeroH !== 'N/A' && (
+                    <button
+                      type="button"
+                      onClick={() => { onSignalerDeces({ numeroH: selectedMember.numeroH, prenom: selectedMember.prenom, nomFamille: selectedMember.nomFamille }); setSelectedMember(null); }}
+                      className="mb-3 w-full text-sm px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                    >
+                      🕯️ Signaler décès
+                    </button>
+                  )}
                   {canHide && (
                     <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
                       <button

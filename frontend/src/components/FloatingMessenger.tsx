@@ -10,6 +10,7 @@ import { isActivityBlocked } from '../utils/activityIcons'
 import { ActivityIcon } from './ActivityIconBadge'
 import LienBadge, { type Lien } from './LienBadge'
 import { chargerMessagesNonLus, marquerConversationLue, EVENEMENT_MESSAGES_LUS, type MessagesNonLus } from '../utils/messagesNonLus'
+import { texteCompteur } from '../utils/compteur'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -597,7 +598,7 @@ export function FloatingMessenger() {
             aria-label={`${nonLus.total} message${nonLus.total > 1 ? 's' : ''} non lu${nonLus.total > 1 ? 's' : ''}`}
             className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center ring-2 ring-white"
           >
-            {nonLus.total > 99 ? '99+' : nonLus.total}
+            {texteCompteur(nonLus.total)}
           </span>
         )}
       </button>
@@ -644,7 +645,7 @@ export function FloatingMessenger() {
                         )}
                         {nbNonLus > 0 && (
                           <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center">
-                            {nbNonLus > 99 ? '99+' : nbNonLus}
+                            {texteCompteur(nbNonLus)}
                           </span>
                         )}
                       </div>

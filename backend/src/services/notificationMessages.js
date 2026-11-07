@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import { preparerClesPush } from '../utils/clesPush.js';
 import User from '../models/User.js';
 import PushSubscription from '../models/PushSubscription.js';
 import { compterNonLus } from '../routes/unread.js';
@@ -45,6 +46,7 @@ export function notifierNouveauMessage({ destinataires, expediteur, convKey, mes
     try {
       const liste = [...new Set((destinataires || []).filter((n) => n && n !== expediteur.numeroH))];
       if (!liste.length) return;
+      if (!(await preparerClesPush())) return;
       const nom = [expediteur.prenom, expediteur.nomFamille].filter(Boolean).join(' ') || 'Un membre';
       const title = groupe ? `${groupe} · ${nom}` : nom;
       const body = apercu(message);
