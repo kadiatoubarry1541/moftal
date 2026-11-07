@@ -68,6 +68,21 @@ const DB_RETRY_DELAY_MS = 2000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Crée les tables modèle par modèle, dans l'ordre des dépendances : un échec
+// (index déjà présent, ancienne colonne…) est signalé mais n'empêche plus la
+// création des tables suivantes. Avec un seul sequelize.sync(), la première
+// erreur arrêtait tout et des tables (rendez-vous, IA, récits…) manquaient.
+async function creerTablesUneParUne(options) {
+  const modeles = [];
+  sequelize.modelManager.forEachModel((m) => modeles.push(m));
+  let echecs = 0;
+  for (const modele of modeles) {
+    try { await modele.sync(options); }
+    catch (e) { echecs++; console.warn(`⚠️ Table ${modele.getTableName?.() || modele.name} :`, e.message); }
+  }
+  if (echecs) console.warn(`⚠️ ${echecs} table(s) non mise(s) à jour sur ${modeles.length} — les autres sont prêtes.`);
+}
+
 const connectDB = async () => {
   let lastError;
   for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
@@ -76,10 +91,10 @@ const connectDB = async () => {
       console.log('PostgreSQL connecte avec succes');
       try {
         if (process.env.NODE_ENV === 'development') {
-          await sequelize.sync({ alter: true });
+          await creerTablesUneParUne({ alter: true });
           console.log('Modeles synchronises avec la base de donnees');
         } else {
-          await sequelize.sync({ force: false });
+          await creerTablesUneParUne({ force: false });
           console.log('Modeles synchronises (production — sans alter)');
         }
       } catch (syncError) {

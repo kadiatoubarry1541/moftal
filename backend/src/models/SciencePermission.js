@@ -82,11 +82,9 @@ SciencePermission.init({
     },
     {
       fields: ['is_active']
-    },
-    {
-      unique: true,
-      fields: ['numero_h']
     }
+    // (Un second index « unique » sur numero_h avait le même nom que le premier :
+    //  il échouait à chaque démarrage, et une personne peut avoir plusieurs permissions.)
   ]
 });
 

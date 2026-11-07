@@ -60,13 +60,13 @@ class GamePlayer extends Model {
       indexes: [
         {
           unique: true,
-          fields: ['gameId', 'numero_h']
+          fields: ['gameId', 'numeroH']
         },
         {
           fields: ['gameId']
         },
         {
-          fields: ['numero_h']
+          fields: ['numeroH']
         }
       ]
     });

@@ -13,7 +13,7 @@ const UserLogo = sequelize.define('UserLogo', {
     allowNull: false,
     references: {
       model: 'users',
-      key: 'numeroH'
+      key: 'numero_h'
     }
   },
   logoId: {

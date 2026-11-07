@@ -11,6 +11,18 @@ import { finAbonnementPaye, DUREES_IA } from '../utils/finAbonnement.js';
 
 /** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
  *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
+// Les fiches sont insérées une fois la table créée : lancées à l'import, elles
+// passaient avant la création des tables et échouaient sur une base neuve.
+async function remplirConnaissancesIa() {
+  try { await IaKnowledge.sync(); await IaConversation.sync(); }
+  catch (err) { console.warn('⚠️ Tables IA :', err.message); return; }
+  await seedTerminaleKnowledge();
+  await seedBiologieKnowledge();
+  await seedFrancaisAvanceKnowledge();
+  await seedGeometrieKnowledge();
+}
+setTimeout(() => { void remplirConnaissancesIa(); }, 0);
+
 async function seedTerminaleKnowledge() {
   try {
     for (const fiche of TERMINALE_KNOWLEDGE) {
@@ -26,7 +38,6 @@ async function seedTerminaleKnowledge() {
     console.warn('⚠️ seedTerminaleKnowledge:', err.message);
   }
 }
-seedTerminaleKnowledge();
 
 /** Insère (ou met à jour) les fiches Biologie au démarrage — mêmes règles
  *  que seedTerminaleKnowledge : n'écrase jamais une fiche déjà modifiée
@@ -40,7 +51,6 @@ async function seedBiologieKnowledge() {
     console.warn('⚠️ seedBiologieKnowledge:', err.message);
   }
 }
-seedBiologieKnowledge();
 
 /** Insère (ou met à jour) les fiches Français avancé au démarrage — mêmes
  *  règles que les autres seeds : n'écrase jamais une fiche déjà modifiée
@@ -54,7 +64,6 @@ async function seedFrancaisAvanceKnowledge() {
     console.warn('⚠️ seedFrancaisAvanceKnowledge:', err.message);
   }
 }
-seedFrancaisAvanceKnowledge();
 
 /** Insère (ou met à jour) les fiches Géométrie au démarrage — mêmes règles
  *  que les autres seeds : n'écrase jamais une fiche déjà modifiée
@@ -68,7 +77,6 @@ async function seedGeometrieKnowledge() {
     console.warn('⚠️ seedGeometrieKnowledge:', err.message);
   }
 }
-seedGeometrieKnowledge();
 
 /** Vérifie si l'utilisateur a un abonnement Professeur IA actif (passes cumulés) */
 async function verifierAbonnementIA(numeroH) {
