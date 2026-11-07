@@ -46,7 +46,7 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
       }
     })();
     return () => { annule = true; };
-  }, [linkId]);
+  }, [linkId, t]);
 
   const ajouter = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0];

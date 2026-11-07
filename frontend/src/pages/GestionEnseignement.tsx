@@ -263,6 +263,7 @@ export default function GestionEnseignement({ mode }: Props) {
       })
       .catch(e => setError(trHors("Impossible de joindre le serveur : {err}", { err: String(e?.message || e) })))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- prechargerHorsLigne est recréée à chaque affichage : la mettre ici relancerait le chargement en boucle
   }, [get, navigate]);
 
   // Employé qui est aussi enseignant ou parent ici : ses espaces, dans l'application

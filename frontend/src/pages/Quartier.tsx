@@ -251,8 +251,10 @@ export default function Quartier() {
             <h3 className="font-bold text-slate-800">Signaler un problème dans le quartier</h3>
             <p className="text-slate-500 text-sm mt-1">Route dégradée, manque d'éclairage, insécurité… faites remonter l'information</p>
           </div>
+          {/* Le signalement se publie dans l'espace du quartier (Terre d'Adam,
+              catégorie Sécurité) — pas dans la Caisse de la famille */}
           <button
-            onClick={() => navigate("/probleme")}
+            onClick={() => navigate("/terre-adam")}
             className="px-5 py-2.5 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors text-sm whitespace-nowrap"
           >
             📢 Signaler

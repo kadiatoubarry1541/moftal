@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 const config = {
   PORT: process.env.PORT || 5002,
   DB_HOST: process.env.DB_HOST || 'localhost',
