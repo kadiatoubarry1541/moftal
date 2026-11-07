@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
@@ -23,6 +23,8 @@ import EnvoiLien from "../components/EnvoiLien";
 import ValeursSite from "../components/ValeursSite";
 import { lienAppGestion } from "../utils/lienAppGestion";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
+import { BandeauSauvegarde, PanneauSauvegarde, ProposerSauvegarde } from "../components/SauvegardeEtablissement";
+import { useSauvegarde } from "../hooks/useSauvegarde";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 import { cheminConnexion } from "../utils/connexionRetour";
 import type {
@@ -42,7 +44,7 @@ function afficherCodePremiereConnexion(code?: string | null) {
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "parents" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "settings";
+type Section = "dashboard" | "apprenants" | "parents" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "sauvegarde" | "settings";
 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
@@ -59,16 +61,24 @@ function printFeeReceipt(f: Frais, tenant: EtablissementEnseignement | null, col
   });
 }
 
+// Montant déjà encaissé sur un frais (avances comprises)
+const payeDe = (f: Frais) => f.montant_paye != null && f.montant_paye !== "" ? +f.montant_paye || 0 : (f.est_paye ? +f.montant || 0 : 0);
+
 const logoHtml = (url?: string | null) => url ? `<img src="${echap(/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url)}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
-function printBulletin(b: Bulletin, orgName: string, color: string, logoUrl?: string | null) {
+function printBulletin(b: Bulletin, orgName: string, color: string, logoUrl?: string | null, notes: Note[] = []) {
   const ar = langueCourante() === "ar";
+  // Détail des notes de la période, matière par matière
+  const lignesNotes = notes.length ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:16px 0"><thead><tr style="background:#f1f5f9">
+<th style="text-align:start;padding:8px;border:1px solid #e2e8f0">${trHors("Matière")}</th><th style="padding:8px;border:1px solid #e2e8f0">${trHors("Note")}</th><th style="text-align:start;padding:8px;border:1px solid #e2e8f0">${trHors("Commentaire")}</th></tr></thead><tbody>
+${notes.map(n => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${echap(trHors(n.matiere || ""))}</td><td style="padding:8px;border:1px solid #e2e8f0;text-align:center;font-weight:700">${echap(n.note)}/${echap(n.note_max || 20)}</td><td style="padding:8px;border:1px solid #e2e8f0">${echap(n.commentaire || "")}</td></tr>`).join("")}
+</tbody></table>` : "";
   const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${echap(trHors("Bulletin {nom}", { nom: b.student_nom }))}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
 <div class="header"><div class="title">${logoHtml(logoUrl)}${echap(orgName)}</div><div style="text-align:end;font-size:12px;color:#64748b">${echap(trHors(b.periode || ""))} — ${echap(b.annee_scolaire)}</div></div>
 <h2 style="margin-bottom:16px">${trHors("Bulletin de progression")}</h2>
 <div class="box"><strong>${echap(b.student_prenom)} ${echap(b.student_nom)}</strong><br><span style="color:#64748b;font-size:13px">${echap(trHors(b.niveau || b.classe || ""))}</span></div>
-<div class="moy">${echap(b.moyenne_generale)}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${echap(trHors(b.mention || ""))}</div></div>
+${lignesNotes}<div class="moy">${b.moyenne_generale != null ? `${echap(b.moyenne_generale)}/20` : "—"}<div style="font-size:14px;font-weight:600;margin-top:8px">${echap(trHors(b.mention || ""))}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">${trHors("Signature & Cachet")}</div></div>
 </body></html>`;
   ouvrirDocument(html, `bulletin-${b.student_prenom || ""}-${b.student_nom || ""}-${b.periode || ""}`);
@@ -169,6 +179,7 @@ export default function GestionEnseignement({ mode }: Props) {
     ] : []),
     { id: "photos",        label: tr("🌐 Mon site"),  icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
     { id: "notifications", label: tr("Notifications"),   icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
+    { id: "sauvegarde",  label: tr("Sauvegarde"),             icon: "M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" },
     { id: "settings",    label: tr("Paramètres"),             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
 
@@ -184,6 +195,8 @@ export default function GestionEnseignement({ mode }: Props) {
   const [fees, setFees]           = useState<Frais[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [enrollRequests, setEnrollRequests] = useState<DemandeInscription[]>([]);
+  // Année scolaire affichée (notes et bulletins) — école seulement
+  const [anneeVue, setAnneeVue] = useState(anneeScolaireEnCours());
   const [reviews, setReviews] = useState<AvisEnseignement[]>([]);
   const [search, setSearch]       = useState("");
   const [niveauFilter, setNiveauFilter] = useState("");
@@ -206,28 +219,36 @@ export default function GestionEnseignement({ mode }: Props) {
   const [lienPour, setLienPour] = useState<{ prenom: string; telephone?: string | null; email?: string | null; role: string } | null>(null);
   const [nhParent, setNhParent]   = useState("");
   const [parentsBusy, setParentsBusy] = useState(false);
+  // Fichier de sauvegarde de l'établissement sur l'appareil (hors connexion)
+  const sauvegarde = useSauvegarde(`${config.API_BASE_URL}/${apiName}/${tenantCode}`,
+    { code: tenantCode || "", nom: tenant?.name || tenantCode || "", secteur: isMadrasa ? "madrasa" : "ecole" });
 
-  const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
+  // Dernière écriture gardée sur l'appareil (sans connexion) : le message le dit
+  const enAttenteRef = useRef(0);
+  const showToast = (msg: string, ok = true) => {
+    const horsLigne = ok && Date.now() - enAttenteRef.current < 2000;
+    if (horsLigne) enAttenteRef.current = 0;
+    setToast({ msg: horsLigne ? `${msg} — ${tr("hors ligne : gardé sur l'appareil, envoyé dès le retour de la connexion")}` : msg, ok });
+    setTimeout(() => setToast(null), horsLigne ? 4500 : 3000);
+  };
 
-  const get = useCallback(async (path: string): Promise<ReponseEnseignement> => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { headers: auth() });
-    return r.json();
+  // Appel au serveur : renvoie toujours un objet (jamais d'exception), avec un
+  // message clair si la connexion est coupée ou si le serveur ne répond pas.
+  // Sans connexion, la couche hors ligne (utils/offlineSync) lit la copie gardée
+  // sur l'appareil et met les enregistrements en file d'attente.
+  const appel = useCallback(async <T = ReponseEnseignement>(path: string, init?: RequestInit): Promise<T> => {
+    let r: Response;
+    try { r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { ...init, headers: auth() }); }
+    catch { return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." } as T; }
+    const d = await r.json().catch(() => ({ success: false, message: "Le serveur ne répond pas. Réessayez dans un instant." }));
+    if (init?.method && init.method !== "GET" && d?.queued) enAttenteRef.current = Date.now();
+    return d as T;
   }, [tenantCode, apiName]);
 
-  const post = useCallback(async <T = ReponseEnseignement>(path: string, body: unknown): Promise<T> => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    return r.json();
-  }, [tenantCode, apiName]);
-
-  const put = useCallback(async (path: string, body: unknown): Promise<ReponseEnseignement> => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
-    return r.json();
-  }, [tenantCode, apiName]);
-
-  const del = useCallback(async (path: string): Promise<ReponseEnseignement> => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
-    return r.json();
-  }, [tenantCode, apiName]);
+  const get  = useCallback((path: string) => appel(path), [appel]);
+  const post = useCallback(<T = ReponseEnseignement>(path: string, body: unknown) => appel<T>(path, { method: "POST", body: JSON.stringify(body) }), [appel]);
+  const put  = useCallback((path: string, body: unknown) => appel(path, { method: "PUT", body: JSON.stringify(body) }), [appel]);
+  const del  = useCallback((path: string) => appel(path, { method: "DELETE" }), [appel]);
 
   useEffect(() => {
     const user = getSessionUser();
@@ -238,6 +259,7 @@ export default function GestionEnseignement({ mode }: Props) {
         setTenant(info.tenant);
         setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "", horaires: info.tenant.horaires || "", phone_urgence: info.tenant.phone_urgence || "" });
         setStats(dash);
+        if (navigator.onLine) prechargerHorsLigne();
       })
       .catch(e => setError(trHors("Impossible de joindre le serveur : {err}", { err: String(e?.message || e) })))
       .finally(() => setLoading(false));
@@ -256,9 +278,25 @@ export default function GestionEnseignement({ mode }: Props) {
   // Le propriétaire et le co-responsable (« total ») choisissent l'accès de chacun
   const peutDonnerAcces = !tenant?.acces_employe || tenant.acces_employe === "total";
 
+  // Avec internet : chaque liste est lue une fois pour être gardée sur l'appareil
+  // (utils/offlineSync), ainsi toute la gestion reste utilisable sans connexion,
+  // même les rubriques pas encore ouvertes
+  const prechargerHorsLigne = () => {
+    const jourConakry = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Conakry" }).format(new Date());
+    const listes = ["/students", "/staff", "/grades", "/fees", "/bulletins", "/members", "/bibliotheque",
+      `/attendance?date=${new Date().toISOString().split("T")[0]}`, `/pointages?jour=${jourConakry}`,
+      ...(isMadrasa ? [] : ["/enroll-requests", "/reviews"])];
+    listes.forEach(l => { void get(l); });
+    get(`/${groupEP}`).then(d => {
+      if (isMadrasa) return;
+      (d[groupEP] || []).forEach((g: Groupe) => { void get(`/attendance/summary?classroom_id=${g.id}`); });
+    });
+  };
+
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
     if (window.innerWidth < 768) setCollapsed(true);
+    if (s === "dashboard")   { get("/dashboard").then(d => { if (d && d.success !== false) setStats(d); }); }
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
     if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
@@ -273,20 +311,42 @@ export default function GestionEnseignement({ mode }: Props) {
     if (s === "avis")        { get("/reviews").then(d => d.success && setReviews(d.reviews)); }
   }, [get, groupEP]);
 
+  useEffect(() => {
+    // (pas pendant l'appel : les présences cochées non enregistrées resteraient perdues)
+    const relire = () => { if (section !== "presences") loadSection(section); };
+    window.addEventListener("moftal-offline-synced", relire);
+    return () => window.removeEventListener("moftal-offline-synced", relire);
+  }, [loadSection, section]);
+
   const loadAttendance = useCallback((date: string, groupId: string) => {
     if (!groupId) return;
     const g = groupes.find(x => String(x.id) === groupId);
     if (!g) return;
     get(`/attendance?date=${date}`).then(d => {
       const existing: PresenceEnregistree[] = d.attendance || [];
-      const gs = students.filter(s => s.niveau === g.niveau && s.is_active !== false);
+      const gs = students.filter(s => s.is_active !== false && (!isMadrasa && s.classroom_id
+        ? String(s.classroom_id) === String(g.id)
+        : s.niveau === g.niveau));
       setAttendance(gs.map(s => {
         const rec = existing.find(r => r.student_id === s.id);
         return rec ? { student_id: s.id, prenom: s.prenom, nom: s.nom, statut: rec.statut }
                    : { student_id: s.id, prenom: s.prenom, nom: s.nom, statut: "present" };
       }));
     });
-  }, [get, groupes, students]);
+  }, [get, groupes, students, isMadrasa]);
+
+  // L'appel se recharge quand la classe, la date ou la liste des élèves change
+  // (les élèves arrivent parfois après le choix de la classe)
+  useEffect(() => {
+    if (section === "presences" && selectedGroup) loadAttendance(attendDate, selectedGroup);
+  }, [section, selectedGroup, attendDate, loadAttendance]);
+
+  // Historique de la classe choisie (rechargé quand on change de classe)
+  useEffect(() => {
+    if (section !== "presences" || attendanceView !== "historique" || !selectedGroup || isMadrasa) return;
+    setAttendanceSummary([]);
+    get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d => { if (d.success) setAttendanceSummary(d.summary || []); });
+  }, [section, attendanceView, selectedGroup, get, isMadrasa]);
 
   // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,13 +375,16 @@ export default function GestionEnseignement({ mode }: Props) {
         if (!form.nom || !form.prenom) { showToast(tr("Nom et prénom obligatoires"), false); return; }
         // Le matricule est celui que l'établissement donne déjà à ses apprenants
         if (!isMadrasa && !String(form.numero_matricule || "").trim()) { showToast(tr("Saisissez le matricule de l'apprenant."), false); return; }
+        const corps = { ...form, niveau: form.niveau || niveaux[0], ...(isMadrasa ? {} : { classroom_id: form.classroom_id || null }) };
+        // Un NuméroH introuvable sur la fiche (parent, élève) est signalé
+        const avertir = (d: ReponseEnseignement) => { if (Array.isArray(d.avertissements) && d.avertissements.length) setTimeout(() => showToast(tr(String(d.avertissements[0])), false), 3100); };
         if (form.id) {
-          const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } as Apprenant : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Apprenant modifié(e)")); get("/students").then(r => r.students && setStudents(r.students)); }
+          const d = await put(`/students/${form.id}`, corps);
+          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } as Apprenant : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Apprenant modifié(e)")); avertir(d); get("/students").then(r => r.students && setStudents(r.students)); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
-          const d = await post("/students", { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Apprenant ajouté(e)")); get("/students").then(r => r.students && setStudents(r.students)); }
+          const d = await post("/students", corps);
+          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Apprenant ajouté(e)")); avertir(d); get("/students").then(r => r.students && setStudents(r.students)); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-parent") {
@@ -358,7 +421,8 @@ export default function GestionEnseignement({ mode }: Props) {
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast(tr("Nom obligatoire"), false); return; }
         const body: Omit<Partial<Groupe>, "enseignants"> & { enseignants?: number[] } = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
-        if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
+        // Sans enseignant choisi : l'enseignant de la classe est retiré
+        body[teacherFld] = form.enseignant_id || null;
         if (!isMadrasa) body.enseignants = [...new Set([...(form.enseignants || []).map(Number), ...(form.enseignant_id ? [Number(form.enseignant_id)] : [])])];
         // Photo de la salle (facultative) : montrée sur le site
         if (typeof form.photo_url === "string" && form.photo_url.startsWith("data:")) body.photo_url = form.photo_url;
@@ -377,29 +441,60 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, emploi_du_temps: form.emploi_du_temps } : x)); setModal(null); setForm({}); showToast(tr("Emploi du temps enregistré")); }
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "add-note") {
-        if (!form.student_id || !form.matiere || form.note === "") { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
-        const body = { ...form, note: parseFloat(String(form.note)), note_max: parseFloat(String(form.note_max || 20)) };
+        if (!form.student_id || !form.matiere || form.note == null || form.note === "" || isNaN(parseFloat(String(form.note)))) { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
+        const body = { ...form, note: parseFloat(String(form.note)), note_max: parseFloat(String(form.note_max || 20)), ...(isMadrasa ? {} : { annee_scolaire: String(form.annee_scolaire || anneeVue).trim() }) };
+        if (!isMadrasa && !/^\d{4}-\d{4}$/.test(String(body.annee_scolaire))) { showToast(tr("Année scolaire au format 2025-2026"), false); return; }
+        if (!(body.note_max > 0) || body.note < 0 || body.note > body.note_max) { showToast(tr("La note doit être entre 0 et {max}", { max: body.note_max > 0 ? body.note_max : 20 }), false); return; }
+        const el = students.find(x => String(x.id) === String(form.student_id));
+        const nomEleve = el ? { student_prenom: el.prenom, student_nom: el.nom } : {};
         if (form.id) {
           const d = await put(`/grades/${form.id}`, body);
           if (d.success) { setGrades(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(tr("Note modifiée")); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post("/grades", body);
-          if (d.grade) { setGrades(p => [d.grade, ...p]); setModal(null); setForm({}); showToast(tr("Note enregistrée")); }
+          if (d.grade) { setGrades(p => [{ ...nomEleve, ...d.grade }, ...p]); setModal(null); setForm({}); showToast(tr("Note enregistrée")); }
           else showToast(tr(d.message || "Erreur"), false);
         }
+      } else if (modal === "add-frais" && form.id) {
+        if (!form.montant || +form.montant <= 0) { showToast(tr("Montant obligatoire"), false); return; }
+        const d = await put(`/fees/${form.id}`, { montant: parseInt(String(form.montant)), type_frais: form.type_frais || V.fraisTypes[1], echeance: form.echeance || null });
+        if (d.success) {
+          setFees(p => p.map(x => {
+            if (x.id !== form.id) return x;
+            const montant = parseInt(String(form.montant));
+            return { ...x, montant, type_frais: form.type_frais || V.fraisTypes[1], echeance: form.echeance || null, est_paye: (+x.montant_paye || 0) >= montant };
+          }));
+          setModal(null); setForm({}); showToast(tr("Frais modifié"));
+        } else showToast(tr(d.message || "Erreur"), false);
+      } else if (modal === "versement") {
+        const v = parseInt(String(form.versement));
+        if (!v || v <= 0) { showToast(tr("Montant du versement invalide."), false); return; }
+        const d = await put(`/fees/${form.id}/pay`, { versement: v });
+        if (d.success) {
+          setFees(fs => fs.map((x) => {
+            if (x.id !== form.id) return x;
+            const du = +x.montant || 0;
+            const paye = Math.min(du, (+x.montant_paye || 0) + v);
+            // Valeurs du serveur quand il a répondu (pas pour une opération gardée hors ligne)
+            const serveur = !d.queued && d.fee ? { montant_paye: d.fee.montant_paye, est_paye: d.fee.est_paye, date_paiement: d.fee.date_paiement } : {};
+            return { ...x, montant_paye: paye, est_paye: paye >= du, date_paiement: new Date().toISOString(), ...serveur };
+          }));
+          setModal(null); setForm({}); showToast(tr("Paiement enregistré"));
+        } else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false);
       } else if (modal === "add-frais") {
         if (!form.student_id || !form.montant) { showToast(tr("Apprenant et montant obligatoires"), false); return; }
         const d = await post("/fees", { ...form, montant: parseInt(String(form.montant)), type_frais: form.type_frais || V.fraisTypes[1] });
-        if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast(tr("Frais ajouté")); }
+        const el = students.find(x => String(x.id) === String(form.student_id));
+        if (d.fee) { setFees(p => [{ student_prenom: el?.prenom, student_nom: el?.nom, telephone_parent: el?.telephone_parent, ...d.fee } as Frais, ...p]); setModal(null); setForm({}); showToast(tr("Frais ajouté")); }
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "save-presence") {
-        const d = await post("/attendance", { date: attendDate, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        const d = await post("/attendance", { date: attendDate, ...(isMadrasa ? {} : { classroom_id: selectedGroup }), records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
         if (d.success) { setModal(null); showToast(tr("Présences enregistrées")); }
         else showToast(tr(d.message || "Les présences n'ont pas été enregistrées"), false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast(tr("Période obligatoire"), false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || anneeScolaireEnCours(), publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: (form.annee || anneeVue).trim(), publish: !!form.publish });
         if (d.success) { showToast(tr("{n} bulletin(s) généré(s)", { n: d.generated })); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(tr(d.message || "Erreur"), false);
       }
@@ -442,7 +537,7 @@ export default function GestionEnseignement({ mode }: Props) {
   };
 
   const chargerMembres = async () => {
-    const d = await get("/members").catch((): ReponseEnseignement => ({}));
+    const d = await get("/members");
     if (d?.success) setMembres(d.members || []);
     else showToast(tr(d?.message || "Impossible de charger les parents."), false);
   };
@@ -461,7 +556,7 @@ export default function GestionEnseignement({ mode }: Props) {
       const tel = !/[a-z]/i.test(v) && v.replace(/[^0-9]/g, "").length >= 8;
       const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
       if (!d.success) { showToast(tr(d.message || "Erreur"), false); return; }
-      showToast(d.user ? tr("Parent relié ({nom})", { nom: `${d.user.prenom} ${d.user.nom}` }) : tr("Parent relié"));
+      showToast(d.user && !d.queued && (d.user.prenom || d.user.nom) ? tr("Parent relié ({nom})", { nom: [d.user.prenom, d.user.nom].filter(Boolean).join(" ") }) : tr("Parent relié"));
       afficherCodePremiereConnexion(d.codePremiereConnexion);
       setNhParent(""); await chargerMembres();
     } catch { showToast(tr("Erreur de connexion. Réessayez."), false); }
@@ -474,11 +569,14 @@ export default function GestionEnseignement({ mode }: Props) {
     const v = nhParent.trim();
     if (!v) return;
     const tel = !/[a-z]/i.test(v) && chiffres9(v).length >= 8 ? chiffres9(v) : "";
+    const mail = v.includes("@") ? v.toLowerCase() : "";
     const m = parentsDeLEleve.find((p) =>
-      tel ? chiffres9(p.telephone_compte) === tel : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
+      tel ? chiffres9(p.telephone_compte) === tel
+      : mail ? String(p.email_compte || "").trim().toLowerCase() === mail
+      : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
     if (!m) {
       const qui = parentsDe?.prenom || tr("cet apprenant");
-      showToast(tel ? tr("Aucun parent de {qui} avec ce numéro de téléphone.", { qui }) : tr("Aucun parent de {qui} avec ce NuméroH.", { qui }), false);
+      showToast(tel ? tr("Aucun parent de {qui} avec ce numéro de téléphone.", { qui }) : mail ? tr("Aucun parent de {qui} avec cet e-mail.", { qui }) : tr("Aucun parent de {qui} avec ce NuméroH.", { qui }), false);
       return;
     }
     void delierParent(m).then(() => setNhParent(""));
@@ -556,6 +654,20 @@ export default function GestionEnseignement({ mode }: Props) {
           }} />
         </label>
       </div>
+    </div>
+  );
+
+  // Notes et bulletins de l'année scolaire choisie (école)
+  const anneeDe = (x: { annee_scolaire?: string | null }) => x.annee_scolaire || anneeScolaireEnCours();
+  const notesVues = isMadrasa ? grades : grades.filter(g => anneeDe(g) === anneeVue);
+  const bulletinsVus = isMadrasa ? bulletins : bulletins.filter(b => anneeDe(b) === anneeVue);
+  const anneesConnues = Array.from(new Set([anneeScolaireEnCours(), anneeVue, ...grades.map(anneeDe), ...bulletins.map(anneeDe)])).sort().reverse();
+  const choixAnnee = (
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <label style={{ fontSize:12, fontWeight:600, color:"#64748b" }}>{tr("Année scolaire")}</label>
+      <select value={anneeVue} onChange={e=>setAnneeVue(e.target.value)} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 10px",fontSize:13,background:"white" }}>
+        {anneesConnues.map(a=><option key={a} value={a}>{a}</option>)}
+      </select>
     </div>
   );
 
@@ -784,8 +896,9 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} disabled={!!form.id} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
+                {form.id && !students.some(s=>String(s.id)===String(form.student_id)) && <option value={form.student_id}>{form.student_prenom} {form.student_nom}</option>}
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} — {tr(s.niveau || "")}</option>)}
               </select>
             </div>
@@ -801,9 +914,15 @@ export default function GestionEnseignement({ mode }: Props) {
                 {PERIODES.map(p=><option key={p} value={p}>{tr(p)}</option>)}
               </select>
             </div>
+            {!isMadrasa && (
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Année scolaire")}</label>
+                <input value={form.annee_scolaire ?? anneeVue} onChange={e=>setForm((f) =>({...f,annee_scolaire:e.target.value}))} placeholder="2025-2026" className={inp} style={inpSt} />
+              </div>
+            )}
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note *")}</label>
-              <input type="number" min="0" max="20" step="0.25" value={form.note||""} onChange={e=>setForm((f) =>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
+              <input type="number" min="0" max="20" step="0.25" value={form.note ?? ""} onChange={e=>setForm((f) =>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note max")}</label>
@@ -823,12 +942,13 @@ export default function GestionEnseignement({ mode }: Props) {
         </>)}
 
         {modal === "add-frais" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{tr("Ajouter un frais")}</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? tr("Modifier le frais") : tr("Ajouter un frais")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} disabled={!!form.id} onChange={e=>setForm((f) =>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
+                {form.id && !students.some(s=>String(s.id)===String(form.student_id)) && <option value={form.student_id}>{form.student_prenom} {form.student_nom}</option>}
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}
               </select>
             </div>
@@ -851,6 +971,19 @@ export default function GestionEnseignement({ mode }: Props) {
           </div>
         </>)}
 
+        {modal === "versement" && (<>
+          <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700 }}>{tr("Encaisser un paiement")}</h3>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>
+            {form.eleve} · {tr(form.type_frais || "")} — {tr("reste {montant}", { montant: fmtMoney(form.reste) })}
+          </p>
+          <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Montant reçu (GNF) *")}</label>
+          <input type="number" min="1" max={form.reste} value={form.versement ?? ""} onChange={e=>setForm((f) =>({...f,versement:e.target.value}))} className={inp} style={inpSt} />
+          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <button onClick={()=>setForm((f) =>({...f,versement:String(f.reste)}))} style={{ padding: "5px 10px", fontSize: 12, borderRadius: 6, border: `1px solid ${V.color}`, color: V.color, background: "white", cursor: "pointer" }}>{tr("Tout le reste")}</button>
+          </div>
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>{tr("Un montant plus petit est enregistré comme avance : le reste reste à payer.")}</p>
+        </>)}
+
         {modal === "save-presence" && (<>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>{tr("Confirmer les présences")}</h3>
           <div style={{ background: "#f0fdf0", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: V.colorDark }}>
@@ -870,7 +1003,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Année scolaire")}</label>
-              <input value={form.annee||anneeScolaireEnCours()} onChange={e=>setForm((f) =>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.annee ?? anneeVue} onChange={e=>setForm((f) =>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
@@ -919,6 +1052,7 @@ export default function GestionEnseignement({ mode }: Props) {
         );
       })()}
 
+      {!isAdminViewing && <ProposerSauvegarde s={sauvegarde} couleur={V.color} />}
       {toast && (
         <div style={{ position: "fixed", top: 20, insetInlineEnd: 20, maxWidth: "calc(100vw - 40px)", boxSizing: "border-box", zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? V.color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
@@ -981,12 +1115,13 @@ export default function GestionEnseignement({ mode }: Props) {
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {!isAdminViewing && <BandeauSauvegarde s={sauvegarde} couleur={V.color} ouvrir={() => loadSection("sauvegarde")} />}
         {isAdminViewing && (
           <div style={{ background: V.colorDark, color: "white", padding: "8px 24px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             👁 {tr("Mode Administrateur")} · <span style={{ fontFamily: "monospace", fontSize: 11, background: "rgba(255,255,255,0.2)", padding: "1px 6px", borderRadius: 4 }}>{tenant.owner_numero_h}</span>
           </div>
         )}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "12px 14px" : "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {collapsed && (
               <button onClick={() => setCollapsed(false)} aria-label={tr("Ouvrir le menu")}
@@ -1001,26 +1136,26 @@ export default function GestionEnseignement({ mode }: Props) {
               <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString(locale,{weekday:"long",day:"numeric",month:"long"})}</p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Nouvel apprenant", "Nouvel apprenant")}</button>}
             {section === "parents"     && <button onClick={()=>{setModal("add-parent");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter un parent")}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter")}</button>}
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Créer une halaqa", "Créer une classe")}</button>}
-            {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter note")}</button>}
+            {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1",annee_scolaire:anneeVue});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter note")}</button>}
             {section === "frais"       && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter frais")}</button>}
             {section === "bulletins" && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ {tr("Générer bulletins")}</button>}
           </div>
         </div>
 
-        <div style={{ padding: 28, flex: 1 }}>
+        <div style={{ padding: isMobile ? 14 : 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display:"flex",flexDirection:"column",gap:20,animation:"fadeIn 0.2s ease" }}>
               <BoutonRapport base={`${config.API_BASE_URL}/${apiName}/${tenantCode}`} etablissement={tenant || undefined} couleur={V.color} onEmployes={() => loadSection("staff")} />
               {/* KPI Cards */}
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14 }}>
                 {[
                   { label: tr(V.apprenants), val: stats?.totalStudents??0, color: V.color, bg: isMadrasa?"#ecfeff":"#f0fdf0",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
@@ -1045,7 +1180,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 ))}
               </div>
               {/* Financial Banner */}
-              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#156315"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",gap:20,color:"white" }}>
+              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#156315"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",flexWrap:"wrap",gap:20,color:"white" }}>
                 <div style={{ width:48,height:48,borderRadius:11,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 </div>
@@ -1062,7 +1197,7 @@ export default function GestionEnseignement({ mode }: Props) {
               {/* Quick Actions */}
               <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin:"0 0 14px",fontSize:14,fontWeight:700,color:"#0f172a" }}>{tr("Actions rapides")}</h3>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10 }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10 }}>
                   {[
                     {label:tr("Faire l'appel"),    s:"presences" as Section, emoji:"📋"},
                     {label:M("Ajouter un apprenant", "Ajouter un apprenant"), s:"apprenants" as Section, emoji:"👤"},
@@ -1095,7 +1230,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   {optionsNiveaux()}
                 </select>
               </div>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                     {[tr(V.apprenant),...(!isMadrasa?[tr("Classe")]:[]),tr("Niveau"),tr("Date naissance"),tr("Tél. parent"),tr("Action")].map(h=>(
@@ -1125,7 +1260,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
                             <button onClick={()=>ouvrirParents(s)} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 {tr("Parents")}</button>
-                            <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
+                            <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
                           </div>
                         </td>
                       </tr>
@@ -1269,7 +1404,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!isMadrasa && (
                             <button onClick={()=>{ setForm({ id: g.id, nom: g.nom, emploi_du_temps: Array.isArray(g.emploi_du_temps) ? g.emploi_du_temps : [] }); setModal("edit-schedule"); }} style={{ color:"#0369a1",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>📅 {tr("Emploi du temps")}</button>
                           )}
-                          <button onClick={async()=>{ if(confirm(tr("Supprimer {nom} ?", { nom: g.nom }))){const d=await del(`/${groupEP}/${g.id}`); if(d.success){setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(M("Halaqa supprimée", "Classe supprimée"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Supprimer")}</button>
+                          <button onClick={async()=>{ if(confirm(tr("Supprimer {nom} ?", { nom: g.nom }))){const d=await del(`/${groupEP}/${g.id}`); if(d.success){setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(M("Halaqa supprimée", "Classe supprimée"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Supprimer")}</button>
                         </div>
                       </div>
                     );
@@ -1283,15 +1418,15 @@ export default function GestionEnseignement({ mode }: Props) {
           {section === "presences" && (
             <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
               <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
-                <input type="date" value={attendDate} onChange={e=>{setAttendDate(e.target.value);loadAttendance(e.target.value,selectedGroup);}} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#0f172a",outline:"none" }} />
-                <select value={selectedGroup} onChange={e=>{setSelectedGroup(e.target.value);loadAttendance(attendDate,e.target.value);}} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#475569",outline:"none",background:"white",minWidth:180 }}>
+                <input type="date" value={attendDate} onChange={e=>setAttendDate(e.target.value || new Date().toISOString().split("T")[0])} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#0f172a",outline:"none" }} />
+                <select value={selectedGroup} onChange={e=>setSelectedGroup(e.target.value)} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#475569",outline:"none",background:"white",minWidth:180 }}>
                   <option value="">{M("Choisir une halaqa…", "Choisir une classe…")}</option>
                   {groupes.map(g=><option key={g.id} value={g.id}>{g.nom} — {tr(g.niveau || "")}</option>)}
                 </select>
                 {!isMadrasa && selectedGroup && (
                   <div style={{ display:"flex",gap:4,background:"white",borderRadius:8,padding:4,border:"1px solid #e2e8f0" }}>
                     {([{ id:"appel",label:tr("Appel du jour") },{ id:"historique",label:tr("Historique") }] as { id:"appel"|"historique"; label:string }[]).map(t=>(
-                      <button key={t.id} onClick={()=>{ setAttendanceView(t.id); if(t.id==="historique" && selectedGroup) get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d=>d.success&&setAttendanceSummary(d.summary)); }}
+                      <button key={t.id} onClick={()=>setAttendanceView(t.id)}
                         style={{ padding:"6px 12px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:attendanceView===t.id?700:500,background:attendanceView===t.id?V.color:"transparent",color:attendanceView===t.id?"white":"#64748b" }}>
                         {t.label}
                       </button>
@@ -1305,7 +1440,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   <div style={{ fontSize:13,color:"#94a3b8" }}>{M("Sélectionnez une halaqa pour faire l'appel", "Sélectionnez une classe pour faire l'appel")}</div>
                 </div>
               ) : attendanceView === "historique" ? (
-                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                   <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                     <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                       {[tr(V.apprenant),tr("Présences"),tr("Absences"),tr("Taux présence")].map(h=>(
@@ -1367,18 +1502,19 @@ export default function GestionEnseignement({ mode }: Props) {
 
           {/* ── NOTES ── */}
           {section === "notes" && (
-            <div style={{ animation:"fadeIn 0.2s ease" }}>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+            <div style={{ animation:"fadeIn 0.2s ease", display:"flex", flexDirection:"column", gap:12 }}>
+              {!isMadrasa && choixAnnee}
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
-                    {[tr(V.apprenant),tr("Matière"),tr("Note"),V.sourate?tr("Sourate"):tr("Référence"),tr("Période"),tr("Commentaire"),""].map(h=>(
+                    {[tr(V.apprenant),tr("Matière"),tr("Note"),...(V.sourate?[tr("Sourate")]:[]),tr("Période"),tr("Commentaire"),""].map(h=>(
                       <th key={h} style={{ padding:"10px 16px",textAlign:"start",fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
-                    {grades.length===0 ? (
-                      <tr><td colSpan={7} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune note enregistrée")}</td></tr>
-                    ) : grades.map(g=>{
+                    {notesVues.length===0 ? (
+                      <tr><td colSpan={V.sourate ? 7 : 6} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune note enregistrée")}</td></tr>
+                    ) : notesVues.map(g=>{
                       const pct=(+g.note/+g.note_max)*100;
                       const nc=pct>=70?"#1a8f1a":pct>=50?"#d97706":"#ef4444";
                       return (
@@ -1387,13 +1523,13 @@ export default function GestionEnseignement({ mode }: Props) {
                           <td style={{ padding:"11px 16px",fontWeight:600,color:"#0f172a" }}>{g.student_prenom} {g.student_nom}</td>
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:4,fontSize:11,fontWeight:600 }}>{tr(g.matiere || "")}</span></td>
                           <td style={{ padding:"11px 16px" }}><span style={{ fontSize:16,fontWeight:800,color:nc }}>{g.note}</span><span style={{ fontSize:11,color:"#94a3b8" }}>/{g.note_max}</span></td>
-                          <td style={{ padding:"11px 16px",color:"#7c3aed",fontSize:12 }}>{g.sourate||"—"}</td>
+                          {V.sourate && <td style={{ padding:"11px 16px",color:"#7c3aed",fontSize:12 }}>{g.sourate||"—"}</td>}
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#475569",borderRadius:20,fontSize:11 }}>{g.periode ? tr(g.periode) : "—"}</span></td>
                           <td style={{ padding:"11px 16px",color:"#94a3b8",fontSize:12 }}>{g.commentaire||"—"}</td>
                           <td style={{ padding:"11px 16px" }}>
                             <div style={{ display:"flex", gap:10 }}>
                               <button onClick={()=>{ setForm({ ...g }); setModal("add-note"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modif.")}</button>
-                              <button onClick={async()=>{ if(confirm(tr("Supprimer cette note ?"))){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast(tr("Note supprimée"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Suppr.")}</button>
+                              <button onClick={async()=>{ if(confirm(tr("Supprimer cette note ?"))){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast(tr("Note supprimée"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Suppr.")}</button>
                             </div>
                           </td>
                         </tr>
@@ -1408,11 +1544,11 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── FRAIS ── */}
           {section === "frais" && (
             <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12 }}>
                 {[
                   { label:tr("Total facturé"),  val:fmtMoney(fees.reduce((s,f)=>s+ +f.montant,0)),                             color:"#0369a1", bg:"#eff6ff" },
-                  { label:tr("Total encaissé"), val:fmtMoney(fees.filter(f=>f.est_paye).reduce((s,f)=>s+ +f.montant,0)),       color:"#1a8f1a", bg:"#f0fdf0" },
-                  { label:tr("Reste à payer"),  val:fmtMoney(fees.filter(f=>!f.est_paye).reduce((s,f)=>s+ +f.montant,0)),     color:"#dc2626", bg:"#fef2f2" },
+                  { label:tr("Total encaissé"), val:fmtMoney(fees.reduce((s,f)=>s+payeDe(f),0)),                              color:"#1a8f1a", bg:"#f0fdf0" },
+                  { label:tr("Reste à payer"),  val:fmtMoney(fees.reduce((s,f)=>s+Math.max(0,(+f.montant||0)-payeDe(f)),0)), color:"#dc2626", bg:"#fef2f2" },
                 ].map((c,i)=>(
                   <div key={i} style={{ background:"white",borderRadius:10,border:"1px solid #e2e8f0",padding:"14px 16px",borderInlineStart:`3px solid ${c.color}` }}>
                     <div style={{ fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6 }}>{c.label}</div>
@@ -1420,7 +1556,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   </div>
                 ))}
               </div>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                     {[tr(V.apprenant),tr("Type"),tr("Montant"),tr("Échéance"),tr("Statut"),tr("Action")].map(h=>(
@@ -1435,13 +1571,16 @@ export default function GestionEnseignement({ mode }: Props) {
                         onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#fafafa"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                         <td style={{ padding:"11px 14px",fontWeight:600,color:"#0f172a" }}>{f.student_prenom} {f.student_nom}</td>
                         <td style={{ padding:"11px 14px",color:"#475569" }}>{tr(f.type_frais || "")}</td>
-                        <td style={{ padding:"11px 14px",fontWeight:700,color:"#0f172a" }}>{fmtMoney(f.montant)}</td>
+                        <td style={{ padding:"11px 14px",fontWeight:700,color:"#0f172a",whiteSpace:"nowrap" }}>{fmtMoney(f.montant)}{!f.est_paye && payeDe(f) > 0 && <div style={{ fontSize:11,fontWeight:500,color:"#dc2626" }}>{tr("reste {montant}", { montant: fmtMoney(+f.montant - payeDe(f)) })}</div>}</td>
                         <td style={{ padding:"11px 14px",color:"#64748b" }}>{f.echeance?fmtDate(f.echeance):"—"}</td>
-                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":"#fef2f2",color:f.est_paye?"#1a8f1a":"#dc2626" }}>{f.est_paye?tr("✓ Payé"):tr("Impayé")}</span></td>
+                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":payeDe(f)>0?"#fffbeb":"#fef2f2",color:f.est_paye?"#1a8f1a":payeDe(f)>0?"#b45309":"#dc2626",whiteSpace:"nowrap" }}>{f.est_paye?tr("✓ Payé"):payeDe(f)>0?tr("Avance {montant}", { montant: fmtMoney(payeDe(f)) }):tr("Impayé")}</span></td>
                         <td style={{ padding:"11px 14px" }}>
-                          <div style={{ display:"flex", gap:6 }}>
-                            {!f.est_paye && (
-                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x) =>x.id===f.id?{...x,est_paye:true}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            {!f.est_paye && !isMadrasa && (
+                              <button onClick={()=>{ setForm({ id: f.id, type_frais: f.type_frais, eleve: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim(), reste: Math.max(0, (+f.montant||0) - payeDe(f)), versement: String(Math.max(0, (+f.montant||0) - payeDe(f))) }); setModal("versement"); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
+                            )}
+                            {!f.est_paye && isMadrasa && (
+                              <button onClick={async()=>{ if(!confirm(tr("Encaisser {montant} pour {eleve} ?", { montant: fmtMoney(+f.montant), eleve: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim() }))) return; const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x) =>x.id===f.id?{...x,est_paye:true,montant_paye:x.montant,date_paiement:new Date().toISOString(),...(d.fee||{}),student_prenom:x.student_prenom,student_nom:x.student_nom,telephone_parent:x.telephone_parent}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
                             )}
                             {!f.est_paye && (
                               <button onClick={() => envoyerRappel(f.telephone_parent, tr(f.echeance
@@ -1454,7 +1593,17 @@ export default function GestionEnseignement({ mode }: Props) {
                                 date: f.echeance ? dateTexte(f.echeance) : "",
                               }))} style={{ padding:"5px 10px",background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>📲 {tr("Rappel")}</button>
                             )}
-                            {f.est_paye && (
+                            {!isMadrasa && (
+                              <button onClick={()=>{ setForm({ ...f, montant: String(f.montant ?? ""), echeance: f.echeance ? String(f.echeance).slice(0,10) : "" }); setModal("add-frais"); }} style={{ padding:"5px 10px",background:"white",color:V.color,border:`1px solid ${V.color}55`,borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Modifier")}</button>
+                            )}
+                            {!isMadrasa && (
+                              <button onClick={async()=>{ if(!confirm(payeDe(f) > 0
+                                  ? tr("Supprimer ce frais ? {montant} ont déjà été encaissés : ils disparaîtront aussi du rapport.", { montant: fmtMoney(payeDe(f)) })
+                                  : tr("Supprimer ce frais ?"))) return;
+                                const d=await del(`/fees/${f.id}`); if(d.success){ setFees(fs=>fs.filter((x) =>x.id!==f.id)); showToast(tr("Frais supprimé")); } else showToast(tr(d.message||"Erreur"),false); }}
+                                style={{ padding:"5px 10px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Suppr.")}</button>
+                            )}
+                            {payeDe(f) > 0 && (
                               <button onClick={() => printFeeReceipt(f, tenant, V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 {tr("Reçu")}</button>
                             )}
                           </div>
@@ -1469,8 +1618,9 @@ export default function GestionEnseignement({ mode }: Props) {
 
           {/* ── BULLETINS ── */}
           {section === "bulletins" && (
-            <div style={{ animation:"fadeIn 0.2s ease" }}>
-              {bulletins.length===0 ? (
+            <div style={{ animation:"fadeIn 0.2s ease", display:"flex", flexDirection:"column", gap:12 }}>
+              {!isMadrasa && choixAnnee}
+              {bulletinsVus.length===0 ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
                   <div style={{ fontSize:48,marginBottom:12 }}>📋</div>
                   <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>{tr("Aucun bulletin généré")}</div>
@@ -1479,7 +1629,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               ) : (
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16 }}>
-                  {bulletins.map(b=>{
+                  {bulletinsVus.map(b=>{
                     const mention=b.mention||"—";
                     const mc=mention.includes("Excellent")?"#1a8f1a":mention.includes("Très")?"#0891b2":mention.includes("Bien")?"#7c3aed":"#d97706";
                     return (
@@ -1494,7 +1644,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <div style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"#f8fafc",borderRadius:8 }}>
                           <div>
                             <div style={{ fontSize:11,color:"#94a3b8" }}>{tr("Moyenne générale")}</div>
-                            <div style={{ fontSize:22,fontWeight:800,color:mc }}>{b.moyenne_generale}/20</div>
+                            <div style={{ fontSize:22,fontWeight:800,color:mc }}>{b.moyenne_generale != null ? `${b.moyenne_generale}/20` : "—"}</div>
                           </div>
                           <div style={{ flex:1,textAlign:"end" }}>
                             <span style={{ fontSize:12,fontWeight:600,color:mc,background:"white",border:`1px solid ${mc}22`,padding:"4px 10px",borderRadius:6 }}>{tr(mention)}</span>
@@ -1504,7 +1654,12 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!b.is_published && (
                             <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x) =>x.id===b.id?{...x,is_published:true}:x));showToast(tr("Bulletin publié"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>{tr("Publier & notifier")}</button>
                           )}
-                          <button onClick={() => printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
+                          <button onClick={async () => {
+                            const d = await get(`/grades?student_id=${b.student_id}&periode=${encodeURIComponent(b.periode || "")}`);
+                            const notes = (d.grades || []).filter((g) => String(g.student_id) === String(b.student_id) && (g.periode || "") === (b.periode || "")
+                              && (isMadrasa || !b.annee_scolaire || !g.annee_scolaire || g.annee_scolaire === b.annee_scolaire));
+                            printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url, notes);
+                          }} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
                         </div>
                       </div>
                     );
@@ -1528,8 +1683,8 @@ export default function GestionEnseignement({ mode }: Props) {
                     </div>
                     {r.statut==="nouvelle" ? (
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(M("Apprenant créé(e)", "Apprenant créé(e)"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>{tr("Inscrire")}</button>
-                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success) setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Rejeter")}</button>
+                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(M("Apprenant créé(e)", "Élève créé(e)"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>{tr("Inscrire")}</button>
+                        <button onClick={async()=>{ if(!confirm(tr("Rejeter la demande de {nom} ?", { nom: r.nom_enfant }))) return; const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success){ setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); showToast(tr("Demande rejetée")); } else showToast(tr(d.message||"Erreur"),false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Rejeter")}</button>
                       </div>
                     ) : (
                       <span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:r.statut==="converti"?"#f0fdf0":"#fef2f2",color:r.statut==="converti"?"#1a8f1a":"#ef4444",flexShrink:0 }}>{r.statut==="converti"?tr("✓ Inscrit(e)"):tr("Rejetée")}</span>
@@ -1590,8 +1745,8 @@ export default function GestionEnseignement({ mode }: Props) {
                         {r.commentaire && <p style={{ fontSize:13,color:"#475569",marginTop:8 }}>{r.commentaire}</p>}
                       </div>
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success) setReviews(rs=>rs.map((x) =>x.id===r.id?{...x,statut:"approuve"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
-                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success) setReviews(rs=>rs.filter((x) =>x.id!==r.id)); else showToast(d.message||"Erreur",false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
+                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success){ setReviews(rs=>rs.map((x) =>x.id===r.id?{...x,statut:"approuve"}:x)); showToast(tr("Avis publié")); } else showToast(tr(d.message||"Erreur"),false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
+                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success){ setReviews(rs=>rs.filter((x) =>x.id!==r.id)); showToast(tr("Avis supprimé")); } else showToast(tr(d.message||"Erreur"),false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
                       </div>
                     </div>
                   </div>
@@ -1599,6 +1754,8 @@ export default function GestionEnseignement({ mode }: Props) {
               </div>
             );
           })()}
+
+          {section === "sauvegarde" && <PanneauSauvegarde s={sauvegarde} couleur={V.color} />}
 
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (

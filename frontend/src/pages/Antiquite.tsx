@@ -229,7 +229,7 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
         });
         loadSections();
       } else {
-        const d = await response.json().catch(() => null);
+        const d = await response.json().catch((): null => null);
         alert(d?.message || 'Erreur lors de la création de la section');
       }
     } catch (error) {

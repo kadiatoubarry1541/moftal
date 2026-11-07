@@ -12,9 +12,12 @@ import { trHors } from "../i18n/traduction";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DB_NAME = "moftal-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_CACHE = "responses";
 const STORE_QUEUE = "outbox";
+// Clés des opérations déjà reçues par le serveur : une sauvegarde ancienne
+// rechargée plus tard ne les renvoie jamais une deuxième fois
+const STORE_ENVOYES = "envoyes";
 
 // API dont les lectures sont gardées sur l'appareil
 const CACHE_PATTERNS = [
@@ -37,7 +40,7 @@ const QUEUE_PATTERNS = [
 // (le pointage des cours doit porter l'heure exacte du serveur ; les accès des
 // employés et l'encaissement en ligne ne se font jamais en différé)
 const ONLINE_ONLY_PATTERNS = [
-  /\/bulletins\/generate$/, /\/members\/add$/, /\/pharmacy\/dispense\//,
+  /\/pharmacy\/dispense\//,
   /\/enseignant\/(debut|fin)$/, /\/acces-employes/,
   // Demandes et avis des visiteurs publics : jamais gardés dans le téléphone,
   // le visiteur doit voir une vraie erreur s'il n'y a pas de connexion
@@ -149,6 +152,7 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_CACHE)) db.createObjectStore(STORE_CACHE);
       if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(STORE_ENVOYES)) db.createObjectStore(STORE_ENVOYES);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => {
@@ -171,14 +175,32 @@ function idb<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore)
   );
 }
 
+// Prévenir (fichier de sauvegarde…) à chaque changement des données gardées
+const changementsLocaux = new Set<() => void>();
+export function surChangementLocal(fn: () => void) {
+  changementsLocaux.add(fn);
+  return () => { changementsLocaux.delete(fn); };
+}
+function signalerChangement<T>(p: Promise<T>): Promise<T> {
+  return p.then((r) => { changementsLocaux.forEach((fn) => { try { fn(); } catch { /* écouteur en erreur */ } }); return r; });
+}
+
 const cacheGet = (key: string) => idb<{ data: unknown; ts: number } | undefined>(STORE_CACHE, "readonly", (s) => s.get(key));
-const cachePut = (key: string, data: unknown) => idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts: Date.now() }, key));
+const cacheEcrire = (key: string, data: unknown, ts = Date.now()) => signalerChangement(idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts }, key)));
+const cachePut = (key: string, data: unknown) => cacheEcrire(key, data);
+// Données JSON gardées sur l'appareil (réponses du serveur, envois en attente) :
+// leur forme dépend de chaque route, elles sont lues champ par champ.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Json = Record<string, any>;
+// Copie gardée lue comme un objet (vide si absente ou d'une autre forme)
+const donneesDe = (e: { data: unknown } | undefined) => (e && e.data && typeof e.data === "object" ? e.data : {}) as Json;
 const cacheKeys = () => idb<IDBValidKey[]>(STORE_CACHE, "readonly", (s) => s.getAllKeys());
 const queueAll = () => idb<QueueItem[]>(STORE_QUEUE, "readonly", (s) => s.getAll());
-const queueAdd = (item: QueueItem) => idb(STORE_QUEUE, "readwrite", (s) => s.add(item));
-const queueDelete = (id: number) => idb(STORE_QUEUE, "readwrite", (s) => s.delete(id));
-
-const queuePut = (item: QueueItem) => idb(STORE_QUEUE, "readwrite", (s) => s.put(item));
+const queueAdd = (item: QueueItem) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.add(item)));
+const queueDelete = (id: number) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.delete(id)));
+const queuePut = (item: QueueItem) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.put(item)));
+const noterEnvoye = (cle: string) => idb(STORE_ENVOYES, "readwrite", (s) => s.put(Date.now(), cle));
+const dejaEnvoye = (cle: string) => idb<number | undefined>(STORE_ENVOYES, "readonly", (s) => s.get(cle));
 
 // Ce que l'opération concerne, en mots simples
 function libelleOperation(item: QueueItem): string {
@@ -317,6 +339,43 @@ async function applyOptimistic(url: string, method: string, body: unknown, tempI
   const base = m[1];
   const sub = new URL(full).pathname.slice(new URL(base).pathname.length) || "/";
   const segs = sub.split("/").filter(Boolean);
+  // Contenu de l'envoi (formulaire JSON) lu champ par champ
+  const corps = (body && typeof body === "object" ? body : {}) as Json;
+
+  // Appel du jour (école / madrasa) : la copie locale de ce jour reflète l'appel fait
+  if (method === "POST" && sub === "/attendance" && corps && Array.isArray(corps.records) && /^\d{4}-\d{2}-\d{2}$/.test(corps.date || "")) {
+    const cle = cacheKey(`${base}/attendance?date=${corps.date}`);
+    const entry = await cacheGet(cle).catch((): undefined => undefined);
+    const anciens: Json[] = Array.isArray(donneesDe(entry).attendance) ? donneesDe(entry).attendance : [];
+    const ids = new Set(corps.records.map((r: Json) => String(r.student_id)));
+    const attendance = [
+      ...anciens.filter((a) => !ids.has(String(a.student_id))),
+      ...corps.records.map((r: Json) => ({ ...r, est_present: r.statut !== "absent", date_presence: corps.date, _horsLigne: true })),
+    ];
+    await cachePut(cle, { ...donneesDe(entry), success: true, attendance, records: attendance, date: corps.date });
+    return { success: true };
+  }
+
+  // Parent relié sans connexion (école / madrasa) : visible tout de suite dans
+  // la liste des membres ; le serveur retrouve la personne à l'envoi
+  if (method === "POST" && sub === "/members/add" && tempId && corps) {
+    const identifiant = String(corps.numero_h || corps.telephone || "");
+    const membre = {
+      id: tempId, numero_h: corps.numero_h || identifiant, telephone_compte: corps.telephone || null, role: corps.role || "parent",
+      nom_display: identifiant, enfants: corps.linked_student_id != null ? [{ id: corps.linked_student_id }] : [], is_active: true, _horsLigne: true,
+    };
+    const cle = cacheKey(`${base}/members`);
+    const entry = await cacheGet(cle).catch((): undefined => undefined);
+    const membres: Json[] = Array.isArray(donneesDe(entry).members) ? donneesDe(entry).members : [];
+    await cachePut(cle, { ...donneesDe(entry), success: true, members: [membre, ...membres] });
+    return membre;
+  }
+
+  // Bulletins générés sans connexion : calculés sur l'appareil avec les notes
+  // gardées (même calcul que le serveur, qui les recalcule à l'envoi)
+  if (method === "POST" && sub === "/bulletins/generate" && corps?.periode) {
+    return genererBulletinsLocaux(base, corps);
+  }
 
   if (method === "POST" && tempId) {
     const item: Objet = { ...champsDe(body), id: tempId, _horsLigne: true, created_at: new Date().toISOString() };
@@ -348,21 +407,88 @@ async function applyOptimistic(url: string, method: string, body: unknown, tempI
   const id = segs[1];
   const collectionPath = new URL(base).pathname + "/" + segs[0];
   const isPlainUpdate = segs.length === 2;
+  // Action sur un élément (encaisser, publier, inscrire…) : ce qu'elle change
+  const changement = segs.length === 3 ? changementAction(segs[2], corps) : null;
   let found: Objet | null = null;
 
+  // Seule la liste de cette collection est touchée : un élève n° 5 et un frais
+  // n° 5 sont deux choses différentes
   await eachCachedUnder(base, (_k, data, path) => {
+    if (path !== collectionPath) return undefined;
     const hit = findById(data, id);
     if (!hit) return undefined;
-    if (!found) found = { ...hit, ...(isPlainUpdate ? champsDe(body) : {}) };
-    if (method === "DELETE" && path === collectionPath) {
+    const maj = (x: Objet): Objet => (isPlainUpdate ? { ...x, ...champsDe(body) } : changement ? { ...x, ...changement(x) } : x);
+    if (!found) found = maj(hit);
+    if (method === "DELETE" && isPlainUpdate) {
       return mapArrays(data, (arr) => arr.filter((x) => !(estObjet(x) && String(x.id) === id)));
     }
-    if (method === "PUT" && isPlainUpdate) {
-      return mapArrays(data, (arr) => arr.map((x) => (estObjet(x) && String(x.id) === id ? { ...x, ...champsDe(body) } : x)));
+    if (method === "PUT" && (isPlainUpdate || changement)) {
+      return mapArrays(data, (arr) => arr.map((x) => (estObjet(x) && String(x.id) === id ? maj(x) : x)));
     }
     return undefined;
   });
   return found;
+}
+
+function mentionDe(m: number | null) {
+  return m == null ? "—" : m >= 18 ? "Excellent" : m >= 16 ? "Très bien" : m >= 14 ? "Bien" : m >= 12 ? "Assez bien" : m >= 10 ? "Passable" : "Insuffisant";
+}
+
+async function genererBulletinsLocaux(base: string, body: Json) {
+  const lire = async (chemin: string) => donneesDe(await cacheGet(cacheKey(base + chemin)).catch((): undefined => undefined));
+  const eleves: Json[] = (await lire("/students"))?.students || [];
+  const notes: Json[] = (await lire("/grades"))?.grades || [];
+  const bulletinsData = (await lire("/bulletins")) || { success: true, bulletins: [] };
+  const anciens: Json[] = Array.isArray(bulletinsData.bulletins) ? bulletinsData.bulletins : [];
+  const annee = String(body.annee || body.annee_scolaire || "");
+  const publier = !!body.publish;
+  const nouveaux: Json[] = eleves.filter((e) => !e.statut || e.statut === "actif").map((e) => {
+    let pts = 0, coeff = 0;
+    for (const g of notes) {
+      if (String(g.student_id) !== String(e.id) || g.periode !== body.periode) continue;
+      if (annee && g.annee_scolaire && g.annee_scolaire !== annee) continue;
+      const n = Number(g.note), max = Number(g.note_max) || 20, c = Number(g.coefficient) || 1;
+      if (!Number.isNaN(n)) { pts += (n / max) * 20 * c; coeff += c; }
+    }
+    const moy = coeff > 0 ? Math.round((pts / coeff) * 100) / 100 : null;
+    const ancien = anciens.find((b) => String(b.student_id) === String(e.id) && b.periode === body.periode && (b.annee_scolaire || "") === annee);
+    return {
+      ...(ancien || { id: `${TEMP_PREFIX}bulletin-${e.id}-${Date.now()}` }),
+      student_id: e.id, student_prenom: e.prenom, student_nom: e.nom, niveau: e.niveau, classe: e.classe,
+      periode: body.periode, annee_scolaire: annee, moyenne_generale: moy, mention: mentionDe(moy),
+      is_published: !!ancien?.is_published || publier, _horsLigne: true,
+    };
+  });
+  const gardes = anciens.filter((b) => !nouveaux.some((n) => n.id === b.id));
+  await cachePut(cacheKey(base + "/bulletins"), { ...bulletinsData, success: true, bulletins: [...nouveaux, ...gardes] });
+  return { success: true, generated: nouveaux.length };
+}
+
+// Effet local des actions courantes, appliqué sans connexion (seulement aux
+// champs que l'élément possède déjà)
+function changementAction(action: string, body: Json): ((x: Json) => Record<string, unknown>) | null {
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  switch (action) {
+    case "pay":
+      return (x) => {
+        if (!("est_paye" in x)) return {};
+        const du = Number(x.montant) || 0;
+        const deja = Number(x.montant_paye) || 0;
+        const v = body?.versement != null && body.versement !== "" ? Number(body.versement) : null;
+        const paye = v != null ? Math.min(du, deja + v) : body?.montant_paye != null && body.montant_paye !== "" ? Number(body.montant_paye) : du;
+        return { montant_paye: paye, est_paye: paye >= du, date_paiement: aujourdhui };
+      };
+    case "publish":
+      return (x) => ("is_published" in x ? { is_published: true } : {});
+    case "convert":
+      return (x) => ("statut" in x ? { statut: "converti" } : {});
+    case "reject":
+      return (x) => ("statut" in x ? { statut: "rejetee" } : {});
+    case "schedule":
+      return () => (body && Array.isArray(body.emploi_du_temps) ? { emploi_du_temps: body.emploi_du_temps } : {});
+    default:
+      return null;
+  }
 }
 
 // Réponse renvoyée à l'écran pour une écriture mise en attente : { success: true }
@@ -375,10 +501,13 @@ function queuedResponse(item: unknown) {
     offline: true,
     message: trHors("Enregistré sur l'appareil — sera envoyé dès le retour de la connexion"),
   };
-  const falsy = new Set(["conflict", "error", "errors", "then", "toJSON", "generated"]);
+  const falsy = new Set(["conflict", "error", "errors", "then", "toJSON"]);
   const proxy = new Proxy(base, {
     get(target, prop) {
       if (prop in target) return target[prop as string];
+      // Nombre de bulletins calculés sur l'appareil
+      const gen = (item as { generated?: unknown } | null | undefined)?.generated;
+      if (prop === "generated") return typeof gen === "number" ? gen : undefined;
       if (typeof prop !== "string" || falsy.has(prop)) return undefined;
       return item ?? { id: undefined };
     },
@@ -676,6 +805,8 @@ export function syncNow(): Promise<void> {
         continue;
       }
       sent++;
+      const cleEnvoi = item.headers["x-idempotency-key"];
+      if (cleEnvoi) await noterEnvoye(cleEnvoi).catch(() => {});
       await queueDelete(item.id!);
 
       const realId = item.tempId ? findRealId(data) : null;
@@ -694,6 +825,90 @@ export function syncNow(): Promise<void> {
     }
   });
   return syncing;
+}
+
+// ─── Fichier de sauvegarde (voir utils/fichierSauvegarde.ts) ─────────────────
+
+const enBase64 = (buf: ArrayBuffer) => {
+  let bin = "";
+  const octets = new Uint8Array(buf);
+  for (let i = 0; i < octets.length; i += 0x8000) bin += String.fromCharCode(...octets.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const depuisBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+
+export interface DonneesLocales {
+  /** Dernières copies des listes de l'établissement */
+  copies: { url: string; ts: number; data: unknown }[];
+  /** Enregistrements pas encore reçus par le serveur, dans l'ordre */
+  operations: Json[];
+}
+
+/** Tout ce que l'appareil garde pour un établissement (base = …/api/school-mgmt/CODE) */
+export async function exporterDonneesLocales(base: string): Promise<DonneesLocales> {
+  const racine = absUrl(base);
+  const scope = userScope() + "|";
+  const copies: DonneesLocales["copies"] = [];
+  for (const k of (await cacheKeys()).map(String)) {
+    if (!k.startsWith(scope + racine)) continue;
+    const entree = await cacheGet(k);
+    if (entree) copies.push({ url: k.slice(scope.length), ts: entree.ts, data: entree.data });
+  }
+  const qui = userScope();
+  const operations = (await queueAll())
+    .filter((q) => q.url.startsWith(racine) && (!q.proprietaire || q.proprietaire === qui))
+    .sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
+    .map((item) => {
+      const { form, ...q } = item;
+      delete (q as Partial<QueueItem>).id;
+      return {
+      ...q,
+      form: form?.map((c) => ("texte" in c ? c : { nom: c.nom, type: c.type, nomFichier: c.nomFichier, base64: enBase64(c.fichier) })),
+      };
+    });
+  return { copies, operations };
+}
+
+export interface ResultatImport { copies: number; operations: number; dejaEnvoyees: number; autreCompte: number }
+
+/**
+ * Reprend une sauvegarde : les copies plus récentes que celles de l'appareil
+ * remplacent les anciennes, et les enregistrements pas encore reçus par le
+ * serveur rejoignent la file d'attente (jamais en double : chaque opération
+ * garde sa clé unique, et le serveur ne l'exécute qu'une fois).
+ */
+export async function importerDonneesLocales(base: string, donnees: DonneesLocales): Promise<ResultatImport> {
+  const racine = absUrl(base);
+  const scope = userScope() + "|";
+  const res: ResultatImport = { copies: 0, operations: 0, dejaEnvoyees: 0, autreCompte: 0 };
+  for (const c of donnees.copies || []) {
+    if (typeof c?.url !== "string" || !c.url.startsWith(racine)) continue;
+    const cle = scope + c.url;
+    const locale = await cacheGet(cle).catch((): undefined => undefined);
+    if (locale && locale.ts >= (Number(c.ts) || 0)) continue;
+    await cacheEcrire(cle, c.data, Number(c.ts) || Date.now());
+    res.copies++;
+  }
+  const qui = userScope();
+  const enFile = new Set((await queueAll()).map((q) => q.headers?.["x-idempotency-key"]).filter(Boolean));
+  for (const op of donnees.operations || []) {
+    if (typeof op?.url !== "string" || !op.url.startsWith(racine) || typeof op.method !== "string") continue;
+    if (op.proprietaire && op.proprietaire !== qui) { res.autreCompte++; continue; }
+    const cleOp = op.headers?.["x-idempotency-key"];
+    if (!cleOp || enFile.has(cleOp)) continue;
+    if (await dejaEnvoye(cleOp).catch((): undefined => undefined)) { res.dejaEnvoyees++; continue; }
+    const form = Array.isArray(op.form)
+      ? op.form.map((c: Json) => (c.base64 != null ? { nom: c.nom, type: c.type, nomFichier: c.nomFichier, fichier: depuisBase64(c.base64) } : c)) as ChampFormulaire[]
+      : undefined;
+    const sansId = { ...op };
+    delete sansId.id;
+    await queueAdd({ ...sansId, form, proprietaire: qui, rejete: false, message: undefined, essais: 0 } as QueueItem);
+    enFile.add(cleOp);
+    res.operations++;
+  }
+  await refreshPending();
+  if (res.operations && navigator.onLine) void syncNow();
+  return res;
 }
 
 // ─── Installation ────────────────────────────────────────────────────────────

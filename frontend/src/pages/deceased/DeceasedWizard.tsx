@@ -173,7 +173,6 @@ export function DeceasedWizard() {
     numero = result.deceased?.numeroHD || numero
     complet.numeroHD = numero
     complet.numeroH = numero
-    const { password: _pw, confirmPassword: _cpw, ...sansMotDePasse } = complet
 
 
     // L'arbre généalogique lit les défunts depuis le serveur (/api/family-tree/tree) :

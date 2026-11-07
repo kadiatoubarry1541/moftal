@@ -150,6 +150,8 @@ export interface Note extends AvecApprenant {
   periode: string;
   sourate?: string | null;
   commentaire?: string | null;
+  /** Année scolaire de la note (école), ex. 2025-2026 */
+  annee_scolaire?: string | null;
   created_at?: string;
 }
 
@@ -213,6 +215,7 @@ export interface MembreEcole {
   prenom?: string | null;
   nom?: string | null;
   telephone_compte?: string | null;
+  email_compte?: string | null;
   enfants?: { id: number; prenom?: string; nom?: string; numero_matricule?: string | null; photo_url?: string | null; classe?: string | null }[];
   photo?: string | null;
 }
@@ -269,6 +272,15 @@ export interface FormEnseignement {
   echeance?: string;
   annee?: string;
   publish?: boolean;
+  /** Année scolaire d'une note (école) */
+  annee_scolaire?: string;
+  /** Encaissement d'un frais : élève, reste à payer et montant versé (avance possible) */
+  eleve?: string;
+  reste?: number;
+  versement?: string;
+  /** Nom de l'apprenant gardé sur une note ou un frais en cours de modification */
+  student_prenom?: string;
+  student_nom?: string;
 }
 
 /** Champ texte du formulaire, utilisé par les listes de champs « Libellé|champ|type » */
@@ -302,6 +314,12 @@ export interface ReponseEnseignement {
   /** Classe ou halaqa qui vient d'être créée */
   classroom?: Groupe;
   halaqa?: Groupe;
+  /** NuméroH saisis sur la fiche mais introuvables */
+  avertissements?: string[];
+  /** Code à donner à la personne pour sa première connexion */
+  codePremiereConnexion?: string | null;
+  /** Gardé sur l'appareil (hors ligne), envoyé au retour de la connexion */
+  queued?: boolean;
 }
 
 export interface ReponseAjoutEquipe { success?: boolean; message?: string; staff?: MembreEquipe; codePremiereConnexion?: string | null }

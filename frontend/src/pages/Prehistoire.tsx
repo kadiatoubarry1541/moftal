@@ -203,7 +203,7 @@ Ces outils témoignent de l'adaptation des populations aux changements climatiqu
         });
         loadSections();
       } else {
-        const d = await response.json().catch(() => null);
+        const d = await response.json().catch((): null => null);
         alert(d?.message || 'Erreur lors de la création de la section');
       }
     } catch (error) {

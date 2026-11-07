@@ -16,6 +16,8 @@ interface MonDon {
   domaine?: string | null;
   statut?: string | null;
   status?: string | null;
+  domaineLabel?: string | null;
+  message?: string | null;
 }
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -110,7 +112,7 @@ export default function Developpement() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(donForm)
       });
-      const data = await res.json().catch(() => null);
+      const data = await res.json().catch((): null => null);
       if (res.ok && data?.donId) {
         setShowDon(false);
         // Le don n'est compté qu'après le paiement
