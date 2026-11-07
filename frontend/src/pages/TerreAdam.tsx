@@ -540,6 +540,13 @@ export default function TerreAdam() {
         {activeTab === 'lieux' && (
           <div className="space-y-2.5">
             <div className="bg-white p-2.5 sm:p-3.5">
+              {/* Responsables du quartier (chef, gestionnaire de caisse) et signalement */}
+              <div className="flex justify-end mb-2">
+                <button type="button" onClick={() => navigate("/quartier")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold hover:bg-blue-100">
+                  👑 Responsables du quartier
+                </button>
+              </div>
               {/* Sous-onglets : un par quartier (Résidence 1, 2, 3) — affichés
                   seulement s'il y en a plus d'un à choisir. */}
               {(() => {

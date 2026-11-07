@@ -6,6 +6,7 @@ import { useTraduction } from "../i18n/traduction";
 import BarreAppMembre from "../components/ecole/BarreAppMembre";
 import { cheminConnexion } from "../utils/connexionRetour";
 import { getPhotoUrl } from "../utils/auth";
+import { AppelClasse, NotesClasse } from "../components/ecole/AppelNotesEnseignant";
 
 // Espace de l'enseignant : « Aujourd'hui » (début et fin de chaque cours),
 // « Mes classes » (matières, liste des apprenants avec photo et matricule) et
@@ -25,6 +26,8 @@ interface Donnees {
   ecole: { nom: string; logo_url?: string | null };
   enseignant: { prenom: string; nom: string; specialite?: string | null };
   jour: string; classes: Classe[]; pointages: Pointage[]; enCours: Pointage | null;
+  /** Droits donnés par le directeur (école) pour les élèves de ses classes */
+  droits?: { appel?: boolean; notes?: boolean };
 }
 
 export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "school" | "madrasa" }) {
@@ -39,7 +42,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   const [, setTic] = useState(0);
   const [onglet, setOnglet] = useState<"jour" | "classes" | "semaine">("jour");
   const [ouverte, setOuverte] = useState<number | null>(null);
-  const [vueClasse, setVueClasse] = useState<"apprenants" | "emploi">("apprenants");
+  const [vueClasse, setVueClasse] = useState<"apprenants" | "emploi" | "appel" | "notes">("apprenants");
   const base = `${config.API_BASE_URL}/${madrasa ? "madrasa-mgmt" : "school-mgmt"}/${encodeURIComponent(tenantCode)}`;
 
   const charger = useCallback(() => {
@@ -109,12 +112,21 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
                 <p className="text-sm opacity-90">{[classe.niveau && tr(classe.niveau), (classe.matieres || []).map(m => tr(m)).join(" · ")].filter(Boolean).join(" — ")}</p>
               </div>
               <div className="flex gap-1 bg-white rounded-xl border border-slate-100 p-1">
-                {([["apprenants", tr("Apprenants ({n})", { n: (classe.apprenants || []).length })], ["emploi", tr("Emploi du temps de la classe")]] as const).map(([id, label]) => (
+                {([
+                  ["apprenants", tr("Apprenants ({n})", { n: (classe.apprenants || []).length })],
+                  ...(d.droits?.appel ? [["appel", tr("📋 Appel")] as const] : []),
+                  ...(d.droits?.notes ? [["notes", tr("📝 Notes")] as const] : []),
+                  ["emploi", tr("Emploi du temps de la classe")],
+                ] as const).map(([id, label]) => (
                   <button key={id} onClick={() => setVueClasse(id)} className="flex-1 py-2 rounded-lg text-xs font-bold"
                     style={vueClasse === id ? { background: VERT, color: "white" } : { color: "#475569" }}>{label}</button>
                 ))}
               </div>
-              {vueClasse === "apprenants" ? (
+              {vueClasse === "appel" && d.droits?.appel ? (
+                <AppelClasse base={base} classroomId={classe.id} couleur={VERT} />
+              ) : vueClasse === "notes" && d.droits?.notes ? (
+                <NotesClasse base={base} classroomId={classe.id} couleur={VERT} matieresClasse={classe.matieres || []} />
+              ) : vueClasse === "apprenants" ? (
                 <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-100">
                   {(classe.apprenants || []).length === 0 && <p className="text-sm text-slate-500 p-4">{tr("Aucun apprenant dans cette classe pour le moment.")}</p>}
                   {(classe.apprenants || []).map((ap) => (
