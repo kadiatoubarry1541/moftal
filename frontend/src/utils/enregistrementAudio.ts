@@ -42,6 +42,15 @@ export function fichierAudio(recorder: MediaRecorder | null, morceaux: Blob[], p
   return new File([new Blob(morceaux, { type })], `${prefixe}-${Date.now()}.${extension}`, { type })
 }
 
+/** Moftal ouvert comme application installée (écran d'accueil ou Play Store), sans barre d'adresse. */
+function dansApplicationInstallee(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia?.('(display-mode: standalone)').matches
+    || window.matchMedia?.('(display-mode: fullscreen)').matches
+    || (navigator as Navigator & { standalone?: boolean }).standalone === true
+    || document.referrer.startsWith('android-app://')
+}
+
 /** Message clair selon la raison pour laquelle le micro n'a pas pu démarrer. */
 export function messageErreurMicro(err: unknown): string {
   const name = (err as { name?: string })?.name
@@ -54,7 +63,10 @@ export function messageErreurMicro(err: unknown): string {
   if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'Aucun micro trouvé sur cet appareil.'
   if (name === 'NotReadableError' || name === 'TrackStartError') return 'Le micro est déjà utilisé par une autre application. Fermez-la puis réessayez.'
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-    return "Micro refusé. Autorisez le micro pour Moftal (touchez le cadenas à côté de l'adresse du site, ou Paramètres du téléphone → Applications → autorisations), puis réessayez."
+    // Court et en images : beaucoup d'utilisateurs lisent peu.
+    return dansApplicationInstallee()
+      ? '🎤 Micro fermé. Ouvrez : ⚙️ Paramètres → Applications → Moftal → Autorisations → 🎤 Micro → Autoriser.'
+      : '🎤 Micro fermé. Touchez 🔒 à côté de l\'adresse, puis 🎤 Micro → Autoriser.'
   }
   return "Le micro n'a pas pu démarrer. Réessayez ; si cela continue, redémarrez l'application."
 }
