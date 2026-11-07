@@ -57,7 +57,7 @@ export default function PaiementResultat() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isLoading, navigate, redirectTarget]);
+  }, [isLoading, isPending, navigate, redirectTarget]);
 
   if (isLoading) return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">

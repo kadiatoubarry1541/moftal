@@ -350,7 +350,7 @@ export default function Probleme() {
                         placeholder="Clinique / médecin (bénéficiaire)"
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
                       <input type="text" value={moftalContact} onChange={e => setMoftalContact(e.target.value)}
-                        placeholder="Numéro de paiement mobile du bénéficiaire"
+                        placeholder="Numéro Orange Money ou MTN MoMo du bénéficiaire"
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
                       <textarea value={moftalRaison} onChange={e => setMoftalRaison(e.target.value)}
                         placeholder="Raison (ex: hospitalisation de Mamadou, 3 jours en clinique...)"
@@ -409,7 +409,7 @@ export default function Probleme() {
                   malade. Partagez-le dans la famille pour que tout le monde sache où envoyer l&apos;aide.
                 </p>
                 <p className="mt-1">
-                  Plus tard, ce numéro pourra être relié à un compte (paiement mobile ou banque) pour les contributions.
+                  Plus tard, ce numéro pourra être relié à un compte (Orange Money, MTN MoMo ou banque) pour les contributions.
                 </p>
               </section>
 
