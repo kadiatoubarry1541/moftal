@@ -2,18 +2,6 @@
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
-const SECTIONS = [
-  { id: "voisinage",   label: "Voisinage",     emoji: "🏘️",  color: "#0891b2", bg: "#ecfeff",  desc: "Vos voisins, échanges de services, entraide locale" },
-  { id: "securite",    label: "Sécurité",      emoji: "🛡️",  color: "#dc2626", bg: "#fef2f2",  desc: "Signalements, alertes sécurité du quartier" },
-  { id: "commerce",    label: "Commerces",     emoji: "🏪",  color: "#d97706", bg: "#fffbeb",  desc: "Boutiques, marchés et artisans de votre zone" },
-  { id: "sante",       label: "Santé",         emoji: "🏥",  color: "#1a8f1a", bg: "#f0fdfa",  desc: "Cliniques, pharmacies et urgences proches" },
-  { id: "education",   label: "Éducation",     emoji: "🏫",  color: "#1a8f1a", bg: "#f0fdf0",  desc: "Écoles, centres de formation, bibliothèques" },
-  { id: "mosquee",     label: "Mosquées",      emoji: "🕌",  color: "#1a8f1a", bg: "#f0fdf0",  desc: "Mosquées, madrasas et horaires de prière" },
-  { id: "evenements",  label: "Événements",    emoji: "📅",  color: "#7c3aed", bg: "#f5f3ff",  desc: "Fêtes, réunions communautaires, activités locales" },
-  { id: "travaux",     label: "Travaux & Infra", emoji: "🔧", color: "#64748b", bg: "#f8fafc",  desc: "Routes, eau, électricité, déchets — signalements" },
-];
-
-
 interface ResponsablesQuartier {
   chef_nom?: string | null;
   chef_numero_h?: string | null;
@@ -29,7 +17,6 @@ export default function Quartier() {
   const quartierNom = user?.quartier || user?.ville || "";
   const userNumeroH = user?.numeroH || user?.numero_h || "";
 
-  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [manager, setManager] = useState<ResponsablesQuartier | null>(null);
   const [showGestion, setShowGestion] = useState(false);
   const [mgrLoading, setMgrLoading] = useState(false);
@@ -113,15 +100,14 @@ export default function Quartier() {
         <div className="text-5xl mb-3">🏘️</div>
         <h1 className="text-3xl font-extrabold mb-2">Mon Quartier</h1>
         <p className="text-blue-100 text-base max-w-lg mx-auto">
-          Votre espace communautaire local — voisinage, sécurité, commerces, mosquées et événements de votre quartier
+          Les responsables de votre quartier, et un signalement en un geste
         </p>
         <div className="mt-4 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm font-medium">
           <span>📍</span>
-          <span>Localisation : {user.ville || user.quartier || "Non définie"}</span>
+          <span>{quartierNom || "Quartier non défini"}</span>
         </div>
       </div>
 
-      {/* Grille des sections */}
       <div className="max-w-4xl mx-auto px-4 py-8">
 
         {/* ─── Responsables du quartier ─── */}
@@ -138,7 +124,7 @@ export default function Quartier() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Chef de quartier */}
               <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                 <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">👑</div>
@@ -180,72 +166,8 @@ export default function Quartier() {
           </div>
         )}
 
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-800">Services du quartier</h2>
-          <p className="text-slate-500 text-sm mt-1">Sélectionnez une section pour y accéder</p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {SECTIONS.map((sec) => (
-            <button
-              key={sec.id}
-              onClick={() => setActiveSection(activeSection === sec.id ? null : sec.id)}
-              className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl border-2 transition-all duration-200 text-left hover:shadow-md"
-              style={{
-                borderColor: activeSection === sec.id ? sec.color : "#e2e8f0",
-                background: activeSection === sec.id ? sec.bg : "white"
-              }}
-            >
-              <div className="text-3xl">{sec.emoji}</div>
-              <div className="font-bold text-slate-800 text-sm text-center">{sec.label}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* Détail section sélectionnée */}
-        {activeSection && (() => {
-          const sec = SECTIONS.find(s => s.id === activeSection)!;
-          return (
-            <div className="mt-6 bg-white rounded-2xl border p-6 shadow-sm" style={{ borderColor: sec.color + "44" }}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-3xl">{sec.emoji}</div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-lg">{sec.label}</h3>
-                  <p className="text-slate-500 text-sm">{sec.desc}</p>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-6 text-center">
-                <div className="text-4xl mb-3">🚧</div>
-                <p className="text-slate-600 font-medium">Section en cours de déploiement</p>
-                <p className="text-slate-400 text-sm mt-1">
-                  Cette section sera alimentée par les habitants et administrateurs du quartier
-                </p>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Carte info rapide */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl p-4 border text-center">
-            <div className="text-2xl mb-1">👥</div>
-            <div className="font-bold text-slate-800 text-lg">—</div>
-            <div className="text-slate-500 text-xs">Habitants enregistrés</div>
-          </div>
-          <div className="bg-white rounded-xl p-4 border text-center">
-            <div className="text-2xl mb-1">🏪</div>
-            <div className="font-bold text-slate-800 text-lg">—</div>
-            <div className="text-slate-500 text-xs">Commerces actifs</div>
-          </div>
-          <div className="bg-white rounded-xl p-4 border text-center">
-            <div className="text-2xl mb-1">📢</div>
-            <div className="font-bold text-slate-800 text-lg">—</div>
-            <div className="text-slate-500 text-xs">Annonces ce mois</div>
-          </div>
-        </div>
-
         {/* Bouton signalement */}
-        <div className="mt-8 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-4">
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-4">
           <div className="text-4xl">📢</div>
           <div className="flex-1 text-center sm:text-left">
             <h3 className="font-bold text-slate-800">Signaler un problème dans le quartier</h3>
