@@ -4,7 +4,7 @@ import { config } from '../../config/api';
 import PaymentModal from '../../components/PaymentModal';
 import type { MessageOrganisation } from '../../types/arbre';
 import { creerEnregistreurAudio, fichierAudio, messageErreurMicro } from '../../utils/enregistrementAudio';
-import { DUREE_MAX_AUDIO } from '../../utils/dureesMedias';
+import { DUREE_MAX_AUDIO, DUREE_MAX_VIDEO } from '../../utils/dureesMedias';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
 
@@ -27,16 +27,17 @@ interface UserData {
 // Sections d'Inspir : « ce qu'on doit faire POUR l'autre ».
 // Homme → Parents · Femmes · Enfants ; Femme → Parents · Hommes · Enfants ;
 // moins de 18 ans → Parents seulement ; admin → tout. (Vérifié aussi par le serveur.)
-type Section = 'parents' | 'femmes' | 'hommes' | 'enfants';
+type Section = 'parents' | 'femmes' | 'hommes' | 'famille' | 'enfants';
 type SectionTab = 'tout' | Section;
 
 const SECTION_INFO: Record<Section, { label: string; icon: string; pour: string }> = {
   parents: { label: 'Parents', icon: '👨‍👩‍👦', pour: 'Pour nos parents' },
   femmes:  { label: 'Femmes',  icon: '👰',    pour: 'Pour nos femmes' },
   hommes:  { label: 'Hommes',  icon: '🤵',    pour: 'Pour nos maris' },
+  famille: { label: 'Famille', icon: '🏡',    pour: 'Pour notre famille' },
   enfants: { label: 'Enfants', icon: '🧒',    pour: 'Pour nos enfants' },
 };
-const ALL_SECTIONS: Section[] = ['parents', 'femmes', 'hommes', 'enfants'];
+const ALL_SECTIONS: Section[] = ['parents', 'femmes', 'hommes', 'famille', 'enfants'];
 // Fil principal : vidéos, photos et audio ensemble.
 // Bibliothèque : livres (abonnement) + écrits & PDF.
 type View = 'fil' | 'bibliotheque';
@@ -103,11 +104,11 @@ export default function Inspir() {
   const localSections = (u: UserData): Section[] => {
     if (isAdmin) return [...ALL_SECTIONS];
     const age = calculateAge(u.dateNaissance || u.date_naissance);
-    if (age !== null && age < 18) return ['parents'];
+    if (age !== null && age < 18) return ['parents', 'famille'];
     const g = String(u.genre || '').trim().toUpperCase();
-    if (['HOMME', 'H', 'M', 'MASCULIN', 'MALE'].includes(g)) return ['parents', 'femmes', 'enfants'];
-    if (['FEMME', 'F', 'FEMININ', 'FÉMININ', 'FEMALE'].includes(g)) return ['parents', 'hommes', 'enfants'];
-    return ['parents', 'enfants'];
+    if (['HOMME', 'H', 'M', 'MASCULIN', 'MALE'].includes(g)) return ['parents', 'femmes', 'famille', 'enfants'];
+    if (['FEMME', 'F', 'FEMININ', 'FÉMININ', 'FEMALE'].includes(g)) return ['parents', 'hommes', 'famille', 'enfants'];
+    return ['parents', 'famille', 'enfants'];
   };
 
   useEffect(() => {
@@ -325,13 +326,13 @@ export default function Inspir() {
     const type = typeDuFichier(file);
     if (!type) { alert('Choisissez une photo, une vidéo ou un audio.'); return; }
     if (type === 'image') { setMediaFile(file); return; }
-    const max = type === 'video' ? 10 : DUREE_MAX_AUDIO;
+    const max = type === 'video' ? DUREE_MAX_VIDEO : DUREE_MAX_AUDIO;
     const el = document.createElement(type === 'video' ? 'video' : 'audio');
     el.preload = 'metadata';
     el.onloadedmetadata = () => {
       URL.revokeObjectURL(el.src);
       if (isFinite(el.duration) && el.duration > max) {
-        alert(type === 'video' ? 'La vidéo ne doit pas dépasser 10 secondes.' : `L'audio ne doit pas dépasser ${DUREE_MAX_AUDIO} secondes.`);
+        alert(type === 'video' ? 'La vidéo ne doit pas dépasser 1 minute.' : `L'audio ne doit pas dépasser ${DUREE_MAX_AUDIO} secondes.`);
         return;
       }
       setMediaFile(file);

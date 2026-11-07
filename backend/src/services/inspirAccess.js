@@ -9,10 +9,11 @@ import { finAbonnementPaye, DUREES_LIVRES } from '../utils/finAbonnement.js';
 //   • femmes   → pour nos femmes        (vu par les hommes)
 //   • hommes   → pour nos maris         (vu par les femmes)
 //   • enfants  → pour nos enfants       (vu par les adultes)
+//   • famille  → pour notre famille     (tout le monde)
 // Un enfant de moins de 18 ans voit seulement « parents ».
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const INSPIR_SECTIONS = ['parents', 'femmes', 'hommes', 'enfants'];
+export const INSPIR_SECTIONS = ['parents', 'femmes', 'hommes', 'famille', 'enfants'];
 
 export function isInspirAdmin(user) {
   if (!user) return false;
@@ -34,11 +35,11 @@ function ageOf(dateNaissance) {
 export function allowedInspirSections(user) {
   if (isInspirAdmin(user)) return [...INSPIR_SECTIONS];
   const age = ageOf(user?.dateNaissance || user?.date_naissance);
-  if (age !== null && age < 18) return ['parents'];
+  if (age !== null && age < 18) return ['parents', 'famille'];
   const g = String(user?.genre || '').trim().toUpperCase();
-  if (['HOMME', 'H', 'M', 'MASCULIN', 'MALE'].includes(g)) return ['parents', 'femmes', 'enfants'];
-  if (['FEMME', 'F', 'FEMININ', 'FÉMININ', 'FEMALE'].includes(g)) return ['parents', 'hommes', 'enfants'];
-  return ['parents', 'enfants'];
+  if (['HOMME', 'H', 'M', 'MASCULIN', 'MALE'].includes(g)) return ['parents', 'femmes', 'famille', 'enfants'];
+  if (['FEMME', 'F', 'FEMININ', 'FÉMININ', 'FEMALE'].includes(g)) return ['parents', 'hommes', 'famille', 'enfants'];
+  return ['parents', 'famille', 'enfants'];
 }
 
 // Bibliothèque (livres) : abonnement annuel actif, ou administrateur.

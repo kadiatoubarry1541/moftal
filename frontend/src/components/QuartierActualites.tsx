@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { DUREE_MAX_VIDEO, libelleDuree } from '../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-const MAX_VIDEO_SECONDS = 5
+// Vidéos de Terre Adam : 1 minute au maximum (règle commune)
+const MAX_VIDEO_SECONDS = DUREE_MAX_VIDEO
 
 // "Sécurité" en premier et mis en avant en rouge — une alerte doit se voir
 // immédiatement, avant les autres catégories d'actualités.
@@ -172,7 +174,7 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
       videoEl.preload = 'metadata'
       videoEl.onloadedmetadata = () => {
         if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`)
+          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${libelleDuree(MAX_VIDEO_SECONDS)}.`)
           URL.revokeObjectURL(url)
           e.target.value = ''
           return
