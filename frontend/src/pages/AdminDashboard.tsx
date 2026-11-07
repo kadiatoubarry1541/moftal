@@ -12,6 +12,7 @@ import AdminDroitsEchange from "../components/AdminDroitsEchange";
 import { SECTEURS_ECHANGE, type DroitEchange } from "../utils/secteursEchange";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
+import AdminEchecsSynchro from "../components/AdminEchecsSynchro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 import { CommandesRecues, MessagesTousLesSites } from "../components/CommanderProduit";
 import type { UserData } from "../utils/auth";
@@ -713,6 +714,7 @@ export default function AdminDashboard() {
       { id: "gestion-interne",   label: "Gestion Interne",  icon: "🔧" },
       { id: "sector-admins",     label: "Admins secteurs",  icon: "🏛️" },
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
+      { id: "echecs-synchro",    label: "Échecs hors ligne", icon: "⚠️" },
     ] : []),
   ];
   // G0 ne voit que la vue d'ensemble et les outils — seul G7 (le chef) voit tout le reste
@@ -2438,6 +2440,9 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ========== ÉCHECS DES ENVOIS HORS LIGNE ========== */}
+          {adminSection === "echecs-synchro" && isSuperAdmin7(userData) && <AdminEchecsSynchro />}
 
           {/* ========== OUTILS ========== */}
           {adminSection === "tools" && (

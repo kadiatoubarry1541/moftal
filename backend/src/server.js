@@ -87,6 +87,7 @@ import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.
 import { migrerPhotosDisque } from './services/fichiersBase.js';
 import { erreursDonnees } from './middleware/erreursDonnees.js';
 import { idempotence } from './middleware/idempotence.js';
+import { echecsSynchro } from './middleware/echecsSynchro.js';
 import quotasRoutes from './routes/quotas.js';
 import infoCardsRoutes from './routes/infoCards.js';
 import familyFundRoutes from './routes/familyFund.js';
@@ -2927,6 +2928,9 @@ app.use((req, res, next) => (corpsGrandPermis(req) ? formGrand : formPetit)(req,
 
 // Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
 // n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois
+// Envoi hors ligne refusé : enregistré et signalé (personne, responsable, admins).
+// Placé avant erreursDonnees pour lire le statut et le message déjà corrigés.
+app.use('/api', echecsSynchro);
 app.use('/api', erreursDonnees);
 app.use('/api', idempotence);
 

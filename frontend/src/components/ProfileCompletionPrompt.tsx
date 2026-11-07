@@ -57,9 +57,9 @@ export default function ProfileCompletionPrompt() {
   const goComplete = () => { setBlockedMessage(null); navigate(PAGE_MAJ_PROFIL); };
   // Sur la page du profil, le formulaire est déjà là : pas de bannière par-dessus
   const onCompletePage = pathname.startsWith("/moi/profil");
-  // Dans l'application d'un établissement (école, clinique…) : c'est l'application
-  // de l'établissement, pas de rappel Moftal par-dessus (parents, enseignants, employés)
-  const dansAppEtablissement = /^\/gestion-/.test(pathname);
+  // Dans l'application d'un établissement (école, clinique…) ou l'Espace Pro : le pro
+  // y travaille sans rappel Moftal par-dessus (le rappel cachait le bouton « Enregistrer »)
+  const dansAppEtablissement = /^\/(gestion-[a-z0-9-]+|espace-pro)(\/|$)/.test(pathname);
 
   return (
     <>

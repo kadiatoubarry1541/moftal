@@ -75,6 +75,9 @@ export default function OfflineStatusBar() {
         <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 10px" }}>
           {tr("Faites hors connexion, elles ont été refusées par le serveur. Corrigez la cause (par exemple une information manquante) puis réessayez, ou retirez-les.")}
         </p>
+        <p style={{ fontSize: 12, color: "#0f766e", fontWeight: 600, margin: "0 0 10px" }}>
+          {tr("Rien n'est perdu : elles restent sur cet appareil. Le responsable de l'établissement et l'administration Moftal ont été prévenus.")}
+        </p>
         {s.rejetes.map((r) => (
           <div key={r.id} style={{ border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 10, padding: 10, marginBottom: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{r.libelle.split(" · ").map(x => tr(x)).join(" · ")}</div>
