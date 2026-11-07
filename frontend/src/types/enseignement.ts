@@ -73,6 +73,9 @@ export interface MembreEquipe {
   sur_site?: boolean;
   /** Accès à la gestion interne : « aucun », « lecture »… */
   acces_gestion?: string;
+  /** École : droits donnés par le directeur pour les élèves de ses classes */
+  droit_appel?: boolean;
+  droit_notes?: boolean;
   profil?: string | null;
   created_at?: string;
 }
@@ -251,6 +254,9 @@ export interface FormEnseignement {
   profil?: string;
   sur_site?: boolean;
   acces_gestion?: string;
+  /** École : l'enseignant fait l'appel / saisit les notes de ses classes */
+  droit_appel?: boolean;
+  droit_notes?: boolean;
   photo_url?: string | null;
   capacite?: Nombre;
   enseignant_id?: Nombre;

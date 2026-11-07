@@ -10,7 +10,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes, accesDuPersonnel, definirAccesPersonnel, retirerAccesPersonnel, employesDansLePersonnel } from '../utils/accesEmployes.js';
-import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel } from './schoolCoursBibliotheque.js';
+import { ajouterRoutesCoursEtBibliotheque, personnelRelie, nomPersonnel, preparerColonnesSite, champsSitePersonnel, enregistrerDroitsEnseignant, preparerDroitsEnseignant } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 import { prochainNumero } from '../utils/prochainNumero.js';
 
@@ -43,6 +43,7 @@ async function ensureSchoolColumns() {
     ALTER TABLE school_fees       ADD COLUMN IF NOT EXISTS echeance DATE;
     ALTER TABLE school_grades     ADD COLUMN IF NOT EXISTS annee_scolaire VARCHAR(20);
   `);
+  await preparerDroitsEnseignant();
   await migrerAnneeScolaire();
   colonnesEcolePretes = true;
 }
@@ -459,7 +460,9 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
       await notifierMembreEtablissement(code, nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}/enseignant`, { url: `/gestion-ecole/${code}` });
     }
-    res.json({ success: true, staff: rows[0], codePremiereConnexion: codePremiereConnexion || null });
+    // Droits de l'enseignant (appel, notes de ses classes) choisis sur la fiche
+    await enregistrerDroitsEnseignant(code, rows[0].id, req.body);
+    res.json({ success: true, staff: { ...rows[0], droit_appel: req.body.droit_appel === true, droit_notes: req.body.droit_notes === true }, codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -487,6 +490,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
       { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, ...champsSitePersonnel(req.body), id: req.params.id, code: req.params.tenantCode } }
     );
     await nommerComptePrepare(nh, prenom, nom);
+    await enregistrerDroitsEnseignant(req.params.tenantCode, req.params.id, req.body);
     res.json({ success: true, codePremiereConnexion: codePremiereConnexion || null });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

@@ -763,6 +763,8 @@ export default function GestionEnseignement({ mode }: Props) {
                   <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(label)}</label>
                   {type === "role" ? (
                     <select value={form[key]||V.roles[1]} onChange={e=>setForm((f) =>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                      {/* Rôle enregistré absent de la liste (ex. « Enseignant ») : affiché tel quel, jamais remplacé par le premier choix */}
+                      {form[key] && !V.roles.includes(String(form[key])) && <option value={String(form[key])}>{tr(String(form[key]))}</option>}
                       {V.roles.map(r=><option key={r} value={r}>{tr(r)}</option>)}
                     </select>
                   ) : type === "mat" ? (
@@ -791,6 +793,19 @@ export default function GestionEnseignement({ mode }: Props) {
               <select value={form.acces_gestion || "aucun"} onChange={e=>setForm((f) =>({...f,acces_gestion:e.target.value}))} className={inp} style={inpSt}>
                 {ACCES_GESTION.map(a=><option key={a.v} value={a.v}>{tr(a.label)}</option>)}
               </select>
+            </div>
+          )}
+          {peutDonnerAcces && !isMadrasa && (
+            <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <div style={{ ...lbl, marginBottom: 6 }}>{tr("Dans son espace enseignant, pour les élèves de ses classes")}</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+                <input type="checkbox" checked={form.droit_appel === true} onChange={e=>setForm((f) =>({...f,droit_appel:e.target.checked}))} />
+                {tr("📋 Faire l'appel")}
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+                <input type="checkbox" checked={form.droit_notes === true} onChange={e=>setForm((f) =>({...f,droit_notes:e.target.checked}))} />
+                {tr("📝 Saisir les notes")}
+              </label>
             </div>
           )}
           <p style={{ margin: "10px 0 0", fontSize: 12, color: "#64748b" }}>
@@ -1339,6 +1354,12 @@ export default function GestionEnseignement({ mode }: Props) {
                           : <span style={{ padding:"2px 8px",background:"#f0fdf4",color:"#166534",borderRadius:20,fontSize:11,fontWeight:700 }}>🌐 {tr("Sur le site")}</span>}
                         {s.sur_site !== false && !s.photo_url && <span style={{ padding:"2px 8px",background:"#fff7ed",color:"#c2410c",borderRadius:20,fontSize:11,fontWeight:700 }}>📷 {tr("Ajoutez sa photo")}</span>}
                       </div>
+                      {(s.droit_appel || s.droit_notes) && (
+                        <div style={{ marginTop:8, display:"flex", gap:6, flexWrap:"wrap" }}>
+                          {s.droit_appel && <span style={{ padding:"2px 8px",background:"#f0fdf4",color:"#166534",borderRadius:20,fontSize:11,fontWeight:700 }}>📋 {tr("Fait l'appel")}</span>}
+                          {s.droit_notes && <span style={{ padding:"2px 8px",background:"#f0fdf4",color:"#166534",borderRadius:20,fontSize:11,fontWeight:700 }}>📝 {tr("Saisit les notes")}</span>}
+                        </div>
+                      )}
                       {s.acces_gestion && s.acces_gestion !== "aucun" && (
                         <div style={{ marginTop:8 }}><span style={{ padding:"2px 8px",background:"#eff6ff",color:"#1d4ed8",borderRadius:20,fontSize:11,fontWeight:700 }}>🔑 {tr(ACCES_GESTION.find(a=>a.v===s.acces_gestion)?.court || "")}</span></div>
                       )}

@@ -137,6 +137,38 @@ async function tenantDe(code) {
  *   staff, groupes (classes / halaqas), principal (enseignant principal du
  *   groupe), membres, eleves, staffActif (filtre des fiches actives).
  */
+// ─── Droits de l'enseignant, choisis par le directeur (école) ────────────────
+// « Faire l'appel » et « Saisir les notes », pour les seuls élèves de ses
+// classes. Sans droit coché, l'enseignant garde son espace (cours, classes,
+// emploi du temps) sans rien enregistrer pour les élèves.
+let droitsPrets = null;
+export function preparerDroitsEnseignant() {
+  droitsPrets ||= sequelize.query(`
+    ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS droit_appel BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS droit_notes BOOLEAN NOT NULL DEFAULT false;
+  `).catch((e) => { droitsPrets = null; throw e; });
+  return droitsPrets;
+}
+/** Enregistre les droits envoyés par la fiche du personnel (rien si absents). */
+export async function enregistrerDroitsEnseignant(code, staffId, body = {}) {
+  const appel = typeof body.droit_appel === 'boolean' ? body.droit_appel : null;
+  const notes = typeof body.droit_notes === 'boolean' ? body.droit_notes : null;
+  if (appel === null && notes === null) return;
+  await preparerDroitsEnseignant();
+  await sequelize.query(
+    `UPDATE school_staff SET droit_appel = COALESCE(:a, droit_appel), droit_notes = COALESCE(:n, droit_notes)
+      WHERE id = :id AND tenant_code = :code`,
+    { replacements: { a: appel, n: notes, id: staffId, code } }
+  );
+}
+const ANNEE_RE = /^\d{4}-\d{4}$/;
+function anneeScolaireActuelle() {
+  const d = new Date();
+  const debut = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  return `${debut}-${debut + 1}`;
+}
+const STATUTS_APPEL = ['present', 'absent', 'retard'];
+
 export const TABLES_ECOLE = { staff: 'school_staff', groupes: 'school_classrooms', principal: 'professeur_principal_id', membres: 'school_members', eleves: 'school_students', staffActif: 'AND is_active = true', enseignantsClasse: 'school_classroom_teachers' };
 export const TABLES_MADRASA = { staff: 'madrasa_staff', groupes: 'madrasa_halaqas', principal: 'enseignant_id', membres: 'madrasa_members', eleves: 'madrasa_students', staffActif: '' };
 
@@ -151,6 +183,7 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
       await preparerTables();
       const tenant = await tenantDe(req.params.tenantCode);
       if (!tenant) return res.status(404).json({ success: false, message: 'Établissement introuvable.' });
+      if (T.enseignantsClasse) await preparerDroitsEnseignant();
       const [staff] = await sequelize.query(
         `SELECT * FROM ${T.staff} WHERE tenant_code = :code ${T.staffActif} AND ${memeNumeroH} LIMIT 1`,
         { replacements: { code: tenant.tenant_code, nh: String(req.userId || '') }, type: Q.SELECT }
@@ -253,12 +286,106 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
       success: true,
       ecole: { nom: req.tenant.name, logo_url: req.tenant.logo_url },
       enseignant: { id: e.id, prenom: e.prenom, nom: e.nom, specialite: e.specialite || null },
+      // Droits donnés par le directeur (école) : appel et notes de ses classes
+      droits: { appel: !!(T.enseignantsClasse && e.droit_appel), notes: !!(T.enseignantsClasse && e.droit_notes) },
       jour: jourSemaine(),
       classes,
       pointages,
       enCours: pointages.find((p) => !p.fin) || null,
     });
   });
+
+  // ─── Enseignant (école) : appel et notes de SES classes, selon ses droits ──
+  /** La classe demandée, si elle est l'une des siennes, avec ses élèves actifs. */
+  async function maClasse(e, classroomId) {
+    const classe = (await classesDe(e)).find((c) => String(c.id) === String(classroomId));
+    if (!classe) return null;
+    const eleves = await sequelize.query(
+      `SELECT id, prenom, nom FROM ${T.eleves} WHERE tenant_code = :code AND statut = 'actif'
+         AND (classroom_id = :cid OR (classroom_id IS NULL AND :niveau <> '' AND niveau = :niveau)) ORDER BY nom, prenom`,
+      { replacements: { code: e.tenant_code, cid: classe.id, niveau: classe.niveau || '' }, type: Q.SELECT }
+    );
+    return { classe, eleves, ids: new Set(eleves.map((x) => String(x.id))) };
+  }
+  if (T.enseignantsClasse) {
+    // Appel déjà fait ce jour-là pour cette classe (pour le reprendre)
+    router.get('/:tenantCode/enseignant/appel', authenticate, verifyEnseignant, async (req, res) => {
+      const e = req.enseignant;
+      if (!e.droit_appel) return res.status(403).json({ success: false, message: "Le directeur ne vous a pas donné le droit de faire l'appel." });
+      const m = await maClasse(e, req.query.classroom_id);
+      if (!m) return res.status(403).json({ success: false, message: "Cette classe n'est pas l'une des vôtres." });
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || '')) ? req.query.date : aujourdhui();
+      const presences = m.eleves.length ? await sequelize.query(
+        `SELECT student_id, statut FROM school_attendance WHERE tenant_code = :code AND date_presence = :date AND student_id IN (:ids)`,
+        { replacements: { code: e.tenant_code, date, ids: m.eleves.map((x) => x.id) }, type: Q.SELECT }
+      ) : [];
+      res.json({ success: true, date, eleves: m.eleves, presences });
+    });
+
+    // POST { classroom_id, date?, records: [{ student_id, statut }] }
+    router.post('/:tenantCode/enseignant/appel', authenticate, verifyEnseignant, async (req, res) => {
+      const e = req.enseignant;
+      if (!e.droit_appel) return res.status(403).json({ success: false, message: "Le directeur ne vous a pas donné le droit de faire l'appel." });
+      const m = await maClasse(e, req.body?.classroom_id);
+      if (!m) return res.status(403).json({ success: false, message: "Cette classe n'est pas l'une des vôtres." });
+      const records = Array.isArray(req.body?.records) ? req.body.records : [];
+      if (!records.length) return res.status(400).json({ success: false, message: 'Aucune présence à enregistrer.' });
+      if (records.some((r) => !m.ids.has(String(r?.student_id)) || !STATUTS_APPEL.includes(r?.statut))) {
+        return res.status(400).json({ success: false, message: "Un élève n'est pas de cette classe, ou un statut est invalide." });
+      }
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body.date || '')) ? req.body.date : aujourdhui();
+      // Un seul enregistrement par élève et par jour : le nouvel appel remplace l'ancien
+      await sequelize.transaction(async (t) => {
+        for (const r of records) {
+          await sequelize.query(`DELETE FROM school_attendance WHERE tenant_code = :code AND date_presence = :date AND student_id = :sid`,
+            { replacements: { code: e.tenant_code, date, sid: r.student_id }, transaction: t });
+          await sequelize.query(
+            `INSERT INTO school_attendance (tenant_code, student_id, classroom_id, date_presence, est_present, statut) VALUES (:code, :sid, :cid, :date, :present, :statut)`,
+            { replacements: { code: e.tenant_code, sid: r.student_id, cid: m.classe.id, date, present: r.statut !== 'absent', statut: r.statut }, transaction: t }
+          );
+        }
+      });
+      res.json({ success: true, date, enregistres: records.length });
+    });
+
+    // Notes déjà saisies pour cette classe
+    router.get('/:tenantCode/enseignant/notes', authenticate, verifyEnseignant, async (req, res) => {
+      const e = req.enseignant;
+      if (!e.droit_notes) return res.status(403).json({ success: false, message: "Le directeur ne vous a pas donné le droit de saisir les notes." });
+      const m = await maClasse(e, req.query.classroom_id);
+      if (!m) return res.status(403).json({ success: false, message: "Cette classe n'est pas l'une des vôtres." });
+      const notes = m.eleves.length ? await sequelize.query(
+        `SELECT id, student_id, matiere, note, note_max, periode, annee_scolaire, created_at FROM school_grades
+          WHERE tenant_code = :code AND student_id IN (:ids) ORDER BY created_at DESC LIMIT 200`,
+        { replacements: { code: e.tenant_code, ids: m.eleves.map((x) => x.id) }, type: Q.SELECT }
+      ) : [];
+      res.json({ success: true, eleves: m.eleves, notes, matieres: m.classe.matieres || [], annee: anneeScolaireActuelle() });
+    });
+
+    // POST { classroom_id, student_id, matiere, note, note_max?, periode, annee_scolaire?, commentaire? }
+    router.post('/:tenantCode/enseignant/notes', authenticate, verifyEnseignant, async (req, res) => {
+      const e = req.enseignant;
+      if (!e.droit_notes) return res.status(403).json({ success: false, message: "Le directeur ne vous a pas donné le droit de saisir les notes." });
+      const b = req.body || {};
+      const m = await maClasse(e, b.classroom_id);
+      if (!m) return res.status(403).json({ success: false, message: "Cette classe n'est pas l'une des vôtres." });
+      if (!m.ids.has(String(b.student_id))) return res.status(400).json({ success: false, message: "Cet élève n'est pas de cette classe." });
+      const matiere = String(b.matiere || '').trim().slice(0, 120);
+      const noteMax = Number(b.note_max) > 0 ? Number(b.note_max) : 20;
+      const note = Number(b.note);
+      if (!matiere || b.note === '' || b.note == null || !Number.isFinite(note) || note < 0 || note > noteMax) {
+        return res.status(400).json({ success: false, message: `Matière obligatoire et note entre 0 et ${noteMax}.` });
+      }
+      const annee = ANNEE_RE.test(String(b.annee_scolaire || '')) ? b.annee_scolaire : anneeScolaireActuelle();
+      const [rows] = await sequelize.query(
+        `INSERT INTO school_grades (tenant_code, student_id, classroom_id, matiere, note, note_max, coefficient, periode, commentaire, annee_scolaire)
+         VALUES (:code, :sid, :cid, :mat, :note, :nmax, 1, :periode, :comm, :annee) RETURNING *`,
+        { replacements: { code: e.tenant_code, sid: b.student_id, cid: m.classe.id, mat: matiere, note, nmax: noteMax,
+          periode: String(b.periode || '').trim().slice(0, 60) || null, comm: String(b.commentaire || '').trim().slice(0, 500) || null, annee } }
+      );
+      res.json({ success: true, grade: rows[0] });
+    });
+  }
 
   // POST { classroom_id, matiere, prevu_debut, prevu_fin } — heure du serveur
   router.post('/:tenantCode/enseignant/debut', authenticate, verifyEnseignant, async (req, res) => {
