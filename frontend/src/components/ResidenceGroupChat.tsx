@@ -4,9 +4,11 @@ import { AudioRecorder } from './AudioRecorder'
 import { useI18n } from '../i18n/useI18n'
 import { useConversationLue } from '../utils/messagesNonLus'
 import MicroVocal from './MicroVocal'
+import { DUREE_MAX_VIDEO, libelleDuree } from '../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-const MAX_VIDEO_SECONDS = 5
+// Vidéos de Terre Adam : 1 minute au maximum (règle commune)
+const MAX_VIDEO_SECONDS = DUREE_MAX_VIDEO
 
 export interface ResidenceMember {
   numeroH?: string
@@ -435,7 +437,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
                       videoEl.onloadedmetadata = () => {
                         URL.revokeObjectURL(url)
                         if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-                          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`)
+                          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${libelleDuree(MAX_VIDEO_SECONDS)}.`)
                           return
                         }
                         setNewMessage(prev => ({ ...prev, messageType: 'video', mediaFile: file }))

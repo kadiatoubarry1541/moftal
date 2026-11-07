@@ -3,9 +3,11 @@ import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from '.
 import ListeEnfants, { type ListeEnfantsHandle } from './ListeEnfants';
 import LivreQuartier, { type LivreQuartierHandle } from './LivreQuartier';
 import ReglesLocalite, { type ReglesLocaliteHandle } from './ReglesLocalite';
+import { DUREE_MAX_VIDEO, libelleDuree } from '../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
-const MAX_VIDEO_SECONDS = 5;
+// Vidéos de Terre Adam : 1 minute au maximum (règle commune)
+const MAX_VIDEO_SECONDS = DUREE_MAX_VIDEO
 
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
   securite:       { emoji: '🚨', color: '#dc2626' },
@@ -260,7 +262,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       videoEl.preload = 'metadata';
       videoEl.onloadedmetadata = () => {
         if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
+          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${libelleDuree(MAX_VIDEO_SECONDS)}.`);
           URL.revokeObjectURL(url);
           e.target.value = '';
           return;
