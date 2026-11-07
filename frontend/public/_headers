@@ -2,7 +2,11 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  # Micro (messages vocaux), caméra (vidéos, QR code, photos) et position
+  # (pros proches) : permis pour Moftal lui-même (self), jamais pour un autre
+  # site affiché dans une page. Avec « () », le navigateur les refusait
+  # directement, sans même demander à la personne.
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)
 
 # JS/CSS buildés par Vite : hash dans le nom → immutables à vie
 /assets/*
