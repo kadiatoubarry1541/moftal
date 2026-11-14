@@ -15,8 +15,8 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 8 | Événements du quartier | ✅ Terminé — « Je participe » sur les messages Fête / Réunion / Rencontre / Mariage / Baptême de la discussion du quartier, enregistré en base avec le nombre de participants ; anciennes pages « Lieu de résidence 1-3 » (sans lien, publications toujours vides) retirées |
 | 9 | Développement : proposer un projet | ✅ Terminé — vrai formulaire, projet enregistré en base « en attente », examiné par l'admin (approuver / refuser avec motif / marquer terminé), auteur prévenu par notification, projets approuvés affichés par domaine, compteurs réels ; le bandeau « Mettez votre profil à jour » ne cache plus les boutons des fenêtres |
 | 10 | Inscription fournisseur | ✅ Terminé — « Devenir fournisseur » ouvert aux 4 secteurs d'Échange avec un formulaire commun (avant : « arrive bientôt » pour Tertiaire et Quaternaire) ; demande enregistrée en base et validée par l'admin ; formulaire incomplet = refus clair au lieu d'une erreur serveur |
-| 11 | Serveur trop gros, base corrigée au démarrage | 🔧 Prochain |
-| 12 | Aucune surveillance des erreurs | À faire |
+| 11 | Serveur trop gros, base corrigée au démarrage | ✅ Terminé (1re étape) — la mise à jour de la base au démarrage (2 600 lignes) sortie de `server.js` dans `src/db/miseAJourBase.js` (server.js : 3 231 → 636 lignes), sans rien changer (structure de base identique, vérifiée) ; testée à chaque envoi sur une base vide, deux fois de suite, sans perte de données. Plus tard : la découper en vraies migrations datées |
+| 12 | Aucune surveillance des erreurs | 🔧 Prochain |
 | 13 | Réveil de la base toutes les 4 minutes (coût Neon) | À faire |
 | 14 | Fichiers en vrac à la racine du projet | À faire |
 | 15 | Pas de `sitemap.xml` | À faire |
