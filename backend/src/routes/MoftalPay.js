@@ -7,7 +7,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { fondsDe } from '../utils/fondsFamille.js';
-import { compteMoftalPayPro, MOFTAL_PAY_PRO_TYPES } from '../utils/compteMoftalPayPro.js';
+import { compteMoftalPayPro } from '../utils/compteMoftalPayPro.js';
 
 // Commission prélevée par la plateforme sur chaque dépôt externe (via Djomy)
 // Les transferts internes (famille → pro) sont GRATUITS — pas de commission
@@ -30,14 +30,12 @@ router.get('/mon-moftal-pay-pro', authenticate, async (req, res) => {
       if (!autre) {
         return res.status(404).json({ success: false, message: 'Aucun compte professionnel approuvé trouvé.' });
       }
-      // Moftal Pay Pro : Santé (clinic) et Alimentation (supplier), formule Gestion Interne
+      // Moftal Pay Pro : tous les secteurs, formule Visibilité + Gestion Interne
       return res.status(403).json({
         success: false,
         restricted: true,
         typePro: autre.type,
-        message: MOFTAL_PAY_PRO_TYPES.includes(autre.type)
-          ? "Le Moftal Pay Pro fait partie de la formule Visibilité + Gestion Interne."
-          : 'Le Moftal Pay Pro est disponible uniquement pour les comptes Santé et Alimentation pour le moment.'
+        message: 'Le Moftal Pay Pro fait partie de la formule Visibilité + Gestion Interne.'
       });
     }
 

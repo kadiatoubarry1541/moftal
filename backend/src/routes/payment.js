@@ -725,7 +725,7 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     }
     if (purpose === 'wallet_depot_pro') {
       const pro = await compteMoftalPayPro(user?.numeroH);
-      if (!pro) return { error: 'Aucun compte Moftal Pay Pro (Santé ou Alimentation, formule Gestion Interne) pour recevoir ce dépôt.' };
+      if (!pro) return { error: 'Aucun compte Moftal Pay Pro (formule Visibilité + Gestion Interne) pour recevoir ce dépôt.' };
     }
     amount = montantDepot;
   }
