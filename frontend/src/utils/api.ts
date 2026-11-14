@@ -115,9 +115,10 @@ export const api = {
           // numeroH pas requis pour les défunts — le backend génère DM0001, DM0002…
           prenom: userData.prenom || 'Défunt',
           nomFamille: userData.nom || userData.nomFamille || 'Inconnu',
-          // Email unique garanti (pas de doublon possible)
-          email: `defunt.${Date.now()}@moftal.genealogie`,
-          password: crypto.randomUUID()
+          // Un défunt n'a pas de compte : ni mot de passe, ni adresse e-mail
+          email: undefined,
+          password: undefined,
+          confirmPassword: undefined
         })
       })
 
