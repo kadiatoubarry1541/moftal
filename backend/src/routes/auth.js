@@ -16,9 +16,10 @@ import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
-import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAncienAdmin, estAdminUtilisateur } from '../middleware/auth.js';
+import { authenticate, findUserFollowingAlias, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable, estAncienAdmin, estAdminUtilisateur } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
+import { ouvrirSession, signerJeton, listerSessions, fermerSession, fermerAutresSessions } from '../services/sessionsAppareils.js';
 import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion, empreinteCodePremiereConnexion, donnerCodePremiereConnexion } from '../services/comptesProvisoires.js';
 import { premiereActiviteBloquee, messageActiviteBloquee } from '../utils/activitesBloquees.js';
 
@@ -337,11 +338,7 @@ router.post('/register', validateUser, async (req, res) => {
         (numeroLibre) => User.create({ ...userData, numeroH: numeroLibre }));
 
       // Générer le token et préparer la réponse tout de suite
-      const token = jwt.sign(
-        { userId: newUser.numeroH, numeroH: newUser.numeroH },
-        config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRE }
-      );
+      const token = await ouvrirSession(req, newUser.numeroH);
       const userWithoutPassword = { ...newUser.dataValues };
       delete userWithoutPassword.password;
 
@@ -423,7 +420,6 @@ async function findNumeroHByPhone(digits) {
   return rows && rows.length > 0 ? rows[0].numero_h : null;
 }
 
-const signToken = (numeroH) => jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRE });
 
 // Seul le titulaire du compte (ou un administrateur) peut modifier son profil.
 function peutModifierProfil(req, numeroH) {
@@ -487,7 +483,7 @@ router.post('/register-quick', [
 
     const user = { ...newUser.dataValues };
     delete user.password;
-    res.status(201).json({ success: true, message: 'Compte créé', user, token: signToken(numeroH), profileIncomplete: true });
+    res.status(201).json({ success: true, message: 'Compte créé', user, token: await ouvrirSession(req, numeroH), profileIncomplete: true });
   } catch (error) {
     if (error?.name === 'SequelizeUniqueConstraintError' || error?.parent?.code === '23505') {
       const champs = (error.errors || []).map((e) => e.path).join(' ');
@@ -614,7 +610,8 @@ router.post('/complete-profile', authenticate, [
   const updated = await User.findByNumeroH(numeroFinal);
   const user = { ...updated.dataValues };
   delete user.password;
-  res.json({ success: true, message: 'Profil mis à jour', user, token: signToken(numeroFinal) });
+  const token = req.sessionId ? signerJeton(numeroFinal, req.sessionId) : await ouvrirSession(req, numeroFinal);
+  res.json({ success: true, message: 'Profil mis à jour', user, token });
 
   // Comme après une inscription complète
   setImmediate(() => {
@@ -726,7 +723,7 @@ router.post('/premiere-connexion', async (req, res) => {
     await User.sequelize.query('UPDATE users SET code_premiere_connexion = NULL WHERE numero_h = :nh', { replacements: { nh } }).catch(() => {});
     const donnees = { ...user.dataValues };
     delete donnees.password;
-    res.json({ success: true, message: 'Mot de passe enregistré', user: donnees, token: signToken(nh), profileIncomplete: true });
+    res.json({ success: true, message: 'Mot de passe enregistré', user: donnees, token: await ouvrirSession(req, nh), profileIncomplete: true });
   } catch (e) {
     console.error('première connexion:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur : réessayez.' });
@@ -849,11 +846,7 @@ router.post('/login', [
       // Mise à jour lastLogin en arrière-plan, sans bloquer la réponse
       user.update({ lastLogin: new Date() }).catch(() => {});
 
-      const token = jwt.sign(
-        { userId: user.numeroH, numeroH: user.numeroH },
-        config.JWT_SECRET,
-        { expiresIn: config.JWT_EXPIRE }
-      );
+      const token = await ouvrirSession(req, user.numeroH);
 
       const userWithoutPassword = { ...user.dataValues };
       delete userWithoutPassword.password;
@@ -1121,6 +1114,8 @@ router.post('/forgot-password/reset', [
     }
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
+    // Mot de passe oublié (peut-être volé) : tous les appareils sont déconnectés
+    await fermerAutresSessions(user.numeroH);
     res.json({ success: true, message: 'Mot de passe modifié. Vous pouvez vous connecter.' });
   } catch (err) {
     console.error('forgot-password/reset:', err);
@@ -1205,12 +1200,12 @@ router.get('/me', authenticate, async (req, res) => {
     }
     const userWithoutPassword = { ...user.dataValues };
     delete userWithoutPassword.password;
-    // Renouvelle le token à chaque visite pour maintenir la session active
-    const newToken = jwt.sign(
-      { userId: user.numeroH, numeroH: user.numeroH },
-      config.JWT_SECRET,
-      { expiresIn: '90d' }
-    );
+    // Renouvelle le token à chaque visite pour maintenir la session active.
+    // Même appareil = même session ; une ancienne connexion (d'avant la liste des
+    // appareils) y est inscrite à cette occasion.
+    const newToken = req.sessionId
+      ? signerJeton(user.numeroH, req.sessionId)
+      : await ouvrirSession(req, user.numeroH);
     res.json({ success: true, user: userWithoutPassword, token: newToken });
   } catch (error) {
     console.error('Erreur GET /auth/me:', error);
@@ -1221,11 +1216,82 @@ router.get('/me', authenticate, async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Déconnexion utilisateur
 // @access  Private
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  // La session de cet appareil est fermée en base (si le jeton est lisible)
+  try {
+    const auth = String(req.headers.authorization || '');
+    const decoded = auth.startsWith('Bearer ') ? jwt.verify(auth.slice(7).trim(), config.JWT_SECRET) : null;
+    if (decoded?.sid && decoded?.numeroH) {
+      const user = await findUserFollowingAlias(decoded.numeroH);
+      if (user) await fermerSession(user.numeroH, decoded.sid);
+    }
+  } catch { /* jeton expiré ou illisible : rien à fermer */ }
   res.json({
     success: true,
     message: 'Déconnexion réussie'
   });
+});
+
+// @route   GET /api/auth/sessions
+// @desc    Appareils connectés à mon compte (celui-ci est marqué « actuel »)
+// @access  Private
+router.get('/sessions', authenticate, async (req, res) => {
+  try {
+    const sessions = await listerSessions(req.user.numeroH);
+    res.json({
+      success: true,
+      // Ancienne connexion pas encore inscrite : elle le sera à la prochaine visite
+      appareilActuelInscrit: !!req.sessionId,
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        appareil: s.appareil,
+        connecteLe: s.cree_le,
+        derniereActivite: s.derniere_activite,
+        actuel: s.id === req.sessionId,
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur GET /auth/sessions:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   DELETE /api/auth/sessions/:id
+// @desc    Déconnecter un de mes appareils à distance
+// @access  Private
+router.delete('/sessions/:id', authenticate, async (req, res) => {
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Appareil introuvable.' });
+    }
+    const ferme = await fermerSession(req.user.numeroH, req.params.id);
+    if (!ferme) return res.status(404).json({ success: false, message: 'Appareil introuvable ou déjà déconnecté.' });
+    res.json({ success: true, message: 'Appareil déconnecté.', actuel: req.params.id === req.sessionId });
+  } catch (error) {
+    console.error('Erreur DELETE /auth/sessions:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/auth/sessions/deconnecter-autres
+// @desc    Déconnecter tous mes autres appareils (téléphone perdu, prêté…)
+// @access  Private
+router.post('/sessions/deconnecter-autres', authenticate, async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const nombre = await fermerAutresSessions(numeroH, req.sessionId);
+    // Les connexions d'avant la liste des appareils sont aussi refusées désormais
+    // (à la seconde près, comme la date d'émission d'un jeton)…
+    const depuis = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await User.sequelize.query('UPDATE users SET sessions_valides_depuis = :depuis WHERE numero_h = :nh',
+      { replacements: { depuis, nh: numeroH } });
+    // …et cet appareil-ci reçoit un jeton neuf pour rester connecté
+    const token = req.sessionId ? signerJeton(numeroH, req.sessionId) : await ouvrirSession(req, numeroH);
+    res.json({ success: true, message: 'Tous vos autres appareils ont été déconnectés.', nombre, token });
+  } catch (error) {
+    console.error('Erreur POST /auth/sessions/deconnecter-autres:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
 });
 
 // @route   PUT /api/auth/profile
@@ -1588,8 +1654,10 @@ router.put('/change-password', authenticate, [
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
 
-    // Les autres appareils sont déconnectés ; celui-ci reçoit une nouvelle session
-    res.json({ success: true, message: 'Mot de passe modifié avec succès. Vos autres appareils ont été déconnectés.', token: signToken(user.numeroH) });
+    // Les autres appareils sont déconnectés ; celui-ci garde sa session avec un jeton neuf
+    await fermerAutresSessions(user.numeroH, req.sessionId);
+    const token = req.sessionId ? signerJeton(user.numeroH, req.sessionId) : await ouvrirSession(req, user.numeroH);
+    res.json({ success: true, message: 'Mot de passe modifié avec succès. Vos autres appareils ont été déconnectés.', token });
   } catch (error) {
     console.error('Erreur lors du changement de mot de passe:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

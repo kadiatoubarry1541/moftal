@@ -1,4 +1,5 @@
 import express from 'express';
+import { sessionOuverte } from '../services/sessionsAppareils.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sequelize } from '../config/database.js';
@@ -32,8 +33,13 @@ router.post('/', async (req, res) => {
   try {
     const auth = String(req.headers.authorization || '');
     const jeton = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-    try { jwt.verify(jeton, config.JWT_SECRET); }
+    let decoded;
+    try { decoded = jwt.verify(jeton, config.JWT_SECRET); }
     catch { return res.status(401).json({ success: false, message: 'Session expirée. Reconnectez-vous.' }); }
+    // Appareil déconnecté à distance : il ne peut plus ouvrir la gestion
+    if (decoded?.purpose || (decoded?.sid && !(await sessionOuverte(decoded.sid)))) {
+      return res.status(401).json({ success: false, message: 'Session expirée. Reconnectez-vous.' });
+    }
     await preparerTable();
     await sequelize.query(`DELETE FROM codes_ouverture WHERE expire_at < NOW()`);
     const code = crypto.randomBytes(24).toString('hex');

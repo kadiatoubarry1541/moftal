@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { sessionOuverte } from '../services/sessionsAppareils.js';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
@@ -95,6 +96,16 @@ export function sessionRevoquee(user, decoded) {
   return !!depuis && (!decoded?.iat || decoded.iat * 1000 < depuis);
 }
 
+/**
+ * Jeton encore accepté ? Refusé si le mot de passe a changé depuis, ou si cet
+ * appareil a été déconnecté à distance (liste « Appareils connectés »).
+ */
+export async function jetonEncoreValide(user, decoded) {
+  if (sessionRevoquee(user, decoded)) return false;
+  if (decoded?.sid && !(await sessionOuverte(decoded.sid))) return false;
+  return true;
+}
+
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
   return authenticate(req, res, next);
@@ -152,8 +163,16 @@ export const authenticate = async (req, res, next) => {
           expired: true
         });
       }
+      if (decoded.sid && !(await sessionOuverte(decoded.sid))) {
+        return res.status(401).json({
+          success: false,
+          message: 'Cet appareil a été déconnecté. Reconnectez-vous.',
+          expired: true
+        });
+      }
 
       req.user = user;
+      req.sessionId = decoded.sid || null;
       // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base,
       // et compte de consultation seulement : il se connecte et regarde, mais ne
       // peut rien modifier (ni son profil, ni publier, ni ajouter, ni supprimer).

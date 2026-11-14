@@ -2,7 +2,7 @@ import express from 'express';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
-import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
+import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias, jetonEncoreValide } from '../middleware/auth.js';
 import { refusNomReserve } from '../utils/nomsReserves.js';
 import ProfessionalAccount, { STATUTS_VISIBLES } from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
@@ -108,7 +108,7 @@ async function utilisateurOptionnel(req) {
     const decoded = jwt.verify(token, config.JWT_SECRET);
     if (decoded.purpose) return null;
     const user = await findUserFollowingAlias(decoded.numeroH);
-    return user && user.isActive ? user : null;
+    return user && user.isActive && (await jetonEncoreValide(user, decoded)) ? user : null;
   } catch {
     return null;
   }
