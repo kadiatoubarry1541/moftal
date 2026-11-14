@@ -374,6 +374,30 @@ export const api = {
     }).catch(() => { /* hors ligne : la session expirera d'elle-même */ })
   },
 
+  // Favoris de la page Services (enregistrés sur le serveur pour la personne)
+  // favoris = null : jamais enregistrés sur le serveur
+  async lireFavorisServices(): Promise<{ success: boolean; favoris?: string[] | null; message?: string }> {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/me/favoris-services`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) return { success: false, message: data.message || 'Favoris indisponibles.' }
+    return { success: true, favoris: Array.isArray(data.favoris) ? data.favoris : null }
+  },
+
+  async enregistrerFavorisServices(favoris: string[]): Promise<{ success: boolean; message?: string }> {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/me/favoris-services`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ favoris })
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) return { success: false, message: data.message || "Vos favoris n'ont pas pu être enregistrés." }
+    return { success: true }
+  },
+
   // Supprimer son propre compte (mot de passe requis)
   async deleteAccount(password: string) {
     const token = localStorage.getItem('token')

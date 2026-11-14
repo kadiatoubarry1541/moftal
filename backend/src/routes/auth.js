@@ -1570,6 +1570,59 @@ router.post('/profile/vitrine-video', authenticate, (req, res) => {
   });
 });
 
+// Favoris de la page Services : enregistrés en base pour la personne (plus
+// seulement dans le téléphone) — ils la suivent sur tous ses appareils.
+const MAX_FAVORIS_SERVICES = 4;
+let colonneFavorisPrete = null;
+const preparerColonneFavoris = () => {
+  if (!colonneFavorisPrete) {
+    colonneFavorisPrete = User.sequelize.query(
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS favoris_services JSONB'
+    ).catch((e) => { colonneFavorisPrete = null; throw e; });
+  }
+  return colonneFavorisPrete;
+};
+
+// @route   GET /api/auth/me/favoris-services
+// @access  Private
+router.get('/me/favoris-services', authenticate, async (req, res) => {
+  try {
+    await preparerColonneFavoris();
+    const [ligne] = await User.sequelize.query(
+      'SELECT favoris_services FROM users WHERE numero_h = :nh',
+      { replacements: { nh: req.user.numeroH }, type: 'SELECT' }
+    );
+    const favoris = Array.isArray(ligne?.favoris_services) ? ligne.favoris_services : null;
+    // null = jamais enregistrés (le téléphone peut envoyer ceux qu'il gardait)
+    res.json({ success: true, favoris });
+  } catch (error) {
+    console.error('Erreur GET favoris-services:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   PUT /api/auth/me/favoris-services
+// @access  Private
+router.put('/me/favoris-services', authenticate, async (req, res) => {
+  try {
+    const liste = req.body?.favoris;
+    if (!Array.isArray(liste) || liste.length > MAX_FAVORIS_SERVICES
+        || !liste.every((f) => typeof f === 'string' && /^\/[\w\-/]{0,99}$/.test(f))) {
+      return res.status(400).json({ success: false, message: `Choisissez au plus ${MAX_FAVORIS_SERVICES} services.` });
+    }
+    const favoris = [...new Set(liste)];
+    await preparerColonneFavoris();
+    await User.sequelize.query(
+      'UPDATE users SET favoris_services = CAST(:favoris AS JSONB) WHERE numero_h = :nh',
+      { replacements: { favoris: JSON.stringify(favoris), nh: req.user.numeroH } }
+    );
+    res.json({ success: true, favoris });
+  } catch (error) {
+    console.error('Erreur PUT favoris-services:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @route   PUT /api/auth/me/visibility
 // @desc    Définir ce que les autres voient de moi dans l'arbre (name_only | name_photo | name_photo_numeroH)
 // @access  Private
