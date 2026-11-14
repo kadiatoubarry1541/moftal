@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
 import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { listerEchecsSynchro } from '../middleware/echecsSynchro.js';
+import { modePaiementDjomy } from './djomyPayment.js';
 
 const router = express.Router();
 
@@ -411,6 +412,8 @@ router.get('/diagnostic-donnees', async (req, res) => {
       comptesProApprouves,
       comptesProEnAttente,
       paiementsReussis,
+      paiementsEchoues,
+      paiementsEnAttente,
       residenceGroupes,
       formationsAnnonces,
     ] = await Promise.all([
@@ -426,6 +429,8 @@ router.get('/diagnostic-donnees', async (req, res) => {
       compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'approved'`),
       compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'pending'`),
       compter(`SELECT COUNT(*) c FROM payments WHERE status = 'completed'`),
+      compter(`SELECT COUNT(*) c FROM payments WHERE status = 'failed'`),
+      compter(`SELECT COUNT(*) c FROM payments WHERE status = 'pending'`),
       compter(`SELECT COUNT(*) c FROM residence_groups`),
       compter(`SELECT COUNT(*) c FROM formation_annonces`),
     ]);
@@ -439,6 +444,9 @@ router.get('/diagnostic-donnees', async (req, res) => {
         publicites: { total: publicitesTotal, enAttente: publicitesEnAttente, enLigne: publicitesEnLigne },
         comptesPro: { total: comptesProTotal, approuves: comptesProApprouves, enAttente: comptesProEnAttente },
         paiementsReussis,
+        paiementsEchoues,
+        paiementsEnAttente,
+        modePaiement: modePaiementDjomy(),
         residenceGroupes,
         formationsAnnonces,
       },

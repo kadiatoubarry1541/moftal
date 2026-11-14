@@ -85,4 +85,17 @@ test('notification de paiement Djomy', { skip: !process.env.TEST_DB && 'TEST_DB 
   // 6. Paiement inconnu : réponse normale, rien de crédité
   assert.equal(await envoyer(succes('DJ-INCONNU', 1000)), 200);
   assert.deepEqual(debloques, ['TX-A', 'TX-B']);
+
+  // 7. Paiement refusé : marqué « échoué » (plus « en attente » pour toujours)
+  const echec = (transactionId) => ({ eventType: 'payment.failed', data: { transactionId } });
+  await Payment.create({ txRef: 'TX-C', gatewayRef: 'DJ-C', payerNumeroH: 'TEST-DJOMY', amount: 1000, purpose: 'subscription_pro' });
+  assert.equal(await envoyer(echec('DJ-C'), 'v1:fausse'), 400);
+  assert.equal(await statut('TX-C'), 'pending', 'une fausse notification ne change rien');
+  assert.equal(await envoyer(echec('DJ-C')), 200);
+  assert.equal(await statut('TX-C'), 'failed');
+
+  // 8. Un paiement réussi n'est jamais redescendu en « échoué »
+  assert.equal(await envoyer(echec('DJ-A')), 200);
+  assert.equal(await statut('TX-A'), 'completed');
+  assert.deepEqual(debloques, ['TX-A', 'TX-B']);
 });
