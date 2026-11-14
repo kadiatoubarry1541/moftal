@@ -19,6 +19,23 @@ interface MonDon {
   domaineLabel?: string | null;
   message?: string | null;
 }
+interface Proposition {
+  id: string;
+  domaine: string;
+  titre: string;
+  description: string;
+  lieu: string | null;
+  statut: "en_attente" | "approuve" | "refuse" | "termine";
+  motifRefus: string | null;
+  auteurNom: string | null;
+  creeLe: string;
+}
+const STATUT_PROPOSITION: Record<Proposition["statut"], { label: string; classe: string }> = {
+  en_attente: { label: "⏳ En attente d'examen", classe: "bg-amber-100 text-amber-800" },
+  approuve:   { label: "🔨 En cours",            classe: "bg-green-100 text-green-800" },
+  termine:    { label: "✅ Terminé",              classe: "bg-blue-100 text-blue-800" },
+  refuse:     { label: "✖ Non retenu",           classe: "bg-red-100 text-red-700" },
+};
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
 const DOMAINES = [
@@ -51,6 +68,16 @@ export default function Developpement() {
   const [activeDomaine, setActiveDomaine] = useState<string | null>(null);
   const [showSoumettre, setShowSoumettre] = useState(false);
 
+  // Propositions de projets (enregistrées en base, publiées après examen de l'admin)
+  const [projets, setProjets] = useState<Proposition[]>([]);
+  const [mesPropositions, setMesPropositions] = useState<Proposition[]>([]);
+  const [statsProjets, setStatsProjets] = useState({ enCours: 0, termines: 0, idees: 0 });
+  const [aExaminer, setAExaminer] = useState<Proposition[]>([]);
+  const [propForm, setPropForm] = useState({ domaine: "", titre: "", description: "", lieu: "" });
+  const [propEnvoi, setPropEnvoi] = useState(false);
+  const [propErreur, setPropErreur] = useState("");
+  const [propMerci, setPropMerci] = useState("");
+
   // États pour les dons
   const [totalCollecte, setTotalCollecte] = useState(0);
   const [parDomaine, setParDomaine] = useState<Record<string, number>>({});
@@ -70,9 +97,86 @@ export default function Developpement() {
   });
 
   useEffect(() => {
-    if (user) loadStats();
+    if (user) { loadStats(); loadPropositions(); if (userIsAdmin) loadAExaminer(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
+
+  const loadPropositions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/developpement/propositions`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProjets(data.projets || []);
+        setMesPropositions(data.mesPropositions || []);
+        if (data.stats) setStatsProjets(data.stats);
+      }
+    } catch { /* la page reste utilisable ; les projets se rechargent à la prochaine visite */ }
+  };
+
+  const loadAExaminer = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/developpement/propositions/a-examiner`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setAExaminer((await res.json()).propositions || []);
+    } catch { /* liste rechargée à la prochaine visite */ }
+  };
+
+  const ouvrirProposition = (domaine: string) => {
+    setPropForm({ domaine, titre: "", description: "", lieu: "" });
+    setPropErreur("");
+    setPropMerci("");
+    setShowSoumettre(true);
+  };
+
+  const envoyerProposition = async () => {
+    setPropErreur("");
+    if (!propForm.domaine) { setPropErreur("Choisissez un domaine."); return; }
+    if (propForm.titre.trim().length < 5) { setPropErreur("Le titre doit faire au moins 5 caractères."); return; }
+    if (propForm.description.trim().length < 20) { setPropErreur("Décrivez votre projet en 20 caractères au moins."); return; }
+    setPropEnvoi(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/developpement/propositions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(propForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) { setPropErreur(data.message || "Votre projet n'a pas pu être envoyé. Réessayez."); return; }
+      setPropMerci(data.message || "Merci ! Votre projet sera examiné par l'administrateur.");
+      loadPropositions();
+      if (userIsAdmin) loadAExaminer();
+    } catch {
+      setPropErreur("Connexion impossible : votre projet n'a pas été envoyé. Réessayez.");
+    } finally {
+      setPropEnvoi(false);
+    }
+  };
+
+  const decider = async (p: Proposition, decision: "approuve" | "refuse" | "termine") => {
+    let motif = "";
+    if (decision === "refuse") {
+      motif = window.prompt(`Motif du refus de « ${p.titre} » (l'auteur le verra) :`)?.trim() || "";
+      if (!motif) return;
+    } else if (!window.confirm(decision === "approuve" ? `Approuver « ${p.titre} » ? Il sera publié.` : `Marquer « ${p.titre} » comme terminé ?`)) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/developpement/propositions/${p.id}/decision`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, motif }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) { alert(data.message || "La décision n'a pas pu être enregistrée."); return; }
+      loadAExaminer();
+      loadPropositions();
+    } catch {
+      alert("Connexion impossible : la décision n'a pas été enregistrée.");
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -231,7 +335,7 @@ export default function Developpement() {
               <p className="text-slate-500 text-sm mt-1">Sélectionnez un domaine pour voir les projets en cours</p>
             </div>
             <button
-              onClick={() => setShowSoumettre(true)}
+              onClick={() => ouvrirProposition(activeDomaine || "")}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm"
             >
               ✚ Proposer
@@ -287,40 +391,99 @@ export default function Developpement() {
                     <span>{formatMontant(montantDom)} collectés pour ce domaine</span>
                   </div>
                 )}
-                <div className="bg-slate-50 rounded-xl p-5 text-center">
-                  <div className="text-4xl mb-3">🚀</div>
-                  <p className="text-slate-600 font-medium">Aucun projet enregistré pour l'instant</p>
-                  <p className="text-slate-400 text-sm mt-1">
-                    Les projets soumis et approuvés par l'administrateur apparaîtront ici
-                  </p>
-                  <button
-                    onClick={() => setShowSoumettre(true)}
-                    className="mt-3 px-4 py-2 text-sm font-semibold rounded-lg transition-colors text-white"
-                    style={{ background: dom.color }}
-                  >
-                    ✚ Proposer un projet dans ce domaine
-                  </button>
-                </div>
+                {(() => {
+                  const duDomaine = projets.filter(p => p.domaine === dom.id);
+                  const miennes = mesPropositions.filter(p => p.domaine === dom.id && (p.statut === "en_attente" || p.statut === "refuse"));
+                  return (
+                    <div className="space-y-3">
+                      {duDomaine.length === 0 ? (
+                        <div className="bg-slate-50 rounded-xl p-5 text-center">
+                          <div className="text-4xl mb-3">🚀</div>
+                          <p className="text-slate-600 font-medium">Aucun projet approuvé pour l'instant</p>
+                          <p className="text-slate-400 text-sm mt-1">
+                            Les projets soumis et approuvés par l'administrateur apparaîtront ici
+                          </p>
+                        </div>
+                      ) : duDomaine.map(p => (
+                        <div key={p.id} className="rounded-xl border border-slate-200 p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-bold text-slate-800">{p.titre}</p>
+                            <span className={`flex-shrink-0 text-[11px] font-bold rounded-full px-2 py-0.5 ${STATUT_PROPOSITION[p.statut].classe}`}>{STATUT_PROPOSITION[p.statut].label}</span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">{[p.lieu, p.auteurNom && `proposé par ${p.auteurNom}`].filter(Boolean).join(" · ")}</p>
+                          <p className="text-sm text-slate-600 mt-2 whitespace-pre-line">{p.description}</p>
+                          {userIsAdmin && p.statut === "approuve" && (
+                            <button onClick={() => decider(p, "termine")} className="mt-2 text-xs font-semibold text-blue-700 hover:underline">✅ Marquer terminé</button>
+                          )}
+                        </div>
+                      ))}
+                      {miennes.length > 0 && (
+                        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                          <p className="text-xs font-bold text-amber-800 mb-2">Mes propositions dans ce domaine</p>
+                          {miennes.map(p => (
+                            <div key={p.id} className="text-sm text-slate-700 py-1">
+                              <span className="font-semibold">{p.titre}</span>{" "}
+                              <span className={`text-[11px] font-bold rounded-full px-2 py-0.5 ${STATUT_PROPOSITION[p.statut].classe}`}>{STATUT_PROPOSITION[p.statut].label}</span>
+                              {p.statut === "refuse" && p.motifRefus && <p className="text-xs text-red-700 mt-0.5">Motif : {p.motifRefus}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <button
+                          onClick={() => ouvrirProposition(dom.id)}
+                          className="px-4 py-2 text-sm font-semibold rounded-lg transition-colors text-white"
+                          style={{ background: dom.color }}
+                        >
+                          ✚ Proposer un projet dans ce domaine
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
         </div>
 
+        {/* Administrateur : propositions à examiner */}
+        {userIsAdmin && aExaminer.length > 0 && (
+          <div className="mb-8 bg-white rounded-2xl border border-amber-300 p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-800 mb-3">📝 Propositions à examiner ({aExaminer.length})</h2>
+            <div className="space-y-3">
+              {aExaminer.map(p => {
+                const dom = DOMAINES.find(d => d.id === p.domaine);
+                return (
+                  <div key={p.id} className="rounded-xl border border-slate-200 p-4">
+                    <p className="font-bold text-slate-800">{dom?.emoji} {p.titre}</p>
+                    <p className="text-xs text-slate-400">{[dom?.label, p.lieu, p.auteurNom].filter(Boolean).join(" · ")}</p>
+                    <p className="text-sm text-slate-600 mt-2 whitespace-pre-line">{p.description}</p>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => decider(p, "approuve")} className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold">✓ Approuver</button>
+                      <button onClick={() => decider(p, "refuse")} className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold">✖ Refuser</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Stats globales */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 border text-center">
             <div className="text-2xl mb-1">📋</div>
-            <div className="font-bold text-slate-800 text-xl">0</div>
+            <div className="font-bold text-slate-800 text-xl">{statsProjets.enCours}</div>
             <div className="text-slate-500 text-xs">Projets en cours</div>
           </div>
           <div className="bg-white rounded-xl p-4 border text-center">
             <div className="text-2xl mb-1">✅</div>
-            <div className="font-bold text-slate-800 text-xl">0</div>
+            <div className="font-bold text-slate-800 text-xl">{statsProjets.termines}</div>
             <div className="text-slate-500 text-xs">Projets terminés</div>
           </div>
           <div className="bg-white rounded-xl p-4 border text-center">
             <div className="text-2xl mb-1">💡</div>
-            <div className="font-bold text-slate-800 text-xl">0</div>
+            <div className="font-bold text-slate-800 text-xl">{statsProjets.idees}</div>
             <div className="text-slate-500 text-xs">Idées soumises</div>
           </div>
           <div
@@ -542,18 +705,43 @@ export default function Developpement() {
               <h2 className="text-xl font-bold text-white">✚ Proposer un projet</h2>
               <p className="text-green-100 text-sm mt-1">Votre idée sera examinée par l'administrateur</p>
             </div>
-            <div className="p-6">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                <div className="text-3xl mb-2">📝</div>
-                <p className="text-green-800 font-medium text-sm">Formulaire de soumission</p>
-                <p className="text-green-600 text-xs mt-1">Bientôt disponible — les soumissions seront activées par l'administrateur</p>
+            {propMerci ? (
+              <div className="p-6 text-center space-y-4">
+                <div className="text-4xl">🙏</div>
+                <p className="text-green-800 font-semibold">{propMerci}</p>
+                <p className="text-slate-500 text-sm">Vous recevrez une notification quand il sera examiné.</p>
+                <button onClick={() => setShowSoumettre(false)} className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm">Fermer</button>
               </div>
-            </div>
-            <div className="px-6 pb-6 flex justify-end">
-              <button onClick={() => setShowSoumettre(false)} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm transition-colors">
-                Fermer
-              </button>
-            </div>
+            ) : (
+              <div className="p-6 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Domaine</label>
+                  <select value={propForm.domaine} onChange={e => setPropForm({ ...propForm, domaine: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                    <option value="">— Choisir —</option>
+                    {DOMAINES.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Titre du projet</label>
+                  <input value={propForm.titre} maxLength={150} onChange={e => setPropForm({ ...propForm, titre: e.target.value })} placeholder="Ex. : Un forage pour le quartier" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Lieu (facultatif)</label>
+                  <input value={propForm.lieu} maxLength={150} onChange={e => setPropForm({ ...propForm, lieu: e.target.value })} placeholder="Quartier, ville…" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                  <textarea value={propForm.description} maxLength={5000} rows={5} onChange={e => setPropForm({ ...propForm, description: e.target.value })} placeholder="Le besoin, ce que vous proposez, qui en profitera…" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                {propErreur && <p className="text-sm text-red-600">{propErreur}</p>}
+                <div className="flex justify-end gap-2 pt-1">
+                  <button onClick={() => setShowSoumettre(false)} disabled={propEnvoi} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Annuler</button>
+                  <button onClick={envoyerProposition} disabled={propEnvoi} className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg text-sm disabled:opacity-50">
+                    {propEnvoi ? "Envoi…" : "Envoyer le projet"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

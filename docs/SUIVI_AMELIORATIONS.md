@@ -13,8 +13,8 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 6 | Déclaration d'un défunt | ✅ Terminé — vrai brouillon (retrouvé si la page se recharge, effacé une fois le défunt enregistré) ; plus de mot de passe ni de fausse adresse e-mail envoyés pour un défunt (aucun compte n'est créé) ; le lien de parenté d'une déclaration n'est plus réutilisé par erreur pour la suivante |
 | 7 | Moftal Pay Pro pour tous les secteurs | ✅ Terminé — ouvert à tous les secteurs en formule Visibilité + Gestion Interne (dépôts, paiements, retraits) ; règle « 1 an d'ancienneté avant un retrait » réparée (elle ne bloquait jamais rien) |
 | 8 | Événements du quartier | ✅ Terminé — « Je participe » sur les messages Fête / Réunion / Rencontre / Mariage / Baptême de la discussion du quartier, enregistré en base avec le nombre de participants ; anciennes pages « Lieu de résidence 1-3 » (sans lien, publications toujours vides) retirées |
-| 9 | Développement : soumissions pas ouvertes | 🔧 Prochain (choix : le construire) |
-| 10 | Inscription fournisseur incomplète | À faire (choix : ouvrir à tous les secteurs) |
+| 9 | Développement : proposer un projet | ✅ Terminé — vrai formulaire, projet enregistré en base « en attente », examiné par l'admin (approuver / refuser avec motif / marquer terminé), auteur prévenu par notification, projets approuvés affichés par domaine, compteurs réels ; le bandeau « Mettez votre profil à jour » ne cache plus les boutons des fenêtres |
+| 10 | Inscription fournisseur incomplète | 🔧 Prochain (choix : ouvrir à tous les secteurs) |
 | 11 | Serveur trop gros, base corrigée au démarrage | À faire |
 | 12 | Aucune surveillance des erreurs | À faire |
 | 13 | Réveil de la base toutes les 4 minutes (coût Neon) | À faire |
