@@ -66,7 +66,7 @@ slide1.background = { color: 'FFFFFF' };
 try {
   const fs = require('fs');
   const path = require('path');
-  const logoPath = path.join(__dirname, '1.png');
+  const logoPath = path.join(__dirname, '..', '..', 'docs', 'ressources', 'logo-presentation.png');
   
   if (fs.existsSync(logoPath)) {
     slide1.addImage({
@@ -336,7 +336,7 @@ pptx.writeFile({ fileName: outputFile })
     console.log(`✅ Présentation créée avec succès: ${outputFile}`);
     console.log(`📊 Nombre de slides: ${pptx.slides.length}`);
     console.log('\n💡 Vous pouvez maintenant ouvrir le fichier PowerPoint et:');
-    console.log('   - Ajouter le logo "1.png" sur la première slide');
+    console.log('   - Ajouter le logo "docs/ressources/logo-presentation.png" sur la première slide');
     console.log('   - Ajouter des captures d\'écran sur la slide 9');
     console.log('   - Personnaliser avec vos informations');
   })

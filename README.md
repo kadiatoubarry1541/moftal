@@ -40,8 +40,9 @@ Variables d'environnement à définir chez l'hébergeur (voir `backend/config.en
 - `CORS_ORIGIN`, `BACKEND_URL`
 - clés des services d'envoi d'e-mails et de paiement
 
-Le workflow `.github/workflows/keep-alive.yml` appelle `/api/health` régulièrement
-pour garder le serveur éveillé.
+Pas de « réveil » automatique : la base Neon s'endort quand personne n'utilise le
+site (elle est facturée au temps éveillée) et se réveille à la première visite
+(environ 1 seconde). Les tâches du serveur ne la consultent qu'une fois par jour.
 
 ## Développement local
 
