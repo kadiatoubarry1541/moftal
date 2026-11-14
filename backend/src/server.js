@@ -84,7 +84,7 @@ import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
 import codeOuvertureRoutes from './routes/codeOuverture.js';
 import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.js';
-import { migrerPhotosDisque } from './services/fichiersBase.js';
+import { migrerPhotosDisque, deplacerFichiersHorsBase } from './services/fichiersBase.js';
 import { erreursDonnees } from './middleware/erreursDonnees.js';
 import { idempotence } from './middleware/idempotence.js';
 import { echecsSynchro } from './middleware/echecsSynchro.js';
@@ -2906,6 +2906,13 @@ app.use('/api/fichiers', fichiersRoutes);
 setTimeout(() => {
   migrerPhotosDisque(path.join(__dirname, '../uploads')).catch((e) => console.warn('Migration photos:', e.message));
 }, 15000);
+// Photos et documents encore stockés DANS la base → stockage en ligne (libère Neon).
+// Désactivable avec DEPLACER_FICHIERS_HORS_BASE=non.
+if (process.env.DEPLACER_FICHIERS_HORS_BASE !== 'non') {
+  setTimeout(() => {
+    deplacerFichiersHorsBase().catch((e) => console.warn('Déplacement des fichiers hors base:', e.message));
+  }, 60000);
+}
 
 // On applique le rate limit uniquement sur les routes API,
 // pas sur les fichiers statiques /uploads

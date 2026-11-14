@@ -1,0 +1,74 @@
+name: Sauvegarde de la base (chaque nuit)
+
+# Copie complète de chaque base Neon, chiffrée, envoyée sur IDrive (et R2 si
+# configuré), puis VÉRIFIÉE en la restaurant dans une base vide.
+# En cas d'échec, GitHub envoie un e-mail. Détails : docs/SAUVEGARDE_ET_RESTAURATION.md
+#
+# Secrets à ajouter dans GitHub (Settings → Secrets and variables → Actions) :
+#   NEON_DATABASE_URL        adresse de la base principale (obligatoire)
+#   NEON_DATABASE_URL_PRO    / _IA / _TEMPS   (seulement si ce sont des bases séparées)
+#   SAUVEGARDE_CLE           mot de passe de chiffrement (à garder aussi hors de GitHub !)
+#   IDRIVE_ACCESS_KEY, IDRIVE_SECRET_KEY, IDRIVE_ENDPOINT, IDRIVE_REGION, IDRIVE_BUCKET
+#   (facultatif) R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_SAUVEGARDES
+
+on:
+  schedule:
+    - cron: '17 2 * * *'   # chaque nuit à 02:17 (heure de Conakry = UTC)
+  workflow_dispatch:        # bouton « Run workflow » pour lancer une sauvegarde tout de suite
+
+concurrency:
+  group: sauvegarde-base
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sauvegarder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      # Base vide où chaque copie est restaurée pour vérifier qu'elle est bonne
+      verif:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: verif
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer les outils PostgreSQL 18
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: Sauvegarder, envoyer et vérifier
+        run: bash scripts/sauvegarde/sauvegarder-base.sh
+        env:
+          BASES: >-
+            principale=${{ secrets.NEON_DATABASE_URL }}
+            pro=${{ secrets.NEON_DATABASE_URL_PRO }}
+            ia=${{ secrets.NEON_DATABASE_URL_IA }}
+            temps=${{ secrets.NEON_DATABASE_URL_TEMPS }}
+          VERIF_URL: postgresql://postgres:postgres@localhost:5432/verif
+          SAUVEGARDE_CLE: ${{ secrets.SAUVEGARDE_CLE }}
+          IDRIVE_ACCESS_KEY: ${{ secrets.IDRIVE_ACCESS_KEY }}
+          IDRIVE_SECRET_KEY: ${{ secrets.IDRIVE_SECRET_KEY }}
+          IDRIVE_ENDPOINT: ${{ secrets.IDRIVE_ENDPOINT }}
+          IDRIVE_REGION: ${{ secrets.IDRIVE_REGION }}
+          IDRIVE_BUCKET: ${{ secrets.IDRIVE_BUCKET }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_SAUVEGARDES: ${{ secrets.R2_BUCKET_SAUVEGARDES }}

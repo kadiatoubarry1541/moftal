@@ -13,6 +13,21 @@ const DJOMY_BASE_URL      = process.env.DJOMY_ENV === 'production'
   ? 'https://djomy.africa'
   : 'https://sandbox.djomy.africa';
 
+/**
+ * Mode des paiements, pour le diagnostic admin (aucune clé n'est révélée) :
+ * 'reel' = vrais paiements, 'test' = bac à sable Djomy (aucun argent encaissé),
+ * 'non_configure' = identifiants absents.
+ */
+export function modePaiementDjomy() {
+  if (!DJOMY_CLIENT_ID || !DJOMY_CLIENT_SECRET) return 'non_configure';
+  return process.env.DJOMY_ENV === 'production' ? 'reel' : 'test';
+}
+if ((process.env.NODE_ENV === 'production' || process.env.RENDER) && modePaiementDjomy() !== 'reel') {
+  console.error(modePaiementDjomy() === 'test'
+    ? '🚨 Paiements Djomy en MODE TEST (DJOMY_ENV ≠ production) : aucun argent réel n\'est encaissé.'
+    : '🚨 Paiements Djomy non configurés (DJOMY_CLIENT_ID / DJOMY_CLIENT_SECRET absents).');
+}
+
 function generateHmac(data, secret) {
   return crypto.createHmac('sha256', secret).update(data).digest('hex');
 }
@@ -97,6 +112,17 @@ async function completeIfNeeded(payment) {
   payment.status = 'completed';
   if (nb === 1) await debloquerPaiement(payment);
 }
+
+// Paiement refusé / annulé chez Djomy : marqué « failed » (au lieu de rester
+// « en attente » pour toujours). Un paiement déjà réussi n'est jamais touché.
+async function marquerEchoue(payment) {
+  if (!payment) return;
+  await Payment.update(
+    { status: 'failed' },
+    { where: { id: payment.id, status: 'pending' } }
+  );
+}
+const STATUTS_ECHEC = new Set(['FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED', 'REJECTED', 'DECLINED']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/djomy/initiate
@@ -288,6 +314,12 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
       }
     }
 
+    if (djomyOk && STATUTS_ECHEC.has(String(status).toUpperCase())) {
+      await marquerEchoue(await Payment.findOne({
+        where: { gatewayRef: req.params.transactionId, payerNumeroH: req.user.numeroH }
+      }));
+    }
+
     res.json({ success: djomyOk, ...data });
   } catch (err) {
     console.error('djomy/status:', err);
@@ -341,7 +373,11 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     }
 
     if (event.eventType === 'payment.failed') {
-      console.warn('❌ Paiement Djomy échoué:', event.data?.transactionId);
+      const { transactionId, merchantPaymentReference } = event.data || {};
+      console.warn('❌ Paiement Djomy échoué:', transactionId);
+      await marquerEchoue(transactionId
+        ? await Payment.findOne({ where: { gatewayRef: String(transactionId) } })
+        : (merchantPaymentReference ? await Payment.findOne({ where: { txRef: merchantPaymentReference } }) : null));
     }
 
     res.json({ received: true });

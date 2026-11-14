@@ -14,6 +14,9 @@ interface Donnees {
   publicites: { total: number | null; enAttente: number | null; enLigne: number | null };
   comptesPro: { total: number | null; approuves: number | null; enAttente: number | null };
   paiementsReussis: number | null;
+  paiementsEchoues?: number | null;
+  paiementsEnAttente?: number | null;
+  modePaiement?: "reel" | "test" | "non_configure";
   residenceGroupes: number | null;
   formationsAnnonces: number | null;
 }
@@ -172,8 +175,32 @@ export default function AdminDiagnostic() {
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-              <p className="text-sm font-bold text-gray-500 mb-1">{tr("💳 Paiements réussis")}</p>
-              <Chiffre valeur={donnees.paiementsReussis} />
+              <p className="text-sm font-bold text-gray-500 mb-3">{tr("💳 Paiements")}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-gray-400">{tr("Réussis")}</p>
+                  <Chiffre valeur={donnees.paiementsReussis} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">{tr("En attente")}</p>
+                  <Chiffre valeur={donnees.paiementsEnAttente ?? null} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">{tr("Échoués")}</p>
+                  <Chiffre valeur={donnees.paiementsEchoues ?? null} />
+                </div>
+              </div>
+              {donnees.modePaiement && (
+                <p className={`mt-3 text-sm font-bold rounded-lg px-3 py-2 ${
+                  donnees.modePaiement === "reel" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                }`}>
+                  {donnees.modePaiement === "reel"
+                    ? tr("✅ Mode réel : les paiements encaissent de l'argent réel.")
+                    : donnees.modePaiement === "test"
+                      ? tr("🚨 Mode test : aucun argent réel n'est encaissé. Mettez DJOMY_ENV=production sur le serveur.")
+                      : tr("🚨 Paiement non configuré : identifiants Djomy absents sur le serveur.")}
+                </p>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
