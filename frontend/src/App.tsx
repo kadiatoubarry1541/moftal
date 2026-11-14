@@ -182,9 +182,6 @@ const GuideEntrepreneur = lazy(() => import("./pages/GuideEntrepreneur"));
 const Reflechissons = lazy(() => import("./pages/Reflechissons"));
 const InscriptionFormation = lazy(() => import("./pages/InscriptionFormation"));
 const Pays = lazy(() => import("./pages/Pays"));
-const LieuResidence1 = lazy(() => import("./pages/LieuResidence1"));
-const LieuResidence2 = lazy(() => import("./pages/LieuResidence2"));
-const LieuResidence3 = lazy(() => import("./pages/LieuResidence3"));
 const AdminGovernments = lazy(() => import("./pages/AdminGovernments"));
 const GestionImam = lazy(() => import("./pages/GestionImam"));
 const Commerce = lazy(() => import("./pages/Commerce"));
@@ -951,9 +948,6 @@ function App() {
           {/* Inscription formation */}
           <Route path="/inscription-formation" element={<InscriptionFormation />} />
           {/* Lieux de résidence */}
-          <Route path="/lieu-residence/1"  element={<LieuResidence1 />} />
-          <Route path="/lieu-residence/2"  element={<LieuResidence2 />} />
-          <Route path="/lieu-residence/3"  element={<LieuResidence3 />} />
           {/* Alias legacy conservés pour rétrocompatibilité */}
           <Route path="/gestion-imam-pro/:tenantCode"   element={<GestionImam />} />
           <Route path="/gestion-madrasa-v2/:tenantCode" element={<GestionEnseignement mode="madrasa" />} />

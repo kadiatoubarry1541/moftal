@@ -12,6 +12,35 @@ import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
 import { estResponsableQuartier } from '../utils/responsablesQuartier.js';
 
+// Événements du quartier : les messages de ces catégories peuvent recevoir des
+// participants (« Je participe »), enregistrés en base pour chaque personne.
+export const CATEGORIES_EVENEMENT = ['fete', 'reunion', 'rencontre', 'mariage', 'bapteme'];
+let tableParticipationsPrete = null;
+function preparerTableParticipations() {
+  if (!tableParticipationsPrete) {
+    tableParticipationsPrete = sequelize.query(`
+      CREATE TABLE IF NOT EXISTS residence_participations (
+        message_id UUID NOT NULL,
+        numero_h VARCHAR(80) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (message_id, numero_h)
+      )`).catch((e) => { tableParticipationsPrete = null; throw e; });
+  }
+  return tableParticipationsPrete;
+}
+
+/** { [messageId]: { participants, jeParticipe } } pour une liste de messages. */
+async function participationsDe(messageIds, numeroH) {
+  if (!messageIds.length) return {};
+  await preparerTableParticipations();
+  const lignes = await sequelize.query(
+    `SELECT message_id, COUNT(*)::int AS participants, BOOL_OR(numero_h = :numeroH) AS je_participe
+     FROM residence_participations WHERE message_id IN (:ids) GROUP BY message_id`,
+    { replacements: { ids: messageIds, numeroH }, type: 'SELECT' }
+  );
+  return Object.fromEntries(lignes.map((l) => [l.message_id, { participants: l.participants, jeParticipe: !!l.je_participe }]));
+}
+
 const router = express.Router();
 
 // S'assure que la colonne logo_url existe (au cas où le déploiement n'a pas pu
@@ -362,14 +391,22 @@ router.get('/groups/:id/messages', async (req, res) => {
     }
 
     const messages = await ResidenceMessage.getGroupMessages(id, parseInt(limit), parseInt(offset));
+    const evenements = messages.filter((m) => CATEGORIES_EVENEMENT.includes(m.category)).map((m) => m.id);
+    const participations = await participationsDe(evenements, req.user.numeroH);
 
-    // Ajouter les noms des auteurs
+    // Ajouter les noms des auteurs (et, pour un événement, ses participants)
     const messagesWithAuthors = await Promise.all(
       messages.map(async (msg) => {
         const user = await User.findOne({ where: { numero_h: msg.numeroH } });
+        const evenement = CATEGORIES_EVENEMENT.includes(msg.category);
         return {
           ...msg.toJSON(),
-          authorName: user ? `${user.prenom} ${user.nomFamille}` : 'Utilisateur inconnu'
+          authorName: user ? `${user.prenom} ${user.nomFamille}` : 'Utilisateur inconnu',
+          ...(evenement ? {
+            evenement: true,
+            participants: participations[msg.id]?.participants || 0,
+            jeParticipe: participations[msg.id]?.jeParticipe || false,
+          } : {})
         };
       })
     );
@@ -384,6 +421,41 @@ router.get('/groups/:id/messages', async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la récupération des messages'
     });
+  }
+});
+
+// @route   POST /api/residences/messages/:id/participation
+// @desc    Je participe à un événement du quartier (participer: true) ou je me
+//          désiste (participer: false). Réservé aux membres du quartier.
+// @access  Authentifié
+router.post('/messages/:id/participation', async (req, res) => {
+  try {
+    const message = await ResidenceMessage.findByPk(req.params.id).catch(() => null);
+    if (!message || message.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Événement introuvable.' });
+    }
+    if (!CATEGORIES_EVENEMENT.includes(message.category)) {
+      return res.status(400).json({ success: false, message: "Ce message n'est pas un événement." });
+    }
+    const group = await ResidenceGroup.findByPk(message.groupId);
+    if (!group || !(group.members || []).includes(req.user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Seuls les habitants du quartier peuvent participer.' });
+    }
+    await preparerTableParticipations();
+    if (req.body?.participer === false) {
+      await sequelize.query('DELETE FROM residence_participations WHERE message_id = :id AND numero_h = :nh',
+        { replacements: { id: message.id, nh: req.user.numeroH } });
+    } else {
+      await sequelize.query(
+        `INSERT INTO residence_participations (message_id, numero_h) VALUES (:id, :nh)
+         ON CONFLICT (message_id, numero_h) DO NOTHING`,
+        { replacements: { id: message.id, nh: req.user.numeroH } });
+    }
+    const etat = (await participationsDe([message.id], req.user.numeroH))[message.id] || { participants: 0, jeParticipe: false };
+    res.json({ success: true, ...etat });
+  } catch (error) {
+    console.error('Erreur participation événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
 

@@ -41,6 +41,10 @@ interface ResidenceMessage {
   category?: string
   createdAt: string
   numeroH: string
+  // Événement (fête, réunion, rencontre, mariage, baptême) : participants
+  evenement?: boolean
+  participants?: number
+  jeParticipe?: boolean
 }
 
 interface ResidenceUserData {
@@ -88,6 +92,31 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
 
   const selectedGroup = group
   const [messages, setMessages] = useState<ResidenceMessage[]>([])
+  const [participationEnCours, setParticipationEnCours] = useState<string | null>(null)
+
+  // « Je participe » à un événement : enregistré sur le serveur ; en cas
+  // d'échec, rien ne change à l'écran et un message s'affiche.
+  const basculerParticipation = async (msg: ResidenceMessage) => {
+    setParticipationEnCours(msg.id)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_BASE}/api/residences/messages/${msg.id}/participation`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participer: !msg.jeParticipe }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.success) {
+        alert(data.message || "Votre participation n'a pas pu être enregistrée. Réessayez.")
+        return
+      }
+      setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, participants: data.participants, jeParticipe: data.jeParticipe } : m))
+    } catch {
+      alert("Connexion impossible : votre participation n'a pas été enregistrée. Réessayez.")
+    } finally {
+      setParticipationEnCours(null)
+    }
+  }
   useConversationLue(`residence:${group.id}`, messages.length)
   const [loading, setLoading] = useState(true)
   const [feedFilter, setFeedFilter] = useState<string>('all')
@@ -336,6 +365,26 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
                     )}
                     {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
                       <audio src={toMediaUrl(msg.mediaUrl)} controls className="w-full" />
+                    )}
+                    {msg.evenement && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => basculerParticipation(msg)}
+                          disabled={participationEnCours === msg.id}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors disabled:opacity-50 ${
+                            msg.jeParticipe
+                              ? 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700'
+                              : 'bg-white border-emerald-500 text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                          title={msg.jeParticipe ? 'Appuyez pour annuler votre participation' : 'Indiquer que vous participez'}
+                        >
+                          {participationEnCours === msg.id ? '…' : msg.jeParticipe ? '✓ Je participe' : '🙋 Je participe'}
+                        </button>
+                        <span className="text-[11px] text-gray-500">
+                          {msg.participants || 0} participant{(msg.participants || 0) > 1 ? 's' : ''}
+                        </span>
+                      </div>
                     )}
                     <div className="flex items-center justify-end gap-2 mt-2">
                       {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (

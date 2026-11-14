@@ -92,8 +92,9 @@ test('fichiers sortis de la base sans jamais rien perdre', { skip: !process.env.
   idrivePanne = false;
   const avant = copiesIDrive;
   bilan = await deplacerFichiersHorsBase({ pause: 0 });
-  assert.equal(bilan.deplaces, 1);
-  assert.equal(copiesIDrive, avant + 1);
+  // (d'autres fichiers de la base de test peuvent être déplacés en même temps)
+  assert.ok(bilan.deplaces >= 1);
+  assert.equal(copiesIDrive, avant + bilan.deplaces);
   l = await ligne(c2);
   assert.equal(l.donnees, null);
   assert.match(l.url_externe, /^https:\/\/files\.moftal\.com\//);
