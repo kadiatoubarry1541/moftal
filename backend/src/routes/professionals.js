@@ -105,7 +105,7 @@ async function utilisateurOptionnel(req) {
     if (!authHeader.startsWith('Bearer ')) return null;
     const token = authHeader.substring(7).trim();
     if (!token) return null;
-    const decoded = jwt.verify(token, config.JWT_SECRET);
+    const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
     if (decoded.purpose) return null;
     const user = await findUserFollowingAlias(decoded.numeroH);
     return user && user.isActive && (await jetonEncoreValide(user, decoded)) ? user : null;

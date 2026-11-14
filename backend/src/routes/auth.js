@@ -1037,7 +1037,7 @@ router.post('/forgot-password/verify-code', [
     const { otpToken, code } = req.body;
     let payload;
     try {
-      payload = jwt.verify(otpToken, config.JWT_SECRET);
+      payload = jwt.verify(otpToken, config.JWT_SECRET, { algorithms: ['HS256'] });
     } catch (e) {
       return res.status(400).json({ success: false, message: 'Code expiré. Recommencez la procédure.' });
     }
@@ -1093,7 +1093,7 @@ router.post('/forgot-password/reset', [
     const { token, newPassword } = req.body;
     let payload;
     try {
-      payload = jwt.verify(token, config.JWT_SECRET);
+      payload = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
     } catch (e) {
       return res.status(400).json({ success: false, message: 'Lien expiré ou invalide. Recommencez la procédure « Mot de passe oublié ».' });
     }
@@ -1221,7 +1221,7 @@ router.post('/logout', async (req, res) => {
   // La session de cet appareil est fermée en base (si le jeton est lisible)
   try {
     const auth = String(req.headers.authorization || '');
-    const decoded = auth.startsWith('Bearer ') ? jwt.verify(auth.slice(7).trim(), config.JWT_SECRET) : null;
+    const decoded = auth.startsWith('Bearer ') ? jwt.verify(auth.slice(7).trim(), config.JWT_SECRET, { algorithms: ['HS256'] }) : null;
     if (decoded?.sid && decoded?.numeroH) {
       const user = await findUserFollowingAlias(decoded.numeroH);
       if (user) await fermerSession(user.numeroH, decoded.sid);

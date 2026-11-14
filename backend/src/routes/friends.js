@@ -183,7 +183,7 @@ async function trouverDestinataire(saisie, moi, moiUser) {
 // NuméroH quand il a choisi de le cacher (treeVisibility).
 const signerSuggestion = (numeroH) => jwt.sign({ s: numeroH }, config.JWT_SECRET, { expiresIn: '30d' });
 function lireSuggestion(ref) {
-  try { return jwt.verify(String(ref), config.JWT_SECRET)?.s || null; } catch { return null; }
+  try { return jwt.verify(String(ref), config.JWT_SECRET, { algorithms: ['HS256'] })?.s || null; } catch { return null; }
 }
 
 /**

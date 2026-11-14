@@ -85,6 +85,7 @@ import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.
 import { migrerPhotosDisque, deplacerFichiersHorsBase } from './services/fichiersBase.js';
 import { erreursDonnees, surPanneServeur } from './middleware/erreursDonnees.js';
 import { enregistrerErreur } from './services/journalErreurs.js';
+import { problemeCleJwt } from './utils/verifierCleJwt.js';
 import erreursRoutes from './routes/erreurs.js';
 import sitemapRoutes from './routes/sitemap.js';
 import { idempotence } from './middleware/idempotence.js';
@@ -198,6 +199,14 @@ process.on('unhandledRejection', (raison) => {
 });
 // Pannes (5xx) enregistrées dans le journal des erreurs (page Diagnostic de l'admin)
 surPanneServeur(enregistrerErreur);
+// Clé JWT déjà publiée ou trop courte : alerte (journal des erreurs + notification admin)
+{
+  const probleme = problemeCleJwt(config.JWT_SECRET);
+  if (probleme && (process.env.NODE_ENV === 'production' || process.env.RENDER)) {
+    console.error(`🚨 ${probleme}`);
+    setTimeout(() => enregistrerErreur({ origine: 'serveur', message: `Sécurité : ${probleme}` }), 20000);
+  }
+}
 
 connectDB()
   .then(() => creerTablesManquantesSecondaires())

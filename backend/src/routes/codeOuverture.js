@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
     const auth = String(req.headers.authorization || '');
     const jeton = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
     let decoded;
-    try { decoded = jwt.verify(jeton, config.JWT_SECRET); }
+    try { decoded = jwt.verify(jeton, config.JWT_SECRET, { algorithms: ['HS256'] }); }
     catch { return res.status(401).json({ success: false, message: 'Session expirée. Reconnectez-vous.' }); }
     // Appareil déconnecté à distance : il ne peut plus ouvrir la gestion
     if (decoded?.purpose || (decoded?.sid && !(await sessionOuverte(decoded.sid)))) {
