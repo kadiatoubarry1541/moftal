@@ -58,6 +58,24 @@ jobs:
           DB_PASSWORD: postgres
           JWT_SECRET: secret-de-test-uniquement
 
+      # Le démarrage du serveur met la base à jour : vérifié sur une base VIDE,
+      # deux fois de suite (rien d'ajouté ni de perdu au 2e démarrage)
+      - name: Vérifier la mise à jour de la base au démarrage
+        working-directory: backend
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE moftal_vide"
+          node --test tests/miseAJourBase.test.js
+        env:
+          TEST_DB_VIDE: '1'
+          NODE_ENV: production
+          DISABLE_IA_AUTO_START: 'true'
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: moftal_vide
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          JWT_SECRET: secret-de-test-uniquement
+
   site:
     name: Site — qualité du code et construction
     runs-on: ubuntu-latest
