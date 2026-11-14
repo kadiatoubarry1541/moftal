@@ -743,8 +743,21 @@ router.get('/suppliers', async (req, res) => {
 // @access  Authentifié
 router.post('/suppliers', async (req, res) => {
   try {
-    const { businessName, businessType, description, categories, contactInfo, address } = req.body;
-    
+    const { businessType, description, categories, contactInfo, address } = req.body;
+    const businessName = String(req.body.businessName || '').trim();
+    // Inscription fournisseur ouverte à tous les secteurs d'Échange : un formulaire
+    // incomplet reçoit un refus clair (avant : « Erreur serveur »)
+    if (businessName.length < 2) {
+      return res.status(400).json({ success: false, message: "Indiquez le nom de votre activité." });
+    }
+    if (!['individuel', 'entreprise', 'coopérative', 'association'].includes(businessType)) {
+      return res.status(400).json({ success: false, message: "Choisissez le type d'activité." });
+    }
+    if (categories !== undefined && (!Array.isArray(categories) || categories.length > 20
+        || !categories.every((c) => typeof c === 'string' && c.length <= 60))) {
+      return res.status(400).json({ success: false, message: 'Catégories invalides.' });
+    }
+
     const user = req.user;
 
     // Vérifier si l'utilisateur est déjà fournisseur
