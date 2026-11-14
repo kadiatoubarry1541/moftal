@@ -8,8 +8,8 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 1 | Sauvegarde des données (base Neon) | ⏸️ **À reprendre.** Code fait et fusionné (sauvegarde chiffrée et vérifiée chaque nuit, photos sorties de Neon). Reste à ajouter les secrets GitHub : voir `docs/SAUVEGARDE_ET_RESTAURATION.md` |
 | 2 | Tests lancés avant toute mise en ligne | ✅ Terminé — tests (serveur + site) obligatoires avant la mise en ligne ; Render réglé sur « After CI Checks Pass » |
 | 3 | Paiements Djomy | ✅ Terminé — tests (signature, double crédit, montant), paiements refusés marqués « échoués », mode réel/test visible dans le diagnostic admin. À vérifier sur Render : `DJOMY_ENV=production` |
-| 4 | Connexion : appareils connectés et déconnexion à distance | 🔧 En cours |
-| 5 | Favoris des Services gardés seulement sur le téléphone | À faire |
+| 4 | Connexion : appareils connectés et déconnexion à distance | ✅ Terminé — liste « Mes appareils connectés » (page Identité), déconnecter un appareil ou tous les autres à distance ; changement / oubli de mot de passe et « Se déconnecter » ferment aussi les sessions |
+| 5 | Favoris des Services gardés seulement sur le téléphone | 🔧 Prochain |
 | 6 | Brouillon de déclaration d'un défunt | À faire |
 | 7 | Wallet Pro « Bientôt disponible » | À faire |
 | 8 | Événements du lieu de résidence | À faire |

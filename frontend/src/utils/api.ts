@@ -4,6 +4,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL + '/api'
   : '/api'
 
+export interface AppareilConnecte {
+  id: string
+  appareil: string
+  connecteLe: string
+  derniereActivite: string
+  actuel: boolean
+}
+
 export interface User {
   numeroH: string
   prenom: string
@@ -310,6 +318,60 @@ export const api = {
       } catch { /* session illisible : le jeton suffit */ }
     }
     return { success: true, message: data.message }
+  },
+
+  // Appareils connectés à mon compte (téléphones, ordinateurs, application installée)
+  async listerAppareils(): Promise<{ success: boolean; message?: string; sessions?: AppareilConnecte[] }> {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) return { success: false, message: data.message || 'Impossible de charger vos appareils.' }
+    return { success: true, sessions: data.sessions || [] }
+  },
+
+  // Déconnecter un appareil à distance
+  async deconnecterAppareil(id: string): Promise<{ success: boolean; message?: string }> {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/sessions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) return { success: false, message: data.message || "L'appareil n'a pas pu être déconnecté." }
+    return { success: true, message: data.message }
+  },
+
+  // Déconnecter tous mes autres appareils (cet appareil reste connecté)
+  async deconnecterAutresAppareils(): Promise<{ success: boolean; message?: string; nombre?: number }> {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/sessions/deconnecter-autres`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) return { success: false, message: data.message || 'Les autres appareils n\'ont pas pu être déconnectés.' }
+    if (data.token) {
+      localStorage.setItem('token', data.token)
+      try {
+        const s = JSON.parse(localStorage.getItem('session_user') || 'null')
+        if (s) localStorage.setItem('session_user', JSON.stringify({ ...s, token: data.token }))
+      } catch { /* session illisible : le jeton suffit */ }
+    }
+    return { success: true, message: data.message, nombre: data.nombre }
+  },
+
+  // Se déconnecter : la session de cet appareil est fermée sur le serveur
+  // (l'envoi continue même si la page change juste après)
+  seDeconnecterDuServeur() {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      keepalive: true
+    }).catch(() => { /* hors ligne : la session expirera d'elle-même */ })
   },
 
   // Supprimer son propre compte (mot de passe requis)

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
 import { api } from "../utils/api";
+import { AppareilsConnectes } from "./AppareilsConnectes";
 import { config } from "../config/api";
 import { useI18n } from "../i18n/useI18n";
 import { LANG_LABELS } from "../i18n/strings";
@@ -53,6 +54,7 @@ export default function IdentiteModal({
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showAppareils, setShowAppareils] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -180,6 +182,7 @@ export default function IdentiteModal({
                     {/* Se déconnecter */}
                     <button
                       onClick={() => {
+                        api.seDeconnecterDuServeur();
                         localStorage.removeItem('token');
                         localStorage.removeItem('session_user');
                         onClose();
@@ -379,6 +382,13 @@ export default function IdentiteModal({
           </button>
           <button
             type="button"
+            onClick={() => setShowAppareils(true)}
+            className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            📱 Mes appareils connectés
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setShowDeleteModal(true);
               setDeletePassword("");
@@ -482,6 +492,8 @@ export default function IdentiteModal({
             </div>
           </div>
         )}
+
+        {showAppareils && <AppareilsConnectes onClose={() => setShowAppareils(false)} />}
 
         {/* Modal suppression de compte */}
         {showDeleteModal && (

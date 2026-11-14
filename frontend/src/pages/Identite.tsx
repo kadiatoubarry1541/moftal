@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../utils/api";
+import { AppareilsConnectes } from "../components/AppareilsConnectes";
 import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 interface UserData {
@@ -126,6 +127,7 @@ export default function Identite() {
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showAppareils, setShowAppareils] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -184,6 +186,13 @@ export default function Identite() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium transition-colors duration-200 border border-blue-200"
             >
               🔒 Changer mon mot de passe
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAppareils(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-medium transition-colors duration-200 border border-blue-200"
+            >
+              📱 Mes appareils connectés
             </button>
             <button
               type="button"
@@ -386,6 +395,8 @@ export default function Identite() {
           </div>
         </div>
       )}
+
+      {showAppareils && <AppareilsConnectes onClose={() => setShowAppareils(false)} />}
 
       {/* Modal suppression de compte */}
       {showDeleteModal && (
