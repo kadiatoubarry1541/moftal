@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
 import { AdCarousel } from '../components/AdCarousel'
 import { useI18n } from '../i18n/useI18n'
+import { api } from '../utils/api'
 
 interface ServiceItem {
   to: string
@@ -11,21 +12,23 @@ interface ServiceItem {
   bg: string
 }
 
-const SERVICES_FAV_KEY = 'services_favorites'
+// Les favoris sont enregistrés sur le serveur. Cette clé ne sert plus qu'à
+// reprendre, une seule fois, les favoris qu'un ancien téléphone gardait.
+const ANCIENNE_CLE_FAVORIS = 'services_favorites'
 const MAX_FAVORITES = 4
 
-function getFavoriteServices(numeroH: string): string[] {
+function anciensFavorisDuTelephone(numeroH: string): string[] {
   try {
-    const raw = localStorage.getItem(`${SERVICES_FAV_KEY}_${numeroH}`)
+    const raw = localStorage.getItem(`${ANCIENNE_CLE_FAVORIS}_${numeroH}`)
     const ids = raw ? JSON.parse(raw) : []
-    return Array.isArray(ids) ? ids : []
+    return Array.isArray(ids) ? ids.filter((x) => typeof x === 'string').slice(0, MAX_FAVORITES) : []
   } catch {
     return []
   }
 }
 
-function saveFavoriteServices(numeroH: string, ids: string[]) {
-  localStorage.setItem(`${SERVICES_FAV_KEY}_${numeroH}`, JSON.stringify(ids))
+function oublierAnciensFavoris(numeroH: string) {
+  try { localStorage.removeItem(`${ANCIENNE_CLE_FAVORIS}_${numeroH}`) } catch { /* rien à oublier */ }
 }
 
 function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFavorite: boolean }) {
@@ -47,21 +50,35 @@ function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFav
 export default function Services() {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const [numeroH, setNumeroH] = useState('')
+  const [connecte, setConnecte] = useState(false)
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
+  const [erreurFavoris, setErreurFavoris] = useState('')
 
+  // Favoris lus sur le serveur ; ceux qu'un ancien téléphone gardait y sont
+  // enregistrés une fois, puis oubliés du téléphone.
   useEffect(() => {
+    let annule = false
     const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
     const user = sessionData.userData || sessionData
-    if (user?.numeroH) {
-      setNumeroH(user.numeroH)
-      setFavoriteIds(getFavoriteServices(user.numeroH))
-    }
+    if (!user?.numeroH || !localStorage.getItem('token')) return
+    setConnecte(true)
+    ;(async () => {
+      const r = await api.lireFavorisServices()
+      if (annule) return
+      if (!r.success) { setErreurFavoris(r.message || 'Favoris indisponibles.'); return }
+      if (r.favoris) {
+        setFavoriteIds(r.favoris)
+        oublierAnciensFavoris(user.numeroH)
+        return
+      }
+      const anciens = anciensFavorisDuTelephone(user.numeroH)
+      if (!anciens.length) return
+      const envoi = await api.enregistrerFavorisServices(anciens)
+      if (annule) return
+      if (envoi.success) { setFavoriteIds(anciens); oublierAnciensFavoris(user.numeroH) }
+    })()
+    return () => { annule = true }
   }, [])
-
-  useEffect(() => {
-    if (numeroH) saveFavoriteServices(numeroH, favoriteIds)
-  }, [numeroH, favoriteIds])
 
   const services: ServiceItem[] = [
     { to: '/sante',                                    emoji: '🏥', label: t('services.cat_sante'),        bg: 'bg-red-100'    },
@@ -84,12 +101,25 @@ export default function Services() {
     { to: '/producteurs',                              emoji: '🌾', label: t('services.cat_producteurs'),  bg: 'bg-lime-100'   },
   ]
 
-  const toggleFavorite = (to: string) => {
-    setFavoriteIds(prev => {
-      if (prev.includes(to)) return prev.filter(id => id !== to)
-      if (prev.length >= MAX_FAVORITES) return prev
-      return [...prev, to]
-    })
+  // Enregistré sur le serveur ; en cas d'échec, le choix est annulé et un
+  // message s'affiche (jamais un faux succès gardé seulement dans le téléphone)
+  const toggleFavorite = async (to: string) => {
+    if (!localStorage.getItem('token')) {
+      setErreurFavoris('Connectez-vous pour enregistrer vos favoris.')
+      return
+    }
+    const avant = favoriteIds
+    let apres = avant
+    if (avant.includes(to)) apres = avant.filter(id => id !== to)
+    else if (avant.length < MAX_FAVORITES) apres = [...avant, to]
+    if (apres === avant) return
+    setErreurFavoris('')
+    setFavoriteIds(apres)
+    const r = await api.enregistrerFavorisServices(apres)
+    if (!r.success) {
+      setFavoriteIds(avant)
+      setErreurFavoris(r.message || "Vos favoris n'ont pas pu être enregistrés.")
+    }
   }
 
   // Favoris en premier (dans leur ordre d'origine), puis le reste
@@ -119,7 +149,7 @@ export default function Services() {
         <div className="flex-1 min-w-0 h-[74px]">
           <AdCarousel compact />
         </div>
-        {numeroH && (
+        {connecte && (
           <FavorisDropdown
             headerLabel={`${t('services.favorites_label')} (${favoriteIds.length}/${MAX_FAVORITES})`}
             ariaLabel={t('services.favorites_aria')}
@@ -145,6 +175,11 @@ export default function Services() {
         )}
       </div>
       </header>
+      {erreurFavoris && (
+        <p role="alert" className="mx-3 mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">
+          ⚠️ {erreurFavoris}
+        </p>
+      )}
 
     <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
       {/* Grille icônes style compact */}
