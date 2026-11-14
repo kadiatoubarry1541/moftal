@@ -4,6 +4,7 @@ import ProWithdrawalRequest from '../models/ProWithdrawalRequest.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { v4 as uuidv4 } from 'uuid';
+import { formuleAvecMoftalPay } from '../utils/compteMoftalPayPro.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -32,23 +33,26 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Compte professionnel introuvable ou accès refusé.' });
     }
 
-    // ── RÈGLE 1 : Seules les cliniques peuvent faire des retraits ──────────────
-    if (pro.type !== 'clinic') {
+    // ── RÈGLE 1 : Moftal Pay (donc les retraits) = formule Gestion Interne ────
+    if (!formuleAvecMoftalPay(pro.planType)) {
       return res.status(403).json({
         success: false,
-        message: 'Les retraits sont réservés aux cliniques et hôpitaux uniquement.'
+        message: 'Les retraits font partie de Moftal Pay, inclus dans la formule Visibilité + Gestion Interne.'
       });
     }
 
-    // ── RÈGLE 2 : La clinique doit avoir 1 an d'ancienneté sur la plateforme ──
+    // ── RÈGLE 2 : L'établissement doit avoir 1 an d'ancienneté sur la plateforme ──
     const unAnAvant = new Date();
     unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-    if (new Date(pro.createdAt) > unAnAvant) {
-      const dateEligible = new Date(pro.createdAt);
+    // (le modèle nomme la date de création « created_at » : « createdAt » était
+    // toujours vide, et la règle ne bloquait jamais rien). Date introuvable = refus.
+    const creeLe = new Date(pro.created_at ?? pro.getDataValue?.('created_at') ?? pro.createdAt ?? NaN);
+    if (Number.isNaN(creeLe.getTime()) || creeLe > unAnAvant) {
+      const dateEligible = new Date(Number.isNaN(creeLe.getTime()) ? Date.now() : creeLe.getTime());
       dateEligible.setFullYear(dateEligible.getFullYear() + 1);
       return res.status(403).json({
         success: false,
-        message: `Retrait impossible. Votre clinique doit être active depuis au moins 1 an sur la plateforme. Vous serez éligible le ${dateEligible.toLocaleDateString('fr-FR')}.`
+        message: `Retrait impossible. Votre établissement doit être actif depuis au moins 1 an sur la plateforme. Vous serez éligible le ${dateEligible.toLocaleDateString('fr-FR')}.`
       });
     }
 

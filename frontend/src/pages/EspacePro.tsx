@@ -2746,8 +2746,8 @@ export default function EspacePro() {
                   </>
                 )}
 
-                {/* Moftal Pay — clinic & supplier uniquement */}
-                {showMoftalPay && (account.type === 'clinic' || account.type === 'supplier') && (
+                {/* Moftal Pay — tous les secteurs, formule Gestion Interne */}
+                {showMoftalPay && (
                   <>
                     <hr className="border-gray-100 dark:border-gray-700" />
                     <div className="flex items-start gap-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4">

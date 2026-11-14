@@ -4,9 +4,9 @@
 import { Op } from 'sequelize';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 
-// Moftal Pay Pro : Santé (clinic) et Alimentation (supplier), formule
-// Visibilité + Gestion Interne (jamais la formule Visibilité + Rendez-vous)
-export const MOFTAL_PAY_PRO_TYPES = ['clinic', 'supplier'];
+// Moftal Pay Pro : tous les secteurs en formule Visibilité + Gestion Interne
+// (jamais la formule Visibilité + Rendez-vous) — CLAUDE.md, règle 1.
+export const formuleAvecMoftalPay = (planType) => planType !== 'visibility';
 
 export async function compteMoftalPayPro(ownerNumeroH, options = {}) {
   if (!ownerNumeroH) return null;
@@ -15,7 +15,6 @@ export async function compteMoftalPayPro(ownerNumeroH, options = {}) {
       ownerNumeroH,
       status: 'approved',
       isActive: true,
-      type: { [Op.in]: MOFTAL_PAY_PRO_TYPES },
       planType: { [Op.or]: [{ [Op.ne]: 'visibility' }, { [Op.is]: null }] },
     },
     order: [['created_at', 'ASC']],

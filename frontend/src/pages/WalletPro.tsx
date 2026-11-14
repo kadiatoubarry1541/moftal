@@ -157,13 +157,13 @@ export default function WalletPro() {
   if (restricted) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl shadow p-8 text-center max-w-sm w-full">
-        <div className="text-5xl mb-3">🔜</div>
-        <p className="text-indigo-700 font-black text-lg mb-2">Bientôt disponible</p>
+        <div className="text-5xl mb-3">💳</div>
+        <p className="text-indigo-700 font-black text-lg mb-2">Moftal Pay</p>
         <p className="text-gray-600 text-sm mb-3">
-          Moftal Pay est actuellement disponible uniquement pour les services de <strong>Santé</strong> et d'<strong>Alimentation</strong>.
+          Moftal Pay fait partie de la formule <strong>Visibilité + Gestion Interne</strong>.
         </p>
         <p className="text-gray-400 text-xs mb-5">
-          Votre service sera intégré prochainement. Merci de votre patience.
+          Vous pouvez changer de formule dans votre Espace Pro, onglet Paramètres.
         </p>
         <button
           onClick={() => navigate(-1)}

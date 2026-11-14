@@ -11,10 +11,10 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 4 | Connexion : appareils connectés et déconnexion à distance | ✅ Terminé — liste « Mes appareils connectés » (page Identité), déconnecter un appareil ou tous les autres à distance ; changement / oubli de mot de passe et « Se déconnecter » ferment aussi les sessions |
 | 5 | Favoris des Services gardés seulement sur le téléphone | ✅ Terminé — enregistrés en base, retrouvés sur tous les appareils ; ceux qu'un ancien téléphone gardait sont repris une fois puis effacés du téléphone ; échec d'enregistrement = message, jamais de faux succès |
 | 6 | Déclaration d'un défunt | ✅ Terminé — vrai brouillon (retrouvé si la page se recharge, effacé une fois le défunt enregistré) ; plus de mot de passe ni de fausse adresse e-mail envoyés pour un défunt (aucun compte n'est créé) ; le lien de parenté d'une déclaration n'est plus réutilisé par erreur pour la suivante |
-| 7 | Wallet Pro « Bientôt disponible » | 🔧 Prochain |
-| 8 | Événements du lieu de résidence | À faire |
-| 9 | Développement : soumissions pas ouvertes | À faire |
-| 10 | Inscription fournisseur incomplète | À faire |
+| 7 | Moftal Pay Pro pour tous les secteurs | ✅ Terminé — ouvert à tous les secteurs en formule Visibilité + Gestion Interne (dépôts, paiements, retraits) ; règle « 1 an d'ancienneté avant un retrait » réparée (elle ne bloquait jamais rien) |
+| 8 | Événements du lieu de résidence | 🔧 Prochain (choix : le construire) |
+| 9 | Développement : soumissions pas ouvertes | À faire (choix : le construire) |
+| 10 | Inscription fournisseur incomplète | À faire (choix : ouvrir à tous les secteurs) |
 | 11 | Serveur trop gros, base corrigée au démarrage | À faire |
 | 12 | Aucune surveillance des erreurs | À faire |
 | 13 | Réveil de la base toutes les 4 minutes (coût Neon) | À faire |
