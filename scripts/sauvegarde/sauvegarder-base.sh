@@ -35,6 +35,13 @@ RESUME="${GITHUB_STEP_SUMMARY:-/dev/null}"
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 
 : "${BASES:?BASES manquant (ex. principale=postgres://...)}"
+# Pas encore configuré (aucune adresse de base fournie) : on prévient sans échouer,
+# pour ne pas envoyer un e-mail d'erreur chaque nuit avant la mise en place.
+if ! printf '%s\n' $BASES | grep -qE '^[^=]+=.+'; then
+  echo "::warning::Sauvegarde NON configurée : ajoutez le secret NEON_DATABASE_URL (voir docs/SAUVEGARDE_ET_RESTAURATION.md)."
+  echo "## ⚠️ Sauvegarde non configurée — ajoutez les secrets (docs/SAUVEGARDE_ET_RESTAURATION.md)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+  exit 0
+fi
 : "${VERIF_URL:?VERIF_URL manquant (base vide pour vérifier la restauration)}"
 
 # ── Stockages ────────────────────────────────────────────────────────────────
