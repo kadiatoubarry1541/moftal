@@ -13,6 +13,7 @@ import { installOfflineSync } from "./utils/offlineSync";
 import { installerLimiteDureesMedias } from "./utils/dureesMedias";
 import { echangerCodeOuverture } from "./utils/codeOuverture";
 import { noterLancementApp, appPlayInstallee } from "./utils/appMoftalInstallee";
+import { signalerErreur, erreurSansImportance } from "./utils/signalerErreur";
 
 // Supprimer les anciennes données de test qui stockaient des mots de passe en clair
 const keysToClean = [
@@ -96,6 +97,19 @@ window.addEventListener('unhandledrejection', (event) => {
       sessionStorage.setItem(key, '1');
       window.location.reload();
     }
+    return;
+  }
+  // Autre erreur oubliée : signalée au journal des erreurs (page Diagnostic de l'admin)
+  if (msg && !erreurSansImportance(msg)) {
+    signalerErreur({ message: msg, pile: (event.reason as Error)?.stack || null });
+  }
+});
+
+// Erreur de script dans une page : signalée aussi
+window.addEventListener('error', (event) => {
+  const msg = event.message || '';
+  if (msg && !erreurSansImportance(msg)) {
+    signalerErreur({ message: msg, pile: event.error?.stack || `${event.filename}:${event.lineno}:${event.colno}` });
   }
 });
 

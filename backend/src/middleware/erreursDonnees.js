@@ -40,6 +40,10 @@ export function estMessageTechnique(message) {
   return MESSAGE_TECHNIQUE.some((r) => r.test(message)) && !ACCENTS.test(message);
 }
 
+// Journal des pannes (branché par server.js : les tests unitaires n'ont pas de base)
+let journaliserPanne = null;
+export function surPanneServeur(fn) { journaliserPanne = fn; }
+
 export function erreursDonnees(req, res, next) {
   const json = res.json.bind(res);
   res.json = (corps) => {
@@ -48,6 +52,18 @@ export function erreursDonnees(req, res, next) {
       res.status(400);
       const clair = MESSAGES.find(([r]) => r.test(corps.message));
       if (clair) corps = { ...corps, message: clair[1], detail: corps.message };
+    }
+    // Toute panne (5xx) est enregistrée dans le journal des erreurs, avec son
+    // message d'origine (avant qu'il soit remplacé pour l'utilisateur)
+    if (res.statusCode >= 500 && journaliserPanne) {
+      const brut = corps && typeof corps === 'object' ? (corps.error || corps.details || corps.message) : corps;
+      journaliserPanne({
+        origine: 'serveur',
+        message: `${res.statusCode} ${typeof brut === 'string' ? brut : 'Erreur serveur'}`,
+        adresse: `${req.method} ${req.originalUrl}`,
+        navigateur: req.headers['user-agent'] || null,
+        numeroH: req.user?.numeroH || null,
+      });
     }
     // Panne du serveur : le détail va dans le journal, l'utilisateur lit « Erreur serveur »
     if (res.statusCode >= 500 && corps && typeof corps === 'object' && 'message' in corps

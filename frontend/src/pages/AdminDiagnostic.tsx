@@ -21,6 +21,20 @@ interface Donnees {
   formationsAnnonces: number | null;
 }
 
+interface ErreurSignalee {
+  id: string;
+  origine: "site" | "serveur";
+  message: string;
+  pile: string | null;
+  adresse: string | null;
+  navigateur: string | null;
+  numero_h: string | null;
+  occurrences: number;
+  premiere_fois: string;
+  derniere_fois: string;
+  resolue: boolean;
+}
+
 function Chiffre({ valeur }: { valeur: number | null }) {
   const { tr } = useTraduction();
   if (valeur === null) {
@@ -40,6 +54,30 @@ export default function AdminDiagnostic() {
   const [verifieLe, setVerifieLe] = useState("");
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState("");
+  const [erreursJournal, setErreursJournal] = useState<ErreurSignalee[] | null>(null);
+  const [ouverte, setOuverte] = useState<string | null>(null);
+
+  // Journal des erreurs (site et serveur), enregistré en base
+  const chargerJournal = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/erreurs/admin`, { headers });
+      const d = await r.json();
+      setErreursJournal(d.success ? d.erreurs : []);
+    } catch {
+      setErreursJournal([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
+  }, [API]);
+
+  const resoudre = async (id: string) => {
+    try {
+      const r = await fetch(`${API}/erreurs/admin/${id}`, { method: "PATCH", headers, body: JSON.stringify({ resolue: true }) });
+      if (r.ok) setErreursJournal((liste) => (liste || []).filter((e) => e.id !== id));
+      else alert(tr("La modification n'a pas pu être enregistrée."));
+    } catch {
+      alert(tr("Impossible de contacter le serveur."));
+    }
+  };
 
   const verifier = useCallback(async () => {
     setLoading(true);
@@ -63,7 +101,8 @@ export default function AdminDiagnostic() {
 
   useEffect(() => {
     verifier();
-  }, [verifier]);
+    chargerJournal();
+  }, [verifier, chargerJournal]);
 
   const fmtDate = (iso: string) =>
     iso ? new Date(iso).toLocaleString("fr-GN", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
@@ -214,6 +253,48 @@ export default function AdminDiagnostic() {
             </div>
           </div>
         ) : null}
+
+        {/* Journal des erreurs */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-gray-700">{tr("🚨 Erreurs à traiter")}</p>
+            <button onClick={chargerJournal} className="text-xs font-semibold text-emerald-700 hover:underline">{tr("🔄 Actualiser")}</button>
+          </div>
+          {erreursJournal === null ? (
+            <p className="text-sm text-gray-400">{tr("Chargement…")}</p>
+          ) : erreursJournal.length === 0 ? (
+            <p className="text-sm text-emerald-700 font-semibold">{tr("✅ Aucune erreur à traiter.")}</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {erreursJournal.map((e) => (
+                <li key={e.id} className="py-3">
+                  <div className="flex items-start gap-3">
+                    <span className={`flex-shrink-0 text-[11px] font-bold rounded-full px-2 py-0.5 ${e.origine === "site" ? "bg-purple-100 text-purple-700" : "bg-red-100 text-red-700"}`}>
+                      {e.origine === "site" ? tr("Site") : tr("Serveur")}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 break-words">{e.message}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 break-words">
+                        {[e.adresse, `${e.occurrences} ${tr("fois")}`, `${tr("dernière :")} ${new Date(e.derniere_fois).toLocaleString("fr-GN")}`, e.numero_h].filter(Boolean).join(" · ")}
+                      </p>
+                      {e.pile && (
+                        <button onClick={() => setOuverte(ouverte === e.id ? null : e.id)} className="text-xs text-gray-400 hover:text-gray-600 mt-1">
+                          {ouverte === e.id ? tr("▾ Masquer le détail") : tr("▸ Détail technique")}
+                        </button>
+                      )}
+                      {ouverte === e.id && e.pile && (
+                        <pre className="mt-1 text-[11px] bg-gray-50 border border-gray-200 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words max-h-64">{e.pile}</pre>
+                      )}
+                    </div>
+                    <button onClick={() => resoudre(e.id)} className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                      {tr("✓ Résolue")}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-800">
           💡 {tr("Si un chiffre affiche")} <span className="font-bold">{tr("indisponible")}</span>{tr(", cela veut dire que cette partie n'a pas pu être vérifiée à cet instant — appuie sur « Vérifier maintenant » pour réessayer. Un chiffre à")} <span className="font-bold">0</span> {tr("veut dire que la table existe bien mais qu'aucune donnée n'y est encore enregistrée.")}
