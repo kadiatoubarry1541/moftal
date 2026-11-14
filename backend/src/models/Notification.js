@@ -12,6 +12,7 @@ function getNotifUrl(type) {
     case 'couple_request': return '/couple';
     case 'tree_request':
     case 'parent_request': return '/famille/parents';
+    case 'developpement': return '/developpement';
     default: return '/';
   }
 }

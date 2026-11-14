@@ -1,6 +1,8 @@
 import express from 'express';
 import multer from 'multer';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, estAdminUtilisateur } from '../middleware/auth.js';
+import { sequelize } from '../config/database.js';
+import { notifier } from '../utils/notifier.js';
 import DeveloppementDon from '../models/DeveloppementDon.js';
 import DevActualite from '../models/DevActualite.js';
 import DevActualitePartage from '../models/DevActualitePartage.js';
@@ -310,6 +312,142 @@ router.delete('/publishers/:id', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── PROPOSITIONS DE PROJETS (citoyens) ─────────────────────────────────────
+// Toute personne connectée propose un projet dans un domaine ; il est enregistré
+// en base « en attente », et n'apparaît sur la page qu'une fois approuvé par
+// l'administrateur. L'auteur voit ses propres propositions et leur décision.
+
+const DOMAINES_DEV = ['agriculture', 'habitat', 'energie', 'education', 'sante', 'numerique', 'commerce',
+  'infrastructure', 'environnement', 'femmes', 'jeunesse', 'gouvernance'];
+const MAX_EN_ATTENTE = 5;
+let tablePropositionsPrete = null;
+function preparerTablePropositions() {
+  if (!tablePropositionsPrete) {
+    tablePropositionsPrete = sequelize.query(`
+      CREATE TABLE IF NOT EXISTS dev_propositions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        auteur_numero_h VARCHAR(80) NOT NULL,
+        auteur_nom VARCHAR(200),
+        domaine VARCHAR(40) NOT NULL,
+        titre VARCHAR(150) NOT NULL,
+        description TEXT NOT NULL,
+        lieu VARCHAR(150),
+        statut VARCHAR(20) NOT NULL DEFAULT 'en_attente',
+        motif_refus TEXT,
+        decide_par VARCHAR(80),
+        decide_le TIMESTAMPTZ,
+        cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`).catch((e) => { tablePropositionsPrete = null; throw e; });
+  }
+  return tablePropositionsPrete;
+}
+const q = (sql, replacements = {}) => sequelize.query(sql, { replacements, type: 'SELECT' });
+const versClient = (p) => ({
+  id: p.id, domaine: p.domaine, titre: p.titre, description: p.description, lieu: p.lieu,
+  statut: p.statut, motifRefus: p.motif_refus, auteurNom: p.auteur_nom,
+  creeLe: p.cree_le, decideLe: p.decide_le,
+});
+
+// Proposer un projet
+router.post('/propositions', authenticate, async (req, res) => {
+  try {
+    const titre = String(req.body?.titre || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const domaine = String(req.body?.domaine || '');
+    const lieu = String(req.body?.lieu || '').trim().slice(0, 150) || null;
+    if (!DOMAINES_DEV.includes(domaine)) return res.status(400).json({ success: false, message: 'Choisissez un domaine.' });
+    if (titre.length < 5 || titre.length > 150) return res.status(400).json({ success: false, message: 'Le titre doit faire entre 5 et 150 caractères.' });
+    if (description.length < 20 || description.length > 5000) {
+      return res.status(400).json({ success: false, message: 'Décrivez votre projet en 20 caractères au moins (5 000 au plus).' });
+    }
+    await preparerTablePropositions();
+    const [{ n }] = await q(`SELECT COUNT(*)::int AS n FROM dev_propositions WHERE auteur_numero_h = :nh AND statut = 'en_attente'`, { nh: req.user.numeroH });
+    if (n >= MAX_EN_ATTENTE) {
+      return res.status(429).json({ success: false, message: `Vous avez déjà ${MAX_EN_ATTENTE} propositions en attente : attendez la décision de l'administrateur.` });
+    }
+    const auteurNom = `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim() || null;
+    const [proposition] = await q(
+      `INSERT INTO dev_propositions (auteur_numero_h, auteur_nom, domaine, titre, description, lieu)
+       VALUES (:nh, :auteurNom, :domaine, :titre, :description, :lieu) RETURNING *`,
+      { nh: req.user.numeroH, auteurNom, domaine, titre, description, lieu }
+    );
+    res.status(201).json({ success: true, message: "Merci ! Votre projet sera examiné par l'administrateur.", proposition: versClient(proposition) });
+  } catch (err) {
+    console.error('dev/propositions POST:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// Projets approuvés (et terminés) d'un domaine, plus mes propres propositions
+router.get('/propositions', authenticate, async (req, res) => {
+  try {
+    await preparerTablePropositions();
+    const domaine = req.query.domaine ? String(req.query.domaine) : null;
+    const filtre = domaine ? 'AND domaine = :domaine' : '';
+    const publics = await q(
+      `SELECT * FROM dev_propositions WHERE statut IN ('approuve', 'termine') ${filtre} ORDER BY decide_le DESC NULLS LAST LIMIT 200`, { domaine });
+    const miennes = await q(
+      `SELECT * FROM dev_propositions WHERE auteur_numero_h = :nh ${filtre} ORDER BY cree_le DESC LIMIT 50`, { nh: req.user.numeroH, domaine });
+    const [stats] = await q(`SELECT
+        COUNT(*) FILTER (WHERE statut = 'approuve')::int AS en_cours,
+        COUNT(*) FILTER (WHERE statut = 'termine')::int AS termines,
+        COUNT(*)::int AS idees
+      FROM dev_propositions`);
+    res.json({
+      success: true,
+      projets: publics.map(versClient),
+      mesPropositions: miennes.map(versClient),
+      stats: { enCours: stats.en_cours, termines: stats.termines, idees: stats.idees },
+    });
+  } catch (err) {
+    console.error('dev/propositions GET:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// Administrateur : propositions à examiner
+router.get('/propositions/a-examiner', authenticate, async (req, res) => {
+  try {
+    if (!estAdminUtilisateur(req.user)) return res.status(403).json({ success: false, message: 'Réservé à l\'administrateur.' });
+    await preparerTablePropositions();
+    const lignes = await q(`SELECT * FROM dev_propositions WHERE statut = 'en_attente' ORDER BY cree_le ASC LIMIT 200`);
+    res.json({ success: true, propositions: lignes.map(versClient) });
+  } catch (err) {
+    console.error('dev/propositions a-examiner:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// Administrateur : approuver, refuser (avec motif) ou marquer un projet terminé
+router.patch('/propositions/:id/decision', authenticate, async (req, res) => {
+  try {
+    if (!estAdminUtilisateur(req.user)) return res.status(403).json({ success: false, message: 'Réservé à l\'administrateur.' });
+    const decision = String(req.body?.decision || '');
+    const motif = String(req.body?.motif || '').trim().slice(0, 1000) || null;
+    const transitions = { approuve: ['en_attente'], refuse: ['en_attente'], termine: ['approuve'] };
+    if (!transitions[decision]) return res.status(400).json({ success: false, message: 'Décision inconnue.' });
+    if (decision === 'refuse' && !motif) return res.status(400).json({ success: false, message: "Indiquez le motif du refus : l'auteur le verra." });
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(404).json({ success: false, message: 'Proposition introuvable.' });
+    await preparerTablePropositions();
+    const [p] = await q(
+      `UPDATE dev_propositions SET statut = :decision, motif_refus = :motif, decide_par = :par, decide_le = NOW()
+       WHERE id = :id AND statut IN (:avant) RETURNING *`,
+      { decision, motif: decision === 'refuse' ? motif : null, par: req.user.numeroH, id: req.params.id, avant: transitions[decision] }
+    );
+    if (!p) return res.status(409).json({ success: false, message: 'Cette proposition a déjà été traitée.' });
+    const textes = {
+      approuve: [`Votre projet « ${p.titre} » a été approuvé : il apparaît maintenant sur la page Développement.`, 'Projet approuvé ✅'],
+      refuse: [`Votre projet « ${p.titre} » n'a pas été retenu. Motif : ${motif}`, 'Projet non retenu'],
+      termine: [`Votre projet « ${p.titre} » est marqué comme terminé. Merci !`, 'Projet terminé 🎉'],
+    }[decision];
+    notifier(p.auteur_numero_h, 'developpement', textes[0], textes[1]);
+    res.json({ success: true, proposition: versClient(p) });
+  } catch (err) {
+    console.error('dev/propositions decision:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
 
