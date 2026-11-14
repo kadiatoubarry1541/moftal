@@ -10,8 +10,8 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 3 | Paiements Djomy | ✅ Terminé — tests (signature, double crédit, montant), paiements refusés marqués « échoués », mode réel/test visible dans le diagnostic admin. À vérifier sur Render : `DJOMY_ENV=production` |
 | 4 | Connexion : appareils connectés et déconnexion à distance | ✅ Terminé — liste « Mes appareils connectés » (page Identité), déconnecter un appareil ou tous les autres à distance ; changement / oubli de mot de passe et « Se déconnecter » ferment aussi les sessions |
 | 5 | Favoris des Services gardés seulement sur le téléphone | ✅ Terminé — enregistrés en base, retrouvés sur tous les appareils ; ceux qu'un ancien téléphone gardait sont repris une fois puis effacés du téléphone ; échec d'enregistrement = message, jamais de faux succès |
-| 6 | Brouillon de déclaration d'un défunt | 🔧 Prochain |
-| 7 | Wallet Pro « Bientôt disponible » | À faire |
+| 6 | Déclaration d'un défunt | ✅ Terminé — vrai brouillon (retrouvé si la page se recharge, effacé une fois le défunt enregistré) ; plus de mot de passe ni de fausse adresse e-mail envoyés pour un défunt (aucun compte n'est créé) ; le lien de parenté d'une déclaration n'est plus réutilisé par erreur pour la suivante |
+| 7 | Wallet Pro « Bientôt disponible » | 🔧 Prochain |
 | 8 | Événements du lieu de résidence | À faire |
 | 9 | Développement : soumissions pas ouvertes | À faire |
 | 10 | Inscription fournisseur incomplète | À faire |

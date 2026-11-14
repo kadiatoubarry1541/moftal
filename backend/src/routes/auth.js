@@ -180,7 +180,8 @@ const validateUser = [
   body('numeroH').if((value, { req }) => req.body.type !== 'defunt' && !req.body.isDeceased).trim().notEmpty().withMessage('Le NumeroH est requis'),
   body('prenom').trim().notEmpty().withMessage('Le prénom est requis'),
   body('nomFamille').trim().notEmpty().withMessage('Le nom de famille est requis'),
-  body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+  // Un défunt n'a pas de compte : pas de mot de passe
+  body('password').if((value, { req }) => req.body.type !== 'defunt' && !req.body.isDeceased).isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
   body('email').optional({ values: 'falsy' }).trim().isEmail().withMessage('Email invalide'),
 ];
 
@@ -232,7 +233,7 @@ router.post('/register', validateUser, async (req, res) => {
 
     // Hasher le mot de passe
     const saltRounds = config.BCRYPT_ROUNDS;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = estDefunt ? null : await bcrypt.hash(password, saltRounds);
 
     // Créer l'objet utilisateur avec TOUS les champs du formulaire
     const userData = {

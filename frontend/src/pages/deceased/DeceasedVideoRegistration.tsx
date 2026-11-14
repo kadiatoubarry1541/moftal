@@ -158,10 +158,9 @@ export function DeceasedVideoRegistration() {
         const numeroHD = result.deceased?.numeroHD || ''
         setSavedNumeroHD(numeroHD)
 
-        // Le défunt est enregistré en base : rien d'autre à garder dans le
-        // téléphone (la vidéo en base64 dépassait la place disponible et
-        // affichait « Erreur » alors que l'enregistrement avait réussi)
-        try { localStorage.setItem('defunt_relation', deceasedData.relationDeclarant) } catch { /* préférence non essentielle */ }
+        // Le défunt (et le lien de parenté, dans additionalInfo) est enregistré
+        // en base : rien à garder dans le téléphone. Avant, le lien restait ici
+        // et était réappliqué par erreur à la déclaration suivante.
 
         setCurrentStep('complete')
       } else {

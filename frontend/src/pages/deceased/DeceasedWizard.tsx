@@ -70,8 +70,33 @@ type EtatDefunt = {
 
 const initial: EtatDefunt = {}
 
+// Brouillon du formulaire en cours (permis : CLAUDE.md, règle 2) : retrouvé si la
+// page se recharge, effacé dès que le défunt est enregistré sur le serveur.
+// Les fichiers (photo, preuve, vidéo) ne se gardent pas : ils sont redemandés.
+const CLE_BROUILLON = 'defunt'
+function lireBrouillon(): EtatDefunt {
+  try {
+    const b = JSON.parse(localStorage.getItem(CLE_BROUILLON) || 'null')
+    if (!b || typeof b !== 'object') return initial
+    const { preuve: _p, video: _v, ...texte } = b as EtatDefunt
+    void _p; void _v
+    return texte
+  } catch { return initial }
+}
+function garderBrouillon(etat: EtatDefunt) {
+  const { preuve: _p, video: _v, ...texte } = etat
+  void _p; void _v
+  try { localStorage.setItem(CLE_BROUILLON, JSON.stringify(texte)) } catch { /* brouillon non essentiel */ }
+}
+function effacerBrouillon() {
+  try {
+    localStorage.removeItem(CLE_BROUILLON)
+    localStorage.removeItem('defunt_relation')
+  } catch { /* rien à effacer */ }
+}
+
 export function DeceasedWizard() {
-  const [state, setState] = useState<EtatDefunt>(initial)
+  const [state, setState] = useState<EtatDefunt>(lireBrouillon)
   const navigate = useNavigate()
   const { t } = useI18n()
 
@@ -84,27 +109,10 @@ export function DeceasedWizard() {
   const set = (patch: Partial<EtatDefunt>) => setState(s => ({ ...s, ...patch }))
 
   const submitFinal = async () => {
-    // Vérifier les contraintes d'âge selon le lien de parenté indiqué
-    const relationAvecDeclarant = localStorage.getItem('defunt_relation') || null
-    try {
-      if ((relationAvecDeclarant === 'fils' || relationAvecDeclarant === 'fille') && state.dateNaissance) {
-        const rawSession = localStorage.getItem('session_user')
-        if (rawSession) {
-          const parsed = JSON.parse(rawSession)
-          const u = parsed.userData || parsed
-          if (u.dateNaissance) {
-            const parentYear = new Date(u.dateNaissance).getFullYear()
-            const childYear = new Date(state.dateNaissance).getFullYear()
-            if (!isNaN(parentYear) && !isNaN(childYear) && childYear <= parentYear) {
-              alert('Un fils ou une fille ne peut pas être plus âgé(e) que son père ou sa mère. Vérifiez les dates de naissance.')
-              return
-            }
-          }
-        }
-      }
-    } catch {
-      // En cas de problème de lecture de la session, on ne bloque pas l\'inscription
-    }
+    // Ancienne valeur laissée par une déclaration précédente : jamais réutilisée
+    // (elle concernait un autre défunt). Ce formulaire ne demande pas le lien.
+    try { localStorage.removeItem('defunt_relation') } catch { /* rien à effacer */ }
+
     // Utiliser les codes géographiques sélectionnés ou valeurs par défaut
     const continentCode = state.continentCode || 'C1'
     const paysCode = state.paysCode || 'P1'
@@ -149,16 +157,14 @@ export function DeceasedWizard() {
       anneesAvantNaissance, 
       anneesDepuisDeces, 
       numeroHD: numero,
-      numeroH: numero, // Pour la compatibilité avec le système de connexion
-      password: 'defunt123',  // ✅ MOT DE PASSE PAR DÉFAUT
-      confirmPassword: 'defunt123',
+      numeroH: numero,
+      // Un défunt n'a pas de compte : ni mot de passe, ni adresse e-mail
       type: 'defunt' as const,
       isDeceased: true,
       prenom: state.prenom || 'Défunt',
       nomFamille: state.nom || 'Inconnu',
-      email: `${numero}@defunt.genealogie`,
       additionalInfo: {
-        relationAvecDeclarant: relationAvecDeclarant || 'inconnu'
+        relationAvecDeclarant: 'inconnu'
       }
     }
     
@@ -173,6 +179,8 @@ export function DeceasedWizard() {
     numero = result.deceased?.numeroHD || numero
     complet.numeroHD = numero
     complet.numeroH = numero
+    // Enregistré sur le serveur : le brouillon n'a plus lieu d'être dans le téléphone
+    effacerBrouillon()
 
 
     // L'arbre généalogique lit les défunts depuis le serveur (/api/family-tree/tree) :
@@ -228,7 +236,7 @@ export function DeceasedWizard() {
               <div className="col-6"><Field label={t('label.death_place')}><input value={state.lieuDeces||''} onChange={e=>set({ lieuDeces: e.target.value })} /></Field></div>
             </div>
             <div className="actions">
-              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('/defunt/page-2') }}>{t('btn.next')}</button>
+              <button className="btn" onClick={()=>{ garderBrouillon(state); navigate('/defunt/page-2') }}>{t('btn.next')}</button>
             </div>
           </div>
         </div>
@@ -254,7 +262,7 @@ export function DeceasedWizard() {
             </div>
             <div className="actions">
               <button className="btn secondary" onClick={()=>navigate(-1)}>{t('btn.back')}</button>
-              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('/defunt/page-3') }}>{t('btn.next')}</button>
+              <button className="btn" onClick={()=>{ garderBrouillon(state); navigate('/defunt/page-3') }}>{t('btn.next')}</button>
             </div>
           </div>
         </div>
