@@ -41,7 +41,7 @@ const q = (sql, rep) =>
 // Formule « Visibilité + Rendez-vous » : pas de site client. On exclut les
 // établissements dont le compte pro lié est en 'visibility' sans Gestion Interne
 // payée en cours ; un établissement sans compte lié (ex. créé par l'admin) reste visible.
-const FILTRE_GESTION_INTERNE = `NOT EXISTS (
+export const FILTRE_GESTION_INTERNE = `NOT EXISTS (
   SELECT 1 FROM professional_accounts pa
    WHERE pa.tenant_code = mt.tenant_code
      AND pa.plan_type = 'visibility'

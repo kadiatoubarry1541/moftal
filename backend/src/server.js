@@ -86,6 +86,7 @@ import { migrerPhotosDisque, deplacerFichiersHorsBase } from './services/fichier
 import { erreursDonnees, surPanneServeur } from './middleware/erreursDonnees.js';
 import { enregistrerErreur } from './services/journalErreurs.js';
 import erreursRoutes from './routes/erreurs.js';
+import sitemapRoutes from './routes/sitemap.js';
 import { idempotence } from './middleware/idempotence.js';
 import { echecsSynchro } from './middleware/echecsSynchro.js';
 import quotasRoutes from './routes/quotas.js';
@@ -390,6 +391,7 @@ app.use('/api/page-admins', pageAdminRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/residences', residenceRoutes);
 app.use('/api/erreurs', erreursRoutes); // journal des erreurs (site → serveur, et liste pour l'admin)
+app.use('/api/sitemap.xml', sitemapRoutes); // plan du site (moteurs de recherche)
 app.use('/api/education', educationRoutes);
 app.use('/api/regions', regionRoutes);
 app.use('/api/organizations', organizationRoutes);
