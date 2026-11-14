@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { notify } from "../utils/toast";
 import { trHors } from "../i18n/traduction";
+import { signalerErreur } from "../utils/signalerErreur";
 
 interface Props {
   children: ReactNode;
@@ -11,12 +12,14 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  // L'erreur a-t-elle vraiment été enregistrée sur le serveur ?
+  signalee: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, signalee: false };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -51,6 +54,12 @@ export class ErrorBoundary extends Component<Props, State> {
     // Enregistrer l'erreur dans le state pour l'afficher
     this.setState({ errorInfo });
 
+    // Enregistrée dans le journal des erreurs (page Diagnostic de l'admin)
+    signalerErreur({
+      message: error.message || String(error),
+      pile: `${error.stack || ""}\n--- composants ---${errorInfo.componentStack || ""}`,
+    }).then((ok) => { if (ok) this.setState({ signalee: true }); });
+
     // Essayer d'afficher une notification (mais ne pas bloquer si ça échoue)
     try {
       notify.error(trHors("Une erreur inattendue s'est produite. Veuillez réessayer."));
@@ -60,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.setState({ hasError: false, error: null, errorInfo: null, signalee: false });
   };
 
   render() {
@@ -81,7 +90,9 @@ export class ErrorBoundary extends Component<Props, State> {
               {trHors("Oups ! Une erreur est survenue")}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {trHors("Nous nous excusons pour ce désagrément. L'erreur a été enregistrée et sera corrigée.")}
+              {this.state.signalee
+                ? trHors("Nous nous excusons pour ce désagrément. L'erreur a été enregistrée et sera corrigée.")
+                : trHors("Nous nous excusons pour ce désagrément.")}
             </p>
             
             {/* Message d'erreur principal */}

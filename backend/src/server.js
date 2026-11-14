@@ -83,7 +83,9 @@ import fichiersRoutes from './routes/fichiers.js';
 import codeOuvertureRoutes from './routes/codeOuverture.js';
 import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.js';
 import { migrerPhotosDisque, deplacerFichiersHorsBase } from './services/fichiersBase.js';
-import { erreursDonnees } from './middleware/erreursDonnees.js';
+import { erreursDonnees, surPanneServeur } from './middleware/erreursDonnees.js';
+import { enregistrerErreur } from './services/journalErreurs.js';
+import erreursRoutes from './routes/erreurs.js';
 import { idempotence } from './middleware/idempotence.js';
 import { echecsSynchro } from './middleware/echecsSynchro.js';
 import quotasRoutes from './routes/quotas.js';
@@ -191,7 +193,10 @@ const startIaServer = () => {
 // d'arrêter tout le serveur (Node 22 s'arrête sinon).
 process.on('unhandledRejection', (raison) => {
   console.error('🚨 Promesse rejetée non gérée :', raison?.stack || raison);
+  enregistrerErreur({ origine: 'serveur', message: `Promesse oubliée : ${raison?.message || raison}`, pile: raison?.stack || null });
 });
+// Pannes (5xx) enregistrées dans le journal des erreurs (page Diagnostic de l'admin)
+surPanneServeur(enregistrerErreur);
 
 connectDB()
   .then(() => creerTablesManquantesSecondaires())
@@ -384,6 +389,7 @@ app.use('/api/logos', logoRoutes);
 app.use('/api/page-admins', pageAdminRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/residences', residenceRoutes);
+app.use('/api/erreurs', erreursRoutes); // journal des erreurs (site → serveur, et liste pour l'admin)
 app.use('/api/education', educationRoutes);
 app.use('/api/regions', regionRoutes);
 app.use('/api/organizations', organizationRoutes);
@@ -510,6 +516,12 @@ app.use(handleUploadError);
 // Middleware de gestion des erreurs générales
 app.use((err, req, res, next) => {
   console.error('Erreur serveur:', err);
+  if ((err.status || 500) >= 500) {
+    enregistrerErreur({
+      origine: 'serveur', message: err.message || 'Erreur serveur interne', pile: err.stack || null,
+      adresse: `${req.method} ${req.originalUrl}`, navigateur: req.headers['user-agent'] || null, numeroH: req.user?.numeroH || null,
+    });
+  }
 
   res.status(err.status || 500).json({
     success: false,
