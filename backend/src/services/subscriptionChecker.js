@@ -65,9 +65,20 @@ function finDeGrace(validUntil, account) {
   return fin;
 }
 
-async function runSubscriptionCheck() {
+// Jour déjà traité par ce serveur : retenu en mémoire, pour ne pas réveiller la
+// base Neon toutes les heures juste pour demander « déjà fait aujourd'hui ? »
+// (Neon facture le temps où la base est éveillée). La base n'est donc consultée
+// qu'une fois par jour (et au redémarrage du serveur).
+let jourDejaTraite = null;
+const aujourdhuiUTC = () => new Date().toISOString().slice(0, 10);
+
+export async function runSubscriptionCheck() {
+  const jour = aujourdhuiUTC();
+  if (jourDejaTraite === jour) return;
   try {
-    if (!(await premiereFoisAujourdhui())) return;
+    const premiereFois = await premiereFoisAujourdhui();
+    jourDejaTraite = jour;
+    if (!premiereFois) return;
   } catch (err) {
     console.error('❌ [SubscriptionChecker] Registre du jour :', err.message);
     return;
