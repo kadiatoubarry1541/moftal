@@ -48,7 +48,7 @@ export async function idempotence(req, res, next) {
   let qui = '';
   const auth = String(req.headers.authorization || '');
   if (auth.startsWith('Bearer ')) {
-    try { qui = jwt.verify(auth.slice(7), config.JWT_SECRET)?.numeroH || ''; } catch { /* jeton invalide : refusé plus loin */ }
+    try { qui = jwt.verify(auth.slice(7), config.JWT_SECRET, { algorithms: ['HS256'] })?.numeroH || ''; } catch { /* jeton invalide : refusé plus loin */ }
   }
   const cle = crypto.createHash('sha256')
     .update(`${brute}|${req.method}|${req.originalUrl}|${qui}`)

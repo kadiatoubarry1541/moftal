@@ -17,7 +17,7 @@ export function cleLimite(req) {
   const auth = String(req.headers.authorization || '');
   if (auth.startsWith('Bearer ')) {
     try {
-      const { numeroH } = jwt.verify(auth.slice(7), config.JWT_SECRET);
+      const { numeroH } = jwt.verify(auth.slice(7), config.JWT_SECRET, { algorithms: ['HS256'] });
       if (numeroH) return `membre:${numeroH}`;
     } catch { /* jeton invalide : on limite par adresse */ }
   }

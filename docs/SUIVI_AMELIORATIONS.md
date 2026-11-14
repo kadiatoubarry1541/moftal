@@ -20,3 +20,19 @@ fusionné dans `main` : on n'y revient pas. ⏸️ = mis de côté, on y reviend
 | 13 | Réveil de la base (coût Neon) | ✅ Terminé (choix : supprimer le réveil) — réveil GitHub toutes les 4 min supprimé (il ne réveillait même pas la base) ; la vraie cause, la vérification des abonnements qui interrogeait la base toutes les heures, ne la consulte plus qu'une fois par jour |
 | 14 | Fichiers en vrac à la racine du projet | ✅ Terminé — images, présentation, tableur et cahier des charges rangés dans `docs/` (rien supprimé), scripts mis à jour ; lanceurs Windows gardés à la racine |
 | 15 | Plan du site (`sitemap.xml`) | ✅ Terminé — plan généré par le serveur (`/api/sitemap.xml`) avec les pages publiques et la vitrine de chaque établissement visible ; `robots.txt` corrigé (il annonçait un ancien nom de domaine) |
+
+## Vérifications avant mise en ligne (JWT · secrets · logs · sauvegardes)
+
+| Vérification | État |
+|---|---|
+| JWT et droits sur chaque route | ✅ Contrôlé — toutes les routes qui modifient un élément vérifient qui le demande (propriétaire, admin, membre) ; les routes ouvertes sans connexion le sont par nature (inscription, connexion, demandes depuis une vitrine, notification Djomy signée) ; jetons limités à la signature HS256 ; dossier d'envoi de fichiers filtré |
+| Secrets | ⚠️ Code actuel propre, garde-fou à chaque envoi (`scripts/verifier-secrets.sh`) et alerte au démarrage si la clé JWT est une clé déjà publiée. **Mais l'historique public contient d'anciennes clés : à changer (voir ci-dessous)** |
+| Logs | ✅ Point 12 — journal des erreurs du site et du serveur, Admin → Diagnostic |
+| Sauvegardes | ⏸️ Point 1 — sauvegarde de chaque nuit restaurée pour vérification ; reste à ajouter les secrets GitHub |
+
+### Clés publiées dans l'historique Git (dépôt public) — à révoquer puis recréer
+1. Mot de passe de la base Neon (base « ep-shiny-cherry », nov. 2025) → console Neon : réinitialiser le mot de passe, puis mettre la nouvelle adresse dans `DATABASE_URL` sur Render.
+2. `JWT_SECRET` (ancien fichier `.env.backup`, nov. 2025) → Render : nouvelle valeur longue et aléatoire (tout le monde se reconnecte une fois).
+3. Clés IDrive (juin 2026) → IDrive e2 : supprimer l'ancienne clé d'accès, en créer une, la mettre sur Render.
+4. Clé privée ImageKit (juin 2026) → ImageKit : régénérer la clé privée, la mettre sur Render.
+5. Mot de passe écrit dans `backend/scripts/reset-password.mjs` (juin 2026) → changer le mot de passe du compte concerné.

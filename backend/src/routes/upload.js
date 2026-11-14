@@ -41,7 +41,9 @@ async function handleUpload(req, res) {
       return res.status(400).json({ success: false, message: 'Aucun fichier reçu' });
     }
     const { mimetype, buffer, originalname } = req.file;
-    const folder = req.body.folder || detectFolder(mimetype);
+    // Dossier : lettres, chiffres et tirets seulement (jamais un chemin choisi librement)
+    const demande = String(req.body.folder || '');
+    const folder = /^[a-z0-9-]{1,40}$/i.test(demande) ? demande : detectFolder(mimetype);
     let url;
     if (mimetype.startsWith('image/')) {
       url = await uploadToImageKit(buffer, originalname, folder);

@@ -15,6 +15,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secrets:
+    name: Aucune clé dans le code
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Chercher des clés ou mots de passe publiés par erreur
+        run: bash scripts/verifier-secrets.sh
+
   serveur:
     name: Serveur — tests avec une base de test
     runs-on: ubuntu-latest
@@ -118,7 +127,7 @@ jobs:
 
   deploy:
     name: Mise en ligne (Cloudflare)
-    needs: [serveur, site]
+    needs: [secrets, serveur, site]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10

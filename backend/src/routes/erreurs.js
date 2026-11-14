@@ -21,7 +21,7 @@ router.post('/', limite, express.json({ limit: '20kb' }), async (req, res) => {
   let numeroH = null;
   try {
     const auth = String(req.headers.authorization || '');
-    if (auth.startsWith('Bearer ')) numeroH = jwt.verify(auth.slice(7).trim(), config.JWT_SECRET)?.numeroH || null;
+    if (auth.startsWith('Bearer ')) numeroH = jwt.verify(auth.slice(7).trim(), config.JWT_SECRET, { algorithms: ['HS256'] })?.numeroH || null;
   } catch { /* jeton expiré : l'erreur est quand même enregistrée */ }
   const ligne = await enregistrerErreur({
     origine: 'site',

@@ -19,7 +19,7 @@ export function initSocket(httpServer, corsOrigins) {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
     if (!token) return next(new Error('Authentication required'));
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET);
+      const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
       if (decoded.purpose) return next(new Error('Invalid token')); // jeton de récupération : jamais une session
       // Compte réel et actif (désactivé ou supprimé → plus de temps réel)
       const { findUserFollowingAlias, jetonEncoreValide } = await import('./middleware/auth.js');

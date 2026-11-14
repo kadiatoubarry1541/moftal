@@ -133,7 +133,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET);
+      const decoded = jwt.verify(token, config.JWT_SECRET, { algorithms: ['HS256'] });
       // Un jeton de récupération de mot de passe (ou tout jeton « à usage »)
       // n'est jamais une session : il ne donne accès à aucun compte.
       if (decoded.purpose) {
