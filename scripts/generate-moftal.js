@@ -1,4 +1,4 @@
-// Génère moftal-spiral.svg et moftal-spiral.pptx à la racine du projet
+// Génère moftal-spiral.svg et moftal-spiral.pptx dans docs/ressources/spirale/
 const pptxgen = require('pptxgenjs');
 const fs = require('fs');
 const path = require('path');
@@ -90,7 +90,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>`;
 
 // ── Sauvegarde SVG ────────────────────────────────────────────────────────────
-const outDir = path.join(__dirname, '..');
+const outDir = path.join(__dirname, '..', 'docs', 'ressources', 'spirale');
 const svgFile = path.join(outDir, 'moftal-spiral.svg');
 fs.writeFileSync(svgFile, svg, 'utf8');
 console.log('✅ SVG enregistré :', svgFile);
