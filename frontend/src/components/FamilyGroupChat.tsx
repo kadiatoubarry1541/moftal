@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/useI18n'
 import CallModal from './CallModal'
 import { useConversationLue } from '../utils/messagesNonLus'
 import MicroVocal from './MicroVocal'
+import LecteurVocal from './LecteurVocal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -168,7 +169,9 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
       el.src = url
       el.onloadedmetadata = () => {
         URL.revokeObjectURL(url)
-        if (el.duration > 30) {
+        // Un vocal enregistré sur Android (webm) n'annonce pas sa durée (Infinity) :
+        // le micro l'a déjà limité à 30 s, on l'accepte. Petite marge pour l'envoi automatique à 30 s.
+        if (Number.isFinite(el.duration) && el.duration > 31) {
           alert(`⏱️ Durée maximale : 30 secondes.\nVotre fichier dure ${Math.round(el.duration)}s.`)
           resolve(false)
         } else {
@@ -344,7 +347,7 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
                           <video src={msg.mediaUrl} controls className="rounded-lg max-h-60 w-full" />
                         )}
                         {msg.mediaUrl && msg.messageType === 'audio' && (
-                          <audio src={msg.mediaUrl} controls className="w-full" />
+                          <LecteurVocal src={msg.mediaUrl} couleur="#16a34a" moi={isMe} />
                         )}
                         <p className="text-[10px] text-gray-400 mt-2 text-right">
                           {new Date(createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

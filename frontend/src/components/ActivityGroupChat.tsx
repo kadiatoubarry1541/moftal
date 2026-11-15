@@ -3,6 +3,7 @@ import { AudioRecorder } from './AudioRecorder'
 import { hideIncrement } from '../utils/formatNumeroH'
 import { useConversationLue } from '../utils/messagesNonLus'
 import MicroVocal from './MicroVocal'
+import LecteurVocal from './LecteurVocal'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '') + '/api'
 
@@ -163,7 +164,7 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
             <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
           )}
           {msg.messageType === 'audio' && msg.mediaUrl && (
-            <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />
+            <div className="mb-1"><LecteurVocal src={/^(https?:|data:|blob:)/.test(msg.mediaUrl) ? msg.mediaUrl : `${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} couleur="#2563eb" moi={isMine} /></div>
           )}
         </div>
         {isMine && (

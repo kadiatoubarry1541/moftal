@@ -4,6 +4,7 @@ import { AudioRecorder } from './AudioRecorder'
 import { useI18n } from '../i18n/useI18n'
 import { useConversationLue } from '../utils/messagesNonLus'
 import MicroVocal from './MicroVocal'
+import LecteurVocal from './LecteurVocal'
 import { DUREE_MAX_VIDEO, libelleDuree } from '../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -364,7 +365,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
                       <video src={toMediaUrl(msg.mediaUrl)} controls className="max-w-full h-auto rounded-lg" />
                     )}
                     {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
-                      <audio src={toMediaUrl(msg.mediaUrl)} controls className="w-full" />
+                      <LecteurVocal src={toMediaUrl(msg.mediaUrl)} couleur="#059669" moi={isMyMessage} />
                     )}
                     {msg.evenement && (
                       <div className="mt-3 flex items-center gap-2 flex-wrap">

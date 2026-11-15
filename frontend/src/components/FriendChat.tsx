@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket } from '../services/socket'
 import { useConversationLue } from '../utils/messagesNonLus'
 import MicroVocal from './MicroVocal'
+import LecteurVocal from './LecteurVocal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -115,7 +116,9 @@ export function FriendChat({ linkId, myNumeroH, partnerLabel }: Props) {
       el.src = url
       el.onloadedmetadata = () => {
         URL.revokeObjectURL(url)
-        if (el.duration > 30) {
+        // Un vocal enregistré sur Android (webm) n'annonce pas sa durée (Infinity) :
+        // le micro l'a déjà limité à 30 s, on l'accepte. Petite marge pour l'envoi automatique à 30 s.
+        if (Number.isFinite(el.duration) && el.duration > 31) {
           alert(`⏱️ Durée maximale : 30 secondes.\nVotre fichier dure ${Math.round(el.duration)}s.`)
           resolve(false)
         } else {
@@ -215,7 +218,7 @@ export function FriendChat({ linkId, myNumeroH, partnerLabel }: Props) {
                         <video src={toMediaUrl(msg.mediaUrl)} controls className="mt-1 rounded-lg max-h-60 w-full" />
                       )}
                       {msg.mediaUrl && msg.messageType === 'audio' && (
-                        <audio src={toMediaUrl(msg.mediaUrl)} controls className="mt-1 w-full" />
+                        <div className="mt-1"><LecteurVocal src={toMediaUrl(msg.mediaUrl)} couleur="#7c3aed" moi={isMe} /></div>
                       )}
                       <p className={`text-[10px] mt-1 ${isMe ? 'text-violet-100' : 'text-gray-500'}`}>
                         {new Date(createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

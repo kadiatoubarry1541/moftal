@@ -28,10 +28,11 @@ const storage = multer.diskStorage({
 
 // Filtre des types de fichiers autorisés
 const fileFilter = (req, file, cb) => {
+  // Les messages vocaux du micro sont en webm (Android) ou m4a (iPhone).
   // Extension exacte obligatoire (avant, « .html » passait si le type annoncé
   // était une image, et une extension contenant « jpg » quelque part suffisait)
-  const allowedExtensions = /^\.(jpeg|jpg|png|gif|webp|mp4|avi|mov|wav|mp3|pdf|doc|docx)$/;
-  const allowedMimes = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|avi|quicktime|x-msvideo)|audio\/(wav|mpeg|mp3)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)/;
+  const allowedExtensions = /^\.(jpeg|jpg|png|gif|webp|mp4|avi|mov|wav|mp3|webm|m4a|ogg|oga|opus|aac|pdf|doc|docx)$/;
+  const allowedMimes = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|avi|quicktime|x-msvideo)|audio\/(wav|mpeg|mp3|webm|mp4|x-m4a|m4a|ogg|aac|opus)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)/;
 
   const ext = path.extname(file.originalname || '').toLowerCase();
   // Sans extension (photo envoyée par le navigateur : « blob ») : le type décide
