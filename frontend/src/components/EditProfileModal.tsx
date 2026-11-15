@@ -96,8 +96,6 @@ export default function EditProfileModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   // Photo enregistrée qui ne se charge plus (ancien fichier perdu par le serveur)
   const [photoCassee, setPhotoCassee] = useState(false);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [vitrinePhoto1File, setVitrinePhoto1File] = useState<File | null>(null);
   const [vitrinePhoto1Preview, setVitrinePhoto1Preview] = useState<string | null>(null);
   const [vitrinePhoto2File, setVitrinePhoto2File] = useState<File | null>(null);
@@ -126,7 +124,6 @@ export default function EditProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const preuveInputRef = useRef<HTMLInputElement>(null);
   const vitrinePhoto1InputRef = useRef<HTMLInputElement>(null);
   const vitrinePhoto2InputRef = useRef<HTMLInputElement>(null);
@@ -151,8 +148,6 @@ export default function EditProfileModal({
       setPhotoPreview(getPhotoUrl(userData.photo));
       setPhotoCassee(false);
       setPhotoFile(null);
-      setVideoFile(null);
-      setVideoPreview(null);
       setVitrinePhoto1File(null);
       setVitrinePhoto1Preview(userData.vitrinePhoto1 ? getPhotoUrl(userData.vitrinePhoto1) : null);
       setVitrinePhoto2File(null);
@@ -178,15 +173,6 @@ export default function EditProfileModal({
       const url = URL.createObjectURL(file);
       setPhotoPreview(url);
       setPhotoCassee(false);
-    }
-  };
-
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setVideoFile(file);
-      const url = URL.createObjectURL(file);
-      setVideoPreview(url);
     }
   };
 
@@ -305,7 +291,6 @@ export default function EditProfileModal({
       }
 
       // Variables locales pour suivre photo et vidéo uploadées
-      let uploadedVideoUrl: string | undefined = formData.video as string | undefined;
       let uploadedPhotoUrl: string | undefined = formData.photo;
 
       // 1. Mettre à jour la photo si une nouvelle a été choisie
@@ -327,21 +312,6 @@ export default function EditProfileModal({
 
         const photoData = await photoResponse.json();
         uploadedPhotoUrl = photoData.photoUrl || (photoData.user && photoData.user.photo) || uploadedPhotoUrl;
-      }
-
-      // 2. Uploader la nouvelle vidéo si sélectionnée
-      if (videoFile) {
-        const videoFormData = new FormData();
-        videoFormData.append("video", videoFile);
-        videoFormData.append("numeroH", numeroH);
-        const videoResponse = await apiFetch("/auth/profile/video", {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: videoFormData,
-        });
-        const videoData = await videoResponse.json().catch(() => ({}));
-        if (!videoResponse.ok) throw new Error(videoData.message || "La vidéo n'a pas pu être enregistrée. Réessayez.");
-        uploadedVideoUrl = videoData.videoUrl || uploadedVideoUrl;
       }
 
       // 2bis. Vitrine du profil (badge) : 2 photos + 1 courte vidéo
@@ -459,7 +429,6 @@ export default function EditProfileModal({
         region: base.regionOrigine ?? base.region,
         telephone: base.tel1 ?? base.telephone,
         photo: uploadedPhotoUrl || base.photo,
-        video: uploadedVideoUrl || base.video,
         vitrinePhoto1: uploadedVitrinePhoto1Url || base.vitrinePhoto1,
         vitrinePhoto2: uploadedVitrinePhoto2Url || base.vitrinePhoto2,
         vitrineVideo: uploadedVitrineVideoUrl || base.vitrineVideo,
@@ -595,45 +564,6 @@ export default function EditProfileModal({
             </div>
             {photoCassee && !photoFile && (
               <p className="text-sm text-gray-600 text-center">Ajoutez votre photo de profil.</p>
-            )}
-          </div>
-
-          {/* Vidéo d'inscription */}
-          <div className="border border-purple-200 rounded-xl p-4 bg-purple-50">
-            <h4 className="text-base font-semibold text-purple-800 mb-2">🎥 Vidéo d'inscription</h4>
-            {(videoPreview || formData.video) ? (
-              <video
-                src={videoPreview || (formData.video as string)}
-                controls
-                className="w-full max-w-sm rounded-xl border border-purple-200 shadow-sm mb-2"
-                style={{ maxHeight: 200 }}
-              />
-            ) : (
-              <p className="text-sm text-gray-400 mb-2">Aucune vidéo enregistrée.</p>
-            )}
-            <div className="flex items-center gap-3 flex-wrap">
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleVideoChange}
-                style={{ display: "none" }}
-              />
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
-              >
-                {formData.video ? "🔄 Remplacer la vidéo" : "🎥 Ajouter une vidéo"}
-              </button>
-              {videoFile && (
-                <span className="text-sm text-green-700 font-medium">✓ Nouvelle vidéo prête</span>
-              )}
-            </div>
-            {formData.video && (
-              <p className="text-xs text-gray-400 mt-2">
-                La vidéo ne peut pas être supprimée — vous pouvez seulement la remplacer.
-              </p>
             )}
           </div>
 

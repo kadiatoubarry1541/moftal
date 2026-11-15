@@ -318,24 +318,6 @@ export default function IdentiteModal({
           </div>
         </div>
 
-        {/* ── Vidéo d'inscription ── */}
-        {userData!.video && (
-          <div className="mt-5 pt-4 border-t border-gray-100">
-            <h4 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
-              🎥 Ma vidéo d'inscription
-            </h4>
-            <p className="text-xs text-slate-400 mb-2">
-              Vidéo enregistrée lors de votre inscription. Elle sert à confirmer votre identité.
-            </p>
-            <video
-              src={userData!.video as string}
-              controls
-              className="w-full max-w-sm rounded-xl border border-slate-200 shadow-sm"
-              style={{ maxHeight: 220 }}
-            />
-          </div>
-        )}
-
         {/* ── Vitrine de profil (badge 🪪) ── */}
         <div className="mt-5 pt-4 border-t border-gray-100">
           <h4 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
