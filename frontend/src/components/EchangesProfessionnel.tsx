@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
@@ -74,12 +74,10 @@ function getSections(t: (key: string) => string) {
   ] as const;
 }
 
-const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }> = {
-  green:  { bg: 'bg-green-600',  border: 'border-green-200',  text: 'text-green-600' },
-  blue:   { bg: 'bg-blue-600',   border: 'border-blue-200',   text: 'text-blue-600' },
-  amber:  { bg: 'bg-amber-600',  border: 'border-amber-200',  text: 'text-amber-600' },
-  violet: { bg: 'bg-violet-600', border: 'border-violet-200', text: 'text-violet-600' },
-};
+/** Pour la recherche : minuscules, sans accents. */
+function normaliser(texte: string | undefined | null): string {
+  return (texte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
 
 export function EchangesProfessionnel() {
   const { t } = useI18n();
@@ -98,11 +96,10 @@ export function EchangesProfessionnel() {
     primaire: true, secondaire: true, tertiaire: true, quaternaire: true,
   });
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [activeSection, setActiveSection] = useState<string>('primaire');
+  const [recherche, setRecherche] = useState('');
   const [canPublish, setCanPublish] = useState(false);
   const [unpaidVendorAccounts, setUnpaidVendorAccounts] = useState<{ id: string; subSector: string }[]>([]);
   const [payingAccount, setPayingAccount] = useState<{ id: string; subSector: string; amount: number } | null>(null);
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Charge les produits réels de chaque catégorie (mêmes routes que les pages détaillées)
   useEffect(() => {
@@ -145,29 +142,28 @@ export function EchangesProfessionnel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
   }, []);
 
-  // Le raccourci actif suit toujours la section réellement visible à l'écran
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter(e => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveSection(visible.target.id.replace('section-', ''));
-      },
-      { rootMargin: '-120px 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-    SECTIONS.forEach(section => {
-      const el = sectionRefs.current[section.id];
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- relancé seulement quand ces valeurs changent (voulu)
-  }, []);
-
-  const scrollToSection = (id: string) => {
-    setActiveSection(id);
-    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  // Recherche : par secteur (« primaire », « secondaire »…) ou par nom de produit (« riz », « fonio »…).
+  // Un mot qui désigne un secteur montre tout ce secteur ; sinon on garde les produits dont
+  // le nom, le type, la description, le lieu ou le vendeur contiennent ce qui est saisi.
+  const q = normaliser(recherche);
+  const sectionsAffichees = useMemo(() => {
+    const toutes = SECTIONS.map(section => ({ section, produits: productsBySection[section.id] || [] }));
+    if (!q) return toutes;
+    const secteursCherches = SECTIONS.filter(sec => normaliser(sec.label).startsWith(q) || sec.id.startsWith(q));
+    if (secteursCherches.length > 0) return toutes.filter(x => secteursCherches.some(sec => sec.id === x.section.id));
+    const mots = q.split(/\s+/).filter(Boolean);
+    return toutes
+      .map(x => ({
+        ...x,
+        produits: x.produits.filter(p => {
+          const texte = normaliser([p.title, p.subcategory, p.description, p.location, p.sellerName].join(' '));
+          return mots.every(m => texte.includes(m));
+        }),
+      }))
+      .filter(x => x.produits.length > 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- SECTIONS dépend seulement de la langue
+  }, [q, productsBySection]);
+  const chargementEnCours = Object.values(loadingBySection).some(Boolean);
 
   const openVendorPayment = async (account: { id: string; subSector: string }) => {
     try {
@@ -217,25 +213,30 @@ export function EchangesProfessionnel() {
           )}
         </div>
 
-        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir. Espacement (gap) garanti entre chaque bouton pour qu'aucun n'en touche un autre. */}
-        <div className="flex gap-1.5" style={{ padding: '0 8px 0', marginTop: -1 }}>
-          {SECTIONS.map(section => {
-            const c = COLOR_CLASSES[section.color];
-            const active = activeSection === section.id;
-            return (
+        {/* Recherche : par secteur ou par nom de produit */}
+        <div style={{ padding: '6px 10px 8px' }}>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden>🔍</span>
+            <input
+              type="search"
+              value={recherche}
+              onChange={e => setRecherche(e.target.value)}
+              placeholder={tr("Rechercher : riz, fonio, primaire…")}
+              aria-label={tr("Rechercher un produit ou un secteur")}
+              enterKeyHint="search"
+              className="w-full h-9 pl-9 pr-9 rounded-full [&::-webkit-search-cancel-button]:hidden bg-white/10 border border-white/15 text-white placeholder-gray-400 text-sm focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder-gray-500"
+            />
+            {recherche && (
               <button
-                key={section.id}
                 type="button"
-                onClick={() => scrollToSection(section.id)}
-                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0 py-0 text-[7px] font-bold transition rounded-lg leading-none ${
-                  active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
-                }`}
+                onClick={() => setRecherche('')}
+                aria-label={tr("Effacer la recherche")}
+                className="no-touch-target absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-400/40 text-white text-xs flex items-center justify-center"
               >
-                <span className="text-[9px] leading-none">{section.icons[0]}</span>
-                <span className="truncate max-w-full leading-none">{section.label}</span>
+                ✕
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
       </header>
 
@@ -265,17 +266,23 @@ export function EchangesProfessionnel() {
           <CommandesRecues />
           <MesCommandes />
         </div>
-        {SECTIONS.map(section => {
-          const products = productsBySection[section.id] || [];
+        {q && !chargementEnCours && sectionsAffichees.length === 0 && (
+          <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+            <p className="text-sm text-gray-600">{tr("Aucun produit trouvé pour")} « {recherche.trim()} ».</p>
+            <button type="button" onClick={() => setRecherche('')} className="mt-3 text-sm font-semibold text-green-700">
+              {tr("Voir tous les produits")}
+            </button>
+          </div>
+        )}
+        {sectionsAffichees.map(({ section, produits: products }) => {
           const loading = loadingBySection[section.id];
           return (
             <div
               key={section.id}
               id={`section-${section.id}`}
-              ref={el => { sectionRefs.current[section.id] = el; }}
-              className="scroll-mt-[112px] pt-5"
+              className="pt-5"
             >
-              {/* Titre de section — icône + nom + flèche pour voir plus, comme Makiti */}
+              {/* Titre de section — icône + nom + flèche pour voir plus */}
               <button
                 type="button"
                 onClick={() => navigate(section.path)}

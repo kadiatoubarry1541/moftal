@@ -287,35 +287,42 @@ export default function EchangePublier() {
         {(
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-            {/* Secteur — visible pour tous les modes, limité aux secteurs où vous êtes approuvé */}
-            <div className="p-6 sm:p-8 pb-0">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_publier.sector_label')}</label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {SECTEURS.map(l => {
-                  const allowed = isAdminUser || approvedSectors.includes(l);
-                  return (
-                    <button
-                      key={l}
-                      disabled={!allowed}
-                      onClick={() => { setLevel(l); setProduct(p => ({ ...p, category: '' })); }}
-                      title={allowed ? undefined : `${t('echange_publier.not_approved_for')} ${l}`}
-                      className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors capitalize ${
-                        !allowed
-                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                          : level === l
-                            ? 'bg-emerald-600 text-white border-emerald-600'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  );
-                })}
-              </div>
-              {!isAdminUser && approvedSectors.length === 0 && (
-                <p className="mt-2 text-xs text-red-500">{t('echange_publier.no_sector_approved')}</p>
-              )}
-            </div>
+            {/* Secteur : celui où le vendeur est approuvé. Un seul secteur → rien à choisir,
+                tous ses produits y vont. Plusieurs → on ne propose que les siens. L'admin voit tout. */}
+            {(() => {
+              const choix = isAdminUser ? [...SECTEURS] : SECTEURS.filter(l => approvedSectors.includes(l));
+              return (
+                <div className="p-6 sm:p-8 pb-0">
+                  {!isAdminUser && choix.length === 1 ? (
+                    <p className="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
+                      {tr("Vos produits sont publiés dans le secteur")} <strong className="capitalize">{choix[0]}</strong>.
+                    </p>
+                  ) : choix.length > 0 ? (
+                    <>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_publier.sector_label')}</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {choix.map(l => (
+                          <button
+                            key={l}
+                            type="button"
+                            onClick={() => { setLevel(l); setProduct(p => ({ ...p, category: '' })); }}
+                            className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors capitalize ${
+                              level === l
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-red-500">{t('echange_publier.no_sector_approved')}</p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── Écran unique : on ajoute ce qu'on veut, dans l'ordre qu'on veut ── */}
             {publishMode === 'simple' && (

@@ -701,6 +701,31 @@ router.delete('/products/:id', async (req, res) => {
   }
 });
 
+// @route   PATCH /api/exchange/products/:id/secteur
+// @desc    Déplacer une publication dans un autre secteur (un vendeur s'est trompé
+//          de secteur en publiant). Body : { secteur: 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire' }
+// @access  Authentifié + Admin
+router.patch('/products/:id/secteur', async (req, res) => {
+  try {
+    if (!isGlobalAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé. Admin requis.' });
+    }
+    const secteur = String(req.body?.secteur || '').toLowerCase();
+    if (!SECTEURS_ECHANGE.includes(secteur)) {
+      return res.status(400).json({ success: false, message: 'Secteur inconnu.' });
+    }
+    const product = await ExchangeProduct.findByPk(req.params.id);
+    if (!product || product.isActive === false) {
+      return res.status(404).json({ success: false, message: 'Publication introuvable.' });
+    }
+    await product.update({ category: secteur });
+    res.json({ success: true, message: 'Publication déplacée.', product });
+  } catch (error) {
+    console.error('Erreur lors du changement de secteur:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors du changement de secteur.' });
+  }
+});
+
 // ========== FOURNISSEURS ==========
 
 // @route   GET /api/exchange/suppliers
