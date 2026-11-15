@@ -211,8 +211,8 @@ export default function TransportVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
             {[
-              { icon: "📞", label: "Téléphone", val: co.phone || tr("Non renseigné") },
-              { icon: "✉️", label: "Email", val: co.email || tr("Non renseigné") },
+              { icon: "📞", label: "Téléphone", val: co.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: "Email", val: co.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: "Gare/Bureau", val: co.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>

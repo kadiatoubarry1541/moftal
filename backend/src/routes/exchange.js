@@ -14,6 +14,7 @@ import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierUtilisateur } from '../utils/notificationsEtablissement.js';
 import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
+import { contactsDe } from '../utils/contactsPro.js';
 
 preparerPageAdmin(sequelize);
 
@@ -750,9 +751,16 @@ router.get('/suppliers', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Contacts d'un fournisseur : jamais au public (seulement à lui-même et à l'admin)
+    const moi = req.user?.numeroH || req.userId;
+    const admin = isGlobalAdmin(req.user);
     res.json({
       success: true,
-      suppliers
+      suppliers: suppliers.map((f) => {
+        const o = f.toJSON();
+        if (!admin && o.numeroH !== moi) delete o.contactInfo;
+        return o;
+      })
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des fournisseurs:', error);
@@ -949,6 +957,21 @@ const STATUTS_COMMANDE = {
 };
 const texteCourt = (v, max) => String(v ?? '').trim().slice(0, max);
 
+/** Contacts du vendeur (compte vendeur Échange, sinon son compte Moftal) — donnés
+ *  seulement à l'acheteur dont la commande est acceptée. */
+async function contactsVendeur(numeroH) {
+  if (!numeroH) return null;
+  const compte = await ProfessionalAccount.findOne({
+    where: { ownerNumeroH: numeroH, type: 'moftal_vendor', status: 'approved' },
+    order: [['created_at', 'DESC']],
+  }).catch(() => null);
+  const utilisateur = await User.findOne({ where: { numeroH }, attributes: ['tel1', 'email'] }).catch(() => null);
+  return contactsDe({
+    phone: compte?.phone || utilisateur?.tel1 || '',
+    email: compte?.email || utilisateur?.email || '',
+  });
+}
+
 // @route   POST /api/exchange/products/:id/commander
 // @desc    Commander une publication — la commande va à celui qui l'a publiée
 // @access  Authentifié
@@ -1049,6 +1072,14 @@ router.get('/orders/mine', async (req, res) => {
        WHERE o.buyer_numero_h = :moi ORDER BY o.created_at DESC LIMIT 200`,
       { replacements: { moi: req.user?.numeroH || req.userId }, type: sequelize.QueryTypes.SELECT }
     );
+    // Commande acceptée (ou livrée) : l'acheteur reçoit les contacts du vendeur
+    const cache = new Map();
+    for (const c of commandes) {
+      if (!['acceptee', 'livree'].includes(c.statut)) continue;
+      if (!cache.has(c.seller_numero_h)) cache.set(c.seller_numero_h, await contactsVendeur(c.seller_numero_h));
+      const contacts = cache.get(c.seller_numero_h);
+      if (contacts) { c.seller_phone = contacts.phone; c.seller_email = contacts.email; }
+    }
     res.json({ success: true, commandes });
   } catch (e) {
     res.status(500).json({ success: false, message: 'Impossible de charger vos commandes.' });
@@ -1081,8 +1112,14 @@ router.patch('/orders/:id', async (req, res) => {
     );
     const destinataire = estVendeur ? commande.buyer_numero_h : commande.seller_numero_h;
     if (destinataire !== moi) {
+      // Commande acceptée : l'acheteur reçoit les contacts du vendeur
+      let contactsTexte = '';
+      if (statut === 'acceptee' && destinataire === commande.buyer_numero_h) {
+        const contacts = await contactsVendeur(commande.seller_numero_h);
+        if (contacts) contactsTexte = ` Contacts du vendeur : ${[contacts.phone && `📞 ${contacts.phone}`, contacts.email && `✉️ ${contacts.email}`].filter(Boolean).join(' · ')}.`;
+      }
       await notifierUtilisateur(destinataire, 'commande',
-        `Commande « ${commande.product_title} » (${commande.quantite}) : ${STATUTS_COMMANDE[statut]}.`,
+        `Commande « ${commande.product_title} » (${commande.quantite}) : ${STATUTS_COMMANDE[statut]}.${contactsTexte}`,
         { titre: '🛒 Suivi de commande', url: estVendeur ? '/echange?mes-commandes=1' : '/mes-comptes-pro?commandes=1' });
     }
     res.json({ success: true });

@@ -257,6 +257,12 @@ export function MesCommandes() {
             <div className="min-w-0">
               <p className="font-semibold text-gray-900 text-sm truncate">{c.quantite} × {c.product_title}</p>
               <p className="text-xs text-gray-500">{montant(c.total, c.currency)}{c.seller_nom ? ` · ${c.seller_nom}` : ""}</p>
+              {(c.seller_phone || c.seller_email) && (
+                <p className="text-xs mt-1 flex flex-wrap gap-x-3">
+                  {c.seller_phone && <a href={`tel:${c.seller_phone}`} className="text-blue-600 font-semibold">📞 {c.seller_phone}</a>}
+                  {c.seller_email && <a href={`mailto:${c.seller_email}`} className="text-blue-600 font-semibold">✉️ {c.seller_email}</a>}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <BadgeStatut statut={c.statut} />

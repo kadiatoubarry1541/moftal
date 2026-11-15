@@ -1,4 +1,5 @@
 import express from 'express';
+import { sansContacts } from '../utils/contactsPro.js';
 import { publicationsEchangeDuSite } from '../services/syncEchange.js';
 import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
 import { ajouterRoutesPhotosPubliques } from './photosSiteEtablissement.js';
@@ -74,7 +75,8 @@ router.get('/list/:type', async (req, res) => {
        ORDER BY mt.name ASC`,
       { replacements: { types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
-    res.json({ success: true, tenants });
+    // Ni téléphone ni e-mail pour le public (sauf urgences) : on prend rendez-vous dans Moftal
+    res.json({ success: true, tenants: tenants.map(t => sansContacts(t)) });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
@@ -97,7 +99,7 @@ router.get('/:type/:tenantCode', async (req, res) => {
       { replacements: { code: tenantCode, types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     if (!tenant) return res.status(404).json({ success: false, message: 'Espace introuvable ou inactif.' });
-    res.json({ success: true, tenant });
+    res.json({ success: true, tenant: sansContacts(tenant) });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

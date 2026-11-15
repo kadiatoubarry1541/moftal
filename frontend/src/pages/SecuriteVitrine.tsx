@@ -213,8 +213,8 @@ export default function SecuriteVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "🚨", label: "Urgences 24h/24", val: agency.phone || tr("Non renseigné") },
-              { icon: "✉️", label: "Email", val: agency.email || tr("Non renseigné") },
+              { icon: "🚨", label: "Urgences 24h/24", val: agency.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: "Email", val: agency.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: "Siège", val: agency.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "24px 16px", background: "white", borderRadius: 16, border: "1px solid #e2e8f0" }}>

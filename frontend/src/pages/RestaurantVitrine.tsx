@@ -298,8 +298,8 @@ export default function RestaurantVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginBottom: 32 }}>
             {[
-              { icon: "📞", label: tr("Téléphone"), val: resto.phone || tr("Non renseigné") },
-              { icon: "✉️", label: tr("E-mail"), val: resto.email || tr("Non renseigné") },
+              { icon: "📞", label: tr("Téléphone"), val: resto.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: tr("E-mail"), val: resto.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: tr("Adresse"), val: resto.address || tr("Non renseignée") },
               ...(resto.horaires ? [{ icon: "🕒", label: tr("Horaires"), val: resto.horaires }] : []),
             ].map((item, i) => (

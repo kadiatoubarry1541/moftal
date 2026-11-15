@@ -1,4 +1,5 @@
 import express from 'express';
+import { sansContacts } from '../utils/contactsPro.js';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
@@ -86,7 +87,8 @@ function filterProsForSubAdmin(accounts) {
 function sanitizeAccountForPublic(account) {
   const a = account?.toJSON ? account.toJSON() : { ...account };
   const { justificatifDocument, billingInfo, grantedToSubAdmin, rejectionReason, ...rest } = a;
-  return rest;
+  // Ni téléphone ni e-mail pour le public (sauf urgences) : on prend rendez-vous dans Moftal
+  return sansContacts(rest);
 }
 
 /** Vue du propriétaire : garde ses coordonnées de paiement (billingInfo) et le

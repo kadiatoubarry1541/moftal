@@ -65,3 +65,15 @@ On montre uniquement ce que le modèle montre, rien de plus.
   `backend/src/utils/notificationsEtablissement.js`).
 - Le responsable (propriétaire, co-responsable « tous les droits ») voit tout le journal ;
   chaque autre personne (parent, enseignant, employé) ne voit que les siennes.
+
+## 5. Contacts des professionnels : tout passe par Moftal
+
+- Le public ne voit ni le téléphone ni l'e-mail d'un professionnel (listes, fiches,
+  sites vitrines, Échanges) : on demande un rendez-vous ou on passe commande dans Moftal.
+  Le serveur ne les envoie pas (`sansContacts`, `backend/src/utils/contactsPro.js`).
+- Exception : les urgences (`TYPES_URGENCE` : clinique, agent de santé, sécurité) gardent
+  leur numéro visible.
+- Rendez-vous accepté → le client reçoit téléphone + e-mail du pro (notification, e-mail,
+  page « Mes rendez-vous »). Commande Échanges acceptée → l'acheteur reçoit ceux du vendeur.
+- Jamais de lien qui envoie le client vers une autre application de cartes : le guidage
+  jusqu'au lieu du rendez-vous se fait dans Moftal.

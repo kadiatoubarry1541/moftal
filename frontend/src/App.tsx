@@ -96,6 +96,7 @@ const MesComptesPro = lazy(() => import("./pages/MesComptesPro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
 const MonEspacePro = lazy(() => import("./pages/MonEspacePro"));
 const PrendreRendezVous = lazy(() => import("./pages/PrendreRendezVous"))
+const MesRendezVous = lazy(() => import("./pages/MesRendezVous"))
 const InstallClientApp = lazy(() => import("./pages/InstallClientApp"))
 const MesCours = lazy(() => import("./pages/MesCours"))
 const GalerieFamily = lazy(() => import("./pages/GalerieFamily"));
@@ -835,6 +836,7 @@ function App() {
           <Route path="/espace-pro/:id" element={<EspacePro />} />
           <Route path="/mon-espace-pro" element={<MonEspacePro />} />
           <Route path="/rendez-vous/:id" element={<PrendreRendezVous />} />
+          <Route path="/mes-rendez-vous" element={<MesRendezVous />} />
           <Route path="/installer-app/:id" element={<InstallClientApp />} />
           <Route path="/mes-cours" element={<MesCours />} />
           <Route path="/galerie-famille" element={<GalerieFamily />} />

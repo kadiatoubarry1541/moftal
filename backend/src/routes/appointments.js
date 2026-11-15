@@ -6,6 +6,7 @@ import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { sendAppointmentAcceptedEmail, sendAppointmentRejectedEmail } from '../services/emailService.js';
+import { contactsDe } from '../utils/contactsPro.js';
 
 const router = express.Router();
 
@@ -73,7 +74,16 @@ router.get('/my-appointments', authenticate, async (req, res) => {
     // Enrichir avec les infos du professionnel
     const enriched = await Promise.all(appointments.map(async (apt) => {
       const pro = await ProfessionalAccount.findByPk(apt.professionalAccountId);
-      return { ...apt.toJSON(), professional: pro ? { id: pro.id, name: pro.name, type: pro.type } : null };
+      if (!pro) return { ...apt.toJSON(), professional: null };
+      // Contacts du pro : seulement pour un rendez-vous accepté
+      const contacts = apt.status === 'accepted' ? contactsDe(pro) : null;
+      return {
+        ...apt.toJSON(),
+        professional: {
+          id: pro.id, name: pro.name, type: pro.type, photo: pro.photo || null,
+          ...(contacts ? { phone: contacts.phone, email: contacts.email, address: pro.address || null, city: pro.city || null } : {}),
+        },
+      };
     }));
 
     res.json({ success: true, appointments: enriched });
@@ -151,16 +161,20 @@ router.post('/accept/:id', authenticate, async (req, res) => {
       respondedAt: new Date()
     });
 
-    // Notifier le patient
+    // Notifier le patient — avec les contacts du pro (rendez-vous accepté)
     const dateInfo = appointment.appointmentDate && appointment.appointmentTime
       ? ` le ${appointment.appointmentDate} à ${appointment.appointmentTime}`
+      : '';
+    const contacts = contactsDe(proAccount);
+    const contactsTexte = contacts
+      ? ` Contacts : ${[contacts.phone && `📞 ${contacts.phone}`, contacts.email && `✉️ ${contacts.email}`].filter(Boolean).join(' · ')}.`
       : '';
 
     await Notification.createNotification({
       recipientNumeroH: appointment.patientNumeroH,
       type: 'appointment_accepted',
       title: 'Rendez-vous accepté !',
-      message: `${proAccount.name} a accepté votre rendez-vous${dateInfo}.${responseVideoUrl ? ' Une vidéo de réponse est disponible.' : ''}`,
+      message: `${proAccount.name} a accepté votre rendez-vous${dateInfo}.${responseVideoUrl ? ' Une vidéo de réponse est disponible.' : ''}${contactsTexte}`,
       relatedId: appointment.id
     });
 
@@ -174,7 +188,9 @@ router.post('/accept/:id', authenticate, async (req, res) => {
         appointmentDate: appointment.appointmentDate,
         appointmentTime: appointment.appointmentTime,
         service: appointment.service,
-        responseMessage: responseMessage || null
+        responseMessage: responseMessage || null,
+        proPhone: contacts?.phone || null,
+        proEmail: contacts?.email || null
       }).catch(() => {});
     }
 

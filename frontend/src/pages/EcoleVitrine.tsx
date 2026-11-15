@@ -421,8 +421,8 @@ export default function EcoleVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "📞", label: tr("Téléphone"), val: school.phone || tr("Non renseigné") },
-              { icon: "✉️", label: tr("Email"), val: school.email || tr("Non renseigné") },
+              { icon: "📞", label: tr("Téléphone"), val: school.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: tr("Email"), val: school.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: tr("Adresse"), val: school.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>

@@ -453,8 +453,8 @@ export default function CommerceVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, maxWidth: 780, margin: "0 auto 40px" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: store.phone || tr("Non renseigné") },
-              { icon: "✉️", label: "Email",     val: store.email || tr("Non renseigné") },
+              { icon: "📞", label: "Téléphone", val: store.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: "Email",     val: store.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: "Adresse",   val: [store.address, store.city].filter(Boolean).join(", ") || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "24px 16px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#fafaf9" }}>

@@ -459,8 +459,18 @@ export async function sendSubscriptionCutoffWarningEmail({ proEmail, proName = '
 
 // ─── Rendez-vous accepté (Brevo → MailerSend secours) ────────────────────────
 
-export async function sendAppointmentAcceptedEmail({ to, toName = '', proName, appointmentDate, appointmentTime, service, responseMessage }) {
+const echapperHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+export async function sendAppointmentAcceptedEmail({ to, toName = '', proName, appointmentDate, appointmentTime, service, responseMessage, proPhone = null, proEmail = null }) {
   if (!to) return;
+  // Rendez-vous accepté : le client reçoit les contacts du professionnel
+  const contactsInfo = (proPhone || proEmail)
+    ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:14px 18px;margin:16px 0;">
+        <p style="color:#1e3a8a;margin:0;font-weight:bold;">Contacts du professionnel :</p>
+        ${proPhone ? `<p style="color:#374151;margin:8px 0 0;">📞 ${echapperHtml(proPhone)}</p>` : ''}
+        ${proEmail ? `<p style="color:#374151;margin:8px 0 0;">✉️ ${echapperHtml(proEmail)}</p>` : ''}
+       </div>`
+    : '';
   const dateInfo = appointmentDate && appointmentTime
     ? `<p style="color:#374151;">📅 <strong>Date :</strong> ${appointmentDate} à ${appointmentTime}</p>`
     : '';
@@ -486,6 +496,7 @@ export async function sendAppointmentAcceptedEmail({ to, toName = '', proName, a
         ${serviceInfo}
       </div>
       ${responseInfo}
+      ${contactsInfo}
       <div style="text-align:center;margin:28px 0;">
         <a href="${FRONTEND_URL}/mes-rendez-vous"
            style="background:#065f46;color:#ffffff;padding:14px 36px;border-radius:6px;
