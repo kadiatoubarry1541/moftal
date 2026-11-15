@@ -27,9 +27,10 @@ test('arbre : fiches, confirmation parentale, un an de couple, admin', { skip: !
   const { default: EnfantSansCompte } = await import('../src/models/EnfantSansCompte.js');
   const { default: Notification } = await import('../src/models/Notification.js');
   const { FamilyTree } = await import('../src/models/additional.js');
+  const { default: DeceasedMember } = await import('../src/models/DeceasedMember.js');
   const { ensureTableFiches } = await import('../src/services/enfantsSansCompte.js');
   const { sequelize } = await import('../src/config/database.js');
-  for (const m of [User, ParentChildLink, CoupleLink, Notification, FamilyTree]) await m.sync();
+  for (const m of [User, ParentChildLink, CoupleLink, Notification, FamilyTree, DeceasedMember]) await m.sync();
   await ensureTableFiches();
 
   for (const u of [papa, maman, grand, neveu, admin]) {
@@ -48,7 +49,7 @@ test('arbre : fiches, confirmation parentale, un an de couple, admin', { skip: !
     await sequelize.query(`DELETE FROM enfants_sans_compte WHERE cree_par LIKE '${P}%'`).catch(() => {});
     await sequelize.query(`DELETE FROM couple_links WHERE husband_numero_h LIKE '${P}%'`).catch(() => {});
     await sequelize.query(`DELETE FROM notifications WHERE recipient_numero_h LIKE '${P}%'`).catch(() => {});
-    await sequelize.query(`DELETE FROM family_trees WHERE root_member LIKE '${P}%'`).catch(() => {});
+    await sequelize.query(`DELETE FROM family_trees WHERE "rootMember" LIKE '${P}%'`).catch(() => {});
     await sequelize.query(`DELETE FROM users WHERE numero_h LIKE '${P}%'`).catch(() => {});
     await sequelize.close();
   });

@@ -1145,7 +1145,7 @@ function FamilleConjoint({ partner, onRetour }: { partner: PartnerInfo; onRetour
     let annule = false
     const token = localStorage.getItem('token')
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/family-tree/spouse-tree/${encodeURIComponent(partner.numeroH)}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(async (r) => { const d = await r.json().catch(() => null); if (!annule) setEtat({ chargement: false, data: r.ok ? d : null, erreur: !r.ok }) })
+      .then(async (r): Promise<void> => { const d: ArbreConjoint | null = await r.json().catch((): null => null); if (!annule) setEtat({ chargement: false, data: r.ok ? d : null, erreur: !r.ok }) })
       .catch(() => { if (!annule) setEtat({ chargement: false, data: null, erreur: true }) })
     return () => { annule = true }
   }, [partner.numeroH])
