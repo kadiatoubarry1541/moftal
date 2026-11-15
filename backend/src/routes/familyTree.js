@@ -1187,23 +1187,16 @@ router.get('/spouse-tree/:spouseNumeroH', async (req, res) => {
     const members = await getTreeMembers(spouseTree);
 
     if (!fullAccess) {
-      // Accès limité : juste la liste des membres (prénom + nom de famille)
+      // Première année du couple : rien de la famille de l'autre (ni noms, ni
+      // nombre de membres) — seulement le délai restant. Règle de la propriétaire :
+      // protéger chaque famille tant que l'union n'a pas un an.
       return res.json({
         success: true,
         accessLevel: 'limited',
         unionDays,
         daysUntilFullAccess: 365 - unionDays,
-        message: `Accès limité. Accès complet dans ${365 - unionDays} jour(s).`,
-        tree: {
-          id: spouseTree.id,
-          memberCount: members.length,
-          members: members.map(m => ({
-            numeroH: m.numeroH,
-            prenom: m.prenom,
-            nomFamille: m.nomFamille,
-            genre: m.genre
-          }))
-        }
+        message: `La famille de votre conjoint(e) sera visible dans ${365 - unionDays} jour(s), après un an de couple.`,
+        tree: null
       });
     }
 

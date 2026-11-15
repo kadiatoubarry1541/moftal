@@ -24,7 +24,10 @@ EnfantSansCompte.init({
   dateDeces: { type: DataTypes.DATEONLY, field: 'date_deces' },
   photo: { type: DataTypes.TEXT },
   quartierNaissance: { type: DataTypes.STRING, field: 'quartier_naissance' },
-  // Extrait de naissance : le numéro n'est unique que dans une commune et une année
+  // Pièce de l'enfant : extrait de la mairie, ou numéro reçu à l'hôpital
+  pieceType: { type: DataTypes.STRING(10), defaultValue: 'mairie', field: 'piece_type', comment: 'mairie | hopital' },
+  // Numéro de la pièce ; « extraitCommune » = commune (mairie) ou nom de l'hôpital.
+  // Le numéro n'est unique que dans un établissement et une année.
   extraitNumero: { type: DataTypes.STRING(60), field: 'extrait_numero' },
   extraitCommune: { type: DataTypes.STRING, field: 'extrait_commune' },
   extraitAnnee: { type: DataTypes.STRING(4), field: 'extrait_annee' },
@@ -36,6 +39,9 @@ EnfantSansCompte.init({
   // Fusion avec le compte de l'enfant devenu grand
   fusionneAvec: { type: DataTypes.STRING, field: 'fusionne_avec' },
   fusionneLe: { type: DataTypes.DATE, field: 'fusionne_le' },
+  // L'enfant devenu grand demande à récupérer sa fiche : un parent doit confirmer
+  demandeNumeroH: { type: DataTypes.STRING, field: 'demande_numero_h' },
+  demandeLe: { type: DataTypes.DATE, field: 'demande_le' },
   liensFusionnes: { type: DataTypes.JSON, defaultValue: [], field: 'liens_fusionnes', comment: 'Liens déplacés vers le compte (pour annuler)' },
   isActive: { type: DataTypes.BOOLEAN, defaultValue: true, field: 'is_active' }
 }, {

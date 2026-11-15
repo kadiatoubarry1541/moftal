@@ -4,7 +4,7 @@ import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 import ChampPersonne from '../../components/ChampPersonne'
-import { FicheEnfantActions, AnnulerFusionFiche } from '../../components/FicheEnfantActions'
+import { FicheEnfantActions, AnnulerFusionFiche, DemandesFichesEnfants } from '../../components/FicheEnfantActions'
 import type { UserData } from "../../utils/auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -475,6 +475,8 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
           {showAddForm ? '✕ Annuler' : '+ Ajouter'}
         </button>
       </div>
+
+      {!focused && <DemandesFichesEnfants onChange={loadMyChildren} />}
 
       {choixAjout && (
         <div className="fixed inset-0 z-[110] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setChoixAjout(false)}>

@@ -50,11 +50,14 @@ export interface ArbreConjoint {
   accessLevel: 'limited' | 'full'
   unionDays?: number
   daysUntilFullAccess?: number
+  /** Message du serveur (refus ou délai) */
+  message?: string
+  /** null pendant la première année du couple : rien de l'autre famille */
   tree?: {
     familyCode?: string
     memberCount?: number
     members?: PersonneLiee[]
-  }
+  } | null
 }
 
 /** Méta de l'arbre familial (/api/family-tree/tree → tree) */

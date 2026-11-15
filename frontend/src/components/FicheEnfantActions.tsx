@@ -91,13 +91,15 @@ export function AnnulerFusionFiche({ ficheId, onChange }: { ficheId: string; onC
 }
 
 /**
- * L'enfant devenu grand retrouve la fiche créée par ses parents avec son extrait
- * de naissance (numéro + commune + année) — sa date de naissance (profil) doit
- * aussi correspondre. Son arbre est alors fusionné avec celui de ses parents.
+ * L'enfant devenu grand demande à récupérer la fiche créée par ses parents, avec
+ * le numéro de l'hôpital ou de la mairie (numéro + établissement + année) — sa
+ * date de naissance (profil) doit aussi correspondre. Un parent confirme, puis
+ * son compte est relié à sa famille.
  */
 export function RejoindreMaFiche({ onDone }: { onDone?: () => void }) {
   const { tr } = useTraduction();
   const [ouvert, setOuvert] = useState(false);
+  const [pieceType, setPieceType] = useState<"mairie" | "hopital">("mairie");
   const [numero, setNumero] = useState("");
   const [commune, setCommune] = useState("");
   const [annee, setAnnee] = useState("");
@@ -106,7 +108,9 @@ export function RejoindreMaFiche({ onDone }: { onDone?: () => void }) {
 
   const envoyer = async (confirmer = false) => {
     if (!numero.trim() || !commune.trim() || !/^\d{4}$/.test(annee.trim())) {
-      setMessage({ ok: false, texte: tr("Remplissez le numéro, la commune et l'année (4 chiffres) de votre extrait de naissance.") });
+      setMessage({ ok: false, texte: pieceType === "hopital"
+        ? tr("Remplissez le numéro, le nom de l'hôpital et l'année (4 chiffres).")
+        : tr("Remplissez le numéro, la commune et l'année (4 chiffres) de votre extrait de naissance.") });
       return;
     }
     setOccupe(true);
@@ -116,12 +120,12 @@ export function RejoindreMaFiche({ onDone }: { onDone?: () => void }) {
       const res = await fetch(`${API_BASE}/api/parent-child/rejoindre-ma-fiche`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ extraitNumero: numero.trim(), extraitCommune: commune.trim(), extraitAnnee: annee.trim(), ...(confirmer ? { confirmer: true } : {}) }),
+        body: JSON.stringify({ pieceType, extraitNumero: numero.trim(), extraitCommune: commune.trim(), extraitAnnee: annee.trim(), ...(confirmer ? { confirmer: true } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 409 && data.code === "CONFIRMER_PRENOM") {
         if (window.confirm(tr(data.message))) return envoyer(true);
-        setMessage({ ok: false, texte: tr("Vérifiez avec vos parents les informations de l'extrait.") });
+        setMessage({ ok: false, texte: tr("Vérifiez ces informations avec vos parents.") });
         return;
       }
       setMessage({ ok: !!data.success, texte: tr(data.message || "Erreur") });
@@ -143,17 +147,75 @@ export function RejoindreMaFiche({ onDone }: { onDone?: () => void }) {
       {ouvert && (
         <div className="px-4 pb-4 space-y-2">
           <p className="text-xs text-slate-500">
-            {tr("Entrez les informations de votre")} <strong>{tr("extrait de naissance")}</strong>{tr(". Si elles correspondent à la fiche créée par vos parents (avec votre date de naissance), votre compte est relié à eux et vos arbres sont fusionnés.")}
+            {tr("Entrez le numéro que vos parents ont donné : celui de l'hôpital ou celui de la mairie. Si tout correspond (avec votre date de naissance), vos parents reçoivent votre demande. Dès que l'un d'eux confirme, votre compte est relié à votre famille.")}
           </p>
-          <input className={champ} value={numero} onChange={(e) => setNumero(e.target.value)} placeholder={tr("Numéro de l'extrait (ex : 125)")} />
-          <input className={champ} value={commune} onChange={(e) => setCommune(e.target.value)} placeholder={tr("Commune de l'extrait (ex : Dabola)")} />
-          <input className={champ} inputMode="numeric" maxLength={4} value={annee} onChange={(e) => setAnnee(e.target.value.replace(/\D/g, ""))} placeholder={tr("Année de l'extrait (ex : 2015)")} />
+          <div className="grid grid-cols-2 gap-2">
+            {(["mairie", "hopital"] as const).map((t) => (
+              <button key={t} type="button" onClick={() => setPieceType(t)}
+                className={`py-2 rounded-lg text-sm font-semibold border ${pieceType === t ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-300"}`}>
+                {t === "mairie" ? tr("🏛️ Mairie (extrait)") : tr("🏥 Hôpital")}
+              </button>
+            ))}
+          </div>
+          <input className={champ} value={numero} onChange={(e) => setNumero(e.target.value)} placeholder={pieceType === "hopital" ? tr("Numéro donné par l'hôpital") : tr("Numéro de l'extrait (ex : 125)")} />
+          <input className={champ} value={commune} onChange={(e) => setCommune(e.target.value)} placeholder={pieceType === "hopital" ? tr("Nom de l'hôpital (ex : Hôpital Donka)") : tr("Commune de l'extrait (ex : Dabola)")} />
+          <input className={champ} inputMode="numeric" maxLength={4} value={annee} onChange={(e) => setAnnee(e.target.value.replace(/\D/g, ""))} placeholder={tr("Année (ex : 2015)")} />
           {message && <p className={`text-sm rounded-lg px-3 py-2 ${message.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"}`}>{message.texte}</p>}
           <button type="button" disabled={occupe} onClick={() => envoyer()} className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-60">
-            {occupe ? tr("Recherche…") : tr("Retrouver ma fiche")}
+            {occupe ? tr("Recherche…") : tr("Demander ma fiche")}
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+interface DemandeFiche {
+  ficheId: string;
+  fichePrenom: string;
+  fichePhoto?: string | null;
+  demandeur: { numeroH: string; prenom?: string; nomFamille?: string; photo?: string | null; dateNaissance?: string | null };
+}
+
+/** Parent : un enfant devenu grand demande à récupérer sa fiche — confirmer ou refuser. */
+export function DemandesFichesEnfants({ onChange }: { onChange?: () => void }) {
+  const { tr } = useTraduction();
+  const [demandes, setDemandes] = useState<DemandeFiche[]>([]);
+  const [occupe, setOccupe] = useState<string | null>(null);
+  const charger = () => appel("/enfants-sans-compte/demandes").then((d) => setDemandes(d.demandes || [])).catch(() => {});
+  useEffect(() => { void charger(); }, []);
+
+  const repondre = async (d: DemandeFiche, decision: "accepter" | "refuser") => {
+    const question = decision === "accepter"
+      ? tr("{nom} est-il/elle bien votre enfant « {enfant} » ? Son compte sera relié à votre famille.", { nom: `${d.demandeur.prenom || ""} ${d.demandeur.nomFamille || ""}`.trim(), enfant: d.fichePrenom })
+      : tr("Refuser ? Cette personne ne sera pas reliée à la fiche « {enfant} ».", { enfant: d.fichePrenom });
+    if (!window.confirm(question)) return;
+    setOccupe(d.ficheId);
+    try { const r = await appel(`/enfants-sans-compte/${d.ficheId}/demande`, "POST", { decision }); alert(tr(r.message)); await charger(); onChange?.(); }
+    catch (e) { alert((e as Error).message); }
+    finally { setOccupe(null); }
+  };
+
+  if (!demandes.length) return null;
+  return (
+    <div className="mb-4 space-y-2">
+      {demandes.map((d) => (
+        <div key={d.ficheId} className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+          <p className="text-sm text-amber-900">
+            <strong>{`${d.demandeur.prenom || ""} ${d.demandeur.nomFamille || ""}`.trim() || d.demandeur.numeroH}</strong>
+            {" "}{tr("dit être votre enfant « {enfant} » et demande à récupérer sa fiche.", { enfant: d.fichePrenom })}
+            {d.demandeur.dateNaissance && <> {tr("Né(e) le")} {String(d.demandeur.dateNaissance).slice(0, 10)}.</>}
+          </p>
+          <div className="flex gap-2 mt-2">
+            <button type="button" disabled={occupe === d.ficheId} onClick={() => repondre(d, "accepter")} className="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold disabled:opacity-60">
+              {tr("✓ C'est mon enfant")}
+            </button>
+            <button type="button" disabled={occupe === d.ficheId} onClick={() => repondre(d, "refuser")} className="flex-1 py-2 rounded-lg bg-white border border-red-300 text-red-700 text-sm font-semibold disabled:opacity-60">
+              {tr("Ce n'est pas lui/elle")}
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

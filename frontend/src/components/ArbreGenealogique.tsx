@@ -69,7 +69,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [, setPendingInvitationCount] = useState(0)
-  const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: ArbreConjoint | null; loading: boolean }>({ open: false, data: null, loading: false })
+  const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: ArbreConjoint | null; loading: boolean; refus?: 'conjoint' | 'erreur' }>({ open: false, data: null, loading: false })
   const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{id: string; type: string; description: string; annee?: string}>>>({})
   const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
@@ -118,8 +118,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       const res = await fetch(`${API_BASE}/api/family-tree/spouse-tree/${spouseNumeroH}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      const data = await res.json()
-      setSpouseTreeModal({ open: true, data: res.ok ? data : null, loading: false })
+      const data = await res.json().catch(() => ({}))
+      // Refus (pas son conjoint) : on garde le message du serveur pour l'afficher
+      setSpouseTreeModal({ open: true, data: res.ok ? data : null, loading: false, refus: res.ok ? undefined : (res.status === 403 ? 'conjoint' : 'erreur') })
     } catch {
       setSpouseTreeModal({ open: true, data: null, loading: false })
     }
@@ -1895,8 +1896,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {!spouseTreeModal.loading && spouseTreeModal.data && (
               <>
                 {spouseTreeModal.data.accessLevel === 'limited' && (
-                  <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 13, color: '#92400e' }}>
-                    Accès limité — union de {spouseTreeModal.data.unionDays} jour(s). Accès complet dans <strong>{spouseTreeModal.data.daysUntilFullAccess}</strong> jour(s) (après 1 an).
+                  <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8, padding: 14, fontSize: 14, color: '#92400e', textAlign: 'center' }}>
+                    <div style={{ fontSize: 30, marginBottom: 6 }}>🔒</div>
+                    La famille de {realConjoint?.prenom || userData.conjointPrenom} sera visible après <strong>un an de couple</strong>,
+                    dans <strong>{spouseTreeModal.data.daysUntilFullAccess}</strong> jour(s).
+                    <div style={{ fontSize: 12, marginTop: 6, color: '#a16207' }}>C'est une protection pour chaque famille.</div>
                   </div>
                 )}
                 {spouseTreeModal.data.accessLevel === 'full' && (
@@ -1905,22 +1909,30 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     {spouseTreeModal.data.tree?.familyCode && <> Code : <strong>{spouseTreeModal.data.tree.familyCode}</strong></>}
                   </div>
                 )}
-                <div>
-                  <strong style={{ fontSize: 14, color: '#444' }}>Membres ({spouseTreeModal.data.tree?.memberCount || spouseTreeModal.data.tree?.members?.length || 0})</strong>
-                  <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 13 }}>
-                    {(spouseTreeModal.data.tree?.members || []).map((m) => (
-                      <li key={m.numeroH} style={{ marginBottom: 4 }}>
-                        {m.prenom} {m.nomFamille}
-                        {spouseTreeModal.data.accessLevel === 'full' && <span style={{ color: '#888', marginLeft: 8, fontSize: 11 }}>({m.genre?.toLowerCase()})</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {spouseTreeModal.data.accessLevel === 'full' && spouseTreeModal.data.tree && (
+                  <div>
+                    <strong style={{ fontSize: 14, color: '#444' }}>Membres ({spouseTreeModal.data.tree.memberCount || spouseTreeModal.data.tree.members?.length || 0})</strong>
+                    <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
+                      {(spouseTreeModal.data.tree.members || []).map((m) => (
+                        <div key={m.numeroH} style={{ textAlign: 'center', fontSize: 12 }}>
+                          {m.photo
+                            ? <img src={m.photo} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', margin: '0 auto', display: 'block', border: '2px solid #d1fae5' }} />
+                            : <div style={{ width: 56, height: 56, borderRadius: '50%', margin: '0 auto', background: '#d1fae5', color: '#065f46', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20 }}>{(m.prenom || '?').charAt(0)}</div>}
+                          <div style={{ marginTop: 4, fontWeight: 600, color: '#333' }}>{m.prenom} {m.nomFamille}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
             {!spouseTreeModal.loading && !spouseTreeModal.data && (
-              <p style={{ color: '#e53e3e', textAlign: 'center' }}>Impossible de charger l'arbre. Vérifiez votre lien de couple.</p>
+              <p style={{ color: spouseTreeModal.refus === 'conjoint' ? '#92400e' : '#e53e3e', textAlign: 'center' }}>
+                {spouseTreeModal.refus === 'conjoint'
+                  ? '🔒 Seul(e) son mari ou son épouse peut ouvrir sa famille, après un an de couple.'
+                  : "Impossible de charger l'arbre. Réessayez."}
+              </p>
             )}
           </div>
         </div>
