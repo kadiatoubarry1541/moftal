@@ -1472,37 +1472,6 @@ router.post('/profile/photo', authenticate, (req, res) => {
   });
 });
 
-// @route   POST /api/auth/profile/video
-// @desc    Remplacer la vidéo d'inscription (jamais supprimer, seulement remplacer)
-// @access  Private
-router.post('/profile/video', authenticate, (req, res) => {
-  upload.single('video')(req, res, async (multerErr) => {
-    if (multerErr) {
-      return res.status(400).json({ success: false, message: multerErr.message || 'Erreur upload vidéo' });
-    }
-    try {
-      const { numeroH } = req.body;
-      if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
-      if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-
-      if (!peutModifierProfil(req, numeroH)) return refusModification(res);
-      const user = await User.findByNumeroH(numeroH);
-      if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-
-      const videoUrl = await urlDurable(req.file, 'profils');
-      await user.update({ video: videoUrl });
-
-      const userWithoutPassword = { ...user.dataValues };
-      delete userWithoutPassword.password;
-
-      res.json({ success: true, message: 'Vidéo mise à jour avec succès', videoUrl, user: userWithoutPassword });
-    } catch (error) {
-      console.error('Erreur upload vidéo profil:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour de la vidéo' });
-    }
-  });
-});
-
 // @route   POST /api/auth/profile/vitrine-photo1
 // @route   POST /api/auth/profile/vitrine-photo2
 // @desc    Mettre à jour l'une des 2 photos de la vitrine de profil (badge)

@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo } from 'react'
+import RecadrerPhoto from '../../components/RecadrerPhoto'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
 import { uploadForRegistration } from '../../utils/uploadMedia'
@@ -189,6 +190,7 @@ export function WrittenRegistration() {
     return `${baseClass} border-gray-300`
   }
 
+  const [photoARecadrer, setPhotoARecadrer] = useState<File | null>(null)
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -200,23 +202,10 @@ export function WrittenRegistration() {
         alert('La photo doit faire moins de 10MB.')
         return
       }
-      // Compresser la photo côté client avant l'envoi (max 350px, JPEG 70%)
-      const objectUrl = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl)
-        const MAX = 350
-        let w = img.width, h = img.height
-        if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX } }
-        else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX } }
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-        const compressed = canvas.toDataURL('image/jpeg', 0.7)
-        setData((prev) => ({ ...prev, photo: file, photoPreview: compressed }))
-      }
-      img.src = objectUrl
+      // D'abord le recadrage dans le cercle (photo produite : 512 px, JPEG)
+      setPhotoARecadrer(file)
     }
+    event.target.value = ''
   }
 
   const removePhoto = () => {
@@ -935,6 +924,17 @@ export function WrittenRegistration() {
                 <div className="field">
                   <label>Photo de profil *</label>
                   <div className={`photo-upload-section${validationErrors.has('photo') ? ' border-2 border-red-500 rounded-lg p-1' : ''}`}>
+                    {photoARecadrer && (
+                      <RecadrerPhoto
+                        fichier={photoARecadrer}
+                        taille={512}
+                        onAnnuler={() => setPhotoARecadrer(null)}
+                        onValider={(fichier, apercu) => {
+                          setData((prev) => ({ ...prev, photo: fichier, photoPreview: apercu }))
+                          setPhotoARecadrer(null)
+                        }}
+                      />
+                    )}
                     {data.photoPreview ? (
                       <div className="photo-preview">
                         <img src={data.photoPreview} alt="Aperçu de la photo" className="preview-image" />
