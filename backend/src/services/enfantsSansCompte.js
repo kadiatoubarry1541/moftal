@@ -14,7 +14,15 @@ export const estFiche = (numeroH) => typeof numeroH === 'string' && numeroH.star
 
 let tablePrete = null;
 export function ensureTableFiches() {
-  if (!tablePrete) tablePrete = EnfantSansCompte.sync().catch((e) => { tablePrete = null; throw e; });
+  if (!tablePrete) {
+    tablePrete = EnfantSansCompte.sync()
+      // Colonnes ajoutées après la création de la table (sync ne les ajoute pas)
+      .then(() => EnfantSansCompte.sequelize.query(`
+        ALTER TABLE enfants_sans_compte ADD COLUMN IF NOT EXISTS piece_type VARCHAR(10) DEFAULT 'mairie';
+        ALTER TABLE enfants_sans_compte ADD COLUMN IF NOT EXISTS demande_numero_h VARCHAR(255);
+        ALTER TABLE enfants_sans_compte ADD COLUMN IF NOT EXISTS demande_le TIMESTAMPTZ;`))
+      .catch((e) => { tablePrete = null; throw e; });
+  }
   return tablePrete;
 }
 
@@ -47,6 +55,24 @@ export function cleExtrait({ numero, commune, annee }) {
   return `${n}|${c}|${a}`;
 }
 
+/**
+ * Clé de la pièce de l'enfant. Mairie : extrait (numéro + commune + année).
+ * Hôpital : numéro reçu à la naissance + nom de l'hôpital + année. Les deux
+ * familles de clés ne se mélangent jamais (préfixe « H| » pour l'hôpital).
+ */
+export function clePiece({ type, numero, etablissement, annee }) {
+  if (type !== 'hopital') return cleExtrait({ numero, commune: etablissement, annee });
+  const n = sansAccents(numero).toUpperCase().trim()
+    .replace(/^(NUMERO|NUM|NO|N)\s*[.:°º#]?\s*(?=\d)/, '')
+    .replace(/[^0-9A-Z]/g, '').replace(/^0+(?=\d)/, '');
+  const h = sansAccents(etablissement).toLowerCase()
+    .replace(/\b(hopital|clinique|centre|de|du|des|la|le|l|sante|maternite|national|regional|prefectoral)\b/g, ' ')
+    .replace(/[^a-z0-9]/g, '');
+  const a = String(annee || '').replace(/[^0-9]/g, '');
+  if (!n || !h || a.length !== 4) return null;
+  return `H|${n}|${h}|${a}`;
+}
+
 const memeDate = (a, b) => !!a && !!b && String(a).slice(0, 10) === String(b).slice(0, 10);
 
 /** Représentation d'une fiche comme un membre de la famille (même forme qu'un compte). */
@@ -65,6 +91,7 @@ export function ficheCommeMembre(f, { avecPapiers = false } = {}) {
     ficheId: f.id,
     ...(avecPapiers ? {
       quartierNaissance: f.quartierNaissance || null,
+      pieceType: f.pieceType || 'mairie',
       extraitNumero: f.extraitNumero || null,
       extraitCommune: f.extraitCommune || null,
       extraitAnnee: f.extraitAnnee || null,

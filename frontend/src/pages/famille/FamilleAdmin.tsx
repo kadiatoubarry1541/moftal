@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { useTraduction } from '../../i18n/traduction'
+import PlacerDansArbreAdmin from '../../components/PlacerDansArbreAdmin'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -207,6 +208,8 @@ export default function FamilleAdmin() {
 
       {!loading && (
         <>
+          <PlacerDansArbreAdmin />
+
           {/* Liaisons parent-enfant */}
           <section className="mb-10">
             <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">

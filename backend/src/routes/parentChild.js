@@ -18,7 +18,7 @@ import { Op } from 'sequelize';
 import CoupleLink from '../models/CoupleLink.js';
 import EnfantSansCompte from '../models/EnfantSansCompte.js';
 import {
-  ensureTableFiches, nouveauNumeroFiche, cleExtrait, normaliserPrenom, memeDate, estFiche,
+  ensureTableFiches, nouveauNumeroFiche, clePiece, normaliserPrenom, memeDate, estFiche,
   fichesParNumero, ficheCommeMembre, estDeLaFamille, estParentDeLaFiche, lierParent, typeParent,
   fusionnerFiche, annulerFusion, comptesCorrespondants, parentsDeLaFiche
 } from '../services/enfantsSansCompte.js';
@@ -1078,6 +1078,9 @@ function lireChampsEnfant(body, { creation }) {
   const dateNaissance = body.dateNaissance ? String(body.dateNaissance).slice(0, 10) : null;
   const dateDeces = body.dateDeces ? String(body.dateDeces).slice(0, 10) : null;
   const papiers = [body.extraitNumero, body.extraitCommune, body.extraitAnnee].map((v) => String(v || '').trim());
+  // Pièce : extrait de la mairie (numéro + commune + année) ou numéro de l'hôpital
+  // (numéro + nom de l'hôpital + année)
+  const pieceType = body.pieceType === 'hopital' ? 'hopital' : 'mairie';
   const erreurs = [];
   if (creation || body.prenom !== undefined) { if (!prenom) erreurs.push('Le prénom est obligatoire.'); }
   if (creation || body.genre !== undefined) { if (!['HOMME', 'FEMME'].includes(genre)) erreurs.push('Choisissez garçon ou fille.'); }
@@ -1087,10 +1090,14 @@ function lireChampsEnfant(body, { creation }) {
   const nbPapiers = papiers.filter(Boolean).length;
   let cle = null;
   if (nbPapiers > 0) {
-    cle = cleExtrait({ numero: papiers[0], commune: papiers[1], annee: papiers[2] });
-    if (nbPapiers < 3 || !cle) erreurs.push('Pour l\'extrait de naissance, remplissez les trois : numéro, commune et année (4 chiffres).');
+    cle = clePiece({ type: pieceType, numero: papiers[0], etablissement: papiers[1], annee: papiers[2] });
+    if (nbPapiers < 3 || !cle) {
+      erreurs.push(pieceType === 'hopital'
+        ? 'Pour le numéro de l\'hôpital, remplissez les trois : numéro, nom de l\'hôpital et année (4 chiffres).'
+        : 'Pour l\'extrait de la mairie, remplissez les trois : numéro, commune et année (4 chiffres).');
+    }
   }
-  return { prenom, genre, estVivant, dateNaissance, dateDeces, papiers, nbPapiers, cle, erreurs };
+  return { prenom, genre, estVivant, dateNaissance, dateDeces, papiers, nbPapiers, cle, pieceType, erreurs };
 }
 
 // POST /api/parent-child/enfants-sans-compte — ajouter un enfant sans compte
@@ -1099,7 +1106,14 @@ router.post('/enfants-sans-compte', async (req, res) => {
     await ensureTableFiches();
     const user = req.user;
     const c = lireChampsEnfant(req.body, { creation: true });
-    if (c.cle && !c.dateNaissance) c.erreurs.push('Avec l\'extrait de naissance, la date de naissance est obligatoire.');
+    // Enfant vivant : tout est obligatoire — c'est ce qui permettra de le reconnaître
+    // quand il voudra récupérer sa fiche (photo, date de naissance, pièce hôpital ou mairie)
+    if (c.estVivant) {
+      if (!req.body.photo) c.erreurs.push('Ajoutez la photo de l\'enfant.');
+      if (!c.dateNaissance) c.erreurs.push('La date de naissance est obligatoire.');
+      if (!c.cle) c.erreurs.push('Le numéro de l\'hôpital ou de la mairie est obligatoire (numéro, établissement et année).');
+    }
+    if (c.cle && !c.dateNaissance) c.erreurs.push('Avec le numéro de l\'hôpital ou de la mairie, la date de naissance est obligatoire.');
 
     // L'autre parent : conjoint(e) lié(e) sur Moftal, ou son nom, ou « inconnu »
     const autreNumeroH = String(req.body.autreParentNumeroH || '').trim();
@@ -1125,7 +1139,7 @@ router.post('/enfants-sans-compte', async (req, res) => {
       const existante = await EnfantSansCompte.findOne({ where: { extraitCle: c.cle, isActive: true } });
       if (existante) {
         if (!memeDate(existante.dateNaissance, c.dateNaissance)) {
-          return res.status(409).json({ success: false, message: 'Un autre enfant est déjà enregistré avec ce numéro d\'extrait, dans cette commune et cette année. Vérifiez le numéro, la commune, l\'année et la date de naissance.' });
+          return res.status(409).json({ success: false, message: 'Un autre enfant est déjà enregistré avec ce numéro, dans cet établissement (hôpital ou mairie) et cette année. Vérifiez le numéro, l\'établissement, l\'année et la date de naissance.' });
         }
         if (normaliserPrenom(existante.prenom) !== normaliserPrenom(c.prenom) && req.body.confirmerMemeEnfant !== true) {
           return res.status(409).json({ success: false, code: 'CONFIRMER_MEME_ENFANT', prenomExistant: existante.prenom,
@@ -1162,6 +1176,7 @@ router.post('/enfants-sans-compte', async (req, res) => {
       dateDeces: c.estVivant ? null : c.dateDeces,
       photo,
       quartierNaissance: String(req.body.quartierNaissance || '').trim() || null,
+      pieceType: c.cle ? c.pieceType : 'mairie',
       extraitNumero: c.cle ? c.papiers[0] : null,
       extraitCommune: c.cle ? c.papiers[1] : null,
       extraitAnnee: c.cle ? c.papiers[2] : null,
@@ -1203,7 +1218,7 @@ router.put('/enfants-sans-compte/:id', async (req, res) => {
     if (c.erreurs.length) return res.status(400).json({ success: false, message: c.erreurs[0] });
     if (c.cle) {
       const autre = await EnfantSansCompte.findOne({ where: { extraitCle: c.cle, isActive: true, id: { [Op.ne]: fiche.id } } });
-      if (autre) return res.status(409).json({ success: false, message: 'Un autre enfant est déjà enregistré avec ce numéro d\'extrait, dans cette commune et cette année.' });
+      if (autre) return res.status(409).json({ success: false, message: 'Un autre enfant est déjà enregistré avec ce numéro, dans cet établissement et cette année.' });
     }
     const maj = {};
     if (req.body.prenom !== undefined) maj.prenom = c.prenom;
@@ -1214,7 +1229,7 @@ router.put('/enfants-sans-compte/:id', async (req, res) => {
     if (req.body.dateDeces !== undefined || c.estVivant === true) maj.dateDeces = (c.estVivant ?? fiche.estVivant) ? null : c.dateDeces;
     if (req.body.quartierNaissance !== undefined) maj.quartierNaissance = String(req.body.quartierNaissance || '').trim() || null;
     if (req.body.photo !== undefined && req.body.photo) maj.photo = await enregistrerPhoto(req.body.photo);
-    if (c.nbPapiers === 3) Object.assign(maj, { extraitNumero: c.papiers[0], extraitCommune: c.papiers[1], extraitAnnee: c.papiers[2], extraitCle: c.cle });
+    if (c.nbPapiers === 3) Object.assign(maj, { pieceType: c.pieceType, extraitNumero: c.papiers[0], extraitCommune: c.papiers[1], extraitAnnee: c.papiers[2], extraitCle: c.cle });
     if (req.body.retirerExtrait === true) Object.assign(maj, { extraitNumero: null, extraitCommune: null, extraitAnnee: null, extraitCle: null });
     if (req.body.autreParentNom !== undefined) maj.autreParentNom = String(req.body.autreParentNom || '').trim() || null;
     // Relier maintenant l'autre parent (couple lié depuis)
@@ -1294,31 +1309,201 @@ router.post('/enfants-sans-compte/:id/annuler-fusion', async (req, res) => {
   }
 });
 
-// POST /api/parent-child/rejoindre-ma-fiche — l'enfant devenu grand retrouve la fiche créée par ses parents
+// POST /api/parent-child/rejoindre-ma-fiche — l'enfant devenu grand demande à récupérer
+// la fiche créée par ses parents. Rien n'est relié tant qu'un parent n'a pas confirmé.
 router.post('/rejoindre-ma-fiche', async (req, res) => {
   try {
     await ensureTableFiches();
     const user = req.user;
-    const cle = cleExtrait({ numero: req.body.extraitNumero, commune: req.body.extraitCommune, annee: req.body.extraitAnnee });
-    if (!cle) return res.status(400).json({ success: false, message: 'Remplissez le numéro, la commune et l\'année de votre extrait de naissance.' });
+    const pieceType = req.body.pieceType === 'hopital' ? 'hopital' : 'mairie';
+    const cle = clePiece({ type: pieceType, numero: req.body.extraitNumero, etablissement: req.body.extraitCommune, annee: req.body.extraitAnnee });
+    if (!cle) {
+      return res.status(400).json({ success: false, message: pieceType === 'hopital'
+        ? 'Remplissez le numéro, le nom de l\'hôpital et l\'année.'
+        : 'Remplissez le numéro, la commune et l\'année de votre extrait de naissance.' });
+    }
     if (!user.dateNaissance) return res.status(400).json({ success: false, message: 'Ajoutez d\'abord votre date de naissance dans votre profil.' });
     const fiche = await EnfantSansCompte.findOne({ where: { extraitCle: cle, isActive: true, fusionneAvec: null, estVivant: true } });
-    // Numéro + commune + année + date de naissance doivent tous correspondre
+    // Numéro + établissement + année + date de naissance doivent tous correspondre
     if (!fiche || !memeDate(fiche.dateNaissance, user.dateNaissance)) {
-      return res.status(404).json({ success: false, message: 'Aucune fiche ne correspond à cet extrait et à votre date de naissance. Vérifiez avec vos parents le numéro, la commune et l\'année.' });
+      return res.status(404).json({ success: false, message: 'Aucune fiche ne correspond à ce numéro et à votre date de naissance. Vérifiez avec vos parents le numéro, l\'établissement et l\'année.' });
     }
     if (await estParentDeLaFiche(user.numeroH, fiche)) {
-      return res.status(400).json({ success: false, message: 'Vous êtes parent de cette fiche : seul l\'enfant peut la rejoindre.' });
+      return res.status(400).json({ success: false, message: 'Vous êtes parent de cette fiche : seul l\'enfant peut la récupérer.' });
     }
     if (normaliserPrenom(fiche.prenom) !== normaliserPrenom(user.prenom) && req.body.confirmer !== true) {
       return res.status(409).json({ success: false, code: 'CONFIRMER_PRENOM', prenomFiche: fiche.prenom,
         message: `Vos parents vous ont enregistré(e) sous le prénom « ${fiche.prenom} ». Est-ce bien vous ?` });
     }
-    await fusionnerFiche(fiche, user.numeroH);
-    res.json({ success: true, message: 'Vous êtes maintenant relié(e) à vos parents : votre arbre est fusionné avec le leur.' });
+    if (fiche.demandeNumeroH && fiche.demandeNumeroH !== user.numeroH) {
+      return res.status(409).json({ success: false, message: 'Une autre demande est déjà en cours pour cette fiche. Vos parents doivent d\'abord y répondre.' });
+    }
+    await fiche.update({ demandeNumeroH: user.numeroH, demandeLe: new Date() });
+    const nom = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+    const aPrevenir = new Set([fiche.creePar, ...(await parentsDeLaFiche(fiche.numero)).map((l) => l.parentNumeroH)]);
+    for (const p of aPrevenir) {
+      try {
+        await Notification.createNotification({ recipientNumeroH: p, type: 'fiche_enfant', title: 'Votre enfant veut récupérer sa fiche',
+          message: `${nom} dit être ${fiche.prenom}, la fiche que vous avez créée. Confirmez-le dans « Mes enfants » si c'est bien votre enfant.`, relatedId: fiche.id });
+      } catch { /* */ }
+    }
+    res.json({ success: true, enAttente: true, message: 'Demande envoyée à vos parents. Dès que l\'un d\'eux confirme, votre compte sera relié à votre fiche et à votre famille.' });
   } catch (error) {
     console.error('Erreur rejoindre ma fiche:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/parent-child/enfants-sans-compte/demandes — demandes à confirmer (pour un parent)
+router.get('/enfants-sans-compte/demandes', async (req, res) => {
+  try {
+    await ensureTableFiches();
+    const moi = req.user.numeroH;
+    const liens = await ParentChildLink.findAll({ where: { parentNumeroH: moi, childNumeroH: { [Op.like]: 'ENF-%' }, isActive: true } });
+    const fiches = await EnfantSansCompte.findAll({
+      where: {
+        isActive: true, fusionneAvec: null, demandeNumeroH: { [Op.ne]: null },
+        [Op.or]: [{ creePar: moi }, { numero: { [Op.in]: liens.map((l) => l.childNumeroH) } }]
+      }
+    });
+    const demandeurs = await User.findAll({
+      where: { numeroH: { [Op.in]: fiches.map((f) => f.demandeNumeroH) } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'dateNaissance']
+    });
+    const parNumero = new Map(demandeurs.map((u) => [u.numeroH, u]));
+    res.json({
+      success: true,
+      demandes: fiches.map((f) => ({
+        ficheId: f.id, fichePrenom: f.prenom, fichePhoto: f.photo || null, demandeLe: f.demandeLe,
+        demandeur: parNumero.get(f.demandeNumeroH) || { numeroH: f.demandeNumeroH },
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur demandes de fiches:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/parent-child/enfants-sans-compte/:id/demande { decision: 'accepter' | 'refuser' }
+router.post('/enfants-sans-compte/:id/demande', async (req, res) => {
+  try {
+    const fiche = await ficheDuParent(req, res); if (!fiche) return;
+    if (!fiche.demandeNumeroH) return res.status(400).json({ success: false, message: 'Aucune demande en attente pour cette fiche.' });
+    const demandeur = fiche.demandeNumeroH;
+    if (req.body.decision === 'accepter') {
+      await fiche.update({ demandeNumeroH: null, demandeLe: null });
+      await fusionnerFiche(fiche, demandeur);
+      return res.json({ success: true, message: `${fiche.prenom} est maintenant relié(e) à son compte.` });
+    }
+    if (req.body.decision === 'refuser') {
+      await fiche.update({ demandeNumeroH: null, demandeLe: null });
+      try {
+        await Notification.createNotification({ recipientNumeroH: demandeur, type: 'general', title: 'Demande refusée',
+          message: `Les parents de la fiche « ${fiche.prenom} » ont indiqué que ce n'était pas vous.`, relatedId: fiche.id });
+      } catch { /* */ }
+      return res.json({ success: true, message: 'Demande refusée.' });
+    }
+    res.status(400).json({ success: false, message: 'Décision invalide.' });
+  } catch (error) {
+    console.error('Erreur décision demande de fiche:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ========== ADMIN : PLACER UNE PERSONNE DANS L'ARBRE ==========
+// L'administrateur peut ajouter quelqu'un à n'importe quelle place, sans limite :
+// il indique la personne déjà dans l'arbre et la position (son enfant, son père
+// ou sa mère). La personne placée a un compte (NuméroH) ou n'en a pas (fiche).
+
+const nomDe = (u) => [u?.prenom, u?.nomFamille].filter(Boolean).join(' ') || u?.numeroH || '';
+
+async function personneOuFiche(numeroH) {
+  const n = String(numeroH || '').trim();
+  if (!n) return null;
+  if (estFiche(n)) {
+    await ensureTableFiches();
+    const f = await EnfantSansCompte.findOne({ where: { numero: n, isActive: true } });
+    return f ? { numeroH: f.fusionneAvec || f.numero, prenom: f.prenom, nomFamille: f.nomFamille, genre: f.genre, compte: !!f.fusionneAvec } : null;
+  }
+  const u = await User.findByNumeroH(n);
+  return u ? { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, genre: u.genre, compte: true, user: u } : null;
+}
+
+async function relierParAdmin(parent, enfant) {
+  if (parent.numeroH === enfant.numeroH) throw Object.assign(new Error('Une personne ne peut pas être son propre parent.'), { status: 400 });
+  const role = typeParent(parent.genre);
+  const deja = await ParentChildLink.findOne({
+    where: { childNumeroH: enfant.numeroH, parentType: role, isActive: true, status: 'active', parentNumeroH: { [Op.ne]: parent.numeroH } }
+  });
+  if (deja) throw Object.assign(new Error(`${nomDe(enfant)} a déjà ${role === 'pere' ? 'un père' : 'une mère'} dans l'arbre. Retirez d'abord l'ancien lien.`), { status: 409 });
+  await lierParent(parent.numeroH, enfant.numeroH, role);
+  if (enfant.compte && !estFiche(enfant.numeroH)) {
+    try {
+      const pere = role === 'pere' ? parent.numeroH : undefined;
+      const mere = role === 'mere' ? parent.numeroH : undefined;
+      await addUserToFamilyTree(enfant.numeroH, pere, mere);
+    } catch (e) { console.error('placer → arbre:', e.message); }
+  }
+  for (const [dest, texte] of [
+    [parent.numeroH, `L'administrateur a ajouté ${nomDe(enfant)} comme votre enfant dans l'arbre.`],
+    [enfant.numeroH, `L'administrateur a ajouté ${nomDe(parent)} comme votre ${role === 'pere' ? 'père' : 'mère'} dans l'arbre.`],
+  ]) {
+    if (estFiche(dest)) continue;
+    try { await Notification.createNotification({ recipientNumeroH: dest, type: 'general', title: 'Arbre familial mis à jour', message: texte }); } catch { /* */ }
+  }
+}
+
+// POST /api/parent-child/admin/placer
+// { personneNumeroH, position: 'enfant' | 'parent', autreNumeroH }            → personne déjà sur Moftal
+// { personneNumeroH, position: 'enfant', sansCompte: { prenom, genre, ... } } → nouvel enfant sans compte
+router.post('/admin/placer', async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) return res.status(403).json({ success: false, message: 'Accès réservé aux administrateurs' });
+    const position = req.body.position;
+    if (!['enfant', 'parent'].includes(position)) return res.status(400).json({ success: false, message: 'Position invalide : choisissez « son enfant » ou « son père / sa mère ».' });
+    const personne = await personneOuFiche(req.body.personneNumeroH);
+    if (!personne) return res.status(404).json({ success: false, message: 'La personne déjà dans l\'arbre est introuvable (vérifiez son NuméroH).' });
+
+    if (req.body.sansCompte) {
+      if (position !== 'enfant') return res.status(400).json({ success: false, message: 'Une personne sans compte s\'ajoute comme enfant.' });
+      if (estFiche(personne.numeroH)) return res.status(400).json({ success: false, message: 'Le parent doit avoir un compte Moftal.' });
+      await ensureTableFiches();
+      const c = lireChampsEnfant(req.body.sansCompte, { creation: true });
+      if (c.erreurs.length) return res.status(400).json({ success: false, message: c.erreurs[0] });
+      if (c.cle && await EnfantSansCompte.findOne({ where: { extraitCle: c.cle, isActive: true } })) {
+        return res.status(409).json({ success: false, message: 'Un enfant est déjà enregistré avec ce numéro, dans cet établissement et cette année.' });
+      }
+      const photo = await enregistrerPhoto(req.body.sansCompte.photo);
+      const fiche = await EnfantSansCompte.create({
+        numero: nouveauNumeroFiche(),
+        prenom: c.prenom,
+        nomFamille: String(req.body.sansCompte.nomFamille || personne.nomFamille || '').trim() || null,
+        genre: c.genre,
+        estVivant: c.estVivant,
+        dateNaissance: c.dateNaissance,
+        dateDeces: c.estVivant ? null : c.dateDeces,
+        photo,
+        pieceType: c.cle ? c.pieceType : 'mairie',
+        extraitNumero: c.cle ? c.papiers[0] : null,
+        extraitCommune: c.cle ? c.papiers[1] : null,
+        extraitAnnee: c.cle ? c.papiers[2] : null,
+        extraitCle: c.cle,
+        creePar: personne.numeroH,
+      });
+      await relierParAdmin(personne, { numeroH: fiche.numero, prenom: fiche.prenom, nomFamille: fiche.nomFamille, genre: fiche.genre, compte: false });
+      return res.status(201).json({ success: true, message: `${fiche.prenom} a été ajouté(e) comme enfant de ${nomDe(personne)}.` });
+    }
+
+    const autre = await personneOuFiche(req.body.autreNumeroH);
+    if (!autre) return res.status(404).json({ success: false, message: 'La personne à placer est introuvable (vérifiez son NuméroH).' });
+    if (position === 'enfant') await relierParAdmin(personne, autre);
+    else await relierParAdmin(autre, personne);
+    res.json({ success: true, message: position === 'enfant'
+      ? `${nomDe(autre)} est maintenant l'enfant de ${nomDe(personne)}.`
+      : `${nomDe(autre)} est maintenant ${typeParent(autre.genre) === 'pere' ? 'le père' : 'la mère'} de ${nomDe(personne)}.` });
+  } catch (error) {
+    console.error('Erreur placement admin:', error);
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Erreur serveur' });
   }
 });
 

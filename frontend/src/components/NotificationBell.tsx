@@ -30,6 +30,7 @@ const TYPE_ICONS: Record<string, string> = {
   couple_request: "💑",
   tree_request: "🌳",
   parent_request: "👨‍👩‍👧",
+  fiche_enfant: "👶",
   email_error: "⚠️",
   general: "🔔"
 };
@@ -48,6 +49,7 @@ function getNavigationPath(type: string): string | null {
     case "couple_request": return "/couple";
     case "tree_request":
     case "parent_request": return "/famille/parents";
+    case "fiche_enfant": return "/famille/enfants";
     default: return null;
   }
 }

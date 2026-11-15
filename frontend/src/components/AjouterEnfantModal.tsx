@@ -21,6 +21,7 @@ export interface FicheEnfant {
   dateDeces?: string | null;
   photo?: string | null;
   quartierNaissance?: string | null;
+  pieceType?: "mairie" | "hopital" | null;
   extraitNumero?: string | null;
   extraitCommune?: string | null;
   extraitAnnee?: string | null;
@@ -60,6 +61,7 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
   const [photo, setPhoto] = useState<string | null>(null);
   const [apercu, setApercu] = useState<string | null>(fiche?.photo || null);
   const [quartier, setQuartier] = useState(fiche?.quartierNaissance || "");
+  const [pieceType, setPieceType] = useState<"mairie" | "hopital">(fiche?.pieceType === "hopital" ? "hopital" : "mairie");
   const [extraitNumero, setExtraitNumero] = useState(fiche?.extraitNumero || "");
   const [extraitCommune, setExtraitCommune] = useState(fiche?.extraitCommune || "");
   const [extraitAnnee, setExtraitAnnee] = useState(fiche?.extraitAnnee || "");
@@ -118,9 +120,17 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
     if (!modif && !autreChoix) return setErreur(estFemme ? tr("Indiquez le père de l'enfant.") : tr("Indiquez la mère de l'enfant."));
     if (autreChoix === "nom" && !autreNom.trim()) return setErreur(estFemme ? tr("Écrivez le nom du père.") : tr("Écrivez le nom de la mère."));
     const papiers = [extraitNumero, extraitCommune, extraitAnnee].filter((v) => v.trim()).length;
-    if (papiers > 0 && papiers < 3) return setErreur(tr("Pour l'extrait de naissance, remplissez les trois : numéro, commune et année."));
-    if (papiers === 3 && !/^\d{4}$/.test(extraitAnnee.trim())) return setErreur(tr("L'année de l'extrait doit avoir 4 chiffres (ex : 2015)."));
-    if (papiers === 3 && !dateNaissance) return setErreur(tr("Avec l'extrait de naissance, la date de naissance est obligatoire."));
+    // Enfant vivant (nouvelle fiche) : photo, date de naissance et numéro hôpital/mairie obligatoires
+    if (!modif && estVivant) {
+      if (!photo) return setErreur(tr("Ajoutez la photo de l'enfant."));
+      if (!dateNaissance) return setErreur(tr("La date de naissance est obligatoire."));
+      if (papiers < 3) return setErreur(tr("Le numéro de l'hôpital ou de la mairie est obligatoire : numéro, établissement et année."));
+    }
+    if (papiers > 0 && papiers < 3) return setErreur(pieceType === "hopital"
+      ? tr("Pour le numéro de l'hôpital, remplissez les trois : numéro, nom de l'hôpital et année.")
+      : tr("Pour l'extrait de la mairie, remplissez les trois : numéro, commune et année."));
+    if (papiers === 3 && !/^\d{4}$/.test(extraitAnnee.trim())) return setErreur(tr("L'année doit avoir 4 chiffres (ex : 2015)."));
+    if (papiers === 3 && !dateNaissance) return setErreur(tr("Avec le numéro de l'hôpital ou de la mairie, la date de naissance est obligatoire."));
 
     const corps: Record<string, unknown> = {
       prenom: prenom.trim(),
@@ -131,7 +141,7 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
       dateDeces: estVivant ? null : (dateDeces || null),
       quartierNaissance: quartier.trim() || null,
       ...(photo ? { photo } : {}),
-      ...(papiers === 3 ? { extraitNumero: extraitNumero.trim(), extraitCommune: extraitCommune.trim(), extraitAnnee: extraitAnnee.trim() } : {}),
+      ...(papiers === 3 ? { pieceType, extraitNumero: extraitNumero.trim(), extraitCommune: extraitCommune.trim(), extraitAnnee: extraitAnnee.trim() } : {}),
       ...(modif && papiers === 0 && fiche?.extraitNumero ? { retirerExtrait: true } : {}),
     };
     if (autreChoix === "nom") corps.autreParentNom = autreNom.trim();
@@ -184,7 +194,7 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
               <button type="button" onClick={() => inputPhoto.current?.click()} className="font-semibold text-emerald-700">
                 {apercu ? tr("Changer la photo") : tr("Ajouter une photo")}
               </button>
-              <div>{tr("(facultatif)")}</div>
+              <div>{estVivant === false ? tr("(facultatif)") : tr("(obligatoire)")}</div>
             </div>
             <input ref={inputPhoto} type="file" accept="image/*" className="hidden" onChange={choisirPhoto} />
           </div>
@@ -222,7 +232,7 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">{tr("Date de naissance")}</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">{estVivant === false ? tr("Date de naissance") : tr("Date de naissance *")}</label>
               <input type="date" className={champ} value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />
             </div>
             {estVivant === false && (
@@ -258,18 +268,26 @@ export default function AjouterEnfantModal({ user, fiche, onClose, onSaved }: Pr
 
           <div className="border border-slate-200 rounded-xl">
             <button type="button" onClick={() => setVoirExtrait((v) => !v)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-700">
-              <span>📄 {tr("Extrait de naissance")} <span className="font-normal text-slate-400">{tr("(facultatif)")}</span></span>
-              <span className="text-slate-400">{voirExtrait ? "▲" : "▼"}</span>
+              <span>📄 {tr("Numéro de l'hôpital ou de la mairie")} <span className="font-normal text-slate-400">{estVivant === false ? tr("(facultatif)") : tr("(obligatoire)")}</span></span>
+              <span className="text-slate-400">{voirExtrait || (!modif && estVivant) ? "▲" : "▼"}</span>
             </button>
-            {voirExtrait && (
+            {(voirExtrait || (!modif && estVivant)) && (
               <div className="px-3 pb-3 space-y-2">
                 <p className="text-xs text-slate-500">
-                  {tr("Permet à votre enfant, devenu grand, de retrouver cette fiche avec son propre compte. Le numéro n'est unique que dans une commune et une année : remplissez les trois. Seuls les parents voient ces informations.")}
+                  {tr("Permet à votre enfant, devenu grand, de récupérer cette fiche avec son propre compte. Le numéro n'est unique que dans un établissement et une année : remplissez les trois. Seuls les parents voient ces informations.")}
                 </p>
-                <input className={champ} value={extraitNumero} onChange={(e) => setExtraitNumero(e.target.value)} placeholder={tr("Numéro de l'extrait (ex : 125)")} />
-                <input className={champ} list="communes-extrait" value={extraitCommune} onChange={(e) => setExtraitCommune(e.target.value)} placeholder={tr("Commune de l'extrait (ex : Dabola)")} />
+                <div className="grid grid-cols-2 gap-2">
+                  {(["mairie", "hopital"] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => setPieceType(t)}
+                      className={`py-2 rounded-lg text-sm font-semibold border-2 ${pieceType === t ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600"}`}>
+                      {t === "mairie" ? tr("🏛️ Mairie (extrait)") : tr("🏥 Hôpital")}
+                    </button>
+                  ))}
+                </div>
+                <input className={champ} value={extraitNumero} onChange={(e) => setExtraitNumero(e.target.value)} placeholder={pieceType === "hopital" ? tr("Numéro donné par l'hôpital") : tr("Numéro de l'extrait (ex : 125)")} />
+                <input className={champ} list={pieceType === "mairie" ? "communes-extrait" : undefined} value={extraitCommune} onChange={(e) => setExtraitCommune(e.target.value)} placeholder={pieceType === "hopital" ? tr("Nom de l'hôpital (ex : Hôpital Donka)") : tr("Commune de l'extrait (ex : Dabola)")} />
                 <datalist id="communes-extrait">{communes.map((c) => <option key={c} value={c} />)}</datalist>
-                <input className={champ} inputMode="numeric" maxLength={4} value={extraitAnnee} onChange={(e) => setExtraitAnnee(e.target.value.replace(/\D/g, ""))} placeholder={tr("Année de l'extrait (ex : 2015)")} />
+                <input className={champ} inputMode="numeric" maxLength={4} value={extraitAnnee} onChange={(e) => setExtraitAnnee(e.target.value.replace(/\D/g, ""))} placeholder={tr("Année (ex : 2015)")} />
               </div>
             )}
           </div>

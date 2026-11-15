@@ -6,7 +6,7 @@ import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
-import type { ChefsArbre, DefuntDetail, DefuntServeur, InfosArbre, PersonneLiee } from '../../types/arbre'
+import type { ArbreConjoint, ChefsArbre, DefuntDetail, DefuntServeur, InfosArbre, PersonneLiee } from '../../types/arbre'
 import { marquerVu } from '../../utils/nouveautes'
 
 interface UserData {
@@ -642,30 +642,7 @@ const enhancedUser: UserData = useMemo(() => {
     <div className="max-w-6xl mx-auto px-4 pb-6 pt-1">
 
         {activeTab === 'arbre-conjoint' && partner && (
-          <>
-            <div className="flex items-center gap-3 mb-4">
-              {partner.photo && (
-                <img src={partner.photo} alt={partner.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-pink-400" />
-              )}
-              <h2 className="text-2xl font-bold">💑 Arbre de {partner.prenom} {partner.nomFamille}</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">Arbre généalogique de votre conjoint(e), avec votre lien.</p>
-            <ArbreGenealogique
-              userData={{
-                ...partner,
-                genre: partner.genre || 'AUTRE',
-                conjointPrenom: user?.prenom,
-                conjointNumeroH: user?.numeroH,
-                conjointNomFamille: user?.nomFamille,
-                conjointGenre: user?.genre,
-                conjointPhoto: user?.photo
-              }}
-              cercleCounts={cercleCounts}
-              onOpenGallery={openGallery}
-              treeHidden={[]}
-              onTreeHiddenChange={() => {}}
-            />
-          </>
+          <FamilleConjoint partner={partner} onRetour={() => setActiveTab('arbre')} />
         )}
 
         {activeTab === 'arbre' && (
@@ -1153,6 +1130,65 @@ const enhancedUser: UserData = useMemo(() => {
       })()}
 
       {/* ── MODAL APPEL WebRTC ─────────────────────────────────────────────── */}
+    </div>
+  )
+}
+
+/**
+ * Famille du conjoint : rien pendant la première année du couple (règle de la
+ * propriétaire), puis les membres de sa famille — en lecture seule. Seul le
+ * conjoint y a accès (le serveur refuse tout autre membre).
+ */
+function FamilleConjoint({ partner, onRetour }: { partner: PartnerInfo; onRetour: () => void }) {
+  const [etat, setEtat] = useState<{ chargement: boolean; data: ArbreConjoint | null; erreur: boolean }>({ chargement: true, data: null, erreur: false })
+  useEffect(() => {
+    let annule = false
+    const token = localStorage.getItem('token')
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/family-tree/spouse-tree/${encodeURIComponent(partner.numeroH)}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => { const d = await r.json().catch(() => null); if (!annule) setEtat({ chargement: false, data: r.ok ? d : null, erreur: !r.ok }) })
+      .catch(() => { if (!annule) setEtat({ chargement: false, data: null, erreur: true }) })
+    return () => { annule = true }
+  }, [partner.numeroH])
+
+  const membres = etat.data?.tree?.members || []
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <button type="button" onClick={onRetour} className="text-sm font-semibold text-emerald-700">← Mon arbre</button>
+      </div>
+      <div className="flex items-center gap-3 mb-4">
+        {partner.photo && <img src={partner.photo} alt={partner.prenom} className="w-12 h-12 rounded-full object-cover border-2 border-pink-400" />}
+        <h2 className="text-xl font-bold">💑 Famille de {partner.prenom} {partner.nomFamille}</h2>
+      </div>
+      {etat.chargement ? (
+        <p className="text-gray-500">Chargement…</p>
+      ) : etat.erreur || !etat.data ? (
+        <p className="text-red-600">Impossible de charger la famille de votre conjoint(e). Réessayez.</p>
+      ) : etat.data.accessLevel !== 'full' ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center">
+          <div className="text-4xl mb-2">🔒</div>
+          <p className="text-amber-900 font-semibold">
+            La famille de {partner.prenom} sera visible après un an de couple, dans {etat.data.daysUntilFullAccess} jour(s).
+          </p>
+          <p className="text-sm text-amber-800 mt-2">
+            En attendant, vous vous voyez l'un l'autre dans vos arbres, avec vos enfants. C'est une protection pour chaque famille.
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-gray-500 mb-4">{membres.length} membre(s) — consultation seulement.</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+            {membres.map((m) => (
+              <div key={m.numeroH} className="text-center">
+                {m.photo
+                  ? <img src={m.photo} alt="" className="w-16 h-16 mx-auto rounded-full object-cover border-2 border-emerald-200" />
+                  : <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl font-bold">{(m.prenom || '?').charAt(0)}</div>}
+                <p className="mt-1 text-xs font-semibold text-gray-800">{m.prenom} {m.nomFamille}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
