@@ -472,8 +472,8 @@ export default function CliniqueVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, maxWidth: 1000, margin: "0 auto" }} className="services-grid">
             {[
-              { icon: "📞", label: "Téléphone", val: clinic.phone || tr("Non renseigné") },
-              { icon: "✉️", label: "Email", val: clinic.email || tr("Non renseigné") },
+              { icon: "📞", label: "Téléphone", val: clinic.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: "Email", val: clinic.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: "Adresse", val: clinic.address || tr("Non renseignée"),
                 extra: clinic.address ? (
                   <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.address)}`} target="_blank" rel="noopener noreferrer"

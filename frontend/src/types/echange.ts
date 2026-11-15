@@ -26,6 +26,9 @@ export interface CommandeEchange {
   seller_numero_h: string;
   /** Nom du vendeur, repris de son compte */
   seller_nom?: string | null;
+  /** Contacts du vendeur : seulement quand la commande est acceptée (ou livrée) */
+  seller_phone?: string | null;
+  seller_email?: string | null;
   buyer_numero_h: string;
   buyer_nom?: string | null;
   buyer_telephone: string;

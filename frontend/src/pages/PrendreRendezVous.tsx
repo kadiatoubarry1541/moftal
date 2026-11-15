@@ -178,9 +178,12 @@ export default function PrendreRendezVous() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{tr("Rendez-vous envoyé !")}</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             {tr("Votre demande a été envoyée à")} <strong>{account.name}</strong>.
-            {tr("Vous recevrez une notification quand elle sera acceptée.")}
+            {tr("Vous recevrez une notification quand elle sera acceptée, avec les contacts du professionnel.")}
           </p>
-          <button onClick={() => navigate("/compte")} className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
+          <button onClick={() => navigate("/mes-rendez-vous")} className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors mb-2">
+            {tr("📅 Mes rendez-vous")}
+          </button>
+          <button onClick={() => navigate("/compte")} className="w-full min-h-[44px] px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors">
             {tr("Retour à mon espace")}
           </button>
         </div>

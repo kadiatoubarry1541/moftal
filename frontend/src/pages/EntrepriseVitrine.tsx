@@ -232,8 +232,8 @@ export default function EntrepriseVitrine() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
             {[
-              { icon: "📞", label: "Téléphone", val: ent.phone || tr("Non renseigné") },
-              { icon: "✉️", label: "Email", val: ent.email || tr("Non renseigné") },
+              { icon: "📞", label: "Téléphone", val: ent.phone || tr("Après rendez-vous accepté") },
+              { icon: "✉️", label: "Email", val: ent.email || tr("Après rendez-vous accepté") },
               { icon: "📍", label: "Adresse", val: ent.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
