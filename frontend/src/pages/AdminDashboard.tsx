@@ -74,12 +74,21 @@ interface ProduitEchangeAdmin {
   title: string;
   description?: string;
   category?: string;
+  subcategory?: string;
+  images?: string[];
   price?: number | string;
   currency?: string;
   location?: string;
   numeroH?: string;
   createdBy?: string;
 }
+
+const SECTEURS_ECHANGE_ADMIN = [
+  { id: "primaire", label: "Primaire", icone: "🌾" },
+  { id: "secondaire", label: "Secondaire", icone: "👗" },
+  { id: "tertiaire", label: "Tertiaire", icone: "🛋️" },
+  { id: "quaternaire", label: "Quaternaire", icone: "📱" },
+] as const;
 
 /** Narrateur des récits (Reci) */
 interface Narrateur {
@@ -205,6 +214,9 @@ export default function AdminDashboard() {
   const [publicationsLoading, setPublicationsLoading] = useState(false);
   const [exchangeProducts, setExchangeProducts] = useState<ProduitEchangeAdmin[]>([]);
   const [exchangeProductsLoading, setExchangeProductsLoading] = useState(false);
+  const [echangeFiltreSecteur, setEchangeFiltreSecteur] = useState<string>("tous");
+  const [echangeRecherche, setEchangeRecherche] = useState("");
+  const [echangeDeplacement, setEchangeDeplacement] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const API_BASE = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
@@ -414,6 +426,29 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erreur:", error);
       alert("Erreur de connexion.");
+    }
+  };
+
+  // Un vendeur s'est trompé de secteur : l'admin range la publication au bon endroit
+  const deplacerProduitEchange = async (productId: string, secteur: string) => {
+    setEchangeDeplacement(productId);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/exchange/products/${productId}/secteur`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ secteur }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setExchangeProducts(prev => prev.map(p => (p.id === productId ? { ...p, category: secteur } : p)));
+      } else {
+        alert(data.message || "Le changement de secteur n'a pas pu être enregistré.");
+      }
+    } catch {
+      alert("Erreur de connexion.");
+    } finally {
+      setEchangeDeplacement(null);
     }
   };
 
@@ -1608,39 +1643,97 @@ export default function AdminDashboard() {
                 <button onClick={loadExchangeProducts} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualiser</button>
               </div>
 
-              {exchangeProductsLoading ? (
-                <div className="text-center py-12 text-gray-500">Chargement des publications...</div>
-              ) : exchangeProducts.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">Aucune publication trouvée</div>
-              ) : (
-                <div className="space-y-3">
-                  {exchangeProducts.map((p) => (
-                    <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="min-w-[200px] flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-900">{p.title}</span>
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-cyan-100 text-cyan-700 capitalize">{p.category}</span>
+              {/* Trier par secteur + rechercher par nom */}
+              <div className="flex gap-2 flex-wrap">
+                {[{ id: "tous", label: "Tous", icone: "🔄" }, ...SECTEURS_ECHANGE_ADMIN].map(sec => {
+                  const n = sec.id === "tous" ? exchangeProducts.length : exchangeProducts.filter(p => p.category === sec.id).length;
+                  const actif = echangeFiltreSecteur === sec.id;
+                  return (
+                    <button
+                      key={sec.id}
+                      type="button"
+                      onClick={() => setEchangeFiltreSecteur(sec.id)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${actif ? "bg-cyan-600 text-white border-cyan-600" : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"}`}
+                    >
+                      {sec.icone} {sec.label} ({n})
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="search"
+                value={echangeRecherche}
+                onChange={e => setEchangeRecherche(e.target.value)}
+                placeholder="Rechercher un produit (riz, fonio, valise…)"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-200"
+              />
+
+              {(() => {
+                const q = echangeRecherche.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const liste = exchangeProducts.filter(p =>
+                  (echangeFiltreSecteur === "tous" || p.category === echangeFiltreSecteur) &&
+                  (!q || [p.title, p.subcategory, p.description].join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(q))
+                );
+                if (exchangeProductsLoading) return <div className="text-center py-12 text-gray-500">Chargement des publications...</div>;
+                if (liste.length === 0) return <div className="text-center py-12 text-gray-500">Aucune publication trouvée</div>;
+                return (
+                  <div className="space-y-3">
+                    {liste.map((p) => {
+                      const image = p.images?.[0];
+                      const imageUrl = image ? (/^(https?:|data:)/.test(image) ? image : `${API_BASE}${image.startsWith("/") ? "" : "/"}${image}`) : null;
+                      return (
+                        <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start gap-3">
+                            <div className="w-16 h-16 shrink-0 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center text-2xl">
+                              {imageUrl ? <img src={imageUrl} alt="" className="w-full h-full object-cover" /> : "📦"}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-900">{p.title}</span>
+                                {p.subcategory && <span className="text-xs text-gray-500">{p.subcategory}</span>}
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1 line-clamp-2">{p.description}</div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {p.numeroH || p.createdBy}{p.location ? ` · ${p.location}` : ""}
+                              </div>
+                              <div className="text-sm font-semibold text-emerald-700 mt-1">
+                                {Number(p.price || 0).toLocaleString()} {p.currency}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600 mt-1 line-clamp-2">{p.description}</div>
-                          <div className="text-xs text-gray-400 mt-2">
-                            {p.numeroH || p.createdBy} · {p.location}
+                          <div className="flex items-center gap-2 flex-wrap mt-3">
+                            <label className="text-xs font-semibold text-gray-600" htmlFor={`secteur-${p.id}`}>Secteur :</label>
+                            <select
+                              id={`secteur-${p.id}`}
+                              value={p.category || ""}
+                              disabled={echangeDeplacement === p.id}
+                              onChange={e => {
+                                const nouveau = e.target.value;
+                                if (nouveau && nouveau !== p.category) void deplacerProduitEchange(p.id, nouveau);
+                              }}
+                              className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white disabled:opacity-50"
+                            >
+                              {!SECTEURS_ECHANGE_ADMIN.some(sec => sec.id === p.category) && (
+                                <option value={p.category || ""}>{p.category || "—"}</option>
+                              )}
+                              {SECTEURS_ECHANGE_ADMIN.map(sec => (
+                                <option key={sec.id} value={sec.id}>{sec.icone} {sec.label}</option>
+                              ))}
+                            </select>
+                            {echangeDeplacement === p.id && <span className="text-xs text-gray-500">Enregistrement…</span>}
+                            <button
+                              onClick={() => deleteExchangeProduct(p.id)}
+                              className="ml-auto px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
+                            >
+                              🗑️ Supprimer
+                            </button>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold text-emerald-700 whitespace-nowrap">
-                          {Number(p.price || 0).toLocaleString()} {p.currency}
-                        </span>
-                        <button
-                          onClick={() => deleteExchangeProduct(p.id)}
-                          className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
-                        >
-                          🗑️ Supprimer
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
