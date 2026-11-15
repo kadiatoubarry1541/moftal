@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import RecadrerPhoto from "./RecadrerPhoto";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { getAllLocationsForGroups, getAllCountries, getRegionsByCountry } from "../utils/worldGeography";
@@ -47,7 +48,6 @@ interface UserData {
   vitrinePhoto1?: string;
   vitrinePhoto2?: string;
   vitrineVideo?: string;
-  video?: string;
   /** Langues parlées, séparées par « ; » */
   languesAutre?: string;
   [key: string]: unknown;
@@ -166,14 +166,12 @@ export default function EditProfileModal({
     }
   };
 
+  // Photo choisie → d'abord le recadrage dans le cercle, puis l'aperçu
+  const [photoARecadrer, setPhotoARecadrer] = useState<File | null>(null);
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-      setPhotoCassee(false);
-    }
+    e.target.value = "";
+    if (file) setPhotoARecadrer(file);
   };
 
   const handleVitrinePhotoChange = (slot: 1 | 2) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -561,6 +559,18 @@ export default function EditProfileModal({
               >
                 📷 Choisir une photo
               </button>
+              {photoARecadrer && (
+                <RecadrerPhoto
+                  fichier={photoARecadrer}
+                  onAnnuler={() => setPhotoARecadrer(null)}
+                  onValider={(fichier, apercu) => {
+                    setPhotoFile(fichier);
+                    setPhotoPreview(apercu);
+                    setPhotoCassee(false);
+                    setPhotoARecadrer(null);
+                  }}
+                />
+              )}
             </div>
             {photoCassee && !photoFile && (
               <p className="text-sm text-gray-600 text-center">Ajoutez votre photo de profil.</p>
