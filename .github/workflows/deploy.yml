@@ -154,3 +154,23 @@ jobs:
         run: npx wrangler@3 deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # Serveur Oracle (deploiement/oracle/GUIDE.md, étape 9) : mis à jour seulement
+      # après toutes les vérifications. Sans les secrets ORACLE_*, cette étape ne fait rien.
+      - name: Mettre à jour le serveur Oracle
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER }}
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          ORACLE_DOSSIER: ${{ secrets.ORACLE_DOSSIER }}
+        run: |
+          if [ -z "$ORACLE_HOST" ] || [ -z "$ORACLE_SSH_KEY" ]; then
+            echo "Serveur Oracle pas encore configuré : rien à faire."
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$ORACLE_SSH_KEY" > ~/.ssh/oracle
+          chmod 600 ~/.ssh/oracle
+          ssh-keyscan -H "$ORACLE_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/oracle "${ORACLE_USER:-ubuntu}@$ORACLE_HOST" \
+            "cd '${ORACLE_DOSSIER:-/home/ubuntu/moftal/deploiement/oracle}' && sudo bash mettre-a-jour.sh"
