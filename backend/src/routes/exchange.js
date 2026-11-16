@@ -15,6 +15,7 @@ import { uploadToIDrive } from '../services/idriveStorage.js';
 import { notifierUtilisateur } from '../utils/notificationsEtablissement.js';
 import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
 import { contactsDe } from '../utils/contactsPro.js';
+import { refusContact } from '../utils/filtreContacts.js';
 
 preparerPageAdmin(sequelize);
 
@@ -324,6 +325,11 @@ router.get('/tertiaire/products', async (req, res) => {
 router.post('/primaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    {
+      // Ni numéro ni e-mail dans un produit : l'acheteur les reçoit quand la commande est acceptée
+      const refus = refusContact(title, description);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
     if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);
@@ -389,6 +395,11 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
 router.post('/secondaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    {
+      // Ni numéro ni e-mail dans un produit : l'acheteur les reçoit quand la commande est acceptée
+      const refus = refusContact(title, description);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
     if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
 
     const user = req.user;
@@ -445,6 +456,11 @@ router.post('/secondaire/products', upload.any(), async (req, res) => {
 router.post('/tertiaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    {
+      // Ni numéro ni e-mail dans un produit : l'acheteur les reçoit quand la commande est acceptée
+      const refus = refusContact(title, description);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
     if (!String(title || '').trim()) return res.status(400).json({ success: false, message: 'Le nom du produit est obligatoire.' });
 
     const user = req.user;
@@ -527,6 +543,11 @@ router.get('/quaternaire/products', async (req, res) => {
 router.post('/quaternaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    {
+      // Ni numéro ni e-mail dans un produit : l'acheteur les reçoit quand la commande est acceptée
+      const refus = refusContact(title, description);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
 
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);
@@ -608,6 +629,11 @@ router.get('/nourriture/products', async (req, res) => {
 router.post('/nourriture/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
+    {
+      // Ni numéro ni e-mail dans un produit : l'acheteur les reçoit quand la commande est acceptée
+      const refus = refusContact(title, description);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
 
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);

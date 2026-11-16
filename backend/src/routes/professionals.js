@@ -1,5 +1,6 @@
 import express from 'express';
-import { sansContacts } from '../utils/contactsPro.js';
+import { sansContacts, estUrgence } from '../utils/contactsPro.js';
+import { refusContact } from '../utils/filtreContacts.js';
 import { sansPosition, quartierCorrespond, coordonneesValides } from '../utils/positionPro.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { Op } from 'sequelize';
@@ -214,6 +215,9 @@ router.get('/verifier-nom', authenticate, async (req, res) => {
 router.post('/register', authenticate, async (req, res) => {
   try {
     const { type, subSector, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument, planType } = req.body;
+    // Ni numéro ni e-mail dans les textes publics (règle 5 ; sauf urgences)
+    const refusInscription = estUrgence(type) ? null : refusContact(name, description, services, specialties);
+    if (refusInscription) return res.status(400).json({ success: false, message: refusInscription });
 
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
@@ -838,6 +842,9 @@ router.put('/:id', authenticate, async (req, res) => {
     if (account.ownerNumeroH !== req.userId) console.log(`✏️ Profil du compte ${account.id} modifié par l'admin ${req.userId}`);
 
   const { name, description, address, city, country, phone, email, services, specialties, photo, billingInfo } = req.body;
+    // Ni numéro ni e-mail dans les textes publics (règle 5 ; sauf urgences)
+    const refusProfil = estUrgence(account.type) ? null : refusContact(name, description, services, specialties);
+    if (refusProfil) return res.status(400).json({ success: false, message: refusProfil });
     if (name && name.trim().toLowerCase() !== String(account.name || '').toLowerCase()) {
       const proprietaire = await findUserFollowingAlias(account.ownerNumeroH);
       const refusReserve = refusNomReserve(name, proprietaire);

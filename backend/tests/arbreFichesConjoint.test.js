@@ -21,6 +21,7 @@ test('arbre : fiches, confirmation parentale, un an de couple, admin', { skip: !
   });
   const { default: pcRouter } = await import('../src/routes/parentChild.js');
   const { default: ftRouter } = await import('../src/routes/familyTree.js');
+  const { default: coupleRouter } = await import('../src/routes/couple.js');
   const { default: User } = await import('../src/models/User.js');
   const { default: ParentChildLink } = await import('../src/models/ParentChildLink.js');
   const { default: CoupleLink } = await import('../src/models/CoupleLink.js');
@@ -41,7 +42,7 @@ test('arbre : fiches, confirmation parentale, un an de couple, admin', { skip: !
   }
 
   const app = express(); app.use(express.json({ limit: '5mb' }));
-  app.use('/api/parent-child', pcRouter); app.use('/api/family-tree', ftRouter);
+  app.use('/api/parent-child', pcRouter); app.use('/api/family-tree', ftRouter); app.use('/api/couple', coupleRouter);
   const serveur = app.listen(0);
   t.after(async () => {
     serveur.close();
@@ -119,6 +120,16 @@ test('arbre : fiches, confirmation parentale, un an de couple, admin', { skip: !
 
   moi = grand; // un autre membre de la famille : jamais
   assert.equal((await appel('GET', `/family-tree/spouse-tree/${maman.numeroH}`)).status, 403);
+
+  // Mais toute la famille voit la case du conjoint (photo, nom) dans l'arbre
+  r = await appel('GET', `/couple/conjoints-de?numeros=${encodeURIComponent(papa.numeroH)}`);
+  assert.equal(r.status, 200, r.d.message);
+  assert.deepEqual(r.d.conjoints[papa.numeroH].map((c) => c.numeroH), [maman.numeroH]);
+  assert.equal(r.d.conjoints[papa.numeroH][0].tel1, undefined, 'pas de téléphone');
+  moi = neveu; // pas (encore) de la famille : rien
+  r = await appel('GET', `/couple/conjoints-de?numeros=${encodeURIComponent(papa.numeroH)}`);
+  assert.deepEqual(r.d.conjoints, {});
+  moi = grand;
 
   // ── 4. Admin : placer une personne à n'importe quelle place
   moi = neveu;
