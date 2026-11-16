@@ -135,7 +135,7 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
     const displayNumero = isMine ? myNumeroH : (msg.numeroH || '')
     const initials = displayName ? displayName.substring(0, 2).toUpperCase() : '?'
     const bgColor = msg.category === 'opportunite' ? 'bg-amber-500' : 'bg-green-500'
-    const avatarBg = msg.category === 'opportunite' ? 'bg-amber-500' : 'bg-indigo-600'
+    const avatarBg = msg.category === 'opportunite' ? 'bg-amber-500' : 'bg-gray-900'
 
     return (
       <div key={msg.id} className={`mb-4 flex ${isMine ? 'justify-end' : 'justify-start'} items-end`}>
@@ -164,7 +164,7 @@ export function ActivityGroupChat({ group, myNumeroH, userData }: { group: Activ
             <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
           )}
           {msg.messageType === 'audio' && msg.mediaUrl && (
-            <div className="mb-1"><LecteurVocal src={/^(https?:|data:|blob:)/.test(msg.mediaUrl) ? msg.mediaUrl : `${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} couleur="#2563eb" moi={isMine} /></div>
+            <div className="mb-1"><LecteurVocal src={/^(https?:|data:|blob:)/.test(msg.mediaUrl) ? msg.mediaUrl : `${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} couleur="#1a8f1a" moi={isMine} /></div>
           )}
         </div>
         {isMine && (

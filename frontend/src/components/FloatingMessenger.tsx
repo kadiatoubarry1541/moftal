@@ -591,7 +591,7 @@ export function FloatingMessenger() {
       <button
         aria-label="Ouvrir la messagerie"
         onClick={openPicker}
-        className="floating-messenger-btn fixed z-50 rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform min-w-[56px] min-h-[56px] w-14 h-14 flex items-center justify-center text-2xl"
+        className="floating-messenger-btn fixed z-50 rounded-full bg-gradient-to-r from-[#22a722] to-[#1a8f1a] text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform min-w-[56px] min-h-[56px] w-14 h-14 flex items-center justify-center text-2xl"
         style={{ right: 'max(1rem, env(safe-area-inset-right, 0px))' }}
       >
         💬
@@ -693,7 +693,7 @@ export function FloatingMessenger() {
       {chat && userData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4" onClick={fermerMessagerie}>
           <div className="bg-white rounded-none sm:rounded-lg w-full h-full sm:h-auto sm:max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-violet-600 px-4 py-3 flex items-center justify-between">
+            <div className="bg-[#1a8f1a] px-4 py-3 flex items-center justify-between">
               <h3 className="text-white font-bold text-base">💬 {chat.label}</h3>
               <button onClick={fermerMessagerie} aria-label="Fermer la discussion" className="text-white/80 hover:text-white text-xl leading-none">✕</button>
             </div>

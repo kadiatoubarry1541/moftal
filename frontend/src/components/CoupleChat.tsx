@@ -167,7 +167,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
         <div className="flex gap-1.5 overflow-x-auto px-3 py-2 bg-white border-b border-gray-100 flex-shrink-0">
           <button
             onClick={() => setFeedFilter('all')}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
           >
             💬 Tout
           </button>
@@ -175,7 +175,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
             <button
               key={cat.id}
               onClick={() => setFeedFilter(cat.id)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === cat.id ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === cat.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
             >
               {cat.icon} {cat.label}
             </button>
@@ -186,7 +186,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
       <div className="flex-1 bg-gray-100 px-3 py-3 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="h-8 w-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+            <div className="h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -204,7 +204,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
                 const createdAt = msg.createdAt || msg.created_at || new Date().toISOString()
                 return (
                   <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs sm:max-w-md px-3 py-2 rounded-2xl shadow-sm ${isMe ? 'bg-rose-500 text-white rounded-br-sm' : 'bg-white text-gray-900 rounded-bl-sm'}`}>
+                    <div className={`max-w-xs sm:max-w-md px-3 py-2 rounded-2xl shadow-sm ${isMe ? 'bg-green-500 text-white rounded-br-sm' : 'bg-white text-gray-900 rounded-bl-sm'}`}>
                       {(msg.messageType === 'text' || !msg.messageType) && (
                         <p className="text-sm whitespace-pre-line">
                           {msg.category && msg.category !== 'information' && (
@@ -220,9 +220,9 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
                         <video src={toMediaUrl(msg.mediaUrl)} controls className="mt-1 rounded-lg max-h-60 w-full" />
                       )}
                       {msg.mediaUrl && msg.messageType === 'audio' && (
-                        <div className="mt-1"><LecteurVocal src={toMediaUrl(msg.mediaUrl)} couleur="#e11d48" moi={isMe} /></div>
+                        <div className="mt-1"><LecteurVocal src={toMediaUrl(msg.mediaUrl)} couleur="#1a8f1a" moi={isMe} /></div>
                       )}
-                      <p className={`text-[10px] mt-1 ${isMe ? 'text-rose-100' : 'text-gray-500'}`}>
+                      <p className={`text-[10px] mt-1 ${isMe ? 'text-green-100' : 'text-gray-500'}`}>
                         {new Date(createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -255,7 +255,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
               type="button"
               onClick={() => setShowCategoryGrid(v => !v)}
               title="Choisir le type d'information"
-              className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-rose-100' : 'hover:bg-gray-100'}`}
+              className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-100'}`}
             >
               <span className="text-base leading-none">{COUPLE_CATEGORIES.find(c => c.id === category)?.icon}</span>
             </button>
@@ -265,7 +265,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
               placeholder={`Écrivez à ${partnerLabel}...`}
-              className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white text-sm"
+              className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
             />
             {showCategoryGrid && (
               <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-4 gap-1 w-56">
@@ -274,7 +274,7 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
                     key={cat.id}
                     type="button"
                     onClick={() => { setCategory(cat.id); setShowCategoryGrid(false) }}
-                    className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${category === cat.id ? 'bg-rose-100' : 'hover:bg-gray-100'}`}
+                    className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${category === cat.id ? 'bg-green-100' : 'hover:bg-gray-100'}`}
                     title={cat.label}
                   >
                     <span className="text-lg leading-none">{cat.icon}</span>
@@ -285,14 +285,14 @@ export function CoupleChat({ linkId, myNumeroH, partnerLabel }: Props) {
           </div>
 
           {/* Micro : touche → enregistre, ➤ envoie (30 s max) */}
-          <MicroVocal onEnvoyer={sendMediaMessage} desactive={isSending} couleur="#e11d48" />
+          <MicroVocal onEnvoyer={sendMediaMessage} desactive={isSending} couleur="#1a8f1a" />
 
           {newMessage.trim() && (
             <button
               type="button"
               onClick={sendMessage}
               disabled={isSending}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-rose-600 hover:bg-rose-700 transition-colors"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-green-600 hover:bg-green-700 transition-colors"
             >
               ➤
             </button>
