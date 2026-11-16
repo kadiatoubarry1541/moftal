@@ -989,7 +989,7 @@ function App() {
       {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
           Compact, chaque information sur sa propre ligne. Le bouton "Guide IA"
           vit ici, dans le footer — il ne flotte plus sur le reste du site. */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-0.5" style={{ paddingBottom: 'max(0.1rem, env(safe-area-inset-bottom, 0px))' }}>
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-[11px]" style={{ paddingBottom: 'max(0.1rem, env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto px-6 text-center space-y-0">
           <p className="text-gray-300 text-[9px] leading-tight">
             <span style={{ color: "#22a722" }} className="font-bold inline-flex items-center gap-[3px] align-middle">
@@ -1002,7 +1002,7 @@ function App() {
             <br />
             {t('footer.system')}
           </p>
-          <p className="leading-tight">
+          <p className="text-[9px] leading-tight mt-0.5">
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
               Contact : support@moftal.com
             </a>
@@ -1011,7 +1011,7 @@ function App() {
               Tél : +224 625 32 60 37
             </a>
           </p>
-          <div className="relative flex justify-center">
+          <div className="relative flex justify-center text-[9px] leading-tight">
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
