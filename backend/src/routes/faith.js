@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import FaithContent from '../models/FaithContent.js';
 import FaithCommunity from '../models/FaithCommunity.js';
 import HolyBook from '../models/HolyBook.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
 
@@ -342,8 +342,8 @@ const preparerLivres = () => (colonnesLivres ||= HolyBook.sequelize.query(`
   ALTER TABLE holy_books ADD COLUMN IF NOT EXISTS pdf_url TEXT;
 `).catch((e) => { colonnesLivres = null; throw e; }));
 
-// @route   POST /api/faith/books — publier un livre ou un PDF (au nom de la personne connectée)
-router.post('/books', upload.single('pdf'), async (req, res) => {
+// @route   POST /api/faith/books — publier un livre ou un PDF : administrateur seulement
+router.post('/books', requireAdmin, upload.single('pdf'), async (req, res) => {
   try {
     await preparerLivres();
     const titre = String(req.body?.title || '').trim().slice(0, 255);

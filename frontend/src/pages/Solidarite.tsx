@@ -71,9 +71,20 @@ interface HolyBook {
   pdfUrl?: string;
 }
 
+/** Livres révélés aux prophètes reconnus par l'islam : noms seulement. */
+const LIVRES_REVELES = [
+  { nom: 'Le Saint Coran', prophete: 'Révélé au Prophète Muhammad (ﷺ)' },
+  { nom: 'La Torah (Tawrat)', prophete: 'Révélée au Prophète Moïse (Moussa)' },
+  { nom: 'Les Psaumes (Zabour)', prophete: 'Révélés au Prophète David (Daoud)' },
+  { nom: "L'Évangile (Injil)", prophete: 'Révélé au Prophète Jésus (Issa)' },
+  { nom: "Les Feuillets d'Abraham (Souhouf Ibrahim)", prophete: 'Révélés au Prophète Abraham (Ibrahim)' },
+]
+
 export default function Solidarite() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
+  // Seul l'administrateur publie un livre (le serveur le refuse aux autres)
+  const estAdmin = !!userData && isAdmin(userData);
   const [activeTab, setActiveTab] = useState<'dons' | 'zaka' | 'livres' | 'ong'>('dons');
   const [donsSubTab, setDonsSubTab] = useState<'pauvres' | 'mes-dons'>('pauvres');
   const [rawPoorPeople, setRawPoorPeople] = useState<PoorPerson[]>([]);
@@ -656,18 +667,18 @@ export default function Solidarite() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
                 <h2 className="text-2xl font-bold text-gray-900">📖 {t('solidarite.tab_livres')}</h2>
-                <button
+                {estAdmin && <button
                   onClick={() => setShowAddBookForm(!showAddBookForm)}
                   className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg text-sm transition-colors"
                 >
                   {showAddBookForm ? '✕ Annuler' : '➕ Publier un livre / PDF'}
-                </button>
+                </button>}
               </div>
 
               <ErreurChargement visible={erreurLivres} onRetry={loadHolyBooks} />
 
               {/* Formulaire ajout livre / PDF */}
-              {showAddBookForm && (
+              {estAdmin && showAddBookForm && (
                 <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-5 space-y-3">
                   <h3 className="font-semibold text-yellow-900 text-base">Publier un livre ou un PDF</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -728,6 +739,24 @@ export default function Solidarite() {
                 </div>
               )}
 
+              {/* Livres révélés aux prophètes : les noms seulement, sans texte ni lien */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Les Livres révélés aux prophètes</h3>
+                <p className="text-sm text-gray-600 mb-3">Les Livres que Dieu Unique a fait descendre sur Ses prophètes.</p>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {LIVRES_REVELES.map((l) => (
+                    <li key={l.nom} className="flex items-start gap-3 border border-amber-200 bg-amber-50 rounded-xl p-4">
+                      <span className="text-2xl leading-none" aria-hidden="true">📖</span>
+                      <div>
+                        <p className="font-semibold text-gray-900">{l.nom}</p>
+                        <p className="text-sm text-gray-600">{l.prophete}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-500 mt-3">La Bible réunit la Torah, les Psaumes et les Évangiles.</p>
+              </div>
+
               <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <p className="text-sm text-blue-800">
                   <strong>💡 Réfléchissons ensemble :</strong> Prenez le temps de méditer sur les passages qui vous marquent dans chaque livre sacré. La réflexion nous aide à mieux comprendre et à grandir spirituellement.
@@ -782,12 +811,6 @@ export default function Solidarite() {
                     </div>
                   </div>
                 ))}
-                {holyBooks.length === 0 && (
-                  <div className="col-span-full text-center py-10 text-gray-500">
-                    <div className="text-5xl mb-3">📖</div>
-                    <p>Aucun livre disponible. Soyez le premier à publier un livre sacré.</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
