@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import AdminPositionsAVerifier from "../components/AdminPositionsAVerifier";
 import { useNavigate } from "react-router-dom";
 import { AdminPanel } from "../components/AdminPanel";
 import { AdminCompteFamille } from "../components/AdminCompteFamille";
@@ -1214,6 +1215,7 @@ export default function AdminDashboard() {
           {/* ========== PROFESSIONNELS ========== */}
           {adminSection === "pros" && (
             <div className="space-y-4">
+              <AdminPositionsAVerifier />
 
               {/* L'admin crée le compte d'un établissement, même à distance : le pro
                   reçoit le lien de son application, se connecte et installe */}

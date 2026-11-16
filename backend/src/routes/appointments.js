@@ -7,6 +7,7 @@ import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { sendAppointmentAcceptedEmail, sendAppointmentRejectedEmail } from '../services/emailService.js';
 import { contactsDe } from '../utils/contactsPro.js';
+import { positionDe } from '../utils/positionPro.js';
 
 const router = express.Router();
 
@@ -77,11 +78,15 @@ router.get('/my-appointments', authenticate, async (req, res) => {
       if (!pro) return { ...apt.toJSON(), professional: null };
       // Contacts du pro : seulement pour un rendez-vous accepté
       const contacts = apt.status === 'accepted' ? contactsDe(pro) : null;
+      // Le point exact de l'établissement : seulement pour un rendez-vous accepté
+      const position = apt.status === 'accepted' ? positionDe(pro) : null;
       return {
         ...apt.toJSON(),
         professional: {
           id: pro.id, name: pro.name, type: pro.type, photo: pro.photo || null,
-          ...(contacts ? { phone: contacts.phone, email: contacts.email, address: pro.address || null, city: pro.city || null } : {}),
+          ...(contacts ? { phone: contacts.phone, email: contacts.email } : {}),
+          ...(apt.status === 'accepted' ? { address: pro.address || null, city: pro.city || null } : {}),
+          ...(position ? { position } : {}),
         },
       };
     }));

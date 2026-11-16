@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LogoEtablissement from "../components/LogoEtablissement";
+import LieuRendezVous, { type PositionPro } from "../components/LieuRendezVous";
 import { useTraduction } from "../i18n/traduction";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
@@ -28,6 +29,8 @@ interface RendezVous {
     email?: string | null;
     address?: string | null;
     city?: string | null;
+    /** Point exact, repère et photo de façade : seulement pour un rendez-vous accepté */
+    position?: PositionPro | null;
   } | null;
 }
 
@@ -45,6 +48,7 @@ export default function MesRendezVous() {
   const [liste, setListe] = useState<RendezVous[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
+  const [lieuOuvert, setLieuOuvert] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -133,6 +137,18 @@ export default function MesRendezVous() {
                           </a>
                         )}
                       </div>
+                    </div>
+                  )}
+                  {accepte && pro?.position && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setLieuOuvert(lieuOuvert === rdv.id ? null : rdv.id)}
+                        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
+                      >
+                        {lieuOuvert === rdv.id ? tr("Fermer la carte") : tr("📍 Voir le lieu du rendez-vous")}
+                      </button>
+                      {lieuOuvert === rdv.id && <LieuRendezVous nom={pro.name} position={pro.position} />}
                     </div>
                   )}
                   {rdv.status === "pending" && (
