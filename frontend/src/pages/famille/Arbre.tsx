@@ -639,7 +639,7 @@ const enhancedUser: UserData = useMemo(() => {
   }, [sharedItems])
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pb-6 pt-1">
+    <div className="max-w-6xl mx-auto px-4 pb-6 pt-2">
 
         {activeTab === 'arbre-conjoint' && partner && (
           <FamilleConjoint partner={partner} onRetour={() => setActiveTab('arbre')} />
@@ -753,7 +753,7 @@ const enhancedUser: UserData = useMemo(() => {
 
             {/* ─── Filtre vivants / décédés ─── */}
             {treeInfo && (
-              <div className="mb-4">
+              <div>
                 {/* Le choix Vivants / Décédés / Tous est dans le menu du bouton Zoom de l'arbre */}
                 {/* Les vivants sont dans l'arbre lui-même (une case par personne) : plus de
                     liste de cartes en double au-dessus. « Signaler décès » est dans la fiche
