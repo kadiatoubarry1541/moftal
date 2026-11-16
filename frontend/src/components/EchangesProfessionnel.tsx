@@ -195,7 +195,7 @@ export function EchangesProfessionnel() {
             </button>
             <div>
               <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 {t('nav.echanges')}</h1>
-              <p style={{ color: '#94a3b8', fontSize: 6, margin: 0, lineHeight: 1 }}>{t('echange.subtitle_scroll')}</p>
+              <p style={{ color: '#e2e8f0', fontSize: 10, fontWeight: 600, margin: '3px 0 0', lineHeight: 1.2 }}>{t('echange.subtitle_scroll')}</p>
             </div>
           </div>
           {canPublish ? (
