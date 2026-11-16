@@ -13,6 +13,8 @@ import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { Op } from 'sequelize';
+import { estDeLaFamille } from '../services/enfantsSansCompte.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -376,6 +378,38 @@ router.delete('/leave', async (req, res) => {
  * GET /api/couple/my-partner
  * Femme → son mari unique | Homme → rétrocompat (retourne sa 1ère épouse)
  */
+// GET /api/couple/conjoints-de?numeros=A,B,C — conjoint(e)s des membres de MA famille
+// (enfants, frères et sœurs…) pour les montrer dans mon arbre : photo, prénom, nom,
+// NuméroH seulement. Jamais leur famille à eux (règle du couple : seul le conjoint,
+// après un an, peut ouvrir l'autre famille).
+router.get('/conjoints-de', async (req, res) => {
+  try {
+    const moi = req.user.numeroH;
+    const numeros = [...new Set(String(req.query.numeros || '').split(',').map((n) => n.trim()).filter(Boolean))].slice(0, 40);
+    const resultat = {};
+    for (const n of numeros) {
+      if (n === moi || !(await estDeLaFamille(moi, n))) continue;
+      const liens = await CoupleLink.findAll({
+        where: {
+          [Op.or]: [{ husbandNumeroH: n }, { wifeNumeroH: n }],
+          status: 'active', isActive: true, isArchived: false
+        }
+      });
+      const autres = liens.map((l) => (l.husbandNumeroH === n ? l.wifeNumeroH : l.husbandNumeroH)).filter(Boolean);
+      if (!autres.length) continue;
+      const conjoints = await User.findAll({
+        where: { numeroH: { [Op.in]: autres }, isActive: true },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'genre']
+      });
+      if (conjoints.length) resultat[n] = conjoints.map((c) => c.toJSON());
+    }
+    res.json({ success: true, conjoints: resultat });
+  } catch (error) {
+    console.error('Erreur conjoints-de:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.get('/my-partner', async (req, res) => {
   try {
     const user = req.user;

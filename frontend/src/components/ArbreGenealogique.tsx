@@ -82,6 +82,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   // par enfant G2, chargés depuis /api/parent-child/children-of/:numeroH —
   // remplace l'ancienne génération G3 qui n'était jamais alimentée.
   const [realG3ByParent, setRealG3ByParent] = useState<Record<string, FamilyMember[]>>({})
+  // Conjoint(e)s de mes enfants, frères et sœurs : visibles par toute la famille
+  // (une case simple, sans accès à l'autre famille)
+  const [conjointsDe, setConjointsDe] = useState<Record<string, { numeroH: string; prenom?: string; nomFamille?: string; photo?: string }[]>>({})
   // Conjoint RÉEL confirmé (lien de couple actif) — remplace les champs
   // userData.conjoint* (jamais validés par l'autre personne) quand présent.
   const [realConjoint, setRealConjoint] = useState<{ numeroH: string; prenom: string; nomFamille: string; genre: string; photo?: string } | null>(null)
@@ -109,6 +112,22 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showZoomMenu])
+
+  // Conjoint(e)s des enfants et des frères / sœurs (liens de couple actifs)
+  useEffect(() => {
+    const numeros = [...new Set(familyMembers
+      .filter(m => m.numeroH && !m.numeroH.startsWith('ENF-') && m.numeroH !== userData.numeroH
+        && (m.relation === 'enfant' || m.relation === 'frere' || m.relation === 'soeur'))
+      .map(m => m.numeroH as string))]
+    if (!numeros.length) { setConjointsDe({}); return }
+    let annule = false
+    const token = localStorage.getItem('token')
+    fetch(`${API_BASE}/api/couple/conjoints-de?numeros=${encodeURIComponent(numeros.join(','))}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (!annule) setConjointsDe(d?.success ? d.conjoints || {} : {}) })
+      .catch(() => {})
+    return () => { annule = true }
+  }, [familyMembers, userData.numeroH])
 
   const handleViewSpouseTree = async (spouseNumeroH: string) => {
     if (!spouseNumeroH) return
@@ -669,6 +688,25 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   )
 
   // Nœud complet avec photo + nom + numéroH + dates + couleur genre
+  // Petite case « 💍 Prénom » du conjoint, sous un enfant ou un frère / une sœur
+  const renderCaseConjoint = (numeroH: string | undefined, x: number, y: number) => {
+    const c = numeroH ? conjointsDe[numeroH]?.[0] : undefined
+    if (!c) return null
+    const id = `c-cj-${numeroH}`.replace(/[^a-zA-Z0-9-]/g, '')
+    const nom = (c.prenom || '').length > 9 ? `${(c.prenom || '').slice(0, 8)}…` : (c.prenom || '')
+    const autres = (conjointsDe[numeroH!]?.length || 1) - 1
+    return (
+      <g>
+        <title>{`Conjoint(e) : ${c.prenom || ''} ${c.nomFamille || ''}`.trim()}</title>
+        <rect x={x + 4} y={y} width={72} height={22} rx={11} fill="#fff7ed" stroke="#fb923c" strokeWidth={1} />
+        <circle cx={x + 15} cy={y + 11} r={8} fill="#fed7aa" />
+        {c.photo && <image href={c.photo} x={x + 7} y={y + 3} width={16} height={16} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id})`} />}
+        <defs><clipPath id={id}><circle cx={x + 15} cy={y + 11} r={8} /></clipPath></defs>
+        <text x={x + 26} y={y + 15} fontSize={9} fill="#9a3412" fontWeight="bold">💍 {nom}{autres > 0 ? ` +${autres}` : ''}</text>
+      </g>
+    )
+  }
+
   const renderSVGNode = (
     genre: 'HOMME' | 'FEMME' | 'AUTRE',
     x: number, y: number,
@@ -1260,6 +1298,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                         sib.relation === 'frere' ? 'Frère' : 'Sœur',
                         sib.photo, sib.dateNaissance, sib.dateDeces, clipId,
                         () => setSelectedMember(sib))}
+                      {renderCaseConjoint(sib.numeroH, x, 423)}
                     </g>
                   )
                 })
@@ -1346,6 +1385,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                         clipId, () => setSelectedMember(child)
                       )}
                       {renderPlusButton(x+80, 515, label, 'enfant')}
+                      {renderCaseConjoint(child.numeroH, x, 563)}
                     </g>
                   )
                 })

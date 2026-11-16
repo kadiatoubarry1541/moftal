@@ -73,6 +73,9 @@ On montre uniquement ce que le modèle montre, rien de plus.
   Le serveur ne les envoie pas (`sansContacts`, `backend/src/utils/contactsPro.js`).
 - Exception : les urgences (`TYPES_URGENCE` : clinique, agent de santé, sécurité) gardent
   leur numéro visible.
+- Un pro ne peut pas écrire de numéro ni d'e-mail dans ses textes publics (profil, vitrine,
+  publications, produits Échanges) : refusé par le serveur (`refusContact`,
+  `backend/src/utils/filtreContacts.js`). Un prix (« 600 000 FG ») n'est pas un numéro.
 - Rendez-vous accepté → le client reçoit téléphone + e-mail du pro (notification, e-mail,
   page « Mes rendez-vous »). Commande Échanges acceptée → l'acheteur reçoit ceux du vendeur.
 - Jamais de lien qui envoie le client vers une autre application de cartes : le guidage

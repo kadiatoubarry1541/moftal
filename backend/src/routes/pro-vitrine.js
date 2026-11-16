@@ -1,4 +1,6 @@
 import express from 'express';
+import { refusContact } from '../utils/filtreContacts.js';
+import { estUrgence } from '../utils/contactsPro.js';
 import { authenticate, requireAdmin, estAdminUtilisateur } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProPublication from '../models/ProPublication.js';
@@ -87,6 +89,10 @@ router.post('/:id/publications', authenticate, async (req, res) => {
     if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { type, titre, contenu, image, video, prix, disponible } = req.body;
+    {
+      const refus = refusContact(titre, contenu);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
     if (!titre?.trim()) return res.status(400).json({ success: false, message: 'Titre requis' });
 
     const pub = await ProPublication.create({
@@ -118,6 +124,10 @@ router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
     }
 
     const { type, titre, contenu, image, video, prix, disponible } = req.body;
+    {
+      const refus = refusContact(titre, contenu);
+      if (refus) return res.status(400).json({ success: false, message: refus });
+    }
     await pub.update({
       type: type !== undefined ? type : pub.type,
       titre: titre?.trim() || pub.titre,
@@ -162,6 +172,8 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
     if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { name, description, address, city, country, phone, email, services, specialties, photo } = req.body;
+    const refusVitrine = estUrgence(account.type) ? null : refusContact(name, description, services, specialties);
+    if (refusVitrine) return res.status(400).json({ success: false, message: refusVitrine });
 
     await account.update({
       name: name?.trim() || account.name,
