@@ -1,0 +1,102 @@
+# Moftal sur le serveur Oracle « Always Free » (gratuit) — tout sur une seule machine :
+#   postgres      la base de données (remplace Neon)
+#   serveur       le serveur Moftal (remplace Render) — api.moftal.com
+#   osrm-pied     calcul des chemins à pied (carte OpenStreetMap de la Guinée)
+#   osrm-voiture  calcul des chemins en voiture / moto
+#   caddy         HTTPS automatique (certificat gratuit) devant le serveur
+#
+# Le site (moftal.com) reste sur Cloudflare : rien à changer de ce côté.
+# Mode d'emploi complet : GUIDE.md (dans ce dossier).
+
+name: moftal
+
+services:
+  postgres:
+    # Version 18 : la même que la sauvegarde de nuit ; elle relit aussi les copies
+    # faites depuis une version plus ancienne (Neon).
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moftal
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Mettez DB_PASSWORD dans .env}
+      POSTGRES_DB: moftal
+    volumes:
+      # Depuis la version 18, les données sont dans /var/lib/postgresql/18/… : on monte le dossier parent
+      - ./donnees/postgres:/var/lib/postgresql
+    # Seulement depuis la machine elle-même (sauvegardes) : jamais ouvert sur Internet
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moftal -d moftal"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 256mb
+
+  serveur:
+    build:
+      context: ../../backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "5002"
+      # Base locale (sans le chiffrement exigé par Neon) : DATABASE_URL doit rester vide
+      DATABASE_URL: ""
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: moftal
+      DB_USER: moftal
+      DISABLE_IA_AUTO_START: "true"
+      PUBLIC_API_URL: https://api.moftal.com
+      OSRM_URL_PIED: http://osrm-pied:5000
+      OSRM_URL_VOITURE: http://osrm-voiture:5000
+    volumes:
+      - ./donnees/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  osrm-pied:
+    image: ghcr.io/project-osrm/osrm-backend:${OSRM_VERSION:-v26.4.0}
+    restart: unless-stopped
+    command: osrm-routed --algorithm mld /data/guinee.osrm
+    volumes:
+      - ./donnees/osrm/pied:/data:ro
+
+  osrm-voiture:
+    image: ghcr.io/project-osrm/osrm-backend:${OSRM_VERSION:-v26.4.0}
+    restart: unless-stopped
+    command: osrm-routed --algorithm mld /data/guinee.osrm
+    volumes:
+      - ./donnees/osrm/voiture:/data:ro
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./donnees/caddy/data:/data
+      - ./donnees/caddy/config:/config
+    depends_on:
+      - serveur
+
+  # Outils (pas lancés en permanence) : transfert depuis Neon, sauvegarde de nuit.
+  #   docker compose --profile outils run --rm outils bash ...
+  outils:
+    profiles: ["outils"]
+    build:
+      context: .
+      dockerfile: outils.Dockerfile
+    env_file: .env
+    volumes:
+      - ../../scripts:/scripts:ro
+      - ./donnees/transfert:/transfert
+    depends_on:
+      postgres:
+        condition: service_healthy
+

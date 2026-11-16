@@ -1,0 +1,10 @@
+# HTTPS automatique (certificat gratuit renouvelé tout seul) pour l'adresse du serveur.
+# Le domaine api.moftal.com doit pointer vers l'adresse IP publique du serveur Oracle.
+api.moftal.com {
+	encode zstd gzip
+	# Photos, vocaux, vidéos : jusqu'à 60 Mo par envoi
+	request_body {
+		max_size 60MB
+	}
+	reverse_proxy serveur:5002
+}

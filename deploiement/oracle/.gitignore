@@ -1,0 +1,3 @@
+# Réglages secrets et données du serveur : jamais sur GitHub
+.env
+donnees/

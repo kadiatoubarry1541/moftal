@@ -148,7 +148,7 @@ export default function MesRendezVous() {
                       >
                         {lieuOuvert === rdv.id ? tr("Fermer la carte") : tr("📍 Voir le lieu du rendez-vous")}
                       </button>
-                      {lieuOuvert === rdv.id && <LieuRendezVous nom={pro.name} position={pro.position} />}
+                      {lieuOuvert === rdv.id && <LieuRendezVous rdvId={rdv.id} nom={pro.name} position={pro.position} />}
                     </div>
                   )}
                   {rdv.status === "pending" && (

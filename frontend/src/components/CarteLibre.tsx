@@ -30,6 +30,33 @@ interface Props {
   onDeplacer?: (id: string, latitude: number, longitude: number) => void;
   /** Toucher la carte place le point « id » à cet endroit */
   idPointAuToucher?: string;
+  /** Chemin à dessiner : liste de [longitude, latitude] */
+  trace?: [number, number][];
+  /** Guidage : la carte suit ce point (au lieu de tout cadrer) */
+  suivre?: string;
+}
+
+// Dessine (ou met à jour) le chemin. À refaire après un changement de style.
+function dessinerTrace(c: CarteMapLibre, trace: [number, number][] | undefined): boolean {
+  const donnees = {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates: trace && trace.length > 1 ? trace : [] },
+  };
+  const source = c.getSource("trace") as { setData?: (d: unknown) => void } | undefined;
+  try {
+    if (source?.setData) {
+      source.setData(donnees);
+      return true;
+    }
+    c.addSource("trace", { type: "geojson", data: donnees });
+    c.addLayer({ id: "trace-bord", type: "line", source: "trace", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": 9 } });
+    c.addLayer({ id: "trace", type: "line", source: "trace", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#2563eb", "line-width": 5 } });
+    return true;
+  } catch {
+    // Style pas encore prêt : on réessaiera à l'événement « styledata »
+    return false;
+  }
 }
 
 const STYLE_OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
@@ -50,13 +77,15 @@ const STYLE_SECOURS: StyleSpecification = {
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
 
-export default function CarteLibre({ points, centre, zoom = 16, hauteur = 280, onDeplacer, idPointAuToucher }: Props) {
+export default function CarteLibre({ points, centre, zoom = 16, hauteur = 280, onDeplacer, idPointAuToucher, trace, suivre }: Props) {
   const conteneur = useRef<HTMLDivElement>(null);
   const carte = useRef<CarteMapLibre | null>(null);
   const marqueurs = useRef<Map<string, MarqueurMapLibre>>(new Map());
   const lib = useRef<typeof import("maplibre-gl") | null>(null);
   const rappel = useRef(onDeplacer);
   rappel.current = onDeplacer;
+  const traceRef = useRef(trace);
+  traceRef.current = trace;
   const [pret, setPret] = useState(false);
   const [erreur, setErreur] = useState(false);
 
@@ -80,6 +109,8 @@ export default function CarteLibre({ points, centre, zoom = 16, hauteur = 280, o
         carte.current = c;
         c.addControl(new m.NavigationControl({ showCompass: false }), "top-right");
         c.on("load", () => { if (!annule) setPret(true); });
+        // Le chemin disparaît quand le style change (passage au secours) : on le redessine
+        c.on("styledata", () => { if (traceRef.current?.length) dessinerTrace(c, traceRef.current); });
         c.on("error", () => {
           // Style OpenFreeMap injoignable : on passe une fois sur le secours
           if (!secoursFait && !c.isStyleLoaded()) {
@@ -133,15 +164,25 @@ export default function CarteLibre({ points, centre, zoom = 16, hauteur = 280, o
     for (const [id, mk] of marqueurs.current) {
       if (!vus.has(id)) { mk.remove(); marqueurs.current.delete(id); }
     }
-    // Cadrer : un point → centré ; plusieurs → tous visibles
-    if (points.length === 1) {
+    // Guidage : on suit la personne. Sinon : un point → centré ; plusieurs → tous visibles
+    const suivi = suivre ? points.find((p) => p.id === suivre) : undefined;
+    if (suivi) {
+      c.easeTo({ center: [suivi.longitude, suivi.latitude], zoom: Math.max(c.getZoom(), 17) });
+    } else if (points.length === 1) {
       c.easeTo({ center: [points[0].longitude, points[0].latitude] });
     } else if (points.length > 1) {
       const lons = points.map((p) => p.longitude);
       const lats = points.map((p) => p.latitude);
       c.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 50, maxZoom: 17 });
     }
-  }, [points, pret]);
+  }, [points, pret, suivre]);
+
+  // Chemin du guidage
+  useEffect(() => {
+    const c = carte.current;
+    if (!pret || !c) return;
+    if (!dessinerTrace(c, trace)) c.once("styledata", () => dessinerTrace(c, traceRef.current));
+  }, [trace, pret]);
 
   if (erreur) {
     return (
