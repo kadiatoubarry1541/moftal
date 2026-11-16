@@ -17,6 +17,7 @@
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.24.0",
+    "maplibre-gl": "6.15.0",
     "qr-scanner": "^1.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.1",

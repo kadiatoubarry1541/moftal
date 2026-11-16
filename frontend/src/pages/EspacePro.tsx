@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
+import PositionEtablissement from "../components/PositionEtablissement";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -37,6 +38,12 @@ interface ProAccount {
   planType?: "visibility" | "full" | null;
   tenant_code?: string | null;
   gestionInterneValidUntil?: string | null;
+  // Position de l'établissement (vue du propriétaire seulement)
+  latitude?: number | null;
+  longitude?: number | null;
+  repere?: string | null;
+  photoFacade?: string | null;
+  positionAVerifier?: boolean;
 }
 
 interface MenuItem {
@@ -1543,6 +1550,15 @@ export default function EspacePro() {
         {/* ─────────────────────────────
             ONGLET : DEMANDES EN ATTENTE
             ───────────────────────────── */}
+        {/* Rappel : sans position, les clients ne peuvent pas être guidés jusqu'à l'établissement */}
+        {tab !== "profile" && account.latitude == null && (
+          <button type="button" onClick={() => setTab("profile")}
+            className="w-full text-left mb-4 px-4 py-3 rounded-2xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100">
+            <span className="font-bold text-emerald-900 text-sm">📍 Ajoutez la position de votre établissement</span>
+            <span className="block text-xs text-emerald-800 mt-0.5">Vos clients avec un rendez-vous accepté seront guidés jusqu'à votre porte. Une minute, sur place.</span>
+          </button>
+        )}
+
         {tab === "pending" && (
           <div>
             {/* Commandes reçues sur l'Échange (ce que le pro a publié) */}
@@ -2626,6 +2642,10 @@ export default function EspacePro() {
             ───────────────────────────── */}
         {tab === "profile" && (
           <div>
+            <PositionEtablissement
+              compte={account}
+              onEnregistre={(c) => setAccount(prev => prev ? { ...prev, latitude: c.latitude, longitude: c.longitude, repere: c.repere, photoFacade: c.photoFacade, positionAVerifier: c.positionAVerifier } : prev)}
+            />
             {/* Essai gratuit — affiché ici pour ne pas surcharger la page */}
             {account.isTrial && account.subscriptionStatus === "active" && account.subscriptionValidUntil && (() => {
             const expiry = new Date(account.subscriptionValidUntil);

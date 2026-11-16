@@ -95,6 +95,8 @@ export default defineConfig(({ mode }) => {
         injectManifest: {
           // PNG exclus du précache : logo.png (227KB) + armoiries (325KB) = 552KB économisés
           globPatterns: ["**/*.{js,css,html,ico,webp,woff2}"],
+          // La carte (≈1 Mo) n'est téléchargée que par ceux qui l'ouvrent
+          globIgnores: ["**/carte-*"],
         },
         devOptions: { enabled: false },
       }),
@@ -132,6 +134,8 @@ export default defineConfig(({ mode }) => {
             if (!id.includes("node_modules")) return undefined;
             // socket.io est lourd et uniquement utilisé dans Arbre.tsx (lazy)
             if (id.includes("/socket.io") || id.includes("/engine.io")) return "socketio";
+            // Bibliothèque de carte (lourde) : chargée seulement quand une carte s'ouvre
+            if (id.includes("/maplibre-gl/") || id.includes("/@maplibre/")) return "carte";
             // Tout le reste dans vendor pour éviter les conflits d'initialisation entre chunks
             return "vendor";
           },

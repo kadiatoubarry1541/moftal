@@ -164,6 +164,15 @@ ProfessionalAccount.init({
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  // Position de l'établissement (posée par le pro) — jamais publique : donnée au
+  // client d'un rendez-vous accepté (voir utils/positionPro.js)
+  latitude: { type: DataTypes.DOUBLE, allowNull: true },
+  longitude: { type: DataTypes.DOUBLE, allowNull: true },
+  repere: { type: DataTypes.TEXT, allowNull: true, comment: 'Repère écrit : « portail bleu en face de la mosquée »' },
+  photoFacade: { type: DataTypes.TEXT, allowNull: true, field: 'photo_facade' },
+  quartierGps: { type: DataTypes.STRING, allowNull: true, field: 'quartier_gps' },
+  positionAVerifier: { type: DataTypes.BOOLEAN, defaultValue: false, field: 'position_a_verifier' },
+  positionLe: { type: DataTypes.DATE, allowNull: true, field: 'position_le' },
   // Sous-secteur Échanges : primaire / secondaire / tertiaire
   // Obligatoire pour vendor, supplier, producer, broker
   // null pour tous les autres types

@@ -1662,6 +1662,15 @@ async function initAllTables() {
     // Colonnes supplémentaires (idempotentes)
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "tenant_code" VARCHAR(50) UNIQUE;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "gestion_interne_valid_until" TIMESTAMPTZ;`).catch(() => {});
+    // Position de l'établissement (point sur la carte, repère, photo de façade)
+    await sequelize.query(`
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "latitude" DOUBLE PRECISION;
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "longitude" DOUBLE PRECISION;
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "repere" TEXT;
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "photo_facade" TEXT;
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "quartier_gps" VARCHAR(255);
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "position_a_verifier" BOOLEAN DEFAULT false;
+      ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "position_le" TIMESTAMPTZ;`).catch(() => {});
     // Colonnes récentes du modèle ProfessionalAccount — absentes des vieilles DBs
     await sequelize.query(`
       DO $$ BEGIN

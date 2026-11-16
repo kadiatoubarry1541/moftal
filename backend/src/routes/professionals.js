@@ -1,5 +1,7 @@
 import express from 'express';
 import { sansContacts } from '../utils/contactsPro.js';
+import { sansPosition, quartierCorrespond, coordonneesValides } from '../utils/positionPro.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
@@ -87,8 +89,9 @@ function filterProsForSubAdmin(accounts) {
 function sanitizeAccountForPublic(account) {
   const a = account?.toJSON ? account.toJSON() : { ...account };
   const { justificatifDocument, billingInfo, grantedToSubAdmin, rejectionReason, ...rest } = a;
-  // Ni téléphone ni e-mail pour le public (sauf urgences) : on prend rendez-vous dans Moftal
-  return sansContacts(rest);
+  // Ni téléphone ni e-mail pour le public (sauf urgences) : on prend rendez-vous dans Moftal.
+  // Le point exact de l'établissement non plus : seulement après un rendez-vous accepté.
+  return sansPosition(sansContacts(rest));
 }
 
 /** Vue du propriétaire : garde ses coordonnées de paiement (billingInfo) et le
@@ -864,6 +867,112 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     res.json({ success: true, account: sanitizeAccountForOwner(account) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ============ POSITION DE L'ÉTABLISSEMENT ============
+
+// Photo de la façade : envoyée au stockage d'images ; en local, on garde la photo compressée.
+async function enregistrerPhotoFacade(photo) {
+  if (!photo || typeof photo !== 'string') return null;
+  if (photo.startsWith('http')) return photo;
+  const m = photo.match(/^data:(image\/[a-z+]+);base64,(.+)$/i);
+  if (!m) throw Object.assign(new Error('Photo de façade invalide.'), { status: 400 });
+  if (photo.length > 3_000_000) throw Object.assign(new Error('Photo de façade trop lourde.'), { status: 400 });
+  try {
+    const url = await uploadToImageKit(Buffer.from(m[2], 'base64'), `facade.${m[1].split('/')[1].replace('jpeg', 'jpg')}`, 'facades');
+    if (url) return url;
+  } catch (e) {
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+      throw Object.assign(new Error('La photo de la façade n\'a pas pu être enregistrée. Réessayez.'), { status: 503 });
+    }
+    console.warn('photo façade → stockage:', e.message);
+  }
+  return photo;
+}
+
+async function notifierAdminsPosition(account) {
+  try {
+    const admins = await User.findAll({
+      where: { [Op.or]: [{ role: { [Op.in]: ['admin', 'super-admin'] } }, { numeroH: SUPER_ADMIN_7 }], isActive: true },
+      attributes: ['numeroH'],
+    });
+    for (const a of admins) {
+      await notifier(a.numeroH, 'general',
+        `« ${account.name} » a posé sa position dans le quartier « ${account.quartierGps} », mais son adresse déclarée est « ${[account.address, account.city].filter(Boolean).join(', ') || '—'} ». À vérifier dans Admin → Positions à vérifier.`,
+        '📍 Position d\'établissement à vérifier');
+    }
+  } catch (e) { console.warn('notification position:', e.message); }
+}
+
+// PUT /api/professionals/:id/position — le pro (ou l'admin) pose la position de l'établissement
+// { latitude, longitude, repere, photoFacade?, quartierGps? }
+router.put('/:id/position', authenticate, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    const estAdmin = estAdminUtilisateur(req.user) || isAnyAdmin(req.user);
+    if (account.ownerNumeroH !== req.userId && !estAdmin) {
+      return res.status(403).json({ success: false, message: 'Non autorisé' });
+    }
+    const { latitude, longitude } = req.body;
+    if (!coordonneesValides(latitude, longitude)) {
+      return res.status(400).json({ success: false, message: 'Position invalide. Touchez « Je suis dans mon établissement » ou placez le point sur la carte.' });
+    }
+    const repere = String(req.body.repere || '').trim().slice(0, 300);
+    if (repere.length < 5) {
+      return res.status(400).json({ success: false, message: 'Écrivez un repère pour aider vos clients (ex : portail bleu en face de la mosquée).' });
+    }
+    const quartierGps = String(req.body.quartierGps || '').trim().slice(0, 255) || null;
+    const photoFacade = req.body.photoFacade ? await enregistrerPhotoFacade(req.body.photoFacade) : account.photoFacade;
+    // Le quartier du GPS est comparé à l'adresse déclarée ; un admin qui pose la
+    // position la vérifie lui-même.
+    const aVerifier = !estAdmin && !!quartierGps && !quartierCorrespond(quartierGps, account.address, account.city);
+
+    await account.update({
+      latitude: Number(latitude), longitude: Number(longitude), repere, photoFacade, quartierGps,
+      positionAVerifier: aVerifier, positionLe: new Date(),
+    });
+    if (aVerifier) await notifierAdminsPosition(account);
+    res.json({
+      success: true,
+      aVerifier,
+      message: aVerifier
+        ? `Position enregistrée. Elle est dans le quartier « ${quartierGps} », différent de votre adresse : l'administrateur va vérifier. Corrigez votre adresse si besoin.`
+        : 'Position de votre établissement enregistrée. Vos clients seront guidés jusqu\'ici après un rendez-vous accepté.',
+      account: sanitizeAccountForOwner(account),
+    });
+  } catch (error) {
+    console.error('Erreur position établissement:', error);
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Erreur serveur' });
+  }
+});
+
+// GET /api/professionals/admin/positions-a-verifier — quartier GPS ≠ adresse déclarée
+router.get('/admin/positions-a-verifier', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const comptes = await ProfessionalAccount.findAll({
+      where: { positionAVerifier: true, isActive: true },
+      order: [['position_le', 'DESC']],
+    });
+    res.json({ success: true, comptes: comptes.map((c) => ({
+      id: c.id, name: c.name, type: c.type, photo: c.photo, address: c.address, city: c.city,
+      quartierGps: c.quartierGps, latitude: c.latitude, longitude: c.longitude, repere: c.repere, photoFacade: c.photoFacade, positionLe: c.positionLe,
+    })) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/professionals/admin/:id/position-verifiee — l'admin valide la position
+router.put('/admin/:id/position-verifiee', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    await account.update({ positionAVerifier: false });
+    res.json({ success: true, message: 'Position validée.' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
