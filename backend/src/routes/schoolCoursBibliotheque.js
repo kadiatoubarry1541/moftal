@@ -12,8 +12,10 @@ import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
  * du cours » puis « Fin du cours » pour une de ses classes ; l'heure est celle
  * du serveur (jamais celle du téléphone). Le directeur voit tout, jour par jour.
  *
- * Bibliothèque : le directeur ajoute les livres PDF de l'école (enregistrés en
- * base, table « fichiers ») ; seuls les membres de l'école les voient :
+ * Bibliothèque : la direction et les enseignants publient les livres et documents
+ * PDF de l'école (enregistrés en base, table « fichiers »), classés par niveau,
+ * type, matière et langue ; un enseignant ne retire que les siens.
+ * Seuls les membres de l'école les voient :
  * direction, employés, enseignants, élèves et parents (membres ou fiche élève).
  */
 const FUSEAU = 'Africa/Conakry';
@@ -51,6 +53,10 @@ function preparerTables() {
         created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_ecole_bibliotheque_tenant ON ecole_bibliotheque (tenant_code);
+      ALTER TABLE ecole_bibliotheque ADD COLUMN IF NOT EXISTS categorie   VARCHAR(80);
+      ALTER TABLE ecole_bibliotheque ADD COLUMN IF NOT EXISTS matiere     VARCHAR(120);
+      ALTER TABLE ecole_bibliotheque ADD COLUMN IF NOT EXISTS langue      VARCHAR(60);
+      ALTER TABLE ecole_bibliotheque ADD COLUMN IF NOT EXISTS description TEXT;
     `).catch((e) => { tablesPretes = null; throw e; });
   }
   return tablesPretes;
@@ -435,41 +441,112 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLE
   });
 
   // ─── Bibliothèque ─────────────────────────────────────────────────────────
+  const COLONNES_LIVRE = 'id, titre, auteur, niveau, categorie, matiere, langue, description, fichier_url, taille, ajoute_par, created_at';
+  const texte = (v, max) => String(v || '').trim().slice(0, max) || null;
+
+  /** Direction : propriétaire, administrateur Moftal ou co-responsable « tous les droits ». */
+  async function estDirection(req, tenant) {
+    const nh = String(req.userId || '');
+    const role = req.user?.role || '';
+    if (req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin' || tenant.owner_numero_h === nh) return true;
+    const [r] = await sequelize.query(
+      `SELECT 1 AS ok FROM management_staff_access WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh) AND is_active = true AND niveau = 'total' LIMIT 1`,
+      { replacements: { code: tenant.tenant_code, nh }, type: Q.SELECT }
+    ).catch(() => []);
+    return !!r;
+  }
+  /** Enseignant (fiche du personnel active) ou employé ayant accès à la gestion ? */
+  async function estEnseignant(req, tenant) {
+    const remp = { replacements: { code: tenant.tenant_code, nh: String(req.userId || '') }, type: Q.SELECT };
+    const [prof] = await sequelize.query(
+      `SELECT 1 AS ok FROM ${T.staff} WHERE tenant_code = :code ${T.staffActif} AND ${memeNumeroH} LIMIT 1`, remp
+    ).catch(() => []);
+    if (prof) return true;
+    const [employe] = await sequelize.query(
+      `SELECT 1 AS ok FROM management_staff_access WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh) AND is_active = true LIMIT 1`, remp
+    ).catch(() => []);
+    return !!employe;
+  }
+  /** Peut publier : la direction ou un enseignant. */
+  async function verifyEditeur(req, res, next) {
+    try {
+      await preparerTables();
+      const tenant = await tenantDe(req.params.tenantCode);
+      if (!tenant) return res.status(404).json({ success: false, message: 'Établissement introuvable.' });
+      const direction = await estDirection(req, tenant);
+      if (!direction && !(await estEnseignant(req, tenant))) {
+        return res.status(403).json({ success: false, message: 'Seuls la direction et les enseignants publient dans la bibliothèque.' });
+      }
+      req.tenant = tenant;
+      req.direction = direction;
+      return enforceGestionAccess(req, res, next);
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  }
+
   router.get('/:tenantCode/bibliotheque', authenticate, verifyLecteur, async (req, res) => {
+    const code = req.tenant.tenant_code;
     const livres = await sequelize.query(
-      `SELECT id, titre, auteur, niveau, fichier_url, taille, created_at FROM ecole_bibliotheque WHERE tenant_code = :code ORDER BY created_at DESC`,
-      { replacements: { code: req.tenant.tenant_code }, type: Q.SELECT }
+      `SELECT ${COLONNES_LIVRE} FROM ecole_bibliotheque WHERE tenant_code = :code ORDER BY created_at DESC`,
+      { replacements: { code }, type: Q.SELECT }
     );
-    res.json({ success: true, ecole: { nom: req.tenant.name, logo_url: req.tenant.logo_url }, livres });
+    // Niveaux et classes de l'établissement, pour classer les livres
+    const groupes = await sequelize.query(
+      `SELECT nom, niveau FROM ${T.groupes} WHERE tenant_code = :code ORDER BY niveau NULLS LAST, nom`,
+      { replacements: { code }, type: Q.SELECT }
+    ).catch(() => []);
+    const niveaux = [...new Set(groupes.flatMap((g) => [g.niveau, g.nom]).map((v) => String(v || '').trim()).filter(Boolean))];
+    const direction = await estDirection(req, req.tenant);
+    const peutPublier = direction || await estEnseignant(req, req.tenant);
+    const moi = String(req.userId || '').toLowerCase();
+    res.json({
+      success: true,
+      ecole: { nom: req.tenant.name, logo_url: req.tenant.logo_url },
+      peut_publier: peutPublier,
+      niveaux,
+      livres: livres.map(({ ajoute_par, ...l }) => ({ ...l, retirable: direction || (peutPublier && String(ajoute_par || '').toLowerCase() === moi) })),
+    });
   });
 
-  router.post('/:tenantCode/bibliotheque', authenticate, verifyTenant, (req, res, next) => {
+  router.post('/:tenantCode/bibliotheque', authenticate, verifyEditeur, (req, res, next) => {
     uploadPdf.single('fichier')(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.code === 'LIMIT_FILE_SIZE' ? 'PDF trop lourd (25 Mo maximum).' : err.message });
       next();
     });
   }, async (req, res) => {
-    await preparerTables();
-    const titre = String(req.body?.titre || '').trim();
-    if (!titre) return res.status(400).json({ success: false, message: 'Le titre du livre est obligatoire.' });
-    const f = req.file;
-    if (!f) return res.status(400).json({ success: false, message: 'Choisissez le fichier PDF du livre.' });
-    const estPdf = f.mimetype === 'application/pdf' || /\.pdf$/i.test(f.originalname || '');
-    if (!estPdf) return res.status(400).json({ success: false, message: 'Seuls les fichiers PDF sont acceptés.' });
-    const url = await enregistrerEnBase({ ...f, mimetype: 'application/pdf' }, { proprietaire: req.params.tenantCode, usage: 'bibliotheque-ecole', tailleMax: PDF_MAX });
-    const [rows] = await sequelize.query(
-      `INSERT INTO ecole_bibliotheque (tenant_code, titre, auteur, niveau, fichier_url, taille, ajoute_par)
-       VALUES (:code, :titre, :auteur, :niveau, :url, :taille, :par) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, titre, auteur: String(req.body?.auteur || '').trim() || null,
-          niveau: String(req.body?.niveau || '').trim() || null, url, taille: f.size, par: req.userId }, type: Q.INSERT }
-    );
-    res.json({ success: true, livre: rows[0] });
+    try {
+      const titre = texte(req.body?.titre, 255);
+      if (!titre) return res.status(400).json({ success: false, message: 'Le titre du livre est obligatoire.' });
+      const f = req.file;
+      if (!f) return res.status(400).json({ success: false, message: 'Choisissez le fichier PDF du livre.' });
+      const estPdf = f.mimetype === 'application/pdf' || /\.pdf$/i.test(f.originalname || '');
+      if (!estPdf) return res.status(400).json({ success: false, message: 'Seuls les fichiers PDF sont acceptés.' });
+      const code = req.tenant.tenant_code;
+      const url = await enregistrerEnBase({ ...f, mimetype: 'application/pdf' }, { proprietaire: code, usage: 'bibliotheque-ecole', tailleMax: PDF_MAX });
+      const [rows] = await sequelize.query(
+        `INSERT INTO ecole_bibliotheque (tenant_code, titre, auteur, niveau, categorie, matiere, langue, description, fichier_url, taille, ajoute_par)
+         VALUES (:code, :titre, :auteur, :niveau, :categorie, :matiere, :langue, :description, :url, :taille, :par) RETURNING ${COLONNES_LIVRE}`,
+        { replacements: { code, titre,
+            auteur: texte(req.body?.auteur, 255), niveau: texte(req.body?.niveau, 120),
+            categorie: texte(req.body?.categorie, 80), matiere: texte(req.body?.matiere, 120),
+            langue: texte(req.body?.langue, 60), description: texte(req.body?.description, 2000),
+            url, taille: f.size, par: req.userId }, type: Q.INSERT }
+      );
+      const { ajoute_par, ...livre } = rows[0];
+      res.json({ success: true, livre: { ...livre, retirable: true } });
+    } catch (e) {
+      console.error('bibliotheque POST:', e);
+      res.status(500).json({ success: false, message: "Le livre n'a pas pu être enregistré." });
+    }
   });
 
-  router.delete('/:tenantCode/bibliotheque/:id', authenticate, verifyTenant, async (req, res) => {
-    await preparerTables();
-    await sequelize.query('DELETE FROM ecole_bibliotheque WHERE id = :id AND tenant_code = :code',
-      { replacements: { id: req.params.id, code: req.params.tenantCode } });
+  // La direction retire n'importe quel livre ; un enseignant, seulement les siens
+  router.delete('/:tenantCode/bibliotheque/:id', authenticate, verifyEditeur, async (req, res) => {
+    const [, meta] = await sequelize.query(
+      `DELETE FROM ecole_bibliotheque WHERE id = :id AND tenant_code = :code
+         AND (:direction OR LOWER(ajoute_par) = LOWER(:nh))`,
+      { replacements: { id: req.params.id, code: req.tenant.tenant_code, direction: !!req.direction, nh: String(req.userId || '') } }
+    );
+    if (!(meta?.rowCount ?? 1)) return res.status(403).json({ success: false, message: 'Vous ne pouvez retirer que les livres que vous avez publiés.' });
     res.json({ success: true });
   });
 }
