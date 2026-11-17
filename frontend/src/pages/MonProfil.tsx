@@ -212,6 +212,20 @@ export default function MonProfil() {
 
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
 
+      {/* Mon album privé : 5 photos + 2 vidéos, que personne d'autre ne voit */}
+      <button
+        type="button"
+        onClick={() => navigate('/moi/album')}
+        className="w-full mb-4 flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-3 shadow-sm text-left"
+      >
+        <span className="text-2xl">🔒</span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-bold">Mon album privé</span>
+          <span className="block text-xs text-emerald-100">5 photos et 2 vidéos — vous seul les voyez</span>
+        </span>
+        <span className="text-2xl">›</span>
+      </button>
+
       {/* Header Principal */}
       <div
         className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 hover:shadow-md transition-shadow duration-200 mb-8"

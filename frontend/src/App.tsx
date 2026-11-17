@@ -41,6 +41,7 @@ const LivingWizard = lazy(() => import("./pages/living/LivingWizard").then(m => 
 const DeceasedWizard = lazy(() => import("./pages/deceased/DeceasedWizard").then(m => ({ default: m.DeceasedWizard })));
 const Moi = lazy(() => import("./pages/Moi").then(m => ({ default: m.Moi })));
 const MonProfil = lazy(() => import("./pages/MonProfil"));
+const AlbumPrive = lazy(() => import("./pages/AlbumPrive"));
 const Famille = lazy(() => import("./pages/famille/Famille"));
 const Parents = lazy(() => import("./pages/famille/Parents"));
 const Partenaire = lazy(() => import("./pages/famille/Partenaire"));
@@ -754,6 +755,7 @@ function App() {
           <Route path="/compte" element={<Account />} />
           <Route path="/moi" element={<Navigate to="/compte" replace />} />
           <Route path="/moi/profil" element={<MonProfil />} />
+          <Route path="/moi/album" element={<AlbumPrive />} />
           <Route path="/moi/arbre" element={<Navigate to="/famille/moi/arbre" replace />} />
           <Route path="/moi/arbre/membres" element={<Navigate to="/famille/moi/arbre/membres" replace />} />
           <Route path="/probleme" element={<Probleme />} />

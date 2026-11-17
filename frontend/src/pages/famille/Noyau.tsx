@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getPhotoUrl, getSessionUser, isAdmin } from '../../utils/auth'
 import { AudioRecorder } from '../../components/AudioRecorder'
 import { VideoRecorder } from '../../components/VideoRecorder'
@@ -433,6 +434,7 @@ export default function Noyau() {
   const [demoEntries, setDemoEntries] = useState<LivreEntry[]>(DEMO_ENTRIES)
 
   const user = useMemo(() => getSessionUser(), [])
+  const navigate = useNavigate()
 
   const isMan = String(user?.genre || '').toUpperCase() === 'HOMME'
 
@@ -580,6 +582,21 @@ export default function Noyau() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+        {/* ════ Moi : mon album privé, que personne d'autre ne voit ════ */}
+        <div className="mb-6">
+          <GroupHeader title="Moi" />
+          <button type="button" onClick={() => navigate('/moi/album')}
+            className="w-full flex items-center gap-3 rounded-xl border border-emerald-100 bg-white dark:bg-gray-800 dark:border-emerald-900/40 p-3 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/50 active:scale-[0.99] transition-all">
+            <MemberAvatar member={{ numeroH: user?.numeroH || '', prenom: user?.prenom || 'Vous', nomFamille: user?.nomFamille || '', photo: user?.photo, genre: user?.genre }} />
+            <div className="min-w-0 flex-1 text-left">
+              <p className="font-semibold text-gray-900 dark:text-white truncate">{user?.prenom} {user?.nomFamille}</p>
+              <p className="text-xs text-amber-600">Vous</p>
+              <p className="text-xs font-semibold text-emerald-600">🔒 Mon album privé — vous seul le voyez</p>
+            </div>
+            <span className="text-2xl text-emerald-500 flex-shrink-0">›</span>
+          </button>
+        </div>
+
         {/* ════ Ma famille proche : chaque personne est cliquable ════ */}
         <div className="mb-6 space-y-4">
           {(() => {
