@@ -44,15 +44,34 @@ const premiereUrl = (l?: unknown[]) => {
 export const SEUIL_LIVRAISON_GRATUITE = 3;
 
 /** Petit bandeau qui motive à commander : livraison gratuite dès 3 produits. */
+// Il vient, reste quelques secondes, s'en va, puis revient — en boucle.
+const BANDEAU_VISIBLE_MS = 6000;
+const BANDEAU_CACHE_MS = 4000;
+
 export function BandeauLivraisonGratuite({ className = "" }: { className?: string }) {
   const { tr } = useTraduction();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    // Mouvements réduits demandés par l'appareil : le message reste affiché, sans aller-retour
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setVisible(true); return; }
+    let minuteur: ReturnType<typeof setTimeout>;
+    const montrer = () => { setVisible(true); minuteur = setTimeout(cacher, BANDEAU_VISIBLE_MS); };
+    const cacher = () => { setVisible(false); minuteur = setTimeout(montrer, BANDEAU_CACHE_MS); };
+    minuteur = setTimeout(montrer, 600);
+    return () => clearTimeout(minuteur);
+  }, []);
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md ${className}`}>
+    <div
+      aria-live="polite"
+      className={`overflow-hidden transition-all duration-700 ease-out ${visible ? `max-h-40 opacity-100 translate-y-0 ${className}` : "max-h-0 opacity-0 -translate-y-3"}`}
+    >
+    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md">
       <span className="text-3xl leading-none" aria-hidden>🚚</span>
       <p className="min-w-0 text-sm sm:text-base leading-snug">
         <span className="font-extrabold">{tr("{n} produits commandés = livraison gratuite", { n: SEUIL_LIVRAISON_GRATUITE })}</span>
         {tr(", qu'ils soient pareils ou différents !")}
       </p>
+    </div>
     </div>
   );
 }
