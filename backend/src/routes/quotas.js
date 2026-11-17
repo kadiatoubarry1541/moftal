@@ -6,6 +6,7 @@ import GalleryPoints from '../models/GalleryPoints.js';
 import PointsTransaction from '../models/PointsTransaction.js';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
+import { REGLES_GALERIES, resumeQuota } from '../utils/quotaGaleries.js';
 
 const router = express.Router();
 
@@ -157,27 +158,34 @@ router.get('/my-points', async (req, res) => {
 });
 
 // GET /api/quotas/family → quota galerie familiale de l'utilisateur connecté
+// (10 photos + 2 vidéos, 1 photo offerte par mois, 1 vidéo tous les 3 mois — utils/quotaGaleries.js)
 router.get('/family', async (req, res) => {
   try {
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     if (!userData?.nomFamille) {
       return res.json({ success: true, quota: null });
     }
-    const quota = await getOrCreateQuota('family', userData.nomFamille, 5, 1);
-    const pts = await GalleryPoints.findOne({ where: { numeroH: req.user.numeroH } });
+    const familyName = userData.nomFamille;
+    const debut = await getOrCreateQuota('family', familyName, REGLES_GALERIES.famille.photos, REGLES_GALERIES.famille.videos);
+    const [[{ nb_photos, nb_videos }]] = await sequelize.query(
+      `SELECT COUNT(*) FILTER (WHERE type = 'image') AS nb_photos, COUNT(*) FILTER (WHERE type = 'video') AS nb_videos
+         FROM family_gallery WHERE family_name = :familyName`,
+      { replacements: { familyName } }
+    );
+    const r = await resumeQuota(REGLES_GALERIES.famille, debut?.createdAt, Number(nb_photos) || 0, Number(nb_videos) || 0, req.user.numeroH);
     res.json({
       success: true,
       quota: {
-        photosLibres: quota.photosLibres,
-        videosLibres: quota.videosLibres,
-        photosUtilisees: quota.photosUtilisees,
-        videosUtilisees: quota.videosUtilisees,
-        photosRestantes: Math.max(0, quota.photosLibres - quota.photosUtilisees),
-        videosRestantes: Math.max(0, quota.videosLibres - quota.videosUtilisees)
+        photosLibres: r.photosGratuites,
+        videosLibres: r.videosGratuites,
+        photosUtilisees: r.photosUtilisees,
+        videosUtilisees: r.videosUtilisees,
+        photosRestantes: r.photosRestantes,
+        videosRestantes: r.videosRestantes,
+        prochainePhotoOfferte: r.prochainePhotoOfferte,
+        prochaineVideoOfferte: r.prochaineVideoOfferte,
       },
-      points: {
-        disponibles: pts?.pointsDisponibles || 0
-      }
+      points: { disponibles: r.pointsDisponibles }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

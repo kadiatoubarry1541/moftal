@@ -5,14 +5,16 @@ import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2, deleteFromR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { REGLES_GALERIES, autoriserPublication, rembourserPoints, resumeQuota, repondreQuota } from '../utils/quotaGaleries.js';
 
 // Album privé : chaque personne a le sien, que personne d'autre ne voit
-// (ni la famille, ni les amis, ni l'admin). 7 fichiers au maximum :
-// 5 photos et 2 vidéos de 5 secondes au plus.
+// (ni la famille, ni les amis, ni l'admin). Règle des galeries personnelles
+// (utils/quotaGaleries.js) : 5 photos + 2 vidéos gratuites, 1 photo offerte
+// chaque mois et 1 vidéo tous les 6 mois, au-delà on paie en points.
+// Une vidéo de l'album privé dure 5 secondes au plus.
 
-export const ALBUM_PRIVE_MAX_PHOTOS = 5;
-export const ALBUM_PRIVE_MAX_VIDEOS = 2;
 export const ALBUM_PRIVE_DUREE_MAX_VIDEO = 5; // secondes
+const REGLE = REGLES_GALERIES.personnel;
 
 const router = express.Router();
 router.use(authenticate);
@@ -45,13 +47,23 @@ async function elementsDe(numeroH) {
   return rows;
 }
 
-const limites = { maxPhotos: ALBUM_PRIVE_MAX_PHOTOS, maxVideos: ALBUM_PRIVE_MAX_VIDEOS, dureeMaxVideo: ALBUM_PRIVE_DUREE_MAX_VIDEO };
+async function reponse(user) {
+  const elements = await elementsDe(user.numeroH);
+  const nbPhotos = elements.filter(e => e.type === 'photo').length;
+  const nbVideos = elements.filter(e => e.type === 'video').length;
+  return {
+    success: true,
+    elements,
+    dureeMaxVideo: ALBUM_PRIVE_DUREE_MAX_VIDEO,
+    quota: await resumeQuota(REGLE, user.createdAt, nbPhotos, nbVideos, user.numeroH),
+  };
+}
 
 /** GET /api/album-prive — mon album (uniquement le mien) */
 router.get('/', async (req, res) => {
   try {
     await assurerTable();
-    res.json({ success: true, elements: await elementsDe(req.user.numeroH), limites });
+    res.json(await reponse(req.user));
   } catch (e) {
     console.error('Album privé (lecture):', e);
     res.status(500).json({ success: false, message: "Votre album n'a pas pu être chargé." });
@@ -74,25 +86,32 @@ router.post('/', upload.single('fichier'), async (req, res) => {
     }
 
     const elements = await elementsDe(req.user.numeroH);
-    const nbPhotos = elements.filter(e => e.type === 'photo').length;
-    const nbVideos = elements.filter(e => e.type === 'video').length;
-    if (estPhoto && nbPhotos >= ALBUM_PRIVE_MAX_PHOTOS) {
-      return res.status(400).json({ success: false, message: `Votre album a déjà ${ALBUM_PRIVE_MAX_PHOTOS} photos. Retirez-en une pour en ajouter une autre.` });
-    }
-    if (estVideo && nbVideos >= ALBUM_PRIVE_MAX_VIDEOS) {
-      return res.status(400).json({ success: false, message: `Votre album a déjà ${ALBUM_PRIVE_MAX_VIDEOS} vidéos. Retirez-en une pour en ajouter une autre.` });
+    let autorisation;
+    try {
+      autorisation = await autoriserPublication({
+        regle: REGLE, depuis: req.user.createdAt, numeroH: req.user.numeroH, estVideo, dureeVideo: duree,
+        nbPhotos: elements.filter(e => e.type === 'photo').length,
+        nbVideos: elements.filter(e => e.type === 'video').length,
+      });
+    } catch (err) {
+      if (err.code === 'QUOTA_EXCEEDED') return repondreQuota(res, err);
+      throw err;
     }
 
-    const url = estPhoto
-      ? await uploadToImageKit(fichier.buffer, fichier.originalname, 'album-prive')
-      : await uploadToR2(fichier.buffer, fichier.originalname, fichier.mimetype, 'album-prive');
+    try {
+      const url = estPhoto
+        ? await uploadToImageKit(fichier.buffer, fichier.originalname, 'album-prive')
+        : await uploadToR2(fichier.buffer, fichier.originalname, fichier.mimetype, 'album-prive');
+      await sequelize.query(
+        `INSERT INTO private_album_items (owner_numero_h, type, url, duree) VALUES (:numeroH, :type, :url, :duree)`,
+        { replacements: { numeroH: req.user.numeroH, type: estPhoto ? 'photo' : 'video', url, duree: estVideo ? duree : null } }
+      );
+    } catch (err) {
+      await rembourserPoints(req.user.numeroH, autorisation);
+      throw err;
+    }
     uploadToIDrive(fichier.buffer, fichier.originalname, fichier.mimetype, 'album-prive').catch(() => {});
-
-    await sequelize.query(
-      `INSERT INTO private_album_items (owner_numero_h, type, url, duree) VALUES (:numeroH, :type, :url, :duree)`,
-      { replacements: { numeroH: req.user.numeroH, type: estPhoto ? 'photo' : 'video', url, duree: estVideo ? duree : null } }
-    );
-    res.json({ success: true, elements: await elementsDe(req.user.numeroH), limites });
+    res.json(await reponse(req.user));
   } catch (e) {
     console.error('Album privé (ajout):', e);
     res.status(500).json({ success: false, message: "Le fichier n'a pas pu être enregistré. Réessayez." });
@@ -109,7 +128,7 @@ router.delete('/:id', async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Fichier introuvable dans votre album.' });
     if (rows[0].type === 'video') deleteFromR2(rows[0].url).catch(() => {});
-    res.json({ success: true, elements: await elementsDe(req.user.numeroH), limites });
+    res.json(await reponse(req.user));
   } catch (e) {
     console.error('Album privé (suppression):', e);
     res.status(500).json({ success: false, message: "Le fichier n'a pas pu être retiré. Réessayez." });

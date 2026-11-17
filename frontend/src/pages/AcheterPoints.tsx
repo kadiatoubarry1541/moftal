@@ -124,7 +124,7 @@ export default function AcheterPoints() {
 
             <div className="flex gap-4 mt-3 text-xs text-indigo-300">
               <span>📷 1 point = 1 photo</span>
-              <span>🎥 3 points = 1 vidéo</span>
+              <span>🎥 2 à 5 points = 1 vidéo (selon sa durée)</span>
             </div>
           </div>
         )}
@@ -133,7 +133,10 @@ export default function AcheterPoints() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
           <p className="font-bold text-amber-900 text-sm mb-1">Comment ça marche ?</p>
           <ul className="text-amber-800 text-sm space-y-1">
-            <li>• Chaque famille a <strong>5 photos + 1 vidéo gratuites</strong></li>
+            <li>• Galerie familiale : <strong>10 photos + 2 vidéos gratuites</strong> pour la famille</li>
+            <li>• Album privé, couple, parent-enfant : <strong>5 photos + 2 vidéos gratuites</strong> par personne</li>
+            <li>• 🎁 Offert ensuite : <strong>1 photo chaque mois</strong>, et 1 vidéo tous les 3 mois (famille) ou tous les 6 mois (les autres)</li>
+            <li>• Retirer une photo libère sa place pour en mettre une autre</li>
             <li>• Au-delà, vous achetez des points pour publier plus</li>
             <li>• <strong>Les points sont valables 1 mois</strong> à partir de l'achat</li>
             <li>• Si vous les utilisez tous avant 1 mois, achetez un nouveau pack</li>
@@ -145,7 +148,7 @@ export default function AcheterPoints() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="font-bold text-gray-800">Choisissez votre pack — valable 1 mois</h3>
-            <p className="text-xs text-indigo-600 font-semibold mt-1">📷 1 point = 1 photo &nbsp;·&nbsp; 🎥 3 points = 1 vidéo</p>
+            <p className="text-xs text-indigo-600 font-semibold mt-1">📷 1 point = 1 photo &nbsp;·&nbsp; 🎥 2 à 5 points = 1 vidéo (2 jusqu'à 10 s, 3 jusqu'à 20 s, 5 au-delà)</p>
             <p className="text-xs text-gray-400 mt-0.5">Paiement via Orange Money, MTN MoMo ou carte bancaire</p>
           </div>
 
@@ -195,11 +198,12 @@ export default function AcheterPoints() {
         </div>
 
         {/* Quota des galeries */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { icon: '🖼️', title: 'Galerie familiale', free: '5 photos + 1 vidéo' },
-            { icon: '💑', title: 'Galerie couple', free: '2 photos + 1 vidéo' },
-            { icon: '👨‍👩‍👧', title: 'Galerie parent-enfant', free: '2 photos + 1 vidéo' },
+            { icon: '🖼️', title: 'Galerie familiale', free: '10 photos + 2 vidéos' },
+            { icon: '🔒', title: 'Album privé', free: '5 photos + 2 vidéos' },
+            { icon: '💑', title: 'Galerie couple', free: '5 photos + 2 vidéos' },
+            { icon: '👨‍👩‍👧', title: 'Galerie parent-enfant', free: '5 photos + 2 vidéos' },
           ].map((item) => (
             <div key={item.title} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
               <div className="text-2xl mb-1">{item.icon}</div>

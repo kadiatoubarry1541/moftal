@@ -5,6 +5,8 @@ import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import type { UserData } from "../../utils/auth";
+import { lireDureeMedia } from '../../utils/dureesMedias'
+import { BarreQuota, chargerQuota, type QuotaGalerie } from '../../components/QuotaGalerie'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -92,7 +94,8 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const [noteRating, setNoteRating] = useState(0)
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<SessionId | 'notes'>('avant')
-  const [mediaBySession, setMediaBySession] = useState<Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
+  const [quotaGalerie, setQuotaGalerie] = useState<QuotaGalerie | null>(null)
+  const [mediaBySession, setMediaBySession] = useState<Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>>>({
     avant: [],
     paradis: [],
     objectif: []
@@ -202,7 +205,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         setActivities(list)
 
         // Reconstruire les médias par session à partir des activités avec mediaUrl
-        const sessions: Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>> = {
+        const sessions: Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>> = {
           avant: [],
           paradis: [],
           objectif: []
@@ -234,10 +237,12 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
             type: mediaType,
             url: displayUrl,
             caption: caption || undefined,
-            date: act.created_at
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaBySession(sessions)
+        chargerQuota(`${API_BASE}/api/couple/gallery-quota`).then(setQuotaGalerie)
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -510,9 +515,9 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (message?: string) => {
       setMediaBySession((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== newItem.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      alert(message || "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -527,6 +532,10 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const formData = new FormData()
         const fieldName = mediaData.type === 'photo' ? 'image' : mediaData.type === 'video' ? 'video' : 'audio'
         formData.append(fieldName, file)
+        if (mediaData.type === 'video') {
+          const duree = await lireDureeMedia(blob)
+          if (Number.isFinite(duree)) formData.append('videoDuration', String(duree))
+        }
         formData.append('type', `souvenir_${session}`)
         formData.append('content', JSON.stringify({ caption: mediaData.caption || '', mediaType: mediaData.type }))
         const res = await fetch(`${API_BASE}/api/couple/activity/upload`, {
@@ -537,7 +546,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média couple:', data)
-          annuler()
+          annuler(data.message)
         } else {
           await loadActivities()
         }
@@ -549,6 +558,21 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
 
     void persist()
     setUploaderSession(null)
+  }
+
+  // Retirer un de mes souvenirs : sa place gratuite se libère pour en mettre un autre
+  const retirerSouvenir = async (id: string) => {
+    if (!window.confirm('Retirer ce souvenir ? Sa place se libère pour en mettre un autre.')) return
+    try {
+      const res = await fetch(`${API_BASE}/api/couple/activity/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) { alert(data.message || "Le souvenir n'a pas pu être retiré."); return }
+      await loadActivities()
+    } catch {
+      alert('Erreur réseau')
+    }
   }
 
   const handleAddNote = async () => {
@@ -1060,6 +1084,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
                             📷 Ajouter
                           </button>
                         </div>
+                        {quotaGalerie && <div className="mb-4"><BarreQuota quota={quotaGalerie} /></div>}
                         {(mediaBySession[openSection as SessionId]?.length ?? 0) === 0 ? (
                           <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                             <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
@@ -1079,6 +1104,9 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
                                 {m.type === 'video' && <video src={m.url} controls className="w-full h-40 bg-black" />}
                                 {m.type === 'audio' && <div className="w-full h-24 bg-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}
                                 {m.caption && <p className="p-2 text-sm text-slate-600">{m.caption}</p>}
+                                {m.from === user?.numeroH && (
+                                  <button type="button" onClick={() => retirerSouvenir(m.id)} className="w-full py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 border-t border-slate-100">🗑️ Retirer</button>
+                                )}
                               </div>
                             ))}
                           </div>

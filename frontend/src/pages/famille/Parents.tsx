@@ -4,6 +4,8 @@ import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { RejoindreMaFiche } from '../../components/FicheEnfantActions'
 import type { UserData } from "../../utils/auth";
+import { lireDureeMedia } from '../../utils/dureesMedias'
+import { BarreQuota, chargerQuota, type QuotaGalerie } from '../../components/QuotaGalerie'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -78,7 +80,8 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
   const [newActivityContent, setNewActivityContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   type ChapterKey = 'enfance' | 'paradis' | 'objectif'
-  type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }
+  type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }
+  const [quotaGalerie, setQuotaGalerie] = useState<QuotaGalerie | null>(null)
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<ChapterKey | 'notes'>('enfance')
   const [mediaByChapter, setMediaByChapter] = useState<Record<ChapterKey, MediaItem[]>>({ enfance: [], paradis: [], objectif: [] })
@@ -226,10 +229,12 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
             type: mediaType,
             url: act.mediaUrl,
             caption: act.content,
-            date: act.created_at
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaByChapter(chapters)
+        chargerQuota(`${API_BASE}/api/parent-child/gallery-quota?parentNumeroH=${encodeURIComponent(link.parentNumeroH)}&childNumeroH=${encodeURIComponent(link.childNumeroH)}`).then(setQuotaGalerie)
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -303,9 +308,9 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (message?: string) => {
       setMediaByChapter((prev) => ({ ...prev, [chapter]: (prev[chapter] || []).filter((m) => m.id !== optimistic.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      alert(message || "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -313,6 +318,11 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
         const token = getToken()
         if (!token) { annuler(); return }
         const dataUrl = await toDataUrl(mediaData.url)
+        let videoDuration: number | undefined
+        if (mediaData.type === 'video') {
+          const duree = await lireDureeMedia(await (await fetch(mediaData.url)).blob())
+          if (Number.isFinite(duree)) videoDuration = duree
+        }
         const toNumeroH =
           user.numeroH === selectedParent.parentNumeroH ? selectedParent.childNumeroH : selectedParent.parentNumeroH
 
@@ -325,13 +335,14 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
             toNumeroH,
             type: `souvenir_${chapter}`,
             content: mediaData.caption,
-            mediaUrl: dataUrl
+            mediaUrl: dataUrl,
+            videoDuration
           })
         })
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média parent:', data)
-          annuler()
+          annuler(data.message)
         } else {
           // Recharger depuis le serveur pour récupérer les IDs réels
           await loadActivitiesForParent(selectedParent)
@@ -344,6 +355,21 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
 
     void persist()
     setUploaderChapter(null)
+  }
+
+  // Retirer un de mes souvenirs : sa place gratuite se libère pour en mettre un autre
+  const retirerSouvenir = async (id: string) => {
+    if (!selectedParent || !window.confirm('Retirer ce souvenir ? Sa place se libère pour en mettre un autre.')) return
+    try {
+      const res = await fetch(`${API_BASE}/api/parent-child/activity/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) { alert(data.message || "Le souvenir n'a pas pu être retiré."); return }
+      await loadActivitiesForParent(selectedParent)
+    } catch {
+      alert('Erreur réseau')
+    }
   }
 
   void handleAddActivity
@@ -610,7 +636,9 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
                           {/* ── Contenu : chapitres médias ── */}
                           {openSection !== 'notes' && (() => {
                             const items = mediaByChapter[openSection as ChapterKey] ?? []
-                            return items.length === 0 ? (
+                            return (<>
+                            {quotaGalerie && <div className="mb-4"><BarreQuota quota={quotaGalerie} /></div>}
+                            {items.length === 0 ? (
                               <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                                 <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
                                 <button
@@ -629,10 +657,14 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
                                     {m.type === 'video' && <video src={m.url} controls className="w-full h-36 bg-black" />}
                                     {m.type === 'audio' && <div className="w-full h-24 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}
                                     {m.caption && <p className="p-2 text-xs text-slate-600 font-medium">{m.caption}</p>}
+                                    {m.from === user?.numeroH && (
+                                      <button type="button" onClick={() => retirerSouvenir(m.id)} className="w-full py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 border-t border-slate-100">🗑️ Retirer</button>
+                                    )}
                                   </div>
                                 ))}
                               </div>
-                            )
+                            )}
+                            </>)
                           })()}
 
                           {/* ── Contenu : Notes ── */}

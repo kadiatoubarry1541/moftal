@@ -6,7 +6,8 @@ import User from '../models/User.js';
 import FamilyGallery from '../models/FamilyGallery.js';
 import FamilyProblemMedia from '../models/FamilyProblemMedia.js';
 import { sequelize } from '../config/database.js';
-import { checkAndConsumeQuota } from './quotas.js';
+import { getOrCreateQuota } from './quotas.js';
+import { REGLES_GALERIES, autoriserPublication, rembourserPoints, repondreQuota } from '../utils/quotaGaleries.js';
 
 const router = express.Router();
 
@@ -391,42 +392,41 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
     if (!familyName) return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour partager des médias' });
     const isVideoFile = req.file.mimetype.startsWith('video/');
 
-    // Coût vidéo selon la durée (envoyée par le frontend en secondes)
-    let videoCost = 5;
-    if (isVideoFile) {
-      const dur = parseFloat(req.body.videoDuration || '30');
-      if (dur <= 10) videoCost = 2;
-      else if (dur <= 20) videoCost = 3;
-      else videoCost = 5;
-    }
-
-    // Vérifier et consommer le quota (5 photos + 1 vidéo gratuits par famille, puis points)
+    // Galerie familiale : 10 photos + 2 vidéos gratuites pour la famille,
+    // 1 photo offerte chaque mois et 1 vidéo tous les 3 mois, puis points.
+    // On compte ce qui est dans la galerie : retirer une photo libère sa place.
+    const debutFamille = await getOrCreateQuota('family', familyName, REGLES_GALERIES.famille.photos, REGLES_GALERIES.famille.videos);
+    const [nbPhotos, nbVideos] = await Promise.all([
+      FamilyGallery.count({ where: { familyName, type: 'image' } }),
+      FamilyGallery.count({ where: { familyName, type: 'video' } }),
+    ]);
+    let autorisation;
     try {
-      await checkAndConsumeQuota('family', familyName, isVideoFile, req.user.numeroH, 5, 1, isVideoFile ? videoCost : undefined);
+      autorisation = await autoriserPublication({
+        regle: REGLES_GALERIES.famille, depuis: debutFamille?.createdAt,
+        numeroH: req.user.numeroH, nbPhotos, nbVideos, estVideo: isVideoFile, dureeVideo: req.body.videoDuration,
+      });
     } catch (quotaErr) {
-      if (quotaErr.code === 'QUOTA_EXCEEDED') {
-        const type = quotaErr.isVideo ? 'vidéo' : 'photo';
-        const pts = quotaErr.isVideo ? `${videoCost} points` : '1 point';
-        return res.status(402).json({
-          success: false,
-          code: 'QUOTA_EXCEEDED',
-          isVideo: quotaErr.isVideo,
-          message: `Quota gratuit de votre famille épuisé. Publiez une ${type} supplémentaire pour ${pts}. Achetez des points via l'admin.`
-        });
-      }
+      if (quotaErr.code === 'QUOTA_EXCEEDED') return repondreQuota(res, quotaErr);
       throw quotaErr;
     }
 
     const dataUrl = toDataUrl(req.file);
     const uploaderName = [userData.prenom, userData.nomFamille].filter(Boolean).join(' ') || 'Membre';
-    const item = await FamilyGallery.create({
-      familyName,
-      uploaderNumeroH: req.user.numeroH,
-      uploaderName,
-      album,
-      url: dataUrl,
-      type: isVideoFile ? 'video' : 'image'
-    });
+    let item;
+    try {
+      item = await FamilyGallery.create({
+        familyName,
+        uploaderNumeroH: req.user.numeroH,
+        uploaderName,
+        album,
+        url: dataUrl,
+        type: isVideoFile ? 'video' : 'image'
+      });
+    } catch (err) {
+      await rembourserPoints(req.user.numeroH, autorisation);
+      throw err;
+    }
     res.json({ success: true, item });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

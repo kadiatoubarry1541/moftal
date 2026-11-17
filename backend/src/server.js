@@ -414,7 +414,7 @@ app.use('/api/defi-educatif', defiEducatifRoutes);
 app.use('/api/family', familyRoutes);
 app.use('/api/family-tree', familyTreeRoutes);
 app.use('/api/parent-child', parentChildRoutes);
-app.use('/api/album-prive', albumPriveRoutes); // album privé : 5 photos + 2 vidéos de 5 s, visible par son seul propriétaire
+app.use('/api/album-prive', albumPriveRoutes); // album privé (vidéos de 5 s), visible par son seul propriétaire — règles : utils/quotaGaleries.js
 app.use('/api/sibling', siblingRoutes);
 app.use('/api/couple', coupleRoutes);
 app.use('/api/unread', unreadRoutes); // messages non lus du bouton 💬

@@ -6,6 +6,8 @@ import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import { FicheEnfantActions, AnnulerFusionFiche, DemandesFichesEnfants } from '../../components/FicheEnfantActions'
 import type { UserData } from "../../utils/auth";
+import { lireDureeMedia } from '../../utils/dureesMedias'
+import { BarreQuota, chargerQuota, type QuotaGalerie } from '../../components/QuotaGalerie'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -94,7 +96,8 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
   const [childRatings, setChildRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<SessionKey | 'notes'>('avant')
-  const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
+  const [quotaGalerie, setQuotaGalerie] = useState<QuotaGalerie | null>(null)
+  const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>>>({
     avant: [],
     paradis: [],
     objectif: []
@@ -182,7 +185,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         setActivities(list)
 
         // Reconstruire les médias par chapitre à partir des activités avec mediaUrl
-        const chapters: Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>> = {
+        const chapters: Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>> = {
           avant: [],
           paradis: [],
           objectif: []
@@ -212,10 +215,12 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
             type: mediaType,
             url: displayUrl,
             caption: caption || undefined,
-            date: act.created_at
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaByChapter(chapters)
+        chargerQuota(`${API_BASE}/api/parent-child/gallery-quota?parentNumeroH=${encodeURIComponent(link.parentNumeroH)}&childNumeroH=${encodeURIComponent(link.childNumeroH)}`).then(setQuotaGalerie)
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -355,9 +360,9 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (message?: string) => {
       setMediaByChapter((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== optimistic.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      alert(message || "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -373,6 +378,10 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         const formData = new FormData()
         const fieldName = mediaData.type === 'photo' ? 'image' : mediaData.type === 'video' ? 'video' : 'audio'
         formData.append(fieldName, file)
+        if (mediaData.type === 'video') {
+          const duree = await lireDureeMedia(blob)
+          if (Number.isFinite(duree)) formData.append('videoDuration', String(duree))
+        }
         formData.append('parentNumeroH', selectedChild.parentNumeroH)
         formData.append('childNumeroH', selectedChild.childNumeroH)
         formData.append('toNumeroH', toNumeroH)
@@ -386,7 +395,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média enfant:', data)
-          annuler()
+          annuler(data.message)
         } else {
           await loadActivitiesForChild(selectedChild)
         }
@@ -398,6 +407,21 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
 
     void persist()
     setUploaderSession(null)
+  }
+
+  // Retirer un de mes souvenirs : sa place gratuite se libère pour en mettre un autre
+  const retirerSouvenir = async (id: string) => {
+    if (!selectedChild || !window.confirm('Retirer ce souvenir ? Sa place se libère pour en mettre un autre.')) return
+    try {
+      const res = await fetch(`${API_BASE}/api/parent-child/activity/${encodeURIComponent(id)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) { alert(data.message || "Le souvenir n'a pas pu être retiré."); return }
+      await loadActivitiesForChild(selectedChild)
+    } catch {
+      alert('Erreur réseau')
+    }
   }
 
   const handleAddNote = async () => {
@@ -806,6 +830,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
                                         📷 Ajouter
                                       </button>
                                     </div>
+                                    {quotaGalerie && <div className="mb-4"><BarreQuota quota={quotaGalerie} /></div>}
                                     {mediaByChapter[openSection as SessionKey].length === 0 ? (
                                       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                                         <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
@@ -825,6 +850,9 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
                                             {m.type === 'video' && <video src={m.url} controls className="w-full h-40 bg-black" />}
                                             {m.type === 'audio' && <div className="w-full h-24 bg-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}
                                             {m.caption && <p className="p-2 text-sm text-slate-600">{m.caption}</p>}
+                                            {m.from === user?.numeroH && (
+                                              <button type="button" onClick={() => retirerSouvenir(m.id)} className="w-full py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 border-t border-slate-100">🗑️ Retirer</button>
+                                            )}
                                           </div>
                                         ))}
                                       </div>

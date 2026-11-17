@@ -221,7 +221,7 @@ export default function MonProfil() {
         <span className="text-2xl">🔒</span>
         <span className="flex-1 min-w-0">
           <span className="block font-bold">Mon album privé</span>
-          <span className="block text-xs text-emerald-100">5 photos et 2 vidéos — vous seul les voyez</span>
+          <span className="block text-xs text-emerald-100">5 photos + 2 vidéos gratuites — vous seul les voyez</span>
         </span>
         <span className="text-2xl">›</span>
       </button>

@@ -1,4 +1,5 @@
 import GalerieAlbum from '../../components/GalerieAlbum'
+import { lireDureeMedia } from '../../utils/dureesMedias'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
@@ -448,6 +449,11 @@ const enhancedUser: UserData = useMemo(() => {
       const token = localStorage.getItem('token')
       const formData = new FormData()
       formData.append('media', file)
+      // La durée fixe le prix d'une vidéo au-delà du gratuit (2, 3 ou 5 points)
+      if (file.type.startsWith('video/')) {
+        const duree = await lireDureeMedia(file)
+        if (Number.isFinite(duree)) formData.append('videoDuration', String(duree))
+      }
       const res = await fetch(`${API_BASE}/api/family/shared-gallery/${activeAlbum}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },

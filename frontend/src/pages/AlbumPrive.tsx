@@ -1,26 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { lireDureeMedia } from "../utils/dureesMedias";
 import { useTraduction } from "../i18n/traduction";
+import { BarreQuota, type QuotaGalerie } from "../components/QuotaGalerie";
 
 // Album privé : chaque personne a le sien, que personne d'autre ne voit.
-// 7 fichiers au maximum : 5 photos et 2 vidéos de 5 secondes au plus.
-// Tout est enregistré sur le serveur (/api/album-prive).
+// 5 photos + 2 vidéos gratuites (vidéos de 5 secondes au plus), 1 photo offerte
+// chaque mois et 1 vidéo tous les 6 mois ; au-delà on paie en points.
+// Retirer un fichier libère sa place. Tout est enregistré sur le serveur (/api/album-prive).
 
 const API = `${config.API_BASE_URL}/album-prive`;
 const jeton = () => localStorage.getItem("token") || "";
 
 interface Element { id: string; type: "photo" | "video"; url: string; duree?: number | null; createdAt: string }
-interface Limites { maxPhotos: number; maxVideos: number; dureeMaxVideo: number }
-const LIMITES_PAR_DEFAUT: Limites = { maxPhotos: 5, maxVideos: 2, dureeMaxVideo: 5 };
 
 export default function AlbumPrive() {
   const { tr } = useTraduction();
   const navigate = useNavigate();
   const [elements, setElements] = useState<Element[]>([]);
-  const [limites, setLimites] = useState<Limites>(LIMITES_PAR_DEFAUT);
+  const [quota, setQuota] = useState<QuotaGalerie | null>(null);
+  const [dureeMaxVideo, setDureeMaxVideo] = useState(5);
+  const [besoinPoints, setBesoinPoints] = useState(false);
   const [chargement, setChargement] = useState(true);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
@@ -28,9 +30,10 @@ export default function AlbumPrive() {
   const champPhoto = useRef<HTMLInputElement>(null);
   const champVideo = useRef<HTMLInputElement>(null);
 
-  const appliquer = (d: { elements?: Element[]; limites?: Limites }) => {
+  const appliquer = (d: { elements?: Element[]; quota?: QuotaGalerie; dureeMaxVideo?: number }) => {
     setElements(d.elements || []);
-    if (d.limites) setLimites(d.limites);
+    if (d.quota) setQuota(d.quota);
+    if (d.dureeMaxVideo) setDureeMaxVideo(d.dureeMaxVideo);
   };
 
   const charger = useCallback(async () => {
@@ -52,19 +55,18 @@ export default function AlbumPrive() {
 
   const photos = elements.filter((e) => e.type === "photo");
   const videos = elements.filter((e) => e.type === "video");
-  const photosPleines = photos.length >= limites.maxPhotos;
-  const videosPleines = videos.length >= limites.maxVideos;
 
   const ajouter = async (fichier: File | undefined) => {
     if (!fichier) return;
     setErreur("");
+    setBesoinPoints(false);
     const estVideo = fichier.type.startsWith("video/");
     let duree: number | null = null;
     if (estVideo) {
       duree = await lireDureeMedia(fichier);
       if (!Number.isFinite(duree)) { setErreur(tr("La durée de cette vidéo n'a pas pu être lue. Essayez une autre vidéo.")); return; }
-      if (duree > limites.dureeMaxVideo + 0.5) {
-        setErreur(tr("Cette vidéo dure {d} secondes. Dans l'album privé, une vidéo dure {max} secondes au maximum.", { d: Math.round(duree), max: limites.dureeMaxVideo }));
+      if (duree > dureeMaxVideo + 0.5) {
+        setErreur(tr("Cette vidéo dure {d} secondes. Dans l'album privé, une vidéo dure {max} secondes au maximum.", { d: Math.round(duree), max: dureeMaxVideo }));
         return;
       }
     }
@@ -75,6 +77,7 @@ export default function AlbumPrive() {
       if (duree !== null) fd.append("duree", String(duree));
       const r = await fetch(API, { method: "POST", headers: { Authorization: `Bearer ${jeton()}` }, body: fd });
       const d = await r.json().catch(() => ({}));
+      if (d.code === "QUOTA_EXCEEDED") setBesoinPoints(true);
       if (!r.ok || !d.success) throw new Error(d.message || tr("Le fichier n'a pas pu être enregistré. Réessayez."));
       appliquer(d);
     } catch (e) {
@@ -129,10 +132,17 @@ export default function AlbumPrive() {
 
       <div className="max-w-3xl mx-auto px-4 py-5 space-y-6">
         <p className="rounded-xl bg-white dark:bg-gray-800 border border-emerald-100 dark:border-emerald-900/40 px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-          {tr("Gardez ici vos plus beaux souvenirs : {p} photos et {v} vidéos de {s} secondes au maximum. Personne d'autre ne les voit.", { p: limites.maxPhotos, v: limites.maxVideos, s: limites.dureeMaxVideo })}
+          {tr("Gardez ici vos plus beaux souvenirs. Personne d'autre ne les voit. Pour changer une photo, retirez-en une et mettez-en une autre.")}
         </p>
 
-        {erreur && <p className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{erreur}</p>}
+        {quota && <BarreQuota quota={quota} />}
+
+        {erreur && (
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <p>{erreur}</p>
+            {besoinPoints && <Link to="/acheter-points" className="mt-2 inline-block rounded-lg bg-amber-500 px-3 py-1.5 font-semibold text-white">🪙 {tr("Acheter des points")}</Link>}
+          </div>
+        )}
         {envoi && <p className="text-sm font-semibold text-emerald-700">{tr("Enregistrement en cours…")}</p>}
 
         {chargement ? (
@@ -141,34 +151,30 @@ export default function AlbumPrive() {
           <>
             <section>
               <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                📷 {tr("Photos")} <span className="font-normal text-gray-500">({photos.length}/{limites.maxPhotos})</span>
+                📷 {tr("Photos")} <span className="font-normal text-gray-500">({photos.length})</span>
               </h2>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {photos.map((el) => <Case key={el.id} el={el} />)}
-                {!photosPleines && <CaseVide libelle={tr("Ajouter une photo")} onClick={() => champPhoto.current?.click()} desactive={envoi} />}
+                <CaseVide libelle={tr("Ajouter une photo")} onClick={() => champPhoto.current?.click()} desactive={envoi} />
               </div>
             </section>
 
             <section>
               <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                🎬 {tr("Vidéos")} <span className="font-normal text-gray-500">({videos.length}/{limites.maxVideos} · {tr("{s} s maximum", { s: limites.dureeMaxVideo })})</span>
+                🎬 {tr("Vidéos")} <span className="font-normal text-gray-500">({videos.length} · {tr("{s} s maximum", { s: dureeMaxVideo })})</span>
               </h2>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {videos.map((el) => <Case key={el.id} el={el} />)}
-                {!videosPleines && <CaseVide libelle={tr("Ajouter une vidéo")} onClick={() => champVideo.current?.click()} desactive={envoi} />}
+                <CaseVide libelle={tr("Ajouter une vidéo")} onClick={() => champVideo.current?.click()} desactive={envoi} />
               </div>
             </section>
-
-            {photosPleines && videosPleines && (
-              <p className="text-center text-sm text-gray-500">{tr("Votre album est complet. Retirez un fichier pour en ajouter un autre.")}</p>
-            )}
           </>
         )}
       </div>
 
       <input ref={champPhoto} type="file" accept="image/*" className="hidden"
         onChange={(e) => { ajouter(e.target.files?.[0]); e.target.value = ""; }} />
-      <input ref={champVideo} type="file" accept="video/*" className="hidden" data-duree-max-video={limites.dureeMaxVideo}
+      <input ref={champVideo} type="file" accept="video/*" className="hidden" data-duree-max-video={dureeMaxVideo}
         onChange={(e) => { ajouter(e.target.files?.[0]); e.target.value = ""; }} />
 
       {ouvert && (
@@ -187,3 +193,4 @@ export default function AlbumPrive() {
     </div>
   );
 }
+

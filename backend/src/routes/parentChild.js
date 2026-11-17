@@ -9,7 +9,8 @@ import ParentChildMessage from '../models/ParentChildMessage.js';
 import { sequelize } from '../config/database.js';
 import Notification from '../models/Notification.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
-import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToR2, deleteFromR2 } from '../services/r2Storage.js';
+import { REGLES_GALERIES, autoriserPublication, rembourserPoints, resumeQuota, repondreQuota, compterMediasPublies, typeMedia } from '../utils/quotaGaleries.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { addUserToFamilyTree, MAX_MEMBRES_ARBRE } from './familyTree.js';
@@ -708,6 +709,50 @@ router.get('/activities', async (req, res) => {
  * POST /api/parent-child/activity
  * Ajouter une activité (ce que je fais pour mon parent ou mon enfant).
  */
+// ── Galerie parent-enfant : 5 photos + 2 vidéos gratuites par personne, puis points ──
+const PAIRE_PC = 'parent_numero_h = :parent AND child_numero_h = :child';
+async function autoriserMediaParentEnfant(user, parentNumeroH, childNumeroH, estVideo, dureeVideo) {
+  const { nbPhotos, nbVideos } = await compterMediasPublies('parent_child_activities', PAIRE_PC, { parent: parentNumeroH, child: childNumeroH }, user.numeroH);
+  return autoriserPublication({ regle: REGLES_GALERIES.personnel, depuis: user.createdAt, numeroH: user.numeroH, nbPhotos, nbVideos, estVideo, dureeVideo });
+}
+
+/**
+ * GET /api/parent-child/gallery-quota?parentNumeroH=&childNumeroH=
+ * Mes photos / vidéos gratuites dans cette galerie (je ne compte que les miennes).
+ */
+router.get('/gallery-quota', async (req, res) => {
+  try {
+    await ensureParentChildActivityTable();
+    const { parentNumeroH, childNumeroH } = req.query;
+    if (!parentNumeroH || !childNumeroH) return res.status(400).json({ success: false, message: 'parentNumeroH et childNumeroH sont requis' });
+    const { nbPhotos, nbVideos } = await compterMediasPublies('parent_child_activities', PAIRE_PC, { parent: parentNumeroH, child: childNumeroH }, req.user.numeroH);
+    res.json({ success: true, quota: await resumeQuota(REGLES_GALERIES.personnel, req.user.createdAt, nbPhotos, nbVideos, req.user.numeroH) });
+  } catch (error) {
+    console.error('Erreur quota galerie parent-enfant:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * DELETE /api/parent-child/activity/:id — retire un de MES souvenirs (libère sa place gratuite)
+ */
+router.delete('/activity/:id', async (req, res) => {
+  try {
+    await ensureParentChildActivityTable();
+    const [rows] = await sequelize.query(
+      `DELETE FROM parent_child_activities WHERE id::text = :id AND from_numero_h = :numeroH RETURNING media_url`,
+      { replacements: { id: req.params.id, numeroH: req.user.numeroH } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Souvenir introuvable, ou publié par l\'autre personne.' });
+    const url = rows[0].media_url;
+    if (url && !url.startsWith('data:') && typeMedia(url) !== 'photo') deleteFromR2(url).catch(() => {});
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir parent-enfant:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.post('/activity', async (req, res) => {
   try {
     await ensureParentChildActivityTable();
@@ -752,15 +797,33 @@ router.post('/activity', async (req, res) => {
       });
     }
 
-    const activity = await ParentChildActivity.create({
-      parentNumeroH,
-      childNumeroH,
-      fromNumeroH: user.numeroH,
-      toNumeroH,
-      type: type || 'message',
-      content: content || null,
-      mediaUrl: mediaUrl || null
-    });
+    // Photo / vidéo : gratuite dans la limite, sinon payée en points
+    let autorisation = null;
+    const genre = mediaUrl ? typeMedia(mediaUrl, content) : null;
+    if (genre === 'photo' || genre === 'video') {
+      try {
+        autorisation = await autoriserMediaParentEnfant(user, parentNumeroH, childNumeroH, genre === 'video', req.body.videoDuration);
+      } catch (err) {
+        if (err.code === 'QUOTA_EXCEEDED') return repondreQuota(res, err);
+        throw err;
+      }
+    }
+
+    let activity;
+    try {
+      activity = await ParentChildActivity.create({
+        parentNumeroH,
+        childNumeroH,
+        fromNumeroH: user.numeroH,
+        toNumeroH,
+        type: type || 'message',
+        content: content || null,
+        mediaUrl: mediaUrl || null
+      });
+    } catch (err) {
+      await rembourserPoints(user.numeroH, autorisation);
+      throw err;
+    }
 
     res.json({
       success: true,
@@ -1578,23 +1641,43 @@ router.post('/activity/upload', uploadChild.fields([
     let mediaUrl = null;
     const files = req.files || {};
     const uploadedFile = (files.image && files.image[0]) || (files.video && files.video[0]) || (files.audio && files.audio[0]);
-    if (uploadedFile) {
-      const isImage = uploadedFile.mimetype.startsWith('image/');
-      mediaUrl = isImage
-        ? await uploadToImageKit(uploadedFile.buffer, uploadedFile.originalname, 'parent-child')
-        : await uploadToR2(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'parent-child');
-      uploadToIDrive(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'parent-child').catch(() => {});
+
+    // Photo / vidéo : gratuite dans la limite, sinon payée en points
+    let autorisation = null;
+    // Le champ choisi (image / video) dit ce que c'est, même si le téléphone n'indique pas le type du fichier
+    const estVideoUpload = !!(files.video && files.video[0]) || (!!uploadedFile && uploadedFile.mimetype.startsWith('video/'));
+    const estPhotoUpload = !estVideoUpload && (!!(files.image && files.image[0]) || (!!uploadedFile && uploadedFile.mimetype.startsWith('image/')));
+    if (uploadedFile && (estPhotoUpload || estVideoUpload)) {
+      try {
+        autorisation = await autoriserMediaParentEnfant(user, parentNumeroH, childNumeroH, estVideoUpload, req.body.videoDuration);
+      } catch (err) {
+        if (err.code === 'QUOTA_EXCEEDED') return repondreQuota(res, err);
+        throw err;
+      }
     }
 
-    const activity = await ParentChildActivity.create({
-      parentNumeroH,
-      childNumeroH,
-      fromNumeroH: user.numeroH,
-      toNumeroH,
-      type: type || 'media',
-      content: content || null,
-      mediaUrl
-    });
+    let activity;
+    try {
+      if (uploadedFile) {
+        const isImage = uploadedFile.mimetype.startsWith('image/');
+        mediaUrl = isImage
+          ? await uploadToImageKit(uploadedFile.buffer, uploadedFile.originalname, 'parent-child')
+          : await uploadToR2(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'parent-child');
+        uploadToIDrive(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'parent-child').catch(() => {});
+      }
+      activity = await ParentChildActivity.create({
+        parentNumeroH,
+        childNumeroH,
+        fromNumeroH: user.numeroH,
+        toNumeroH,
+        type: type || 'media',
+        content: content || null,
+        mediaUrl
+      });
+    } catch (err) {
+      await rembourserPoints(user.numeroH, autorisation);
+      throw err;
+    }
 
     res.json({
       success: true,

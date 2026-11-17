@@ -9,7 +9,8 @@ import PartnerRating from '../models/PartnerRating.js';
 import { sequelize } from '../config/database.js';
 import Notification from '../models/Notification.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
-import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToR2, deleteFromR2 } from '../services/r2Storage.js';
+import { REGLES_GALERIES, autoriserPublication, rembourserPoints, resumeQuota, repondreQuota, compterMediasPublies, typeMedia } from '../utils/quotaGaleries.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
@@ -742,6 +743,52 @@ router.get('/activities', async (req, res) => {
  * POST /api/couple/activity
  * Ajouter une activité (ce que je fais pour mon partenaire).
  */
+// ── Galerie du couple : 5 photos + 2 vidéos gratuites par personne, puis points ──
+const PAIRE_COUPLE = 'numero_h1 = :h1 AND numero_h2 = :h2';
+async function compterMediasCouple(link, numeroH) {
+  return compterMediasPublies('couple_activities', PAIRE_COUPLE, { h1: link.numeroH1, h2: link.numeroH2 }, numeroH);
+}
+async function autoriserMediaCouple(user, link, estVideo, dureeVideo) {
+  const { nbPhotos, nbVideos } = await compterMediasCouple(link, user.numeroH);
+  return autoriserPublication({ regle: REGLES_GALERIES.personnel, depuis: user.createdAt, numeroH: user.numeroH, nbPhotos, nbVideos, estVideo, dureeVideo });
+}
+
+/**
+ * GET /api/couple/gallery-quota — mes photos / vidéos gratuites dans la galerie du couple
+ */
+router.get('/gallery-quota', async (req, res) => {
+  try {
+    await ensureCoupleActivityTable();
+    const link = await CoupleLink.getMyPartner(req.user.numeroH);
+    if (!link) return res.json({ success: true, quota: null });
+    const { nbPhotos, nbVideos } = await compterMediasCouple(link, req.user.numeroH);
+    res.json({ success: true, quota: await resumeQuota(REGLES_GALERIES.personnel, req.user.createdAt, nbPhotos, nbVideos, req.user.numeroH) });
+  } catch (error) {
+    console.error('Erreur quota galerie couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * DELETE /api/couple/activity/:id — retire un de MES souvenirs (libère sa place gratuite)
+ */
+router.delete('/activity/:id', async (req, res) => {
+  try {
+    await ensureCoupleActivityTable();
+    const [rows] = await sequelize.query(
+      `DELETE FROM couple_activities WHERE id::text = :id AND from_numero_h = :numeroH RETURNING media_url`,
+      { replacements: { id: req.params.id, numeroH: req.user.numeroH } }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Souvenir introuvable, ou publié par votre conjoint(e).' });
+    const url = rows[0].media_url;
+    if (url && !url.startsWith('data:') && typeMedia(url) !== 'photo') deleteFromR2(url).catch(() => {});
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.post('/activity', async (req, res) => {
   try {
     await ensureCoupleActivityTable();
@@ -758,15 +805,32 @@ router.post('/activity', async (req, res) => {
 
     const toNumeroH = link.numeroH1 === user.numeroH ? link.numeroH2 : link.numeroH1;
 
-    const activity = await CoupleActivity.create({
-      numeroH1: link.numeroH1,
-      numeroH2: link.numeroH2,
-      fromNumeroH: user.numeroH,
-      toNumeroH,
-      type: type || 'message',
-      content: content || null,
-      mediaUrl: mediaUrl || null
-    });
+    let autorisation = null;
+    const genre = mediaUrl ? typeMedia(mediaUrl, content) : null;
+    if (genre === 'photo' || genre === 'video') {
+      try {
+        autorisation = await autoriserMediaCouple(user, link, genre === 'video', req.body.videoDuration);
+      } catch (err) {
+        if (err.code === 'QUOTA_EXCEEDED') return repondreQuota(res, err);
+        throw err;
+      }
+    }
+
+    let activity;
+    try {
+      activity = await CoupleActivity.create({
+        numeroH1: link.numeroH1,
+        numeroH2: link.numeroH2,
+        fromNumeroH: user.numeroH,
+        toNumeroH,
+        type: type || 'message',
+        content: content || null,
+        mediaUrl: mediaUrl || null
+      });
+    } catch (err) {
+      await rembourserPoints(user.numeroH, autorisation);
+      throw err;
+    }
 
     res.json({
       success: true,
@@ -812,23 +876,41 @@ router.post('/activity/upload', uploadCouple.fields([
     let mediaUrl = null;
     const files = req.files || {};
     const uploadedFile = (files.image && files.image[0]) || (files.video && files.video[0]) || (files.audio && files.audio[0]);
-    if (uploadedFile) {
-      const isImage = uploadedFile.mimetype.startsWith('image/');
-      mediaUrl = isImage
-        ? await uploadToImageKit(uploadedFile.buffer, uploadedFile.originalname, 'couple')
-        : await uploadToR2(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple');
-      uploadToIDrive(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple').catch(() => {});
+    let autorisation = null;
+    // Le champ choisi (image / video) dit ce que c'est, même si le téléphone n'indique pas le type du fichier
+    const estVideoUpload = !!(files.video && files.video[0]) || (!!uploadedFile && uploadedFile.mimetype.startsWith('video/'));
+    const estPhotoUpload = !estVideoUpload && (!!(files.image && files.image[0]) || (!!uploadedFile && uploadedFile.mimetype.startsWith('image/')));
+    if (uploadedFile && (estPhotoUpload || estVideoUpload)) {
+      try {
+        autorisation = await autoriserMediaCouple(user, link, estVideoUpload, req.body.videoDuration);
+      } catch (err) {
+        if (err.code === 'QUOTA_EXCEEDED') return repondreQuota(res, err);
+        throw err;
+      }
     }
 
-    const activity = await CoupleActivity.create({
-      numeroH1: link.numeroH1,
-      numeroH2: link.numeroH2,
-      fromNumeroH: user.numeroH,
-      toNumeroH,
-      type: type || 'media',
-      content: content || null,
-      mediaUrl
-    });
+    let activity;
+    try {
+      if (uploadedFile) {
+        const isImage = uploadedFile.mimetype.startsWith('image/');
+        mediaUrl = isImage
+          ? await uploadToImageKit(uploadedFile.buffer, uploadedFile.originalname, 'couple')
+          : await uploadToR2(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple');
+        uploadToIDrive(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple').catch(() => {});
+      }
+      activity = await CoupleActivity.create({
+        numeroH1: link.numeroH1,
+        numeroH2: link.numeroH2,
+        fromNumeroH: user.numeroH,
+        toNumeroH,
+        type: type || 'media',
+        content: content || null,
+        mediaUrl
+      });
+    } catch (err) {
+      await rembourserPoints(user.numeroH, autorisation);
+      throw err;
+    }
 
     res.json({
       success: true,
