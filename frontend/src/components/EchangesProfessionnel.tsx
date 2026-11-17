@@ -4,7 +4,7 @@ import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
 import PaymentModal from './PaymentModal';
 import { useI18n } from '../i18n/useI18n';
-import { CommanderProduitModal, CommandesRecues, MesCommandes } from './CommanderProduit';
+import { BandeauLivraisonGratuite, CommanderProduitModal, CommandesRecues, MesCommandes } from './CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
@@ -263,6 +263,7 @@ export function EchangesProfessionnel() {
       <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-8">
         {/* Commandes : celles reçues (vendeur) et celles passées (acheteur) — vides, rien ne s'affiche */}
         <div className="pt-3">
+          <BandeauLivraisonGratuite className="mb-3" />
           <CommandesRecues />
           <MesCommandes />
         </div>

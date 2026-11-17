@@ -6,7 +6,7 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { useI18n } from '../i18n/useI18n';
-import { CommanderProduitModal } from '../components/CommanderProduit';
+import { BandeauLivraisonGratuite, CommanderProduitModal } from '../components/CommanderProduit';
 import { useTraduction } from '../i18n/traduction';
 import type { ContactEchange } from "../types/echange";
 
@@ -266,6 +266,7 @@ export default function EchangeNourriture() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <BandeauLivraisonGratuite className="mb-4" />
       <button
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"

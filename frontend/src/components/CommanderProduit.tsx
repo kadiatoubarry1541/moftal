@@ -40,6 +40,27 @@ const premiereUrl = (l?: unknown[]) => {
   return u ? getPhotoUrl(u) : null;
 };
 
+/** Nombre de produits à partir duquel la livraison est offerte (même produit ou produits différents). */
+export const SEUIL_LIVRAISON_GRATUITE = 3;
+
+/** Petit bandeau qui motive à commander : livraison gratuite dès 3 produits. */
+export function BandeauLivraisonGratuite({ className = "" }: { className?: string }) {
+  const { tr } = useTraduction();
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md ${className}`}>
+      <span className="text-3xl leading-none" aria-hidden>🚚</span>
+      <div className="min-w-0">
+        <p className="font-extrabold text-sm sm:text-base leading-tight">
+          {tr("Livraison gratuite dès {n} produits commandés !", { n: SEUIL_LIVRAISON_GRATUITE })}
+        </p>
+        <p className="text-xs sm:text-sm text-white/90 leading-snug">
+          {tr("3 fois le même produit ou 3 produits différents : à vous de choisir, la livraison est offerte.")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /** Fenêtre « Commander » : quantité, téléphone, adresse, message → au vendeur. */
 export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }: { product: ProduitACommander; couleur?: string; onClose: () => void }) {
   const { tr } = useTraduction();
@@ -126,6 +147,15 @@ export function CommanderProduitModal({ product, couleur = "#16a34a", onClose }:
               <span className="text-gray-600 dark:text-gray-300">{tr("Total")}</span>
               <span className="font-bold text-gray-900 dark:text-white">{montant(prix * quantite, product.currency)}</span>
             </div>
+          )}
+          {quantite >= SEUIL_LIVRAISON_GRATUITE ? (
+            <p className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm font-semibold text-emerald-800">
+              🎉 {tr("Bravo ! Avec {n} produits, votre livraison est gratuite.", { n: quantite })}
+            </p>
+          ) : (
+            <p className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
+              🚚 {tr("Plus que {n} produit(s) et la livraison est gratuite — même produit ou produits différents.", { n: SEUIL_LIVRAISON_GRATUITE - quantite })}
+            </p>
           )}
           {erreur && <p className="mt-3 text-sm text-red-600">{erreur}</p>}
 
