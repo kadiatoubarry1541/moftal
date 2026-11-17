@@ -49,14 +49,10 @@ export function BandeauLivraisonGratuite({ className = "" }: { className?: strin
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md ${className}`}>
       <span className="text-3xl leading-none" aria-hidden>🚚</span>
-      <div className="min-w-0">
-        <p className="font-extrabold text-sm sm:text-base leading-tight">
-          {tr("Livraison gratuite dès {n} produits commandés !", { n: SEUIL_LIVRAISON_GRATUITE })}
-        </p>
-        <p className="text-xs sm:text-sm text-white/90 leading-snug">
-          {tr("3 fois le même produit ou 3 produits différents : à vous de choisir, la livraison est offerte.")}
-        </p>
-      </div>
+      <p className="min-w-0 text-sm sm:text-base leading-snug">
+        <span className="font-extrabold">{tr("{n} produits commandés = livraison gratuite", { n: SEUIL_LIVRAISON_GRATUITE })}</span>
+        {tr(", qu'ils soient pareils ou différents !")}
+      </p>
     </div>
   );
 }
