@@ -6,11 +6,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// S'assurer que le dossier uploads existe
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Dossier uploads créé:', uploadsDir);
+// Dossier de passage des fichiers reçus (ils partent ensuite vers le stockage en ligne).
+// Chez Cloudflare, seul /tmp est inscriptible : UPLOADS_DIR=/tmp/uploads.
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('📁 Dossier uploads créé:', uploadsDir);
+  }
+} catch (e) {
+  console.warn('⚠️ Dossier uploads impossible à créer :', e.message);
 }
 
 // Configuration du stockage

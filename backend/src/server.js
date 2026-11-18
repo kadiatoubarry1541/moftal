@@ -127,6 +127,10 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(path.dirname(__dirname), 'config.env') });
 
 const app = express();
+// Prêt = base connectée et serveur à l'écoute (utile chez Cloudflare : on attend
+// ce moment avant de lui passer la première demande)
+let signalerPret;
+export const serveurPret = new Promise((resoudre) => { signalerPret = resoudre; });
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || config.PORT || 5002;
 
@@ -217,7 +221,9 @@ connectDB()
   .then(() => import('./services/syncEchange.js').then((m) => { m.synchroniserTout(); }))
   .then(() => {
     console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
-    initSocket(httpServer, rawOrigins);
+    // Temps réel (socket.io) : pas encore disponible chez Cloudflare (à refaire
+    // avec les Durable Objects) — désactivé seulement là-bas (SANS_TEMPS_REEL=true)
+    if (process.env.SANS_TEMPS_REEL !== 'true') initSocket(httpServer, rawOrigins);
     httpServer.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         process.exit(0);
@@ -228,6 +234,7 @@ connectDB()
     });
 
     httpServer.listen(PORT, () => {
+      signalerPret();
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
       console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 URL: http://localhost:${PORT}`);

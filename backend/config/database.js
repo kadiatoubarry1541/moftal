@@ -1,4 +1,6 @@
 import { Sequelize } from 'sequelize';
+// Pilote PostgreSQL donné directement (et non chargé à la volée) : nécessaire chez Cloudflare
+import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,6 +17,7 @@ let sequelize;
 if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
+    dialectModule: pg,
     logging: false,
     dialectOptions: {
       ssl: {
@@ -37,6 +40,7 @@ if (process.env.DATABASE_URL) {
 } else {
   sequelize = new Sequelize({
     dialect: 'postgres',
+    dialectModule: pg,
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
     database: process.env.DB_NAME || 'enfants_adam_eve',

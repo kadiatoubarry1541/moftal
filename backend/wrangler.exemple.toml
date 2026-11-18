@@ -1,0 +1,18 @@
+# Modèle de réglages Cloudflare pour le serveur Moftal (branche « cloudflare »).
+# Copier en wrangler.toml (ignoré par git). Les valeurs secrètes ou de test vont
+# dans .dev.vars (ignoré aussi) — voir docs/MIGRATION_CLOUDFLARE.md.
+name = "moftal-serveur-essai"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PORT = "5002"
+DISABLE_IA_AUTO_START = "true"
+UPLOADS_DIR = "/tmp/uploads"
+SANS_TEMPS_REEL = "true"
+CONNEXION_PAR_DEMANDE = "true"
+
+# Les fichiers cherchent leur emplacement (import.meta.url) : inexistant chez Cloudflare
+[define]
+"import.meta.url" = "\"file:///moftal/backend/src/server.js\""

@@ -65,6 +65,10 @@
     "sequelize": {
       "uuid": "^11.1.1"
     },
-    "follow-redirects": "^1.16.2"
+    "follow-redirects": "^1.16.2",
+    "iconv-lite": "0.6.3"
+  },
+  "devDependencies": {
+    "wrangler": "4.156.0"
   }
 }
