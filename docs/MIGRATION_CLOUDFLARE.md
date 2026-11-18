@@ -1,4 +1,4 @@
-# Passage du serveur Moftal sur Cloudflare — branche `cloudflare`
+# Passage du serveur Moftal sur Cloudflare — branche `migration-cloudflare`
 
 Objectif : faire tourner le **serveur** de Moftal (aujourd'hui sur Render) dans
 **Cloudflare Workers**, gratuitement, sans toucher à `main` tant que tout ne marche
@@ -58,7 +58,7 @@ Tous les tests du serveur passent toujours (32 réussis, 0 échec).
 ## Rappels
 
 - `main` n'est pas touchée : bug urgent → `git checkout main`, corriger, pousser,
-  puis `git checkout cloudflare`.
+  puis `git checkout migration-cloudflare`.
 - Les données des utilisateurs sont dans la base (Neon), pas dans le code :
   changer de branche ne les touche pas. Les essais se font sur une base de test.
 - Lancer l'essai : `cd backend && cp wrangler.exemple.toml wrangler.toml`, créer

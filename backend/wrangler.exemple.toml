@@ -1,4 +1,4 @@
-# Modèle de réglages Cloudflare pour le serveur Moftal (branche « cloudflare »).
+# Modèle de réglages Cloudflare pour le serveur Moftal (branche « migration-cloudflare »).
 # Copier en wrangler.toml (ignoré par git). Les valeurs secrètes ou de test vont
 # dans .dev.vars (ignoré aussi) — voir docs/MIGRATION_CLOUDFLARE.md.
 name = "moftal-serveur-essai"
