@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { config } from '../config/api'
+import { lienPublicite } from '../utils/destinationsPublicite'
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || ''
 
@@ -46,7 +47,9 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
     setActive(prev => (prev + 1) % pubs.length)
   }
 
-  const goTo = (lien?: string | null) => {
+  // Chaque annonce ouvre sa page : le lien choisi, sinon celui deviné d'après son texte.
+  const goTo = (pub: Pub) => {
+    const lien = lienPublicite(pub)
     if (!lien) return
     if (lien.startsWith('http')) window.open(lien, '_blank', 'noopener,noreferrer')
     else navigate(lien)
@@ -69,14 +72,14 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
         {pubs.map((pub, i) => (
           <div
             key={pub.id}
-            onClick={() => goTo(pub.lien)}
+            onClick={() => goTo(pub)}
             className="absolute inset-0 transition-opacity duration-300"
             style={{
               opacity: i === active ? 1 : 0,
               // Les cartes sont empilées : seule la carte visible reçoit le clic
               // (sinon c'est toujours la dernière de la pile qui l'attrape).
               pointerEvents: i === active ? 'auto' : 'none',
-              cursor: pub.lien ? 'pointer' : 'default'
+              cursor: lienPublicite(pub) ? 'pointer' : 'default'
             }}
           >
             {hasImage(pub) && <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
@@ -126,14 +129,14 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
         {pubs.map((pub, i) => (
           <div
             key={pub.id}
-            onClick={() => goTo(pub.lien)}
+            onClick={() => goTo(pub)}
             className="absolute inset-0 transition-opacity duration-300"
             style={{
               opacity: i === active ? 1 : 0,
               // Les cartes sont empilées : seule la carte visible reçoit le clic
               // (sinon c'est toujours la dernière de la pile qui l'attrape).
               pointerEvents: i === active ? 'auto' : 'none',
-              cursor: pub.lien ? 'pointer' : 'default'
+              cursor: lienPublicite(pub) ? 'pointer' : 'default'
             }}
           >
             {hasImage(pub) && (

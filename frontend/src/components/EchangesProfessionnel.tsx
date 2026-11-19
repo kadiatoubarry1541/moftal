@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
 import PaymentModal from './PaymentModal';
@@ -96,7 +96,9 @@ export function EchangesProfessionnel() {
     primaire: true, secondaire: true, tertiaire: true, quaternaire: true,
   });
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [recherche, setRecherche] = useState('');
+  // ?q=… (ex. une publicité « essence ») ouvre la page déjà filtrée sur ce produit.
+  const [searchParams] = useSearchParams();
+  const [recherche, setRecherche] = useState(() => searchParams.get('q') || '');
   const [canPublish, setCanPublish] = useState(false);
   const [unpaidVendorAccounts, setUnpaidVendorAccounts] = useState<{ id: string; subSector: string }[]>([]);
   const [payingAccount, setPayingAccount] = useState<{ id: string; subSector: string; amount: number } | null>(null);

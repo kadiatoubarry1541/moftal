@@ -56,7 +56,7 @@ const BANNER_VERSION = 5;
 const HOUSE_ADS = [
   { slug: 'info-moftal', image: `/banners/info-moftal.png?v=${BANNER_VERSION}`, lien: '/info' },
   { slug: 'professeur-ia', image: `/banners/professeur-ia.png?v=${BANNER_VERSION}`, lien: '/professeur-ia' },
-  { slug: 'paiement-famille', image: `/banners/paiement-famille.png?v=${BANNER_VERSION}`, lien: '/moftal-pay' },
+  { slug: 'paiement-famille', image: `/banners/paiement-famille.png?v=${BANNER_VERSION}`, lien: '/famille?tab=heritage', ancienLien: '/moftal-pay' },
   { slug: 'visibilite-gestion', image: `/banners/visibilite-gestion.png?v=${BANNER_VERSION}`, lien: '/inscription-pro' },
   { slug: 'echange', image: `/banners/echange.png?v=${BANNER_VERSION}`, lien: '/echange' },
 ];
@@ -71,7 +71,7 @@ async function seedHouseAds() {
       const ref = `house-ad:${ad.slug}`;
       const imageUrl = `${FRONTEND_ORIGIN}${ad.image}`;
       const [[existing]] = await sequelize.query(
-        `SELECT id, image_url FROM publicites WHERE payment_ref = :ref LIMIT 1`,
+        `SELECT id, image_url, lien FROM publicites WHERE payment_ref = :ref LIMIT 1`,
         { replacements: { ref } }
       );
       if (existing) {
@@ -81,6 +81,15 @@ async function seedHouseAds() {
           await sequelize.query(
             `UPDATE publicites SET image_url = :imageUrl WHERE id = :id`,
             { replacements: { imageUrl, id: existing.id } }
+          );
+        }
+        // Lien remplacé (ex. Paiement Famille → page Héritage, là où est l'argent
+        // de la famille) : on ne touche qu'à l'ancien lien d'origine, jamais à
+        // un lien que l'admin a choisi lui-même.
+        if (ad.ancienLien) {
+          await sequelize.query(
+            `UPDATE publicites SET lien = :lien WHERE id = :id AND (lien IS NULL OR lien = '' OR lien = :ancienLien)`,
+            { replacements: { lien: ad.lien, ancienLien: ad.ancienLien, id: existing.id } }
           );
         }
         continue;
@@ -245,6 +254,33 @@ router.post('/:id/activer-admin', authenticate, async (req, res) => {
       WHERE id = :id
     `, { replacements: { admin: req.user.numeroH, id: req.params.id, expireLe } });
     res.json({ success: true, message: 'Publicité publiée pour 30 jours.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/publicites/:id/lien
+// Change la page ouverte quand on appuie sur la publicité (même déjà publiée).
+// Le propriétaire de l'annonce ou l'admin principal. Lien vide = page devinée
+// d'après le texte de l'annonce (voir destinationsPublicite.ts côté site).
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/:id/lien', authenticate, async (req, res) => {
+  try {
+    const [[pub]] = await sequelize.query(
+      `SELECT numero_h FROM publicites WHERE id = :id`,
+      { replacements: { id: req.params.id } }
+    );
+    if (!pub) return res.status(404).json({ success: false, message: 'Publicité introuvable.' });
+    if (pub.numero_h !== req.user.numeroH && !req.user.isMasterAdmin) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres publicités.' });
+    }
+    const lien = (req.body?.lien || '').toString().trim().slice(0, 500) || null;
+    await sequelize.query(
+      `UPDATE publicites SET lien = :lien WHERE id = :id`,
+      { replacements: { lien, id: req.params.id } }
+    );
+    res.json({ success: true, lien, message: 'Lien de la publicité enregistré.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
