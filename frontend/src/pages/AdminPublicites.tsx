@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { getSessionUser, isMasterAdmin } from "../utils/auth";
+import { ModifierLienPublicite } from "../components/ChoixLienPublicite";
 
 interface Publicite {
   id: string;
@@ -27,6 +29,22 @@ export default function AdminPublicites() {
   const API = (config.API_BASE_URL || "http://localhost:5002/api");
   const token = localStorage.getItem("token");
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  // Seul l'admin principal peut changer la page d'une annonce (comme le serveur).
+  const adminPrincipal = isMasterAdmin(getSessionUser());
+
+  async function enregistrerLien(id: string, lien: string): Promise<string | null> {
+    try {
+      const res = await fetch(`${API}/publicites/${id}/lien`, { method: "PATCH", headers, body: JSON.stringify({ lien }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.success) return d.message || "Le lien n'a pas été enregistré. Réessayez.";
+      const maj = (l: Publicite[]) => l.map(p => (p.id === id ? { ...p, lien: d.lien || undefined } : p));
+      setToutes(maj);
+      setEnAttente(maj);
+      return null;
+    } catch {
+      return "Erreur de connexion : le lien n'a pas été enregistré.";
+    }
+  }
 
   const [tab, setTab] = useState<"attente" | "toutes">("attente");
   const [enAttente, setEnAttente] = useState<Publicite[]>([]);
@@ -171,7 +189,8 @@ export default function AdminPublicites() {
                     <p className="text-sm font-semibold text-gray-800 mt-1">{p.nom || p.numero_h}</p>
                     <p className="text-xs text-gray-400">{p.numero_h}</p>
                     {p.bouton_texte && <p className="text-xs text-gray-400 mt-0.5">Bouton : « {p.bouton_texte} »</p>}
-                    {p.lien && <p className="text-xs text-blue-500 truncate mt-0.5">🔗 {p.lien}</p>}
+                    {p.lien && !adminPrincipal && <p className="text-xs text-blue-500 truncate mt-0.5">🔗 {p.lien}</p>}
+                    {adminPrincipal && p.statut !== "refuse" && <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />}
                     {p.statut === "refuse" && p.raison_refus && (
                       <p className="text-xs text-red-500 mt-1">Raison : {p.raison_refus}</p>
                     )}

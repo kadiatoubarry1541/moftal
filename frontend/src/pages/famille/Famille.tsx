@@ -29,7 +29,9 @@ export default function Famille() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
+  // Onglet demandé par la navigation (state) ou par le lien (?tab=heritage — publicités).
   const initialTab = (location.state as { tab?: string } | null)?.tab
+    || new URLSearchParams(location.search).get('tab') || undefined
   const [activeTab, setActiveTab] = useState<TabId | null>(
     VALID_TAB_IDS.includes(initialTab as TabId) ? (initialTab as TabId) : null
   )

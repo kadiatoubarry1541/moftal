@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getSessionUser, isMasterAdmin } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
 import ImageCropper from '../components/ImageCropper'
+import { SelectDestination, ModifierLienPublicite } from '../components/ChoixLienPublicite'
 
 // Même format que la bannière affichée dans AdCarousel.tsx (aspectRatio: '4 / 1')
 // — recadrer à ce format exact avant l'envoi permet de savoir précisément ce
@@ -18,6 +19,9 @@ interface MaPublicite {
   expire_le?: string | null;
   id: string;
   image_url?: string | null;
+  lien?: string | null;
+  description?: string | null;
+  bouton_texte?: string | null;
   raison_refus?: string | null;
   statut?: string | null;
   titre?: string | null;
@@ -119,6 +123,22 @@ export default function Publicite() {
       chargerMesPublicites()
     } catch {
       alert('Erreur de connexion.')
+    }
+  }
+
+  async function enregistrerLien(id: string, nouveauLien: string): Promise<string | null> {
+    try {
+      const r = await fetch(`${API}/api/publicites/${id}/lien`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lien: nouveauLien }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.success) return d.message || "Le lien n'a pas été enregistré. Réessayez."
+      setMesPublicites(prev => prev.map(p => p.id === id ? { ...p, lien: d.lien } : p))
+      return null
+    } catch {
+      return 'Erreur de connexion : le lien n\'a pas été enregistré.'
     }
   }
 
@@ -248,12 +268,10 @@ export default function Publicite() {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Lien <span className="font-normal text-gray-400">(optionnel)</span>
+                  Page ouverte au clic
                 </label>
-                <input type="text" value={lien} onChange={e => setLien(e.target.value)}
-                  placeholder="Ex : /echange ou https://..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
-                <p className="text-xs text-gray-400 mt-1">Si quelqu'un appuie sur votre publicité, il sera dirigé vers ce lien.</p>
+                <SelectDestination value={lien} onChange={setLien} pub={{ titre, description, bouton_texte: boutonTexte }} />
+                <p className="text-xs text-gray-400 mt-1">Si quelqu'un appuie sur votre publicité, il arrive directement sur cette page.</p>
               </div>
 
               {erreur && (
@@ -328,6 +346,7 @@ export default function Publicite() {
                       </div>
                     </div>
                   </div>
+                  {p.statut !== 'refuse' && <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />}
                 </div>
               )
             })}
