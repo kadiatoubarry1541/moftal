@@ -1,4 +1,5 @@
 import http from 'http';
+import { jetonDeDemande } from './config/demandeCourante.js';
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -127,6 +128,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(path.dirname(__dirname), 'config.env') });
 
 const app = express();
+// Chez Cloudflare : chaque demande garde ses propres connexions à la base
+app.use(jetonDeDemande);
 // Prêt = base connectée et serveur à l'écoute (utile chez Cloudflare : on attend
 // ce moment avant de lui passer la première demande)
 let signalerPret;
@@ -259,7 +262,9 @@ connectDB()
   });
 
 // Compression GZIP — réduit la taille des réponses de 70-90%
-app.use(compression({ level: 6 }));
+// Chez Cloudflare, la compression est faite par Cloudflare lui-même (sinon la
+// réponse arrive compressée sans le dire et devient illisible)
+if (process.env.SANS_COMPRESSION !== 'true') app.use(compression({ level: 6 }));
 
 // Middleware de sécurité
 app.use(helmet({

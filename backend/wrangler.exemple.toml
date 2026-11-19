@@ -12,6 +12,7 @@ DISABLE_IA_AUTO_START = "true"
 UPLOADS_DIR = "/tmp/uploads"
 SANS_TEMPS_REEL = "true"
 CONNEXION_PAR_DEMANDE = "true"
+SANS_COMPRESSION = "true"
 
 # Les fichiers cherchent leur emplacement (import.meta.url) : inexistant chez Cloudflare
 [define]

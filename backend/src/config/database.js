@@ -1,13 +1,9 @@
 import { Sequelize } from 'sequelize';
 // Pilote PostgreSQL donné directement (et non chargé à la volée) : nécessaire chez Cloudflare
 import pg from 'pg';
+import { brancherParDemande } from './demandeCourante.js';
 
-// Chez Cloudflare, une connexion ouverte pendant une demande ne peut pas servir à
-// une autre demande : CONNEXION_PAR_DEMANDE=true ferme chaque connexion dès qu'elle
-// est rendue (une connexion fraîche par demande).
-const POOL = process.env.CONNEXION_PAR_DEMANDE === 'true'
-  ? { max: 10, min: 0, acquire: 10000, idle: 1, evict: 1 }
-  : { max: 10, min: 0, acquire: 10000, idle: 10000 };
+const POOL = { max: 10, min: 0, acquire: 10000, idle: 10000 };
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -64,6 +60,8 @@ if (process.env.DATABASE_URL) {
   }
 });
 }
+
+brancherParDemande(sequelize);
 
 // Un champ facultatif laissé vide dans un formulaire arrive « undefined » :
 // Sequelize refuse alors toute la requête (« Named replacement … has no entry »)

@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 // Pilote PostgreSQL donné directement (et non chargé à la volée) : nécessaire chez Cloudflare
 import pg from 'pg';
+import { brancherParDemande } from '../src/config/demandeCourante.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -66,6 +67,8 @@ if (process.env.DATABASE_URL) {
     }
   });
 }
+
+brancherParDemande(sequelize);
 
 const MAX_DB_RETRIES = 5;
 const DB_RETRY_DELAY_MS = 2000;
