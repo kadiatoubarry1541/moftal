@@ -424,7 +424,7 @@ router.get('/diagnostic-donnees', async (req, res) => {
       compter(`SELECT COUNT(*) c FROM exchange_products WHERE category = 'quaternaire'`),
       compter(`SELECT COUNT(*) c FROM publicites`),
       compter(`SELECT COUNT(*) c FROM publicites WHERE statut = 'en_attente'`),
-      compter(`SELECT COUNT(*) c FROM publicites WHERE is_active = true AND expire_le >= NOW()`),
+      compter(`SELECT COUNT(*) c FROM publicites WHERE is_active = true AND (expire_le IS NULL OR expire_le >= NOW())`),
       compter(`SELECT COUNT(*) c FROM professional_accounts`),
       compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'approved'`),
       compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'pending'`),

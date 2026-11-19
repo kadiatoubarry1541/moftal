@@ -40,33 +40,40 @@ async function ensurePublicitesTable() {
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "titre" VARCHAR(120);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "description" VARCHAR(300);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "bouton_texte" VARCHAR(40);`).catch(() => {});
+    // Les annonces de l'admin principal restent en ligne tant qu'il ne les a
+    // pas retirées : jamais d'expiration (expire_le vide). Celles encore en
+    // ligne au moment de la mise à jour deviennent permanentes.
+    await sequelize.query(`
+      UPDATE "publicites" SET "expire_le" = NULL
+      WHERE "numero_h" IN (:admins) AND "is_active" = true AND "statut" = 'approuve'
+        AND "expire_le" IS NOT NULL AND "expire_le" >= NOW()
+    `, { replacements: { admins: MASTER_ADMIN_NUMEROS } }).catch(() => {});
   } catch (err) {
     console.warn('⚠️ ensurePublicitesTable:', err.message);
   }
 }
 
-// ─── Publicités "maison" — mettent en avant les outils Moftal eux-mêmes ───────
-// (Info Moftal, Professeur IA, Paiement Famille, Visibilité & Gestion Interne,
-// Échange). Insérées une seule fois au démarrage (marquées via payment_ref),
-// jamais réinsérées si l'admin les a modifiées ou retirées depuis.
-// "v=4" ci-dessous force les navigateurs/CDN à recharger l'image (au lieu de
-// garder l'ancienne en cache) — à incrémenter à chaque fois que le fichier
-// PNG d'une bannière maison est remplacé.
-const BANNER_VERSION = 5;
+// ─── Publicités "maison" — les 5 services que Moftal propose ──────────────────
+// (Moftal Info, Professeur IA, Moftal Pay, Moftal Pro, Moftal Échange).
+// Permanentes : aucune date d'expiration, elles restent sur la page d'accueil
+// tant que l'admin ne les a pas retirées. Insérées au démarrage (marquées via
+// payment_ref). Une nouvelle version des cartes (BANNER_VERSION) les remet en
+// ligne une fois ; ensuite, un retrait par l'admin est respecté.
+// "v=" force les navigateurs/CDN à recharger l'image — à incrémenter à chaque
+// fois qu'une carte maison est redessinée.
+const BANNER_VERSION = 6;
 const HOUSE_ADS = [
-  { slug: 'info-moftal', image: `/banners/info-moftal.png?v=${BANNER_VERSION}`, lien: '/info' },
-  { slug: 'professeur-ia', image: `/banners/professeur-ia.png?v=${BANNER_VERSION}`, lien: '/professeur-ia' },
-  { slug: 'paiement-famille', image: `/banners/paiement-famille.png?v=${BANNER_VERSION}`, lien: '/moftal-pay' },
-  { slug: 'visibilite-gestion', image: `/banners/visibilite-gestion.png?v=${BANNER_VERSION}`, lien: '/inscription-pro' },
-  { slug: 'echange', image: `/banners/echange.png?v=${BANNER_VERSION}`, lien: '/echange' },
+  { slug: 'info-moftal', image: `/banners/info-moftal.jpg?v=${BANNER_VERSION}`, lien: '/info' },
+  { slug: 'professeur-ia', image: `/banners/professeur-ia.jpg?v=${BANNER_VERSION}`, lien: '/professeur-ia' },
+  { slug: 'paiement-famille', image: `/banners/paiement-famille.jpg?v=${BANNER_VERSION}`, lien: '/moftal-pay' },
+  { slug: 'visibilite-gestion', image: `/banners/visibilite-gestion.jpg?v=${BANNER_VERSION}`, lien: '/inscription-pro' },
+  { slug: 'echange', image: `/banners/echange.jpg?v=${BANNER_VERSION}`, lien: '/echange' },
 ];
 const FRONTEND_ORIGIN = 'https://moftal.com';
 
 async function seedHouseAds() {
   try {
     const admin = MASTER_ADMIN_NUMEROS[0];
-    const expireLe = new Date();
-    expireLe.setFullYear(expireLe.getFullYear() + 1);
     for (const ad of HOUSE_ADS) {
       const ref = `house-ad:${ad.slug}`;
       const imageUrl = `${FRONTEND_ORIGIN}${ad.image}`;
@@ -75,20 +82,22 @@ async function seedHouseAds() {
         { replacements: { ref } }
       );
       if (existing) {
-        // Garde l'image à jour (nouvelle version = casse le cache navigateur)
-        // même si l'admin a modifié le lien ou le statut entre-temps.
+        // Nouvelle version de la carte : on met l'image à jour et on la remet
+        // en ligne, sans expiration (une seule fois par version).
         if (existing.image_url !== imageUrl) {
-          await sequelize.query(
-            `UPDATE publicites SET image_url = :imageUrl WHERE id = :id`,
-            { replacements: { imageUrl, id: existing.id } }
-          );
+          await sequelize.query(`
+            UPDATE publicites
+            SET image_url = :imageUrl, statut = 'approuve', is_active = true, expire_le = NULL,
+                titre = NULL, description = NULL, bouton_texte = NULL
+            WHERE id = :id
+          `, { replacements: { imageUrl, id: existing.id } });
         }
         continue;
       }
       await sequelize.query(`
         INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, payment_ref, created_at)
-        VALUES (:numeroH, 'Moftal', :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, :ref, NOW())
-      `, { replacements: { numeroH: admin, imageUrl, lien: ad.lien, expireLe, ref } });
+        VALUES (:numeroH, 'Moftal', :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, NULL, :ref, NOW())
+      `, { replacements: { numeroH: admin, imageUrl, lien: ad.lien, ref } });
     }
   } catch (err) {
     console.warn('⚠️ seedHouseAds:', err.message);
@@ -110,7 +119,8 @@ const upload = multer({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/publicites/actives
-// Liste les publicités de l'admin principal, actives et non expirées — pour
+// Liste les publicités de l'admin principal, actives et non expirées (celles
+// de l'admin n'expirent jamais : expire_le vide) — pour
 // le bandeau Famille. Réservé aux annonces de l'admin (voir /soumettre) :
 // la page d'accueil n'affiche jamais les publicités des autres utilisateurs.
 // Accessible sans connexion.
@@ -120,9 +130,10 @@ router.get('/actives', async (req, res) => {
     const [publicites] = await sequelize.query(`
       SELECT id, image_url, lien, titre, description, bouton_texte
       FROM publicites
-      WHERE is_active = true AND statut = 'approuve' AND expire_le >= NOW()
+      WHERE is_active = true AND statut = 'approuve'
+        AND (expire_le IS NULL OR expire_le >= NOW())
         AND numero_h IN (:admins)
-      ORDER BY created_at DESC
+      ORDER BY (COALESCE(payment_ref, '') LIKE 'house-ad:%') DESC, created_at DESC
       LIMIT 20
     `, { replacements: { admins: MASTER_ADMIN_NUMEROS } });
     res.json({ success: true, publicites });
@@ -165,20 +176,18 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     const boutonTexte = (req.body.boutonTexte || '').toString().trim().slice(0, 40) || null;
 
     // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
-    // publicité, ni pour la payer — elle est directement approuvée ET activée
-    // 30 jours, comme après un paiement normal. Seul l'admin principal
-    // apparaît sur la page d'accueil (voir /actives) ; les autres
-    // utilisateurs restent soumis à l'approbation + paiement habituels.
+    // publicité, ni pour la payer — elle est directement approuvée ET activée,
+    // sans expiration : elle reste en ligne tant qu'il ne l'a pas retirée.
+    // Seul l'admin principal apparaît sur la page d'accueil (voir /actives) ;
+    // les autres utilisateurs restent soumis à l'approbation + paiement habituels.
     const autoApprouve = !!req.user.isMasterAdmin;
-    const expireLe = new Date();
-    expireLe.setDate(expireLe.getDate() + 30);
 
     const [[pub]] = autoApprouve
       ? await sequelize.query(`
           INSERT INTO publicites (numero_h, nom, image_url, lien, titre, description, bouton_texte, statut, approuve_par, approuve_le, is_active, expire_le, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, :titre, :description, :boutonTexte, 'approuve', :numeroH, NOW(), true, :expireLe, NOW())
+          VALUES (:numeroH, :nom, :imageUrl, :lien, :titre, :description, :boutonTexte, 'approuve', :numeroH, NOW(), true, NULL, NOW())
           RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, titre, description, boutonTexte, expireLe } })
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, titre, description, boutonTexte } })
       : await sequelize.query(`
           INSERT INTO publicites (numero_h, nom, image_url, lien, titre, description, bouton_texte, statut, is_active, created_at)
           VALUES (:numeroH, :nom, :imageUrl, :lien, :titre, :description, :boutonTexte, 'en_attente', false, NOW())
@@ -189,7 +198,7 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
       success: true,
       publiciteId: pub.id,
       message: autoApprouve
-        ? 'Publicité approuvée et publiée pour 30 jours.'
+        ? 'Publicité publiée. Elle reste en ligne jusqu\'à ce que vous la retiriez.'
         : 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer pour la publier.',
     });
   } catch (err) {
@@ -205,7 +214,7 @@ router.get('/mes-publicites', authenticate, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
       SELECT id, image_url, lien, titre, description, bouton_texte, statut, raison_refus, expire_le, is_active,
-        (is_active = true AND expire_le >= NOW()) AS en_ligne,
+        (is_active = true AND (expire_le IS NULL OR expire_le >= NOW())) AS en_ligne,
         created_at
       FROM publicites
       WHERE numero_h = :numeroH
@@ -237,14 +246,13 @@ router.post('/:id/activer-admin', authenticate, async (req, res) => {
     if (pub.numero_h !== req.user.numeroH) {
       return res.status(403).json({ success: false, message: 'Cette publicité ne vous appartient pas.' });
     }
-    const expireLe = new Date();
-    expireLe.setDate(expireLe.getDate() + 30);
+    // Sans expiration : en ligne jusqu'à ce que l'admin la retire.
     await sequelize.query(`
       UPDATE publicites
-      SET statut = 'approuve', approuve_par = :admin, approuve_le = NOW(), is_active = true, expire_le = :expireLe
+      SET statut = 'approuve', approuve_par = :admin, approuve_le = NOW(), is_active = true, expire_le = NULL
       WHERE id = :id
-    `, { replacements: { admin: req.user.numeroH, id: req.params.id, expireLe } });
-    res.json({ success: true, message: 'Publicité publiée pour 30 jours.' });
+    `, { replacements: { admin: req.user.numeroH, id: req.params.id } });
+    res.json({ success: true, message: 'Publicité publiée. Elle reste en ligne jusqu\'à ce que vous la retiriez.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -291,7 +299,7 @@ router.get('/admin/en-attente', authenticate, requireAdmin, async (req, res) => 
 router.get('/admin/toutes', authenticate, requireAdmin, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT *, (is_active = true AND expire_le >= NOW()) AS en_ligne
+      SELECT *, (is_active = true AND (expire_le IS NULL OR expire_le >= NOW())) AS en_ligne
       FROM publicites
       ORDER BY created_at DESC
       LIMIT 200

@@ -302,6 +302,9 @@ export default function Publicite() {
                       {enLigne && p.expire_le && (
                         <p className="text-xs text-gray-400 mt-1">Expire le {fmtDate(p.expire_le)}</p>
                       )}
+                      {enLigne && !p.expire_le && (
+                        <p className="text-xs text-gray-400 mt-1">Reste en ligne jusqu'à ce que vous la retiriez</p>
+                      )}
                       <div className="flex gap-3 mt-2">
                         {!enLigne && p.statut !== 'refuse' && admin && (
                           <button
