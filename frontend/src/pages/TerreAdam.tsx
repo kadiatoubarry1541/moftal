@@ -118,6 +118,10 @@ export default function TerreAdam() {
   const [selectedGroup, setSelectedGroup] = useState<ResidenceGroup | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Publications d'exemple de la page Terre (admin)
+  const [exemplesBusy, setExemplesBusy] = useState(false);
+  const [exemplesMsg, setExemplesMsg] = useState<string | null>(null);
+  const [exemplesCle, setExemplesCle] = useState(0);
   // ✅ Vérifier si l'utilisateur est journaliste
   const [isJournalist, setIsJournalist] = useState(false);
   const [filterScope, setFilterScope] = useState<'all' | 'quartier'>('quartier');
@@ -472,6 +476,69 @@ export default function TerreAdam() {
   const activeQuartierLoc = activeQuartierCode ? findLocationByCode(activeQuartierCode) : null;
   const activeQuartierName = activeQuartierLoc?.name || (isRealLieu(activeQuartierCode) ? activeQuartierCode : null);
 
+  // ─── Publications d'exemple (admin) ───────────────────────────────────
+  // Les lieux remplis sont exactement ceux que la page affiche (mêmes
+  // scope/location que les fils ci-dessous) : l'admin voit le rendu réel.
+
+  const niveauxExemples = () => {
+    const niveaux: { scope: string; location: string; locationName: string }[] = [];
+    [0, 1, 2].forEach(i => {
+      const code = userQuartierCodes[i];
+      niveaux.push({
+        scope: 'quartier',
+        location: code || `quartier-${i + 1}`,
+        locationName: (code && findLocationByCode(code)?.name) || code || `Résidence ${i + 1}`,
+      });
+    });
+    const nomSp = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : t('terre_adam.default_commune'));
+    niveaux.push({ scope: 'sous-prefecture', location: userData?.sousPrefectureCode || userData?.sousPrefecture || nomSp, locationName: nomSp });
+    const nomPref = userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : t('terre_adam.default_prefecture'));
+    niveaux.push({ scope: 'prefecture', location: userData?.prefectureCode || userData?.prefecture || nomPref, locationName: nomPref });
+    niveaux.push({
+      scope: 'region',
+      location: userData?.regionCode || userData?.region || userData?.regionOrigine || 'region',
+      locationName: userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region'),
+    });
+    niveaux.push({
+      scope: 'pays',
+      location: userData?.paysCode || effectiveCountry?.code || userData?.pays || 'pays',
+      locationName: effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays'),
+    });
+    niveaux.push({
+      scope: 'continent',
+      location: userData?.continentCode || effectiveContinent?.code || userData?.continent || 'continent',
+      locationName: effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent'),
+    });
+    niveaux.push({ scope: 'mondial', location: 'mondial', locationName: 'Monde' });
+    return niveaux;
+  };
+
+  const gererExemples = async (action: 'publier' | 'retirer') => {
+    if (action === 'retirer' && !window.confirm('Retirer toutes les publications d\'exemple de la page Terre ?')) return;
+    setExemplesBusy(true);
+    setExemplesMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/developpement/exemples`, {
+        method: action === 'publier' ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: action === 'publier' ? JSON.stringify({ niveaux: niveauxExemples() }) : undefined,
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.success) {
+        setExemplesMsg(`❌ ${d.message || 'Erreur du serveur'}`);
+        return;
+      }
+      setExemplesMsg(action === 'publier'
+        ? `✅ ${d.crees} publications d'exemple ajoutées, du quartier jusqu'au Monde.`
+        : `✅ ${d.retires} publications d'exemple retirées.`);
+      setExemplesCle(k => k + 1); // recharge les fils affichés
+    } catch {
+      setExemplesMsg('❌ Erreur réseau : rien n\'a été enregistré.');
+    } finally {
+      setExemplesBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header + Menu 3 points */}
@@ -546,7 +613,24 @@ export default function TerreAdam() {
       })()}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
+      <div key={exemplesCle} className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
+        {isAdmin && (
+          <div className="mb-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-xs font-bold text-amber-900">🧪 Publications d'exemple (visible par l'admin)</p>
+            <p className="text-[11px] text-amber-800 mt-0.5">Remplit chaque niveau — quartier, sous-préfecture, préfecture, région, pays, continent et Monde — pour voir le rendu.</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button type="button" disabled={exemplesBusy} onClick={() => gererExemples('publier')}
+                className="px-3 py-1.5 rounded-full bg-amber-600 text-white text-xs font-semibold disabled:opacity-50">
+                {exemplesBusy ? '…' : '➕ Publier les exemples'}
+              </button>
+              <button type="button" disabled={exemplesBusy} onClick={() => gererExemples('retirer')}
+                className="px-3 py-1.5 rounded-full bg-white border border-amber-300 text-amber-800 text-xs font-semibold disabled:opacity-50">
+                🗑️ Retirer les exemples
+              </button>
+            </div>
+            {exemplesMsg && <p className="text-[11px] mt-1.5 text-amber-900">{exemplesMsg}</p>}
+          </div>
+        )}
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
           <div className="space-y-2.5">
