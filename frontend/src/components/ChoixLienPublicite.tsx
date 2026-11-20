@@ -95,3 +95,72 @@ export function ModifierLienPublicite({ pub, enregistrer }: {
     </div>
   )
 }
+
+export interface TextesAnnonce {
+  titre: string
+  description: string
+  boutonTexte: string
+  lien: string
+}
+
+/** Titre, description, bouton et page d'une annonce déjà publiée. */
+export function ModifierAnnonce({ pub, enregistrer }: {
+  pub: PubTexte & { id: string; lien?: string | null }
+  /** Envoie au serveur ; renvoie un message d'erreur ou null si c'est enregistré */
+  enregistrer: (id: string, textes: TextesAnnonce) => Promise<string | null>
+}) {
+  const depart: TextesAnnonce = {
+    titre: pub.titre || '',
+    description: pub.description || '',
+    boutonTexte: pub.bouton_texte || '',
+    lien: pub.lien || '',
+  }
+  const [textes, setTextes] = useState(depart)
+  const [enregistre, setEnregistre] = useState(depart)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null)
+  const change = (k: keyof TextesAnnonce, v: string) => { setTextes(t => ({ ...t, [k]: v })); setMessage(null) }
+  const modifie = JSON.stringify(textes) !== JSON.stringify(enregistre)
+  const sansPage = !enregistre.lien && !devinerDestination({ titre: enregistre.titre, description: enregistre.description, bouton_texte: enregistre.boutonTexte })
+
+  const sauver = async () => {
+    setBusy(true); setMessage(null)
+    const erreur = await enregistrer(pub.id, textes)
+    setBusy(false)
+    if (erreur) { setMessage({ ok: false, texte: erreur }); return }
+    setEnregistre(textes)
+    setMessage({ ok: true, texte: 'Annonce enregistrée.' })
+  }
+
+  const champ = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400'
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+      <p className="text-xs font-bold text-gray-600">✏️ Modifier cette annonce</p>
+      {sansPage && (
+        <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+          ⚠️ Cette annonce n'ouvre encore aucune page quand on appuie dessus. Choisissez sa page ci-dessous.
+        </p>
+      )}
+      <input type="text" value={textes.titre} onChange={e => change('titre', e.target.value)} maxLength={120} placeholder="Titre (ex : Créez votre espace pro)" className={champ} />
+      <textarea value={textes.description} onChange={e => change('description', e.target.value)} maxLength={300} rows={2} placeholder="Description (optionnel)" className={champ + ' resize-none'} />
+      <input type="text" value={textes.boutonTexte} onChange={e => change('boutonTexte', e.target.value)} maxLength={40} placeholder="Texte du bouton (ex : Commencer)" className={champ} />
+      <p className="text-xs font-bold text-gray-600 pt-1">🔗 Page ouverte quand on appuie sur l'annonce</p>
+      <SelectDestination
+        value={textes.lien}
+        onChange={v => change('lien', v)}
+        pub={{ titre: textes.titre, description: textes.description, bouton_texte: textes.boutonTexte }}
+      />
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={sauver}
+          disabled={busy || !modifie}
+          className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold px-3 py-1.5 rounded-lg"
+        >
+          {busy ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
+        {message && <span className={`text-xs font-semibold ${message.ok ? 'text-green-600' : 'text-red-600'}`}>{message.texte}</span>}
+      </div>
+    </div>
+  )
+}
