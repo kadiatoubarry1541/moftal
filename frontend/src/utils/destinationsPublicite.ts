@@ -65,3 +65,10 @@ export function labelDestination(chemin?: string | null): string | null {
   if (!chemin) return null
   return DESTINATIONS_PUBLICITE.find(d => d.chemin === chemin)?.label || chemin
 }
+
+// Autorisation unique : seules les annonces publiées avant cette date peuvent
+// recevoir leurs textes après coup (même date que côté serveur).
+export const ANNONCES_MODIFIABLES_AVANT = '2026-11-21T00:00:00Z'
+
+export const annonceModifiable = (createdAt?: string | null) =>
+  !!createdAt && new Date(createdAt) < new Date(ANNONCES_MODIFIABLES_AVANT)

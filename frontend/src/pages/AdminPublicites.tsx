@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isMasterAdmin } from "../utils/auth";
-import { ModifierLienPublicite } from "../components/ChoixLienPublicite";
+import { ModifierLienPublicite, ModifierAnnonce, type TextesAnnonce } from "../components/ChoixLienPublicite"
+import { annonceModifiable } from "../utils/destinationsPublicite";
 
 interface Publicite {
   id: string;
@@ -31,6 +32,20 @@ export default function AdminPublicites() {
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
   // Seul l'admin principal peut changer la page d'une annonce (comme le serveur).
   const adminPrincipal = isMasterAdmin(getSessionUser());
+
+  async function enregistrerTextes(id: string, textes: TextesAnnonce): Promise<string | null> {
+    try {
+      const res = await fetch(`${API}/publicites/${id}/textes`, { method: "PATCH", headers, body: JSON.stringify(textes) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.success) return d.message || "L'annonce n'a pas été enregistrée. Réessayez.";
+      const maj = (l: Publicite[]) => l.map(p => (p.id === id ? { ...p, ...d.publicite } : p));
+      setToutes(maj);
+      setEnAttente(maj);
+      return null;
+    } catch {
+      return "Erreur de connexion : l'annonce n'a pas été enregistrée.";
+    }
+  }
 
   async function enregistrerLien(id: string, lien: string): Promise<string | null> {
     try {
@@ -190,7 +205,9 @@ export default function AdminPublicites() {
                     <p className="text-xs text-gray-400">{p.numero_h}</p>
                     {p.bouton_texte && <p className="text-xs text-gray-400 mt-0.5">Bouton : « {p.bouton_texte} »</p>}
                     {p.lien && !adminPrincipal && <p className="text-xs text-blue-500 truncate mt-0.5">🔗 {p.lien}</p>}
-                    {adminPrincipal && p.statut !== "refuse" && <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />}
+                    {adminPrincipal && p.statut !== "refuse" && (annonceModifiable(p.created_at)
+                      ? <ModifierAnnonce pub={p} enregistrer={enregistrerTextes} />
+                      : <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />)}
                     {p.statut === "refuse" && p.raison_refus && (
                       <p className="text-xs text-red-500 mt-1">Raison : {p.raison_refus}</p>
                     )}
