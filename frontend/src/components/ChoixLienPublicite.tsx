@@ -74,6 +74,11 @@ export function ModifierLienPublicite({ pub, enregistrer }: {
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-100">
+      {!enregistre && !devinerDestination(pub) && (
+        <p className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5 mb-2">
+          ⚠️ Cette annonce n'ouvre encore aucune page quand on appuie dessus. Choisissez sa page ci-dessous puis « Enregistrer le lien ».
+        </p>
+      )}
       <p className="text-xs font-bold text-gray-600 mb-1.5">🔗 Page ouverte quand on appuie sur l'annonce</p>
       <SelectDestination value={lien} onChange={v => { setLien(v); setMessage(null) }} pub={pub} />
       <div className="flex items-center gap-3 mt-2">
