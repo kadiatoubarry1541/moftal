@@ -176,7 +176,7 @@ export default function Quartier() {
           {/* Le signalement se publie dans l'espace du quartier (Terre d'Adam,
               catégorie Sécurité) — pas dans la Caisse de la famille */}
           <button
-            onClick={() => navigate("/terre-adam")}
+            onClick={() => navigate("/terre-adam?lieu=quartier-1")}
             className="px-5 py-2.5 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors text-sm whitespace-nowrap"
           >
             📢 Signaler
