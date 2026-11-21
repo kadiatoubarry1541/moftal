@@ -15,6 +15,7 @@ import CoupleLink from '../models/CoupleLink.js';
 import { getIO } from '../socket.js';
 import { normalizeNumeroH } from '../utils/numeroH.js';
 import { notifierNouveauMessage, membresFamille } from '../services/notificationMessages.js';
+import { priveDepuisFichier } from '../services/mediasPrives.js';
 
 /** Comparaison insensible à la casse pour un NuméroH saisi à la main
  *  (père/mère) — évite qu'une différence de casse ou d'espace empêche
@@ -28,7 +29,7 @@ function matchNumeroH(value) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Multer memory storage — stocké en base64 dans PostgreSQL (pas de fichier sur disque)
+// Multer en mémoire — média privé rangé à part (pas de fichier sur disque)
 // Limites : image 3 MB, vidéo 5 MB (≈30s), audio 2 MB (≈30s)
 const MAX_SIZES = { image: 3, video: 5, audio: 2 }; // en MB
 
@@ -850,7 +851,7 @@ router.post('/messages', async (req, res) => {
 
 // @route   POST /api/family-tree/messages/upload
 // @desc    Envoyer un message avec photo / vidéo (≤30s) / audio (≤30s)
-//          Stocké en base64 dans PostgreSQL — aucun fichier sur disque
+//          Média privé rangé à part (mediasPrives.js), servi par lien signé
 // @access  Authentifié
 router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, res) => {
   try {
@@ -879,9 +880,8 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
       });
     }
 
-    // Conversion en data URL base64 — stocké directement en DB, pas sur le disque
-    const base64 = req.file.buffer.toString('base64');
-    const mediaUrl = `data:${mime};base64,${base64}`;
+    // Média privé de la famille : rangé à part, la ligne ne garde qu'un repère
+    const mediaUrl = await priveDepuisFichier(req.file, { proprietaire: user.numeroH, usage: 'message-arbre' });
 
     const content = req.body.content || (messageType === 'audio' ? '🎤 Message vocal' : messageType === 'video' ? '🎬 Vidéo' : '📷 Photo');
 

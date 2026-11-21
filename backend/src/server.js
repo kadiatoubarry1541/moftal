@@ -81,6 +81,8 @@ import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
+import fichiersPrivesRoutes from './routes/fichiersPrives.js';
+import { mediasPrivesMiddleware, sortirMediasBase64, deplacerPrivesVersSeau } from './services/mediasPrives.js';
 import codeOuvertureRoutes from './routes/codeOuverture.js';
 import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.js';
 import { migrerPhotosDisque, deplacerFichiersHorsBase } from './services/fichiersBase.js';
@@ -321,6 +323,7 @@ const limiter = rateLimit({
 // Photos enregistrées en base : servies avant la limite de requêtes
 // (une page en affiche beaucoup ; le navigateur les garde en cache)
 app.use('/api/fichiers', fichiersRoutes);
+app.use('/api/fichiers-prives', fichiersPrivesRoutes);
 setTimeout(() => {
   migrerPhotosDisque(path.join(__dirname, '../uploads')).catch((e) => console.warn('Migration photos:', e.message));
 }, 15000);
@@ -330,6 +333,17 @@ if (process.env.DEPLACER_FICHIERS_HORS_BASE !== 'non') {
   setTimeout(() => {
     deplacerFichiersHorsBase().catch((e) => console.warn('Déplacement des fichiers hors base:', e.message));
   }, 60000);
+}
+
+// Anciens médias privés en base64 (famille, stories…) → rangés à part, puis
+// vers le seau R2 privé s'il est réglé (R2_BUCKET_PRIVE). Désactivable avec
+// SORTIR_MEDIAS_BASE64=non.
+if (process.env.SORTIR_MEDIAS_BASE64 !== 'non') {
+  setTimeout(() => {
+    sortirMediasBase64()
+      .then(() => deplacerPrivesVersSeau())
+      .catch((e) => console.warn('Médias privés hors des lignes:', e.message));
+  }, 90000);
 }
 
 // On applique le rate limit uniquement sur les routes API,
@@ -352,6 +366,8 @@ const corpsGrandPermis = (req) => String(req.headers.authorization || '').starts
   || /^\/api\/auth\/register(\/|$|\?)/.test(req.originalUrl || '');
 app.use((req, res, next) => (corpsGrandPermis(req) ? jsonGrand : jsonPetit)(req, res, next));
 app.use((req, res, next) => (corpsGrandPermis(req) ? formGrand : formPetit)(req, res, next));
+// Médias privés : repère « prive:<id> » ⇄ lien signé et temporaire
+app.use('/api', mediasPrivesMiddleware);
 
 // Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
 // n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois
