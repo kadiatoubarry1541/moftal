@@ -7,13 +7,15 @@ import FamilyGallery from '../models/FamilyGallery.js';
 import FamilyProblemMedia from '../models/FamilyProblemMedia.js';
 import { sequelize } from '../config/database.js';
 import { checkAndConsumeQuota } from './quotas.js';
+import { priveDepuisFichier } from '../services/mediasPrives.js';
 
 const router = express.Router();
 
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'];
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
 
-// Stockage en mémoire (pas sur disque) → les fichiers sont convertis en base64 et stockés en DB
+// Stockage en mémoire (pas sur disque) → médias privés rangés à part (mediasPrives.js) :
+// la ligne ne garde qu'un repère, transformé en lien signé dans les réponses
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
@@ -29,10 +31,8 @@ const upload = multer({
   }
 });
 
-// Convertit le buffer en data URL base64
-function toDataUrl(file) {
-  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-}
+// Média privé de la famille → repère « prive:<id> » (plus de base64 dans les lignes)
+const ranger = (req, usage) => priveDepuisFichier(req.file, { proprietaire: req.user.numeroH, usage });
 
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
@@ -139,7 +139,7 @@ router.post('/photos/family', upload.single('photo'), async (req, res) => {
   try {
     await ensureFamilyPhotoColumns();
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'photo-famille');
     await User.update({ familyPhoto: dataUrl }, { where: { numeroH: req.user.numeroH } });
     res.json({ success: true, message: 'Photo uploadée avec succès', photoUrl: dataUrl });
   } catch (error) {
@@ -152,7 +152,7 @@ router.post('/photos/man', upload.single('photo'), async (req, res) => {
   try {
     await ensureFamilyPhotoColumns();
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'photo-famille');
     await User.update({ manPhoto: dataUrl }, { where: { numeroH: req.user.numeroH } });
     res.json({ success: true, message: 'Photo uploadée avec succès', photoUrl: dataUrl });
   } catch (error) {
@@ -165,7 +165,7 @@ router.post('/photos/wife', upload.single('photo'), async (req, res) => {
   try {
     await ensureFamilyPhotoColumns();
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'photo-famille');
     await User.update({ wifePhoto: dataUrl }, { where: { numeroH: req.user.numeroH } });
     res.json({ success: true, message: 'Photo uploadée avec succès', photoUrl: dataUrl });
   } catch (error) {
@@ -178,7 +178,7 @@ router.post('/photos/children', upload.single('photo'), async (req, res) => {
   try {
     await ensureFamilyPhotoColumns();
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'photo-enfant');
     const { childName } = req.body;
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     let childrenPhotos = [];
@@ -256,14 +256,14 @@ router.get('/gallery', async (req, res) => {
   }
 });
 
-// POST /api/family/gallery/:album → ajouter dans galerie privée (base64)
+// POST /api/family/gallery/:album → ajouter dans galerie privée
 router.post('/gallery/:album', upload.single('media'), async (req, res) => {
   try {
     await ensureGalleryColumn();
     const { album } = req.params;
     if (!VALID_ALBUMS.includes(album)) return res.status(400).json({ success: false, message: 'Album invalide' });
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'galerie-privee');
     const isVideo = req.file.mimetype.startsWith('video/');
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     const albums = parseAlbums(userData?.galleryAlbums);
@@ -336,7 +336,7 @@ router.post('/problems/media', upload.single('media'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour publier ici.' });
     }
 
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'probleme-famille');
     const isVideo = req.file.mimetype.startsWith('video/');
     const description = (req.body.description || '').toString().slice(0, 500);
     const authorName = [userData.prenom, userData.nomFamille].filter(Boolean).join(' ') || 'Membre';
@@ -359,7 +359,7 @@ router.post('/problems/media', upload.single('media'), async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GALERIE PARTAGÉE — visible par tous les membres de la même famille
-// Photos stockées en base64 dans PostgreSQL
+// Médias privés rangés à part, servis par liens signés
 // ─────────────────────────────────────────────────────────────────────────────
 
 // GET /api/family/shared-gallery
@@ -379,7 +379,7 @@ router.get('/shared-gallery', async (req, res) => {
   }
 });
 
-// POST /api/family/shared-gallery/:album → base64 stocké en DB
+// POST /api/family/shared-gallery/:album
 router.post('/shared-gallery/:album', upload.single('media'), async (req, res) => {
   try {
     await ensureGalleryTable();
@@ -417,7 +417,7 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
       throw quotaErr;
     }
 
-    const dataUrl = toDataUrl(req.file);
+    const dataUrl = await ranger(req, 'galerie-famille');
     const uploaderName = [userData.prenom, userData.nomFamille].filter(Boolean).join(' ') || 'Membre';
     const item = await FamilyGallery.create({
       familyName,

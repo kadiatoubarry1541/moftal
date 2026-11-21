@@ -35,6 +35,9 @@ export function ensureTableFichiers() {
       // Tables créées avant le stockage en ligne
       await sequelize.query('ALTER TABLE fichiers ADD COLUMN IF NOT EXISTS url_externe TEXT');
       await sequelize.query('ALTER TABLE fichiers ALTER COLUMN donnees DROP NOT NULL');
+      // Médias privés (famille, stories…) : jamais servis par la route publique
+      // ni envoyés vers le stockage public (voir mediasPrives.js)
+      await sequelize.query('ALTER TABLE fichiers ADD COLUMN IF NOT EXISTS prive BOOLEAN NOT NULL DEFAULT false');
     })().catch((e) => { tablePrete = null; throw e; });
   }
   return tablePrete;
@@ -93,7 +96,7 @@ export async function enregistrerEnBase(file, { proprietaire = null, usage = nul
 
 export async function lireFichier(id) {
   await ensureTableFichiers();
-  const [row] = await sequelize.query('SELECT mime, donnees, url_externe FROM fichiers WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+  const [row] = await sequelize.query('SELECT mime, donnees, url_externe FROM fichiers WHERE id = :id AND prive = false', { replacements: { id }, type: QueryTypes.SELECT });
   return row || null;
 }
 
@@ -112,7 +115,7 @@ export async function deplacerFichiersHorsBase({ lot = 5, pause = 2000 } = {}) {
   for (;;) {
     const lignes = await sequelize.query(
       `SELECT id, mime, donnees FROM fichiers
-       WHERE donnees IS NOT NULL AND url_externe IS NULL
+       WHERE donnees IS NOT NULL AND url_externe IS NULL AND prive = false
          AND NOT (id = ANY(CAST(:echecs AS uuid[])))
        ORDER BY created_at LIMIT :lot`,
       { replacements: { echecs: `{${echecs.join(',')}}`, lot }, type: QueryTypes.SELECT }

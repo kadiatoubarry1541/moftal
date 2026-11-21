@@ -50,3 +50,18 @@ Si elle échoue, GitHub vous envoie un e-mail : il faut alors regarder l'onglet 
       ```
       Le script refuse d'écrire dans une base qui contient déjà des tables.
    4. Vérifier les données, puis mettre la nouvelle adresse dans `DATABASE_URL` sur Render.
+
+## Médias privés de la famille (galerie, photos de famille, problèmes de la famille, messages de l'arbre, histoires, stories)
+
+Ils ne sont plus enregistrés en base64 dans les lignes : la ligne garde un repère
+`prive:<id>`, le contenu est dans la table `fichiers` (`prive = true`) avec une copie
+IDrive (`sauvegarde-prives/`). Le serveur renvoie un **lien signé valable 6 à 12 h**
+(`/api/fichiers-prives/<id>?e=…&s=…`), seulement aux personnes qui ont le droit de voir le
+média. La route publique `/api/fichiers` ne les sert jamais.
+
+Les anciens médias base64 sont déplacés automatiquement au démarrage (désactivable :
+`SORTIR_MEDIAS_BASE64=non`). Une ligne n'est modifiée que si elle n'a pas changé entre-temps.
+
+**Pour alléger vraiment la base** : créer dans Cloudflare un seau R2 **privé** (sans adresse
+publique, par exemple `moftal-prive`) et ajouter sur le serveur `R2_BUCKET_PRIVE=moftal-prive`.
+Les médias privés y partent alors (relus à l'identique avant d'être retirés de la base).
