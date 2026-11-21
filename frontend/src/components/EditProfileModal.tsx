@@ -122,6 +122,9 @@ export default function EditProfileModal({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Changer d'e-mail demande le mot de passe (sinon une session volée suffisait
+  // pour mettre son propre e-mail puis récupérer le compte)
+  const [motDePasseEmail, setMotDePasseEmail] = useState("");
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const preuveInputRef = useRef<HTMLInputElement>(null);
@@ -218,9 +221,16 @@ export default function EditProfileModal({
     }
   };
 
+  const emailChange = !!formData
+    && (formData.email || "").trim().toLowerCase() !== (userData?.email || "").trim().toLowerCase();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData) return;
+    if (emailChange && !motDePasseEmail) {
+      setError("Saisissez votre mot de passe pour changer d'adresse e-mail.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -402,7 +412,7 @@ export default function EditProfileModal({
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ ...textFields, ...(preuve ? { preuve } : {}) }),
+          body: JSON.stringify({ ...textFields, ...(preuve ? { preuve } : {}), ...(emailChange ? { motDePasseActuel: motDePasseEmail } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -674,6 +684,20 @@ export default function EditProfileModal({
                 <p className="text-xs text-amber-700 mt-1">
                   ⚠️ Sans e-mail, votre compte ne pourra pas être récupéré si vous oubliez votre mot de passe.
                 </p>
+              )}
+              {emailChange && (
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Votre mot de passe (obligatoire pour changer d'e-mail)
+                  </label>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={motDePasseEmail}
+                    onChange={(e) => setMotDePasseEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               )}
             </div>
             <div>

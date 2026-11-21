@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
   "email": "kadiatou1541.kb@gmail.com",
-  "password": "Neneyaya1",
+  "password": "(celui défini dans ADMIN_PASSWORD)",
   "nomComplet": "Admin Diangou"
 }
 

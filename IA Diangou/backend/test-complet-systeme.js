@@ -50,7 +50,8 @@ async function testComplet() {
     console.log('2️⃣ TEST DU COMPTE ADMIN');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     const adminEmail = 'kadiatou1541.kb@gmail.com';
-    const adminPassword = 'Neneyaya1';
+    const adminPassword = process.env.ADMIN_PASSWORD || '';
+if (!adminPassword) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
     
     const admin = await User.findOne({ where: { email: adminEmail } });
     
@@ -122,7 +123,7 @@ async function testComplet() {
     if (adminExists && adminCanLogin) {
       console.log('✅ Connexion Admin: VOUS POUVEZ VOUS CONNECTER');
       console.log('   Email: kadiatou1541.kb@gmail.com');
-      console.log('   Mot de passe: Neneyaya1');
+      console.log('   Mot de passe: (celui de ADMIN_PASSWORD)');
     } else if (adminExists) {
       console.log('⚠️ Connexion Admin: PROBLÈME (exécutez node scripts/createAdmin.js)');
     } else {

@@ -218,7 +218,7 @@ MAX_FILE_SIZE=10485760
 ### 5.4 Comptes et rôles
 - Compte admin principal (référencé par middlewares) :
   - NumeroH: `G0C0P0R0E0F0 0` – rôle: `super-admin`.
-  - Mot de passe : `Neneyaya1` (à affecter lors de la création initiale du projet)
+  - Mot de passe : `(celui défini dans ADMIN_PASSWORD)` (à affecter lors de la création initiale du projet)
 - Un compte de test pouvait être créé par `auth.js` (NumeroH `G96C1P2R3E2F1 4`, mdp `test123`), mais la base actuelle ne conserve désormais QUE l’admin principal (tous les autres comptes ont été supprimés).
 - Rôles: `user`, `admin`, `super-admin`.
   - Middlewares: `authenticate`, `requireAdmin`, `requireSuperAdmin`, `requireMasterAdmin`, `bypassAllRestrictions`.
@@ -270,7 +270,7 @@ MAX_FILE_SIZE=10485760
 ## 10) Données minimales
 - Compte administrateur principal présent dans la base avec :
   - NumeroH `G0C0P0R0E0F0 0`
-  - Mot de passe `Neneyaya1`
+  - Mot de passe `(celui défini dans ADMIN_PASSWORD)`
   - rôle `super-admin`
 - Dossiers `uploads/photos` et `uploads/videos` existants (peuvent être vides).
 

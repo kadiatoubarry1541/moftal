@@ -14,7 +14,8 @@ import Notification from '../models/Notification.js';
 import CoupleLink from '../models/CoupleLink.js';
 import { getIO } from '../socket.js';
 import { normalizeNumeroH } from '../utils/numeroH.js';
-import { notifierNouveauMessage, membresFamille } from '../services/notificationMessages.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
+import { arbresDe, membresDeMaFamille, salonsFamille } from '../utils/familleArbre.js';
 import { priveDepuisFichier } from '../services/mediasPrives.js';
 
 /** Comparaison insensible à la casse pour un NuméroH saisi à la main
@@ -741,6 +742,19 @@ router.post('/report-death', async (req, res) => {
 
 // ========== MESSAGERIE FAMILIALE  ==========
 
+async function diffuserMessageFamille(user, msgData, message, familyName) {
+  try {
+    const arbres = await arbresDe(user.numeroH);
+    const io = getIO();
+    if (io) for (const salon of salonsFamille(arbres)) io.to(salon).emit('family-message', msgData);
+    const membres = await membresDeMaFamille(user.numeroH, arbres);
+    membres.delete(user.numeroH);
+    await notifierNouveauMessage({ destinataires: [...membres], expediteur: user, convKey: 'family:', message, groupe: `Famille ${familyName}` });
+  } catch (e) {
+    console.error('Diffusion message famille:', e.message);
+  }
+}
+
 // @route   GET /api/family-tree/messages
 // @desc    Récupérer les messages familiaux (par nom de famille)
 //          - Utilisateur classique : uniquement sa propre famille (nomFamille)
@@ -773,22 +787,30 @@ router.get('/messages', async (req, res) => {
       });
     }
 
-    const messages = await FamilyTreeMessage.getFamilyMessages(
-      familyName,
-      parseInt(limit, 10),
-      parseInt(offset, 10)
-    );
+    // Au plus 200 messages par page (une valeur énorme chargeait toute la table)
+    const lim = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 200);
+    const dec = Math.max(parseInt(offset, 10) || 0, 0);
+    const where = { familyName, isActive: true };
+    // Membre : seulement les messages écrits par des membres de SES arbres familiaux
+    // (jamais ceux de tous les homonymes). L'admin qui modère garde la vue par nom.
+    if (!(isAdmin && requestedFamilyName)) {
+      where.numeroH = { [Op.in]: [...await membresDeMaFamille(user.numeroH)] };
+    }
+    const messages = await FamilyTreeMessage.findAll({ where, order: [['created_at', 'DESC']], limit: lim, offset: dec });
 
-    const messagesWithAuthors = await Promise.all(
-      messages.map(async (msg) => {
-        const author = await User.findOne({ where: { numeroH: msg.numeroH } });
-        return {
-          ...msg.toJSON(),
-          authorName: author ? `${author.prenom} ${author.nomFamille}` : 'Membre de la famille',
-          familyName
-        };
-      })
-    );
+    // Auteurs lus en une seule requête (avant : une requête par message)
+    const auteurs = new Map((await User.findAll({
+      where: { numeroH: { [Op.in]: [...new Set(messages.map((m) => m.numeroH))] } },
+      attributes: ['numeroH', 'prenom', 'nomFamille'],
+    })).map((a) => [a.numeroH, a]));
+    const messagesWithAuthors = messages.map((msg) => {
+      const author = auteurs.get(msg.numeroH);
+      return {
+        ...msg.toJSON(),
+        authorName: author ? `${author.prenom} ${author.nomFamille}` : 'Membre de la famille',
+        familyName
+      };
+    });
 
     res.json({
       success: true,
@@ -838,9 +860,8 @@ router.post('/messages', async (req, res) => {
     };
 
     // Diffuse en temps réel aux membres de la famille connectés
-    const io = getIO();
-    if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
-    membresFamille(familyName).then((destinataires) => notifierNouveauMessage({ destinataires, expediteur: user, convKey: 'family:', message, groupe: `Famille ${familyName}` })).catch(() => {});
+    // Temps réel et notifications : seulement les membres des arbres de l'auteur
+    diffuserMessageFamille(user, msgData, message, familyName);
 
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
@@ -900,9 +921,8 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
       familyName
     };
 
-    const io = getIO();
-    if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
-    membresFamille(familyName).then((destinataires) => notifierNouveauMessage({ destinataires, expediteur: user, convKey: 'family:', message, groupe: `Famille ${familyName}` })).catch(() => {});
+    // Temps réel et notifications : seulement les membres des arbres de l'auteur
+    diffuserMessageFamille(user, msgData, message, familyName);
 
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {

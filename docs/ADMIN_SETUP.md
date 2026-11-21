@@ -5,7 +5,7 @@ Ce document explique comment configurer et gérer le compte administrateur princ
 ## 📋 Informations du Compte Administrateur
 
 - **NumeroH**: `G0C0P0R0E0F0 0`
-- **Mot de passe**: `Neneyaya1`
+- **Mot de passe**: `(celui défini dans ADMIN_PASSWORD)`
 - **Rôle**: `super-admin`
 - **Prénom**: Administrateur
 - **Nom**: Principal
@@ -47,7 +47,7 @@ Ce script vérifie :
 
 1. Allez sur la page de connexion
 2. Entrez le NumeroH : `G0C0P0R0E0F0 0`
-3. Entrez le mot de passe : `Neneyaya1`
+3. Entrez le mot de passe : `(celui défini dans ADMIN_PASSWORD)`
 4. Cliquez sur "Se connecter"
 
 ### Via l'API
@@ -57,7 +57,7 @@ curl -X POST http://localhost:5002/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "numeroH": "G0C0P0R0E0F0 0",
-    "password": "Neneyaya1"
+    "password": "(celui défini dans ADMIN_PASSWORD)"
   }'
 ```
 

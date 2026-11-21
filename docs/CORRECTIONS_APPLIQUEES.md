@@ -33,7 +33,7 @@ npm run verify-admin
 ### Informations du Compte Admin
 
 - **NumeroH**: `G0C0P0R0E0F0 0`
-- **Mot de passe**: `Neneyaya1`
+- **Mot de passe**: `(celui défini dans ADMIN_PASSWORD)`
 - **Rôle**: `super-admin`
 - **Prénom**: Administrateur
 - **Nom**: Principal
@@ -93,7 +93,7 @@ Le middleware `auth.js` est correctement configuré avec :
 1. Allez sur la page de connexion
 2. Entrez :
    - NumeroH: `G0C0P0R0E0F0 0`
-   - Mot de passe: `Neneyaya1`
+   - Mot de passe: `(celui défini dans ADMIN_PASSWORD)`
 3. Cliquez sur "Se connecter"
 
 ## 🛡️ 5. Privilèges Administrateur
