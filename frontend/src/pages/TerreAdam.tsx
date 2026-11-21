@@ -15,6 +15,7 @@ import { useI18n } from '../i18n/useI18n';
 import { PAGE_MAJ_PROFIL } from '../utils/profilPage';
 import { useMarquerVu } from '../utils/nouveautes';
 import DemandeResponsable from '../components/DemandeResponsable';
+import IconeApp from '../components/IconeApp';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -100,26 +101,6 @@ const urlLogo = (u?: string | null) => (u ? (u.startsWith('http') ? u : `${API_B
 const NIVEAUX = ['sous-prefecture', 'prefecture', 'region', 'pays', 'continent', 'mondial'] as const;
 type Niveau = typeof NIVEAUX[number];
 type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
-
-/** Une icône de lieu, dans le même style que les icônes de la page Services :
- *  son logo s'il en a un, sinon son image ; son nom ; son niveau. */
-function TuileLieu({ icone, logo, nom, niveau, fond, onClick }: {
-  icone: string; logo: string | null; nom: string; niveau: string; fond: string; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-gray-50 hover:border-gray-200 active:scale-95"
-    >
-      <div className={`w-11 h-11 rounded-lg overflow-hidden flex items-center justify-center text-2xl flex-shrink-0 ${fond}`}>
-        {logo ? <img src={logo} alt={nom} className="w-full h-full object-cover" /> : icone}
-      </div>
-      <span className="w-full text-[10px] font-semibold text-gray-700 text-center leading-tight truncate">{nom}</span>
-      <span className="w-full text-[9px] text-gray-400 text-center leading-none truncate">{niveau}</span>
-    </button>
-  );
-}
 
 export default function TerreAdam() {
   const { t } = useI18n();
@@ -573,22 +554,13 @@ export default function TerreAdam() {
     .filter(q => q.visible);
   const bandesGrille = [
     {
-      id: 'chez-moi', titre: `🏠 ${t('terre_adam.band_home')}`,
-      fondBande: 'bg-emerald-50', couleurTitre: 'text-emerald-800', fondIcone: 'bg-emerald-100',
+      id: 'chez-moi', titre: t('terre_adam.band_home'),
       // Aucun quartier renseigné : une icône quand même, qui invite à le renseigner
       tuiles: tuilesQuartiers.length ? tuilesQuartiers
         : [{ id: 'quartier-1', icone: '🏠', logo: null as string | null, nom: t('terre_adam.default_quartier'), niveau: t('terre_adam.default_quartier') }],
     },
-    {
-      id: 'ville', titre: `🏙️ ${t('terre_adam.band_town')}`,
-      fondBande: 'bg-blue-50', couleurTitre: 'text-blue-800', fondIcone: 'bg-blue-100',
-      tuiles: (['sous-prefecture', 'prefecture'] as Niveau[]).map(tuileNiveau),
-    },
-    {
-      id: 'monde', titre: `🌍 ${t('terre_adam.band_world')}`,
-      fondBande: 'bg-orange-50', couleurTitre: 'text-orange-800', fondIcone: 'bg-orange-100',
-      tuiles: (['region', 'pays', 'continent', 'mondial'] as Niveau[]).map(tuileNiveau),
-    },
+    { id: 'ville', titre: t('terre_adam.band_town'), tuiles: (['sous-prefecture', 'prefecture'] as Niveau[]).map(tuileNiveau) },
+    { id: 'monde', titre: t('terre_adam.band_world'), tuiles: (['region', 'pays', 'continent', 'mondial'] as Niveau[]).map(tuileNiveau) },
   ];
   // ─── Publications d'exemple (admin) ───────────────────────────────────
   // Les lieux remplis sont exactement ceux que la page affiche (mêmes
@@ -679,17 +651,24 @@ export default function TerreAdam() {
         );
       })()}
 
-      {/* Grille : chaque lieu a son icône (son logo), comme sur la page Services.
-          Trois cercles, du plus proche au plus loin ; chaque icône ouvre la
-          page de ce lieu seulement, sans rien mélanger. */}
+      {/* Grille : chaque lieu a son icône (son logo), exactement comme les
+          icônes de la page Services. Du plus proche au plus loin ; chaque
+          icône ouvre la page de ce lieu seulement, sans rien mélanger. */}
       {activeTab === 'accueil' && (
-        <div className="max-w-lg mx-auto px-2 pt-3 pb-4 space-y-3">
+        <div className="max-w-lg mx-auto px-2 pt-3 pb-4 space-y-5">
           {bandesGrille.map(bande => (
-            <section key={bande.id} className={`rounded-2xl p-2 ${bande.fondBande}`}>
-              <h2 className={`px-1 pb-2 text-sm font-extrabold ${bande.couleurTitre}`}>{bande.titre}</h2>
-              <div className="grid grid-cols-4 gap-2">
+            <section key={bande.id}>
+              <h2 className="px-1 pb-2 text-xs font-bold uppercase tracking-wide text-gray-500">{bande.titre}</h2>
+              <div className="grid grid-cols-4 gap-x-2 gap-y-4">
                 {bande.tuiles.map(tuile => (
-                  <TuileLieu key={tuile.id} {...tuile} fond={bande.fondIcone} onClick={() => ouvrirLieu(tuile.id)} />
+                  <IconeApp
+                    key={tuile.id}
+                    nom={tuile.nom}
+                    image={tuile.logo}
+                    emoji={tuile.icone}
+                    description={`${tuile.nom}, ${tuile.niveau}`}
+                    onClick={() => ouvrirLieu(tuile.id)}
+                  />
                 ))}
               </div>
             </section>

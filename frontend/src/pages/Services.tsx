@@ -1,15 +1,15 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
 import { AdCarousel } from '../components/AdCarousel'
 import { useI18n } from '../i18n/useI18n'
 import { api } from '../utils/api'
+import IconeApp from '../components/IconeApp'
 
 interface ServiceItem {
   to: string
   emoji: string
   label: string
-  bg: string
 }
 
 // Les favoris sont enregistrés sur le serveur. Cette clé ne sert plus qu'à
@@ -29,22 +29,6 @@ function anciensFavorisDuTelephone(numeroH: string): string[] {
 
 function oublierAnciensFavoris(numeroH: string) {
   try { localStorage.removeItem(`${ANCIENNE_CLE_FAVORIS}_${numeroH}`) } catch { /* rien à oublier */ }
-}
-
-function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFavorite: boolean }) {
-  return (
-    <Link to={to} className="relative w-full flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-gray-50 hover:border-gray-200 active:scale-95">
-      {isFavorite && (
-        <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-          ✓
-        </span>
-      )}
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${bg}`}>
-        {emoji}
-      </div>
-      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
-    </Link>
-  )
 }
 
 export default function Services() {
@@ -81,24 +65,24 @@ export default function Services() {
   }, [])
 
   const services: ServiceItem[] = [
-    { to: '/sante',                                    emoji: '🏥', label: t('services.cat_sante'),        bg: 'bg-red-100'    },
-    { to: '/securite',                                 emoji: '🛡️', label: t('services.cat_securite'),     bg: 'bg-slate-100'  },
-    { to: '/juridique',                                emoji: '⚖️', label: t('services.cat_juridique'),    bg: 'bg-red-100'    },
-    { to: '/immobilier',                               emoji: '🏠', label: t('services.cat_immobilier'),   bg: 'bg-amber-100'  },
-    { to: '/education',                                emoji: '🎓', label: t('services.cat_education'),    bg: 'bg-amber-100'  },
-    { to: '/madrasa',                                  emoji: '📖', label: t('services.cat_madrasa'),      bg: 'bg-teal-100'   },
-    { to: '/commerce',                                  emoji: '🏪', label: t('services.cat_commerce'),     bg: 'bg-yellow-100' },
-    { to: '/entreprise',                               emoji: '🏢', label: t('services.cat_entreprise'),   bg: 'bg-violet-100' },
-    { to: '/journalistes',                             emoji: '📰', label: t('services.cat_journalistes'), bg: 'bg-orange-100' },
-    { to: '/science',                                  emoji: '🔬', label: t('services.cat_science'),      bg: 'bg-indigo-100' },
-    { to: '/fournisseurs',                             emoji: '🚚', label: t('services.cat_fournisseurs'), bg: 'bg-cyan-100'   },
-    { to: '/restaurants',                              emoji: '🍽️', label: t('services.cat_restaurant'),   bg: 'bg-orange-100' },
-    { to: '/transport',                                emoji: '🚌', label: t('services.cat_transport'),   bg: 'bg-blue-100'   },
-    { to: '/beaute',                                   emoji: '💈', label: t('services.cat_beaute'),       bg: 'bg-pink-100'   },
-    { to: '/artisans',                                 emoji: '🔧', label: t('services.cat_artisanat'),    bg: 'bg-stone-100'  },
-    { to: '/reseau',                                   emoji: '🔗', label: t('services.cat_reseau'),       bg: 'bg-purple-100' },
-    { to: '/vendeurs',                                 emoji: '🛍️', label: t('services.cat_vendeurs'),     bg: 'bg-sky-100'    },
-    { to: '/producteurs',                              emoji: '🌾', label: t('services.cat_producteurs'),  bg: 'bg-lime-100'   },
+    { to: '/sante',                                    emoji: '🏥', label: t('services.cat_sante') },
+    { to: '/securite',                                 emoji: '🛡️', label: t('services.cat_securite') },
+    { to: '/juridique',                                emoji: '⚖️', label: t('services.cat_juridique') },
+    { to: '/immobilier',                               emoji: '🏠', label: t('services.cat_immobilier') },
+    { to: '/education',                                emoji: '🎓', label: t('services.cat_education') },
+    { to: '/madrasa',                                  emoji: '📖', label: t('services.cat_madrasa') },
+    { to: '/commerce',                                  emoji: '🏪', label: t('services.cat_commerce') },
+    { to: '/entreprise',                               emoji: '🏢', label: t('services.cat_entreprise') },
+    { to: '/journalistes',                             emoji: '📰', label: t('services.cat_journalistes') },
+    { to: '/science',                                  emoji: '🔬', label: t('services.cat_science') },
+    { to: '/fournisseurs',                             emoji: '🚚', label: t('services.cat_fournisseurs') },
+    { to: '/restaurants',                              emoji: '🍽️', label: t('services.cat_restaurant') },
+    { to: '/transport',                                emoji: '🚌', label: t('services.cat_transport') },
+    { to: '/beaute',                                   emoji: '💈', label: t('services.cat_beaute') },
+    { to: '/artisans',                                 emoji: '🔧', label: t('services.cat_artisanat') },
+    { to: '/reseau',                                   emoji: '🔗', label: t('services.cat_reseau') },
+    { to: '/vendeurs',                                 emoji: '🛍️', label: t('services.cat_vendeurs') },
+    { to: '/producteurs',                              emoji: '🌾', label: t('services.cat_producteurs') },
   ]
 
   // Enregistré sur le serveur ; en cas d'échec, le choix est annulé et un
@@ -182,10 +166,18 @@ export default function Services() {
       )}
 
     <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
-      {/* Grille icônes style compact */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Grille d'icônes, comme l'écran d'accueil d'un téléphone */}
+      <div className="grid grid-cols-4 gap-x-2 gap-y-4">
         {orderedServices.map(s => (
-          <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
+          <IconeApp
+            key={s.to}
+            to={s.to}
+            nom={s.label}
+            emoji={s.emoji}
+            pastille={favoriteIds.includes(s.to) ? (
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center leading-none border-2 border-white">✓</span>
+            ) : undefined}
+          />
         ))}
       </div>
 
