@@ -604,8 +604,8 @@ function App() {
                   >
                     <Pastille className="absolute top-0 right-1" n={item.id === "terre-adam" ? nouveautes.terreAdam : item.id === "famille" ? nouveautes.recit + nouveautes.galerie + nouveautes.amitie : 0} />
                     {item.id === "echanges"
-                      ? <SalesIcon size={22} className="text-gray-500" />
-                      : <span className="text-[20px] leading-none">{item.icon}</span>
+                      ? <SalesIcon size={24} className="text-gray-500" />
+                      : <span className="text-[22px] leading-none">{item.icon}</span>
                     }
                     <span className={`text-[9px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
                       {item.label}
