@@ -59,7 +59,7 @@ Vous devriez voir :
 2. Cliquez sur "Se connecter"
 3. Entrez :
    - **Email** : `kadiatou1541.kb@gmail.com`
-   - **Mot de passe** : `Neneyaya1`
+   - **Mot de passe** : `(celui défini dans ADMIN_PASSWORD)`
 
 ## Si ça ne fonctionne pas
 

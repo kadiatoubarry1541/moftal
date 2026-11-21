@@ -1,4 +1,5 @@
 import express from 'express';
+import { membresDeMaFamille } from '../utils/familleArbre.js';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { liensDe } from '../utils/liens.js';
@@ -94,8 +95,9 @@ router.get('/', async (req, res) => {
       ).catch(() => 0),
       // Photos et vidéos ajoutées à la galerie de sa famille par les autres
       u.nomFamille ? compter(
-        `SELECT id FROM family_gallery WHERE family_name = :fam AND created_at > :vu AND uploader_numero_h <> :nh`,
-        { fam: u.nomFamille, vu: vues.galerie, nh }
+        `SELECT id FROM family_gallery WHERE family_name = :fam AND created_at > :vu AND uploader_numero_h <> :nh
+            AND uploader_numero_h IN (:membres)`,
+        { fam: u.nomFamille, vu: vues.galerie, nh, membres: [...await membresDeMaFamille(nh)] }
       ).catch(() => 0) : 0,
       // Amitié : stories des proches (encore visibles, 24 h) + demandes d'amis reçues
       compter(

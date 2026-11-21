@@ -25,4 +25,13 @@ if [ -n "$trouve" ]; then
   echo "$trouve" | sed -E 's/(:[0-9]+:).*/\1 …/'
   exit 1
 fi
+# Mots de passe écrits en clair dans un script ou une doc (const PASSWORD = '…',
+# « Mot de passe : `…` »). Les tests (valeurs factices) ne sont pas concernés.
+mdp="(const|let|var)\s+[A-Za-z_]*(PASSWORD|Password|password|MotDePasse|motDePasse)\s*=\s*['\"][^'\"\$ ]{6,}['\"]|Mot de passe\**\s*:\s*\`[^\`(]{6,}\`"
+trouveMdp=$(git grep -nIE "$mdp" -- . ':!**/package-lock.json' ':!scripts/verifier-secrets.sh' ':!**/tests/**' ':!**/*.test.*' || true)
+if [ -n "$trouveMdp" ]; then
+  echo "🚨 Mot de passe écrit en clair (valeurs masquées) — le lire depuis l'environnement (ADMIN_PASSWORD…) :"
+  echo "$trouveMdp" | sed -E 's/(:[0-9]+:).*/\1 …/'
+  exit 1
+fi
 echo "✅ Aucune clé ni aucun mot de passe dans le projet."

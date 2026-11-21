@@ -80,8 +80,4 @@ export function notifierNouveauMessage({ destinataires, expediteur, convKey, mes
 }
 
 /** Membres de la famille principale (même nom de famille, comme la messagerie familiale). */
-export async function membresFamille(familyName) {
-  if (!familyName) return [];
-  const users = await User.findAll({ where: { nomFamille: familyName, isActive: true }, attributes: ['numeroH'], limit: 2000 });
-  return users.map((u) => u.numeroH);
-}
+

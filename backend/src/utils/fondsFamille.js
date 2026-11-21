@@ -27,6 +27,39 @@ export function estMembreArbre(arbre, numeroH) {
 }
 
 /**
+ * Membres « reconnus » de l'arbre : ceux dont la place est prouvée autrement que
+ * par ce qu'ils ont eux-mêmes écrit dans leur profil — fondateur de l'arbre,
+ * parents de l'arbre, identité vérifiée par l'admin, ou lien parent-enfant
+ * confirmé par l'autre personne. Seuls eux reçoivent AUTOMATIQUEMENT un rôle
+ * d'argent (gérant à la création, Conseiller = doyen). Avant, n'importe qui
+ * entré dans l'arbre et se déclarant né en 1900 devenait Conseiller et pouvait
+ * payer avec l'argent de la famille.
+ */
+export async function membresReconnus(arbre) {
+  const membres = Array.isArray(arbre?.members) ? arbre.members.filter(Boolean) : [];
+  if (!membres.length) return new Set();
+  const reconnus = new Set([arbre.rootMember, arbre.numeroHPere, arbre.numeroHMere].filter((n) => n && membres.includes(n)));
+  const { default: User } = await import('../models/User.js');
+  const { default: ParentChildLink } = await import('../models/ParentChildLink.js');
+  const verifies = await User.findAll({ where: { numeroH: { [Op.in]: membres }, isVerified: true }, attributes: ['numeroH'] });
+  verifies.forEach((u) => reconnus.add(u.numeroH));
+  const liens = await ParentChildLink.findAll({
+    where: {
+      status: 'active', isActive: true,
+      [Op.or]: [{ parentNumeroH: { [Op.in]: membres } }, { childNumeroH: { [Op.in]: membres } }],
+    },
+    attributes: ['parentNumeroH', 'childNumeroH'],
+  });
+  for (const l of liens) {
+    // Un lien confirmé ne compte que si les deux personnes sont dans l'arbre
+    if (membres.includes(l.parentNumeroH) && membres.includes(l.childNumeroH)) {
+      reconnus.add(l.parentNumeroH); reconnus.add(l.childNumeroH);
+    }
+  }
+  return reconnus;
+}
+
+/**
  * Compte famille de la personne (et son arbre). Un ancien compte créé par nom
  * de famille est rattaché à l'arbre dont un de ses responsables est membre.
  * options.transaction / options.lock : pour verrouiller le compte pendant un débit.

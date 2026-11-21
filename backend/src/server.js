@@ -4,6 +4,7 @@ import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -294,9 +295,10 @@ app.use(cors({
     if (!origin) return callback(null, true); // appels server-to-server, Postman
     // Dev : tout accepter
     if (process.env.NODE_ENV === 'development') return callback(null, true);
-    // Prod : accepter les origines configurées + Cloudflare Pages (*.pages.dev) + *.moftal.com
+    // Prod : origines configurées (CORS_ORIGIN) + *.moftal.com. Plus de *.pages.dev :
+    // n'importe qui peut ouvrir un site sur pages.dev ; mettre l'adresse exacte
+    // dans CORS_ORIGIN si un aperçu en a besoin.
     if (rawOrigins.includes(origin)) return callback(null, true);
-    if (/^https:\/\/[a-z0-9-]+\.pages\.dev$/.test(origin)) return callback(null, true);
     if (/^https:\/\/([a-z0-9-]+\.)?moftal\.com$/.test(origin)) return callback(null, true);
     return callback(new Error(`CORS: origine non autorisée — ${origin}`));
   },
@@ -362,9 +364,24 @@ const jsonGrand = express.json({ limit: '200mb', verify: verifierCorps });
 const jsonPetit = express.json({ limit: '5mb', verify: verifierCorps });
 const formGrand = express.urlencoded({ extended: true, limit: '200mb' });
 const formPetit = express.urlencoded({ extended: true, limit: '5mb' });
-const corpsGrandPermis = (req) => String(req.headers.authorization || '').startsWith('Bearer ')
-  || /^\/api\/auth\/register(\/|$|\?)/.test(req.originalUrl || '');
-app.use((req, res, next) => (corpsGrandPermis(req) ? jsonGrand : jsonPetit)(req, res, next));
+// Jeton VALIDE exigé (avant : écrire « Bearer n'importe quoi » suffisait pour
+// envoyer 200 Mo). Le journal des erreurs du site garde sa petite limite.
+const jsonMini = express.json({ limit: '20kb' });
+const jetonValide = (req) => {
+  const auth = String(req.headers.authorization || '');
+  if (!auth.startsWith('Bearer ')) return false;
+  try { return !jwt.verify(auth.slice(7).trim(), config.JWT_SECRET, { algorithms: ['HS256'] })?.purpose; } catch { return false; }
+};
+const corpsGrandPermis = (req) => {
+  if (req._corpsGrand === undefined) {
+    req._corpsGrand = /^\/api\/auth\/register(\/|$|\?)/.test(req.originalUrl || '') || jetonValide(req);
+  }
+  return req._corpsGrand;
+};
+app.use((req, res, next) => {
+  if (/^\/api\/erreurs\/?(\?|$)/.test(req.originalUrl || '')) return jsonMini(req, res, next);
+  return (corpsGrandPermis(req) ? jsonGrand : jsonPetit)(req, res, next);
+});
 app.use((req, res, next) => (corpsGrandPermis(req) ? formGrand : formPetit)(req, res, next));
 // Médias privés : repère « prive:<id> » ⇄ lien signé et temporaire
 app.use('/api', mediasPrivesMiddleware);
@@ -388,23 +405,43 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 }));
 
 // Routes
-// Connexion : 10 essais ratés au plus par compte visé en 15 min. Compté par
-// identifiant (NuméroH / téléphone / email) et non par adresse, qu'on peut
-// falsifier : impossible d'essayer des milliers de mots de passe sur un compte.
+// Connexion : essais ratés comptés par compte visé (NuméroH / téléphone / email),
+// par appareil (adresse réelle, impossible à inventer, voir utils/cleLimite.js)
+// et au total par compte.
+// Le même compte écrit autrement (« 0622… », « +224 622… », « g7c7… ») compte
+// pour UN seul compte : avant, chaque écriture avait son propre compteur.
+const compteVise = (req) => {
+  const brut = String(req.body?.numeroH || '').trim();
+  if (!brut) return '';
+  if (brut.includes('@')) return `mail:${brut.toLowerCase()}`;
+  const chiffres = brut.replace(/[^0-9]/g, '');
+  if (chiffres.length >= 6 && chiffres === brut.replace(/[\s\-().+]/g, '')) return `tel:${chiffres.slice(-9)}`;
+  return `nh:${brut.toLowerCase().replace(/\s+/g, ' ').replace(/o/g, '0')}`;
+};
+// 10 essais ratés par compte ET par appareil en 15 min…
 const limiteurConnexion = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isDev ? 1000 : 10,
   skipSuccessfulRequests: true,
-  keyGenerator: (req) => {
-    const ident = String(req.body?.numeroH || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    return ident ? `connexion:${ident}` : `connexion-ip:${adresseVisiteur(req)}`;
-  },
+  keyGenerator: (req) => `connexion:${compteVise(req) || '-'}:${adresseVisiteur(req)}`,
   validate: validationLimite,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Trop d\'essais de connexion pour ce compte. Réessayez dans 15 minutes, ou utilisez « Mot de passe oublié ».' }
 });
-app.post('/api/auth/login', limiteurConnexion);
+// …et 50 au plus par compte en 1 heure, d'où qu'ils viennent (un pirate seul ne
+// bloque plus le vrai propriétaire en 10 essais, mais ne peut pas essayer sans fin).
+const limiteurCompte = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 5000 : 50,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `connexion-compte:${compteVise(req) || adresseVisiteur(req)}`,
+  validate: validationLimite,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Trop d\'essais de connexion pour ce compte. Réessayez dans une heure, ou utilisez « Mot de passe oublié ».' }
+});
+app.post('/api/auth/login', limiteurConnexion, limiteurCompte);
 app.use('/api/auth', authRoutes);
 // Badges : gérés depuis l'espace admin (/api/admin/badges), réservés aux admins
 app.use('/api/admin/badges', badgeRoutes);

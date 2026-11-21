@@ -5,7 +5,7 @@ import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import User from '../models/User.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
-import { fondsDe, nbMembresArbre, estMembreArbre } from '../utils/fondsFamille.js';
+import { fondsDe, nbMembresArbre, estMembreArbre, membresReconnus } from '../utils/fondsFamille.js';
 
 // Tenant fournisseur dédié à l'admin pour la vente de riz aux familles
 // (géré via /gestion-fournisseur/RIZ-MOFTAL-ADMIN, accessible au master admin)
@@ -22,9 +22,13 @@ function estAdmin(fund, numeroH) {
 async function detecterPatriarche(arbre) {
   try {
     if (!arbre || !Array.isArray(arbre.members) || arbre.members.length === 0) return null;
+    // Doyen choisi parmi les membres reconnus seulement (jamais sur une date de
+    // naissance qu'une personne s'est donnée elle-même en entrant dans l'arbre)
+    const reconnus = [...await membresReconnus(arbre)];
+    if (!reconnus.length) return null;
     const membres = await User.findAll({
       where: {
-        numeroH: { [Op.in]: arbre.members },
+        numeroH: { [Op.in]: reconnus },
         type: 'vivant',
         isActive: true,
         dateNaissance: { [Op.not]: null }
@@ -81,7 +85,7 @@ router.get('/mon-compte', async (req, res) => {
         fund = await FamilyFund.create({
           nomFamille: (arbre.familyName || nomFamille).trim(),
           treeId: arbre.id,
-          gerant1NumeroH: req.user.numeroH
+          gerant1NumeroH: (await membresReconnus(arbre)).has(req.user.numeroH) ? req.user.numeroH : null
         });
         // Ré-continuer sous le bloc fund existant
       } else {
@@ -211,7 +215,7 @@ router.post('/creer', async (req, res) => {
     const fund = await FamilyFund.create({
       nomFamille: (arbre.familyName || nomFamille).trim(),
       treeId: arbre.id,
-      gerant1NumeroH: req.user.numeroH
+      gerant1NumeroH: (await membresReconnus(arbre)).has(req.user.numeroH) ? req.user.numeroH : null
     });
 
     res.json({ success: true, message: 'Compte famille créé avec succès.', fundId: fund.id });
@@ -426,7 +430,9 @@ router.put('/gerants', async (req, res) => {
     const { fund, arbre } = await fondsDe(req.user);
     if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
 
-    const peutModifier = !fund.gerant1NumeroH || estAdmin(fund, numeroH);
+    // Compte sans aucun responsable : seul un membre reconnu peut désigner les gérants
+    const sansResponsable = !fund.gerant1NumeroH && !fund.gerant2NumeroH && !fund.conseillerNumeroH;
+    const peutModifier = estAdmin(fund, numeroH) || (sansResponsable && (await membresReconnus(arbre)).has(numeroH));
     if (!peutModifier) {
       return res.status(403).json({ success: false, message: 'Seul un admin du compte peut changer les gérants.' });
     }
@@ -478,6 +484,10 @@ router.put('/conseiller', async (req, res) => {
     // Seul un admin existant ou le conseiller actuel peut changer le conseiller
     if (fund.conseillerNumeroH && fund.conseillerNumeroH !== numeroH && !estAdmin(fund, numeroH)) {
       return res.status(403).json({ success: false, message: 'Seul le Conseiller actuel peut passer son rôle.' });
+    }
+    // Pas encore de Conseiller : seul un responsable du compte ou un membre reconnu le désigne
+    if (!fund.conseillerNumeroH && !estAdmin(fund, numeroH) && !(await membresReconnus(arbre)).has(numeroH)) {
+      return res.status(403).json({ success: false, message: 'Seul un responsable du compte famille peut désigner le Conseiller.' });
     }
 
     if (!estMembreArbre(arbre, conseillerNumeroH)) {
@@ -608,11 +618,18 @@ router.get('/admin/transactions/:fundId', async (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/admin/depot-test', async (req, res) => {
   try {
+    // Dépôt de TEST (argent créé sans paiement réel) : jamais en production,
+    // sauf si l'hébergeur l'autorise exprès (AUTORISER_DEPOTS_TEST=oui).
+    if (process.env.NODE_ENV === 'production' && process.env.AUTORISER_DEPOTS_TEST !== 'oui') {
+      return res.status(403).json({ success: false, message: 'Dépôt de test désactivé en production.' });
+    }
     const estAdmin = req.user.isMasterAdmin || req.user.isAdmin || req.user.role === 'admin';
     if (!estAdmin) return res.status(403).json({ success: false, message: 'Accès refusé.' });
 
-    const { fundId, montant } = req.body;
-    if (!fundId || !montant || montant < 100) {
+    const { fundId } = req.body;
+    // Nombre entier (avant : « 1000 » envoyé en texte était collé au total)
+    const montant = Number(req.body?.montant);
+    if (!fundId || !Number.isInteger(montant) || montant < 100) {
       return res.status(400).json({ success: false, message: 'fundId et montant (min 100) requis.' });
     }
 

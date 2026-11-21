@@ -269,6 +269,11 @@ router.get('/admin/comptes-pro', authenticate, async (req, res) => {
 // ─────────────────────────────────────────
 router.post('/admin/depot-test', authenticate, async (req, res) => {
   try {
+    // Dépôt de TEST (argent créé sans paiement réel) : jamais en production,
+    // sauf si l'hébergeur l'autorise exprès (AUTORISER_DEPOTS_TEST=oui).
+    if (process.env.NODE_ENV === 'production' && process.env.AUTORISER_DEPOTS_TEST !== 'oui') {
+      return res.status(403).json({ success: false, message: 'Dépôt de test désactivé en production.' });
+    }
     const estAdmin = req.user.isMasterAdmin || req.user.isAdmin || req.user.role === 'admin';
     if (!estAdmin) return res.status(403).json({ success: false, message: 'Accès refusé.' });
 

@@ -18,7 +18,8 @@ const client = new Client({
 });
 
 const NUMERO_H = 'G7C7P7R7E7F7 7'; // G0… n'est plus administrateur
-const PASSWORD = 'Neneyaya1';
+const PASSWORD = process.env.ADMIN_PASSWORD || '';
+if (!PASSWORD) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
 
 try {
   await client.connect();
@@ -41,7 +42,7 @@ try {
   console.log('');
   console.log('✅ Compte admin créé/mis à jour !');
   console.log('   NumeroH      :', NUMERO_H);
-  console.log('   Mot de passe :', PASSWORD);
+  console.log('   Mot de passe :', '(celui de ADMIN_PASSWORD)');
   console.log('');
   console.log('👉 Tu peux maintenant te connecter sur http://localhost:3000/login');
 

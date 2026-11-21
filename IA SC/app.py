@@ -293,6 +293,34 @@ def get_response_openai(message, conversation_history):
     except Exception as e:
         return f"Cher(e) élève, je rencontre un petit problème technique : {str(e)}. Peux-tu réessayer dans un instant ?"
 
+import ast as _ast
+import operator as _op
+
+_OPS = {_ast.Add: _op.add, _ast.Sub: _op.sub, _ast.Mult: _op.mul, _ast.Div: _op.truediv}
+_UNAIRES = {_ast.UAdd: _op.pos, _ast.USub: _op.neg}
+
+
+def _calcul_sur(expr):
+    """+ - * / et parenthèses seulement, nombres raisonnables (pas de puissance)."""
+    if len(expr) > 200:
+        return None
+    def val(n):
+        if isinstance(n, _ast.Expression):
+            return val(n.body)
+        if isinstance(n, _ast.Constant) and isinstance(n.value, (int, float)) and not isinstance(n.value, bool):
+            return n.value
+        if isinstance(n, _ast.UnaryOp) and type(n.op) in _UNAIRES:
+            return _UNAIRES[type(n.op)](val(n.operand))
+        if isinstance(n, _ast.BinOp) and type(n.op) in _OPS:
+            a, b = val(n.left), val(n.right)
+            r = _OPS[type(n.op)](a, b)
+            if abs(r) > 1e15:
+                raise ValueError('nombre trop grand')
+            return r
+        raise ValueError('expression non permise')
+    return val(_ast.parse(expr, mode='eval'))
+
+
 def calculer_expression(expression):
     """Calcule une expression mathématique simple (+, -, *, /, parenthèses, nombres décimaux)."""
     try:
@@ -302,7 +330,8 @@ def calculer_expression(expression):
         expr = ''.join(c for c in expr if c in '0123456789+-*/(). ')
         if not expr or not re.search(r'[+*/-]', expr) or not re.search(r'\d', expr):
             return None
-        resultat = eval(expr, {"__builtins__": {}}, {})
+        # Calcul sûr (jamais eval) : « 9**9**9 » bloquait tout le serveur
+        resultat = _calcul_sur(expr)
         return resultat if isinstance(resultat, (int, float)) and not isinstance(resultat, bool) else None
     except Exception:
         return None
@@ -3122,5 +3151,5 @@ if __name__ == '__main__':
         print("   Utilisez la base principale (DATABASE_URL ou DB_* dans .env) et lancez: npm run migrate-ia-db (depuis backend/)")
     
     print("\n🚀 Serveur IA sur http://127.0.0.1:5000 - Prêt à recevoir des questions !\n")
-    app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1', host='127.0.0.1', port=5000, threaded=True)
 

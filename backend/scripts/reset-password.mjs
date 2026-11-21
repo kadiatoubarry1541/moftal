@@ -12,7 +12,8 @@ dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
 // ── Paramètres à modifier ──────────────────────────────────────────────
 const NUMERO_H      = 'G7C7P7R7E7F7 7';
-const NEW_PASSWORD  = 'Alphabobomodizakoolo2025@amourpur';
+const NEW_PASSWORD = process.env.ADMIN_PASSWORD || '';
+if (!NEW_PASSWORD) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
 // ──────────────────────────────────────────────────────────────────────
 
 async function resetPassword() {
@@ -43,7 +44,7 @@ async function resetPassword() {
 
     console.log('\nMot de passe réinitialisé avec succès !');
     console.log(`NumeroH  : ${NUMERO_H}`);
-    console.log(`Nouveau  : ${NEW_PASSWORD}`);
+    console.log(`Nouveau  : (celui de ADMIN_PASSWORD)`);
 
   } catch (error) {
     console.error('Erreur :', error.message);

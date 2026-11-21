@@ -118,7 +118,7 @@ DATABASE_URL=postgresql://user:password@host.neon.tech/diangou?sslmode=require
 
 Essayez de vous connecter avec :
 - Email : `kadiatou1541.kb@gmail.com`
-- Mot de passe : `Neneyaya1`
+- Mot de passe : `(celui défini dans ADMIN_PASSWORD)`
 
 Si ça fonctionne, c'est bon ! ✅
 

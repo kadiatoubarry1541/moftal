@@ -25,7 +25,8 @@ async function testAdminLogin() {
     console.log('   ✅ Modèles synchronisés\n');
 
     const email = 'kadiatou1541.kb@gmail.com';
-    const password = 'Neneyaya1';
+    const password = process.env.ADMIN_PASSWORD || '';
+if (!password) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
 
     // Vérifier si l'admin existe
     console.log(`2️⃣ Recherche de l'utilisateur: ${email}...`);
@@ -84,7 +85,7 @@ async function testAdminLogin() {
       console.log('✅ COMPTE ADMIN PRÊT POUR LA CONNEXION !');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       console.log('📧 Email:', email);
-      console.log('🔑 Mot de passe:', password);
+      console.log('🔑 Mot de passe:', '(celui de ADMIN_PASSWORD)');
       console.log('👤 NumeroH:', finalUser.numeroH);
       console.log('🎭 Rôle:', finalUser.role);
       console.log('✅ Actif:', finalUser.isActive ? 'Oui' : 'Non');
