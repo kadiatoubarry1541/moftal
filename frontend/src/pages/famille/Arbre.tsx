@@ -1,4 +1,6 @@
 import GalerieAlbum from '../../components/GalerieAlbum'
+import OffreGalerie from '../../components/OffreGalerie'
+import { avertirOffre, ajouterDureeVideo, type Offre } from '../../utils/offreGaleries'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
@@ -418,7 +420,20 @@ const enhancedUser: UserData = useMemo(() => {
     [enhancedUser, familyMembers]
   )
 
+  // Offre gratuite de la galerie famille : 7 photos + 2 vidéos
+  const [offreFamille, setOffreFamille] = useState<Offre | null>(null)
+  const loadOffreFamille = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/family/shared-gallery/offre`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      })
+      const data = await res.json()
+      if (res.ok && data.success) setOffreFamille(data.offre)
+    } catch { /* la barre d'offre reste cachée */ }
+  }
+
   const loadSharedGallery = async () => {
+    loadOffreFamille()
     try {
       setSharedLoading(true)
       const token = localStorage.getItem('token')
@@ -448,6 +463,7 @@ const enhancedUser: UserData = useMemo(() => {
       const token = localStorage.getItem('token')
       const formData = new FormData()
       formData.append('media', file)
+      await ajouterDureeVideo(formData, file)
       const res = await fetch(`${API_BASE}/api/family/shared-gallery/${activeAlbum}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -456,13 +472,39 @@ const enhancedUser: UserData = useMemo(() => {
       const data = await res.json()
       if (res.ok && data.item) {
         setSharedItems(prev => [data.item, ...prev])
+        loadOffreFamille()
+        return true
+      }
+      avertirOffre(data, 'Erreur lors de la publication')
+      return false
+    } catch {
+      alert('Erreur de connexion au serveur')
+      return false
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Remplacer une de ses photos / vidéos : sa place dans l'offre gratuite est gardée
+  const remplacerMediaGalerie = async (id: string, file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('media', file)
+      await ajouterDureeVideo(formData, file)
+      const res = await fetch(`${API_BASE}/api/family/shared-gallery/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.item) {
+        setSharedItems(prev => prev.map(item => (item.id === id ? data.item : item)))
+        loadOffreFamille()
       } else {
-        alert(data.message || 'Erreur lors de la publication')
+        avertirOffre(data, 'Le remplacement n\'a pas été enregistré')
       }
     } catch {
       alert('Erreur de connexion au serveur')
-    } finally {
-      setUploading(false)
     }
   }
 
@@ -478,7 +520,7 @@ const enhancedUser: UserData = useMemo(() => {
         else echec = (await res.json().catch(() => ({}))).message || 'Erreur lors de la suppression'
       } catch { echec = 'Erreur de connexion au serveur' }
     }
-    if (supprimes.length) setSharedItems(prev => prev.filter(item => !supprimes.includes(item.id)))
+    if (supprimes.length) { setSharedItems(prev => prev.filter(item => !supprimes.includes(item.id))); loadOffreFamille() }
     if (echec) alert(echec)
   }
 
@@ -1057,7 +1099,7 @@ const enhancedUser: UserData = useMemo(() => {
                   onChange={async e => {
                     const files = Array.from(e.target.files || [])
                     for (const file of files) {
-                      await uploadToSharedGallery(file)
+                      if (!(await uploadToSharedGallery(file))) break
                     }
                     e.target.value = ''
                   }}
@@ -1076,6 +1118,7 @@ const enhancedUser: UserData = useMemo(() => {
           ) : galleryView === 'list' ? (
             /* 1. Les albums */
             <div className="flex-1 overflow-y-auto p-3">
+              <OffreGalerie offre={offreFamille} className="mb-3" />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {ALBUM_CONFIG.map(cfg => {
                   const albumItems = albums[cfg.key] || []
@@ -1109,12 +1152,14 @@ const enhancedUser: UserData = useMemo(() => {
           ) : (
             /* 2. Les photos de l'album, sur toute la largeur */
             <div className="flex-1 overflow-y-auto">
+              <div className="p-2"><OffreGalerie offre={offreFamille} /></div>
               <GalerieAlbum
                 elements={(albums[activeAlbum] || []).map((item) => ({
                   cle: item.id, url: buildMediaUrl(item.url), video: item.type === 'video' || isVideo(item.url),
                   auteur: item.uploaderName, supprimable: item.uploaderNumeroH === user?.numeroH,
                 }))}
                 onSupprimer={supprimerMediasGalerie}
+                onRemplacer={remplacerMediaGalerie}
                 vide={
                   <div className="flex flex-col items-center justify-center py-20 px-6 text-center text-gray-600">
                     <span className="text-7xl mb-4 opacity-30">{albumCfg?.emoji}</span>

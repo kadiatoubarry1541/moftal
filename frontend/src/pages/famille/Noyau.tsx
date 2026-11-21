@@ -11,6 +11,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 const ParentsGallery    = lazy(() => import('./Parents'))
 const EnfantsGallery    = lazy(() => import('./Enfants'))
 const PartenaireGallery = lazy(() => import('./Partenaire'))
+// Ma galerie personnelle 🔒 : visible uniquement par moi (carte « Moi »)
+const GaleriePersonnelle = lazy(() => import('../../components/GaleriePersonnelle'))
 
 type GalleryKind = 'parent' | 'enfant' | 'conjoint'
 interface OpenGallery { kind: GalleryKind; member: Member | null }
@@ -425,6 +427,7 @@ export default function Noyau() {
   const [myChildren, setMyChildren] = useState<Array<{ member: Member; status?: string }>>([])
   const [mySpouses, setMySpouses] = useState<Array<{ member: Member; status?: string }>>([])
   const [openGallery, setOpenGallery] = useState<OpenGallery | null>(null)
+  const [galeriePerso, setGaleriePerso] = useState(false)
   const [data, setData] = useState<Record<TabKey, NoyauData>>({ mine: EMPTY, pere: EMPTY, mere: EMPTY })
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -600,6 +603,23 @@ export default function Noyau() {
                     Aperçu admin : exemples de personnes. Touchez-en une pour voir la galerie.
                   </p>
                 )}
+                {/* Ma carte : ma galerie personnelle, que moi seul vois */}
+                <div>
+                  <GroupHeader title="Moi" />
+                  <button type="button" onClick={() => setGaleriePerso(true)}
+                    className="w-full flex items-center gap-3 rounded-xl border border-emerald-200 bg-white dark:bg-gray-800 dark:border-emerald-900/40 p-3 shadow-sm hover:border-emerald-300 hover:bg-emerald-50/50 active:scale-[0.99] transition-all">
+                    <MemberAvatar member={{
+                      numeroH: user?.numeroH || 'moi', prenom: user?.prenom || 'Moi', nomFamille: user?.nomFamille || '',
+                      photo: user?.photo || null, genre: user?.genre
+                    }} />
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">{user?.prenom} {user?.nomFamille}</p>
+                      <p className="text-xs font-semibold text-emerald-600">🔒 Ma galerie personnelle</p>
+                      <p className="text-xs text-gray-400">Visible uniquement par vous</p>
+                    </div>
+                    <span className="text-2xl text-emerald-500 flex-shrink-0">›</span>
+                  </button>
+                </div>
                 <div>
                   <GroupHeader
                     title={parents.length > 1 ? 'Mes parents' : 'Mon parent'}
@@ -701,6 +721,12 @@ export default function Noyau() {
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           Fondateur du noyau{isMyNoyau ? ' (vous)' : ''}
                         </p>
+                        {isMyNoyau && (
+                          <button type="button" onClick={() => setGaleriePerso(true)}
+                            className="mt-1 text-xs font-semibold text-emerald-600 hover:underline">
+                            🔒 Ma galerie personnelle ›
+                          </button>
+                        )}
                         {!isMyNoyau && current.founder && myParents.some(p => p.member.numeroH === current.founder!.numeroH) && (
                           <button type="button" onClick={() => setOpenGallery({ kind: 'parent', member: current.founder! })}
                             className="mt-1 text-xs font-semibold text-emerald-600 hover:underline">
@@ -800,6 +826,12 @@ export default function Noyau() {
       </div>
 
       {showModal && <AddEntryModal onClose={() => setShowModal(false)} onSave={addEntry} />}
+
+      {galeriePerso && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-white flex items-center justify-center text-emerald-600">Chargement de la galerie…</div>}>
+          <GaleriePersonnelle onClose={() => setGaleriePerso(false)} />
+        </Suspense>
+      )}
 
       {/* ════ Galerie commune avec la personne touchée ════ */}
       {openGallery && (

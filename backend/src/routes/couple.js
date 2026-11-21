@@ -14,6 +14,7 @@ import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
 import { Op } from 'sequelize';
+import { OFFRES_GALERIES, coutVideo, genreMedia, resumeOffre, placeDansGalerie, refusOffre } from '../utils/offreGaleries.js';
 import { estDeLaFamille } from '../services/enfantsSansCompte.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
@@ -738,6 +739,66 @@ router.get('/activities', async (req, res) => {
   }
 });
 
+// ── Galerie commune du couple : offre 5 photos + 2 vidéos gratuites ──
+async function compteGalerieCouple(numeroH1, numeroH2) {
+  const rows = await CoupleActivity.findAll({
+    where: {
+      [Op.or]: [{ numeroH1, numeroH2 }, { numeroH1: numeroH2, numeroH2: numeroH1 }],
+      isActive: true, type: { [Op.like]: 'souvenir_%' }, mediaUrl: { [Op.ne]: null }
+    },
+    attributes: ['type', 'content', 'mediaUrl']
+  });
+  let photos = 0, videos = 0;
+  for (const r of rows) {
+    const g = genreMedia({ content: r.content, mediaUrl: r.mediaUrl });
+    if (g === 'video') videos++; else if (g === 'photo') photos++;
+  }
+  return { photos, videos };
+}
+
+async function verifierOffreCouple(res, { link, genre, numeroH, duree }) {
+  if (genre !== 'photo' && genre !== 'video') return null;
+  try {
+    const c = await compteGalerieCouple(link.numeroH1, link.numeroH2);
+    await placeDansGalerie({
+      offre: OFFRES_GALERIES.noyau, ...c, estVideo: genre === 'video', numeroH,
+      cout: genre === 'video' ? coutVideo(duree) : 1
+    });
+    return null;
+  } catch (e) {
+    if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.noyau);
+    throw e;
+  }
+}
+
+/** GET /api/couple/gallery-offer → ce qui reste de l'offre gratuite de la galerie du couple */
+router.get('/gallery-offer', async (req, res) => {
+  try {
+    const link = await CoupleLink.getMyPartner(req.user.numeroH);
+    const c = link ? await compteGalerieCouple(link.numeroH1, link.numeroH2) : { photos: 0, videos: 0 };
+    res.json({ success: true, offre: resumeOffre(OFFRES_GALERIES.noyau, c.photos, c.videos) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/** DELETE /api/couple/activity/:id → retirer un de ses souvenirs (libère sa place gratuite) */
+router.delete('/activity/:id', async (req, res) => {
+  try {
+    const act = await CoupleActivity.findByPk(req.params.id);
+    if (!act || !act.isActive) return res.status(404).json({ success: false, message: 'Souvenir introuvable' });
+    if (act.fromNumeroH !== req.user.numeroH) {
+      return res.status(403).json({ success: false, message: 'Seule la personne qui l\'a ajouté peut le supprimer' });
+    }
+    act.isActive = false;
+    await act.save();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 /**
  * POST /api/couple/activity
  * Ajouter une activité (ce que je fais pour mon partenaire).
@@ -757,6 +818,11 @@ router.post('/activity', async (req, res) => {
     }
 
     const toNumeroH = link.numeroH1 === user.numeroH ? link.numeroH2 : link.numeroH1;
+
+    if (mediaUrl && String(type || '').startsWith('souvenir_')) {
+      const refus = await verifierOffreCouple(res, { link, numeroH: user.numeroH, duree: req.body.videoDuration, genre: genreMedia({ content, mediaUrl }) });
+      if (refus) return refus;
+    }
 
     const activity = await CoupleActivity.create({
       numeroH1: link.numeroH1,
@@ -812,6 +878,11 @@ router.post('/activity/upload', uploadCouple.fields([
     let mediaUrl = null;
     const files = req.files || {};
     const uploadedFile = (files.image && files.image[0]) || (files.video && files.video[0]) || (files.audio && files.audio[0]);
+    if (uploadedFile && String(type || '').startsWith('souvenir_')) {
+      const genre = files.image?.[0] ? 'photo' : files.video?.[0] ? 'video' : 'audio';
+      const refus = await verifierOffreCouple(res, { link, genre, numeroH: user.numeroH, duree: req.body.videoDuration });
+      if (refus) return refus;
+    }
     if (uploadedFile) {
       const isImage = uploadedFile.mimetype.startsWith('image/');
       mediaUrl = isImage

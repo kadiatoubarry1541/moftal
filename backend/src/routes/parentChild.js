@@ -15,6 +15,7 @@ import { getIO } from '../socket.js';
 import { addUserToFamilyTree, MAX_MEMBRES_ARBRE } from './familyTree.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
 import { Op } from 'sequelize';
+import { OFFRES_GALERIES, coutVideo, genreMedia, resumeOffre, placeDansGalerie, refusOffre } from '../utils/offreGaleries.js';
 import CoupleLink from '../models/CoupleLink.js';
 import EnfantSansCompte from '../models/EnfantSansCompte.js';
 import {
@@ -704,6 +705,74 @@ router.get('/activities', async (req, res) => {
   }
 });
 
+// ── Galerie commune parent-enfant : offre 5 photos + 2 vidéos gratuites ──
+// (comptées sur ce qui est dans la galerie en ce moment, pour la paire)
+async function compteGaleriePaire(parentNumeroH, childNumeroH) {
+  const rows = await ParentChildActivity.findAll({
+    where: { parentNumeroH, childNumeroH, isActive: true, type: { [Op.like]: 'souvenir_%' }, mediaUrl: { [Op.ne]: null } },
+    attributes: ['type', 'content', 'mediaUrl']
+  });
+  let photos = 0, videos = 0;
+  for (const r of rows) {
+    const g = genreMedia({ content: r.content, mediaUrl: r.mediaUrl });
+    if (g === 'video') videos++; else if (g === 'photo') photos++;
+  }
+  return { photos, videos };
+}
+
+// Une photo / vidéo de plus dans la galerie de la paire (null = accepté, sinon réponse envoyée)
+async function verifierOffrePaire(res, { parentNumeroH, childNumeroH, genre, numeroH, duree }) {
+  if (genre !== 'photo' && genre !== 'video') return null;
+  try {
+    const c = await compteGaleriePaire(parentNumeroH, childNumeroH);
+    await placeDansGalerie({
+      offre: OFFRES_GALERIES.noyau, ...c, estVideo: genre === 'video', numeroH,
+      cout: genre === 'video' ? coutVideo(duree) : 1
+    });
+    return null;
+  } catch (e) {
+    if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.noyau);
+    throw e;
+  }
+}
+
+/**
+ * GET /api/parent-child/gallery-offer?parentNumeroH=&childNumeroH=
+ * Ce qui reste de l'offre gratuite de la galerie commune.
+ */
+router.get('/gallery-offer', async (req, res) => {
+  try {
+    const { parentNumeroH, childNumeroH } = req.query;
+    if (req.user.numeroH !== parentNumeroH && req.user.numeroH !== childNumeroH && !isAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès non autorisé' });
+    }
+    const c = await compteGaleriePaire(parentNumeroH, childNumeroH);
+    res.json({ success: true, offre: resumeOffre(OFFRES_GALERIES.noyau, c.photos, c.videos) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * DELETE /api/parent-child/activity/:id
+ * Retirer un de ses propres souvenirs de la galerie (libère sa place gratuite).
+ */
+router.delete('/activity/:id', async (req, res) => {
+  try {
+    const act = await ParentChildActivity.findByPk(req.params.id);
+    if (!act || !act.isActive) return res.status(404).json({ success: false, message: 'Souvenir introuvable' });
+    if (act.fromNumeroH !== req.user.numeroH) {
+      return res.status(403).json({ success: false, message: 'Seule la personne qui l\'a ajouté peut le supprimer' });
+    }
+    act.isActive = false;
+    await act.save();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression souvenir parent-enfant:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 /**
  * POST /api/parent-child/activity
  * Ajouter une activité (ce que je fais pour mon parent ou mon enfant).
@@ -750,6 +819,14 @@ router.post('/activity', async (req, res) => {
         success: false,
         message: 'toNumeroH doit être le parent ou l\'enfant de cette liaison'
       });
+    }
+
+    if (mediaUrl && String(type || '').startsWith('souvenir_')) {
+      const refus = await verifierOffrePaire(res, {
+        parentNumeroH, childNumeroH, numeroH: user.numeroH, duree: req.body.videoDuration,
+        genre: genreMedia({ content, mediaUrl })
+      });
+      if (refus) return refus;
     }
 
     const activity = await ParentChildActivity.create({
@@ -1578,6 +1655,11 @@ router.post('/activity/upload', uploadChild.fields([
     let mediaUrl = null;
     const files = req.files || {};
     const uploadedFile = (files.image && files.image[0]) || (files.video && files.video[0]) || (files.audio && files.audio[0]);
+    if (uploadedFile && String(type || '').startsWith('souvenir_')) {
+      const genre = files.image?.[0] ? 'photo' : files.video?.[0] ? 'video' : 'audio';
+      const refus = await verifierOffrePaire(res, { parentNumeroH, childNumeroH, genre, numeroH: user.numeroH, duree: req.body.videoDuration });
+      if (refus) return refus;
+    }
     if (uploadedFile) {
       const isImage = uploadedFile.mimetype.startsWith('image/');
       mediaUrl = isImage

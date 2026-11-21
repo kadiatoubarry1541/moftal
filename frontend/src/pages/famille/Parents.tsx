@@ -4,6 +4,9 @@ import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { RejoindreMaFiche } from '../../components/FicheEnfantActions'
 import type { UserData } from "../../utils/auth";
+import OffreGalerie from '../../components/OffreGalerie'
+import { avertirOffre, type Offre } from '../../utils/offreGaleries'
+import { lireDureeMedia } from '../../utils/dureesMedias'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -78,11 +81,13 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
   const [newActivityContent, setNewActivityContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   type ChapterKey = 'enfance' | 'paradis' | 'objectif'
-  type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }
+  type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<ChapterKey | 'notes'>('enfance')
   const [mediaByChapter, setMediaByChapter] = useState<Record<ChapterKey, MediaItem[]>>({ enfance: [], paradis: [], objectif: [] })
   const [uploaderChapter, setUploaderChapter] = useState<ChapterKey | null>(null)
+  // Offre gratuite de la galerie commune : 5 photos + 2 vidéos
+  const [offre, setOffre] = useState<Offre | null>(null)
   const [notesFromParents, setNotesFromParents] = useState<Array<{ id: string; annee: number; note: number; parentName?: string }>>([])
   const [formAnnee, setFormAnnee] = useState(() => new Date().getFullYear())
   const [formNote, setFormNote] = useState(0)
@@ -217,19 +222,32 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
           if (!act.mediaUrl || !act.type || !act.type.startsWith('souvenir_')) continue
           const key = act.type.replace('souvenir_', '') as ChapterKey
           if (!chapters[key]) continue
-          const mediaType: MediaItem['type'] =
+          let mediaType: MediaItem['type'] =
             act.mediaUrl.startsWith('data:video') ? 'video'
             : act.mediaUrl.startsWith('data:audio') ? 'audio'
             : 'photo'
+          let caption = act.content
+          // Souvenir ajouté depuis la page Enfants : { caption, mediaType }
+          if (act.content?.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(act.content)
+              if (parsed.mediaType) mediaType = parsed.mediaType
+              caption = parsed.caption || undefined
+            } catch { /* légende en texte simple */ }
+          }
           chapters[key].push({
             id: act.id,
             type: mediaType,
-            url: act.mediaUrl,
-            caption: act.content,
-            date: act.created_at
+            url: act.mediaUrl.startsWith('data:') || act.mediaUrl.startsWith('http') ? act.mediaUrl : `${API_BASE}${act.mediaUrl}`,
+            caption: caption || undefined,
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaByChapter(chapters)
+        fetch(`${API_BASE}/api/parent-child/gallery-offer?parentNumeroH=${encodeURIComponent(link.parentNumeroH)}&childNumeroH=${encodeURIComponent(link.childNumeroH)}`,
+          { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json()).then(d => setOffre(d.success ? d.offre : null)).catch(() => setOffre(null))
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -303,9 +321,9 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (data?: { code?: string; message?: string }) => {
       setMediaByChapter((prev) => ({ ...prev, [chapter]: (prev[chapter] || []).filter((m) => m.id !== optimistic.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      avertirOffre(data, "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -313,6 +331,12 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
         const token = getToken()
         if (!token) { annuler(); return }
         const dataUrl = await toDataUrl(mediaData.url)
+        // Durée d'une vidéo : son prix au-delà de l'offre gratuite en dépend
+        let videoDuration: number | undefined
+        if (mediaData.type === 'video') {
+          const d = await lireDureeMedia(await (await fetch(mediaData.url)).blob())
+          if (Number.isFinite(d)) videoDuration = Math.round(d)
+        }
         const toNumeroH =
           user.numeroH === selectedParent.parentNumeroH ? selectedParent.childNumeroH : selectedParent.parentNumeroH
 
@@ -325,13 +349,14 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
             toNumeroH,
             type: `souvenir_${chapter}`,
             content: mediaData.caption,
-            mediaUrl: dataUrl
+            mediaUrl: dataUrl,
+            videoDuration
           })
         })
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média parent:', data)
-          annuler()
+          annuler(data)
         } else {
           // Recharger depuis le serveur pour récupérer les IDs réels
           await loadActivitiesForParent(selectedParent)
@@ -344,6 +369,21 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
 
     void persist()
     setUploaderChapter(null)
+  }
+
+  // Retirer un de ses souvenirs : sa place dans l'offre gratuite est libérée
+  const supprimerSouvenir = async (id: string) => {
+    if (!selectedParent || !confirm("Supprimer ce souvenir ? C'est définitif.")) return
+    try {
+      const res = await fetch(`${API_BASE}/api/parent-child/activity/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) alert(data.message || "La suppression n'a pas été enregistrée.")
+    } catch {
+      alert("La suppression n'a pas été enregistrée : vérifiez votre connexion.")
+    }
+    await loadActivitiesForParent(selectedParent)
   }
 
   void handleAddActivity
@@ -608,6 +648,7 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
                           </div>
 
                           {/* ── Contenu : chapitres médias ── */}
+                          {openSection !== 'notes' && <OffreGalerie offre={offre} className="mb-3" />}
                           {openSection !== 'notes' && (() => {
                             const items = mediaByChapter[openSection as ChapterKey] ?? []
                             return items.length === 0 ? (
@@ -624,7 +665,11 @@ export default function Parents({ focusNumeroH }: { inline?: boolean; focusNumer
                             ) : (
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {items.map((m) => (
-                                  <div key={m.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                  <div key={m.id} className="relative bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                    {m.from && m.from === user?.numeroH && (
+                                      <button type="button" onClick={() => supprimerSouvenir(m.id)} aria-label="Supprimer"
+                                        className="absolute top-1.5 right-1.5 z-10 w-8 h-8 rounded-full bg-black/55 text-white text-sm">🗑</button>
+                                    )}
                                     {m.type === 'photo' && <img src={m.url} alt="" className="w-full h-36 object-cover" />}
                                     {m.type === 'video' && <video src={m.url} controls className="w-full h-36 bg-black" />}
                                     {m.type === 'audio' && <div className="w-full h-24 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}

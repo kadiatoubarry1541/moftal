@@ -23,11 +23,13 @@ interface Props {
   elements: ElementGalerie[];
   /** Supprime les éléments choisis (déjà confirmés) */
   onSupprimer?: (cles: string[]) => Promise<void>;
+  /** Remplace un de ses éléments par un autre fichier (menu « ⋮ ») */
+  onRemplacer?: (cle: string, fichier: File) => Promise<void>;
   vide?: React.ReactNode;
   colonnes?: string;
 }
 
-export default function GalerieAlbum({ elements, onSupprimer, vide, colonnes = "grid-cols-3 sm:grid-cols-4 md:grid-cols-5" }: Props) {
+export default function GalerieAlbum({ elements, onSupprimer, onRemplacer, vide, colonnes = "grid-cols-3 sm:grid-cols-4 md:grid-cols-5" }: Props) {
   const { tr } = useTraduction();
   const [ouvert, setOuvert] = useState<number | null>(null);
   const [selection, setSelection] = useState<Set<string> | null>(null);
@@ -172,17 +174,32 @@ export default function GalerieAlbum({ elements, onSupprimer, vide, colonnes = "
             <button type="button" onClick={fermer} aria-label={tr("Fermer")}
               className="w-11 h-11 rounded-full bg-white/10 text-xl">←</button>
             <span className="text-sm font-semibold">{ouvert + 1} / {elements.length}</span>
-            {onSupprimer && courant.supprimable ? (
+            {(onSupprimer || onRemplacer) && courant.supprimable ? (
               <div className="relative">
                 <button type="button" onClick={() => setMenu((m) => !m)} aria-label={tr("Plus d'options")}
                   className="w-11 h-11 rounded-full bg-white/10 text-2xl leading-none">⋮</button>
                 {menu && (
                   <div className="absolute right-0 top-12 bg-white rounded-xl shadow-xl overflow-hidden text-gray-900" style={{ width: 200, maxWidth: "none" }}>
-                    <button type="button" disabled={suppression}
+                    {onRemplacer && (
+                      <label className={`block w-full text-left px-4 py-3 text-base font-semibold whitespace-nowrap hover:bg-gray-50 ${suppression ? "opacity-50" : "cursor-pointer"}`}>
+                        🔄 {tr("Remplacer")}
+                        <input type="file" accept="image/*,video/*" className="hidden" disabled={suppression}
+                          onChange={async (ev) => {
+                            const fichier = ev.target.files?.[0];
+                            ev.target.value = "";
+                            if (!fichier) return;
+                            setMenu(false);
+                            setSuppression(true);
+                            try { await onRemplacer(courant.cle, fichier); }
+                            finally { setSuppression(false); }
+                          }} />
+                      </label>
+                    )}
+                    {onSupprimer && <button type="button" disabled={suppression}
                       onClick={async () => { setMenu(false); await supprimer([courant.cle]); }}
                       className="w-full text-left px-4 py-3 text-base font-semibold text-red-600 whitespace-nowrap hover:bg-red-50 disabled:opacity-50">
                       🗑 {tr("Supprimer")}
-                    </button>
+                    </button>}
                   </div>
                 )}
               </div>

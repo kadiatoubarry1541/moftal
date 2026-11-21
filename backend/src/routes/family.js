@@ -6,7 +6,7 @@ import User from '../models/User.js';
 import FamilyGallery from '../models/FamilyGallery.js';
 import FamilyProblemMedia from '../models/FamilyProblemMedia.js';
 import { sequelize } from '../config/database.js';
-import { checkAndConsumeQuota } from './quotas.js';
+import { OFFRES_GALERIES, coutVideo, genreMedia, resumeOffre, placeDansGalerie, refusOffre } from '../utils/offreGaleries.js';
 import { priveDepuisFichier } from '../services/mediasPrives.js';
 
 const router = express.Router();
@@ -391,29 +391,16 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
     if (!familyName) return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour partager des médias' });
     const isVideoFile = req.file.mimetype.startsWith('video/');
 
-    // Coût vidéo selon la durée (envoyée par le frontend en secondes)
-    let videoCost = 5;
-    if (isVideoFile) {
-      const dur = parseFloat(req.body.videoDuration || '30');
-      if (dur <= 10) videoCost = 2;
-      else if (dur <= 20) videoCost = 3;
-      else videoCost = 5;
-    }
-
-    // Vérifier et consommer le quota (5 photos + 1 vidéo gratuits par famille, puis points)
+    // Offre famille : 7 photos + 2 vidéos gratuites (ce qui est dans la galerie
+    // en ce moment), puis points de la personne qui ajoute
     try {
-      await checkAndConsumeQuota('family', familyName, isVideoFile, req.user.numeroH, 5, 1, isVideoFile ? videoCost : undefined);
+      const c = await compteFamille(familyName);
+      await placeDansGalerie({
+        offre: OFFRES_GALERIES.famille, ...c, estVideo: isVideoFile, numeroH: req.user.numeroH,
+        cout: isVideoFile ? coutVideo(req.body.videoDuration) : 1
+      });
     } catch (quotaErr) {
-      if (quotaErr.code === 'QUOTA_EXCEEDED') {
-        const type = quotaErr.isVideo ? 'vidéo' : 'photo';
-        const pts = quotaErr.isVideo ? `${videoCost} points` : '1 point';
-        return res.status(402).json({
-          success: false,
-          code: 'QUOTA_EXCEEDED',
-          isVideo: quotaErr.isVideo,
-          message: `Quota gratuit de votre famille épuisé. Publiez une ${type} supplémentaire pour ${pts}. Achetez des points via l'admin.`
-        });
-      }
+      if (quotaErr.code === 'QUOTA_EXCEEDED') return refusOffre(res, quotaErr, OFFRES_GALERIES.famille);
       throw quotaErr;
     }
 
@@ -443,6 +430,174 @@ router.delete('/shared-gallery/:id', async (req, res) => {
     }
     await item.destroy();
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Photos et vidéos de la galerie famille en ce moment
+async function compteFamille(familyName) {
+  const items = await FamilyGallery.findAll({ where: { familyName }, attributes: ['type', 'url'] });
+  let photos = 0, videos = 0;
+  for (const it of items) (genreMedia({ type: it.type, mediaUrl: it.url }) === 'video' ? videos++ : photos++);
+  return { photos, videos };
+}
+
+// GET /api/family/shared-gallery/offre → offre gratuite de la galerie famille
+router.get('/shared-gallery/offre', async (req, res) => {
+  try {
+    await ensureGalleryTable();
+    const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
+    const c = userData?.nomFamille ? await compteFamille(userData.nomFamille) : { photos: 0, videos: 0 };
+    res.json({ success: true, offre: resumeOffre(OFFRES_GALERIES.famille, c.photos, c.videos) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT /api/family/shared-gallery/:id → remplacer un de ses médias (sa place gratuite est gardée)
+router.put('/shared-gallery/:id', upload.single('media'), async (req, res) => {
+  try {
+    const item = await FamilyGallery.findByPk(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Média introuvable' });
+    if (item.uploaderNumeroH !== req.user.numeroH) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+    const estVideo = req.file.mimetype.startsWith('video/');
+    const avantVideo = genreMedia({ type: item.type, mediaUrl: item.url }) === 'video';
+    if (estVideo !== avantVideo) {
+      // Une photo remplacée par une vidéo (ou l'inverse) : la nouvelle doit avoir sa place
+      const c = await compteFamille(item.familyName);
+      if (avantVideo) c.videos--; else c.photos--;
+      try {
+        await placeDansGalerie({
+          offre: OFFRES_GALERIES.famille, ...c, estVideo, numeroH: req.user.numeroH,
+          cout: estVideo ? coutVideo(req.body.videoDuration) : 1
+        });
+      } catch (e) {
+        if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.famille);
+        throw e;
+      }
+    }
+    item.url = await ranger(req, 'galerie-famille');
+    item.type = estVideo ? 'video' : 'image';
+    await item.save();
+    res.json({ success: true, item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GALERIE PERSONNELLE — visible uniquement par son propriétaire
+// (dans le Noyau, sur la carte « Moi »). Offre : 5 photos + 2 vidéos gratuites.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function ensureGaleriePersonnelle() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS "galerie_personnelle" (
+      "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      "numero_h"    VARCHAR(255) NOT NULL,
+      "url"         TEXT         NOT NULL,
+      "type"        VARCHAR(20)  NOT NULL DEFAULT 'image',
+      "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+  `);
+  await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_gp_numero_h ON "galerie_personnelle" ("numero_h");`).catch(() => {});
+}
+
+async function lireGaleriePersonnelle(numeroH) {
+  const [items] = await sequelize.query(
+    `SELECT id, url, type, created_at AS "createdAt", updated_at AS "updatedAt"
+     FROM galerie_personnelle WHERE numero_h = :numeroH ORDER BY created_at DESC`,
+    { replacements: { numeroH } }
+  );
+  const videos = items.filter(i => i.type === 'video').length;
+  return { items, offre: resumeOffre(OFFRES_GALERIES.personnelle, items.length - videos, videos) };
+}
+
+// GET /api/family/personal-gallery
+router.get('/personal-gallery', async (req, res) => {
+  try {
+    await ensureGaleriePersonnelle();
+    res.json({ success: true, ...(await lireGaleriePersonnelle(req.user.numeroH)) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/family/personal-gallery
+router.post('/personal-gallery', upload.single('media'), async (req, res) => {
+  try {
+    await ensureGaleriePersonnelle();
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+    const numeroH = req.user.numeroH;
+    const estVideo = req.file.mimetype.startsWith('video/');
+    const { offre } = await lireGaleriePersonnelle(numeroH);
+    try {
+      await placeDansGalerie({
+        offre: OFFRES_GALERIES.personnelle, photos: offre.photosUtilisees, videos: offre.videosUtilisees,
+        estVideo, numeroH, cout: estVideo ? coutVideo(req.body.videoDuration) : 1
+      });
+    } catch (e) {
+      if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.personnelle);
+      throw e;
+    }
+    const url = await ranger(req, 'galerie-personnelle');
+    await sequelize.query(
+      `INSERT INTO galerie_personnelle (id, numero_h, url, type) VALUES (gen_random_uuid(), :numeroH, :url, :type)`,
+      { replacements: { numeroH, url, type: estVideo ? 'video' : 'image' } }
+    );
+    res.json({ success: true, ...(await lireGaleriePersonnelle(numeroH)) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT /api/family/personal-gallery/:id → remplacer une photo ou une vidéo
+router.put('/personal-gallery/:id', upload.single('media'), async (req, res) => {
+  try {
+    await ensureGaleriePersonnelle();
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+    const numeroH = req.user.numeroH;
+    const { items, offre } = await lireGaleriePersonnelle(numeroH);
+    const item = items.find(i => i.id === req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Média introuvable' });
+    const estVideo = req.file.mimetype.startsWith('video/');
+    if (estVideo !== (item.type === 'video')) {
+      try {
+        await placeDansGalerie({
+          offre: OFFRES_GALERIES.personnelle,
+          photos: offre.photosUtilisees - (item.type === 'video' ? 0 : 1),
+          videos: offre.videosUtilisees - (item.type === 'video' ? 1 : 0),
+          estVideo, numeroH, cout: estVideo ? coutVideo(req.body.videoDuration) : 1
+        });
+      } catch (e) {
+        if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.personnelle);
+        throw e;
+      }
+    }
+    const url = await ranger(req, 'galerie-personnelle');
+    await sequelize.query(
+      `UPDATE galerie_personnelle SET url = :url, type = :type, updated_at = NOW() WHERE id = :id AND numero_h = :numeroH`,
+      { replacements: { id: item.id, numeroH, url, type: estVideo ? 'video' : 'image' } }
+    );
+    res.json({ success: true, ...(await lireGaleriePersonnelle(numeroH)) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE /api/family/personal-gallery/:id → libère sa place dans l'offre gratuite
+router.delete('/personal-gallery/:id', async (req, res) => {
+  try {
+    await ensureGaleriePersonnelle();
+    const [, meta] = await sequelize.query(
+      `DELETE FROM galerie_personnelle WHERE id = :id AND numero_h = :numeroH`,
+      { replacements: { id: req.params.id, numeroH: req.user.numeroH } }
+    );
+    if (!(meta?.rowCount ?? meta?.affectedRows ?? 0)) return res.status(404).json({ success: false, message: 'Média introuvable' });
+    res.json({ success: true, ...(await lireGaleriePersonnelle(req.user.numeroH)) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

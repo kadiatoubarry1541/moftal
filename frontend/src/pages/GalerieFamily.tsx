@@ -275,7 +275,7 @@ export default function GalerieFamily() {
                       📷 {quota.photosUtilisees}/{quota.photosLibres} photos gratuites
                     </span>
                     <span className={`flex items-center gap-1 ${quota.videosRestantes > 0 ? 'text-green-700' : 'text-red-500'}`}>
-                      🎥 {quota.videosUtilisees}/{quota.videosLibres} vidéo gratuite
+                      🎥 {quota.videosUtilisees}/{quota.videosLibres} vidéos gratuites
                     </span>
                     <span className="text-indigo-600 font-semibold">🪙 {points} pts disponibles</span>
                   </div>
