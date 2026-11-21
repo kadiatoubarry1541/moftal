@@ -12,6 +12,7 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { lirePrive, PREFIXE as PREFIXE_PRIVE } from './mediasPrives.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,18 @@ function getToken() {
 async function toBuffer(imageData) {
   if (!imageData || typeof imageData !== 'string') {
     return { buffer: null, isVideo: false, error: 'Pas de données image' };
+  }
+
+  // Média privé rangé à part (« prive:<id> ») : lu directement
+  if (imageData.startsWith(PREFIXE_PRIVE)) {
+    try {
+      const f = await lirePrive(imageData.slice(PREFIXE_PRIVE.length));
+      if (!f?.contenu) return { buffer: null, isVideo: false, error: 'Média privé introuvable' };
+      if (!String(f.mime).startsWith('image/')) return { buffer: null, isVideo: String(f.mime).startsWith('video/'), error: null };
+      return { buffer: f.contenu, isVideo: false, error: null };
+    } catch (e) {
+      return { buffer: null, isVideo: false, error: e.message };
+    }
   }
 
   // Vidéos → skip

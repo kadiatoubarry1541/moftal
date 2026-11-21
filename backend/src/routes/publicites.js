@@ -213,13 +213,17 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
 router.get('/mes-publicites', authenticate, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT id, image_url, lien, titre, description, bouton_texte, statut, raison_refus, expire_le, is_active,
+      SELECT id, numero_h, image_url, lien, titre, description, bouton_texte, statut, raison_refus, expire_le, is_active,
         (is_active = true AND expire_le >= NOW()) AS en_ligne,
         created_at
       FROM publicites
-      WHERE numero_h = :numeroH
+      WHERE numero_h IN (:numeros)
       ORDER BY created_at DESC
-    `, { replacements: { numeroH: req.user.numeroH } });
+    `, { replacements: {
+      // L'admin principal voit toutes les annonces de la page d'accueil (les
+      // siennes et les annonces maison), pour pouvoir les régler.
+      numeros: req.user.isMasterAdmin ? [...new Set([req.user.numeroH, ...MASTER_ADMIN_NUMEROS])] : [req.user.numeroH],
+    } });
 
     res.json({ success: true, publicites });
   } catch (err) {
@@ -287,6 +291,46 @@ router.patch('/:id/lien', authenticate, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/publicites/:id/textes
+// Modifier le titre, la description, le texte du bouton et la page d'une
+// annonce DÉJÀ publiée — autorisation unique, demandée par la propriétaire,
+// pour les seules annonces existant avant le 21/11/2026. Les annonces publiées
+// ensuite reçoivent leurs textes à la publication et ne passent pas par ici.
+// ─────────────────────────────────────────────────────────────────────────────
+export const ANNONCES_MODIFIABLES_AVANT = '2026-11-21T00:00:00Z';
+
+router.patch('/:id/textes', authenticate, async (req, res) => {
+  try {
+    const [[pub]] = await sequelize.query(
+      `SELECT numero_h, created_at FROM publicites WHERE id = :id`,
+      { replacements: { id: req.params.id } }
+    );
+    if (!pub) return res.status(404).json({ success: false, message: 'Publicité introuvable.' });
+    if (pub.numero_h !== req.user.numeroH && !req.user.isMasterAdmin) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres publicités.' });
+    }
+    if (new Date(pub.created_at) >= new Date(ANNONCES_MODIFIABLES_AVANT)) {
+      return res.status(403).json({ success: false, message: 'Seules les annonces publiées avant le 21 novembre 2026 peuvent être modifiées.' });
+    }
+    const champ = (v, max) => (v ?? '').toString().trim().slice(0, max) || null;
+    const b = req.body || {};
+    const valeurs = {
+      titre: champ(b.titre, 120),
+      description: champ(b.description, 300),
+      boutonTexte: champ(b.boutonTexte, 40),
+      lien: champ(b.lien, 500),
+    };
+    await sequelize.query(
+      `UPDATE publicites SET titre = :titre, description = :description, bouton_texte = :boutonTexte, lien = :lien WHERE id = :id`,
+      { replacements: { ...valeurs, id: req.params.id } }
+    );
+    res.json({ success: true, publicite: { titre: valeurs.titre, description: valeurs.description, bouton_texte: valeurs.boutonTexte, lien: valeurs.lien }, message: 'Annonce enregistrée.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/publicites/:id
 // L'utilisateur retire sa propre publicité
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,7 +341,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       { replacements: { id: req.params.id } }
     );
     if (!pub) return res.status(404).json({ success: false, message: 'Publicité introuvable.' });
-    if (pub.numero_h !== req.user.numeroH) {
+    if (pub.numero_h !== req.user.numeroH && !(req.user.isMasterAdmin && MASTER_ADMIN_NUMEROS.includes(pub.numero_h))) {
       return res.status(403).json({ success: false, message: 'Vous ne pouvez retirer que vos propres publicités.' });
     }
     await sequelize.query(`UPDATE publicites SET is_active = false WHERE id = :id`, { replacements: { id: req.params.id } });

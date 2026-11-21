@@ -10,6 +10,7 @@ import DevProjet from '../models/DevProjet.js';
 import DevSignalement from '../models/DevSignalement.js';
 import DevPublisher from '../models/DevPublisher.js';
 import LocationLogo from '../models/LocationLogo.js';
+import { EXEMPLES_TERRE, EXEMPLE_NUMERO_H } from '../data/exemplesTerre.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 
@@ -626,6 +627,77 @@ router.delete('/logo', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'scope et location requis' });
     await LocationLogo.destroy({ where: { scope, location: location.toLowerCase() } });
     res.json({ success: true, message: 'Logo retiré' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── PUBLICATIONS D'EXEMPLE (admin) ─────────────────────────────────────────
+// L'admin remplit chaque niveau de la page Terre (quartier → Monde) avec des
+// actualités d'exemple, enregistrées en base, pour voir le rendu réel.
+// Relancer remplace les exemples de ces lieux (jamais de doublons) ; DELETE
+// les retire tous. Les vraies publications ne sont jamais touchées.
+
+router.post('/exemples', authenticate, async (req, res) => {
+  try {
+    if (!isAdminOnly(req.user))
+      return res.status(403).json({ success: false, message: 'Réservé aux administrateurs' });
+    const niveaux = Array.isArray(req.body?.niveaux) ? req.body.niveaux.slice(0, 20) : [];
+    if (!niveaux.length)
+      return res.status(400).json({ success: false, message: 'Aucun niveau à remplir' });
+
+    let crees = 0;
+    const maintenant = Date.now();
+    for (const n of niveaux) {
+      const scope = String(n?.scope || '');
+      const location = String(n?.location || '').toLowerCase().slice(0, 100);
+      const lieu = String(n?.locationName || '').trim().slice(0, 80) || 'votre lieu';
+      const modeles = EXEMPLES_TERRE[scope];
+      if (!modeles || !location) continue;
+
+      const anciens = await DevActualite.findAll({ where: { numeroH: EXEMPLE_NUMERO_H, scope, location }, attributes: ['id'] });
+      if (anciens.length) {
+        const ids = anciens.map(a => a.id);
+        await DevActualitePartage.destroy({ where: { actualiteId: ids } });
+        await DevActualite.destroy({ where: { id: ids } });
+      }
+
+      for (const [i, m] of modeles.entries()) {
+        const remplir = (t) => t.replaceAll('{lieu}', lieu);
+        await DevActualite.create({
+          numeroH: EXEMPLE_NUMERO_H,
+          authorName: remplir(m.auteur).slice(0, 255),
+          titre: remplir(m.titre).slice(0, 200),
+          content: remplir(m.content),
+          mediaUrl: null,
+          mediaType: 'text',
+          domaine: m.domaine,
+          scope,
+          location,
+          // Ancienneté étalée pour un fil réaliste (quelques minutes d'écart
+          // garantissent l'ordre même quand joursAvant est identique).
+          createdAt: new Date(maintenant - (m.joursAvant * 86400000) - i * 60000),
+        });
+        crees++;
+      }
+    }
+    res.json({ success: true, crees });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/exemples', authenticate, async (req, res) => {
+  try {
+    if (!isAdminOnly(req.user))
+      return res.status(403).json({ success: false, message: 'Réservé aux administrateurs' });
+    const exemples = await DevActualite.findAll({ where: { numeroH: EXEMPLE_NUMERO_H }, attributes: ['id'] });
+    const ids = exemples.map(a => a.id);
+    if (ids.length) {
+      await DevActualitePartage.destroy({ where: { actualiteId: ids } });
+      await DevActualite.destroy({ where: { id: ids } });
+    }
+    res.json({ success: true, retires: ids.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

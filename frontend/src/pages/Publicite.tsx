@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { getSessionUser, isMasterAdmin } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
 import ImageCropper from '../components/ImageCropper'
-import { SelectDestination, ModifierLienPublicite } from '../components/ChoixLienPublicite'
+import { SelectDestination, ModifierLienPublicite, ModifierAnnonce, type TextesAnnonce } from '../components/ChoixLienPublicite'
+import { annonceModifiable } from '../utils/destinationsPublicite'
 
 // Même format que la bannière affichée dans AdCarousel.tsx (aspectRatio: '4 / 1')
 // — recadrer à ce format exact avant l'envoi permet de savoir précisément ce
@@ -25,6 +26,7 @@ interface MaPublicite {
   raison_refus?: string | null;
   statut?: string | null;
   titre?: string | null;
+  created_at?: string | null;
 }
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
@@ -139,6 +141,22 @@ export default function Publicite() {
       return null
     } catch {
       return 'Erreur de connexion : le lien n\'a pas été enregistré.'
+    }
+  }
+
+  async function enregistrerTextes(id: string, textes: TextesAnnonce): Promise<string | null> {
+    try {
+      const r = await fetch(`${API}/api/publicites/${id}/textes`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(textes),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.success) return d.message || "L'annonce n'a pas été enregistrée. Réessayez."
+      setMesPublicites(prev => prev.map(p => p.id === id ? { ...p, ...d.publicite } : p))
+      return null
+    } catch {
+      return 'Erreur de connexion : l\'annonce n\'a pas été enregistrée.'
     }
   }
 
@@ -346,7 +364,9 @@ export default function Publicite() {
                       </div>
                     </div>
                   </div>
-                  {p.statut !== 'refuse' && <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />}
+                  {p.statut !== 'refuse' && (annonceModifiable(p.created_at)
+                    ? <ModifierAnnonce pub={p} enregistrer={enregistrerTextes} />
+                    : <ModifierLienPublicite pub={p} enregistrer={enregistrerLien} />)}
                 </div>
               )
             })}

@@ -31,7 +31,7 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
     if (pubs.length <= 1) return
     timerRef.current = setInterval(() => {
       setActive(prev => (prev + 1) % pubs.length)
-    }, 3000)
+    }, 2000) // 2 secondes par annonce
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [pubs.length])
 

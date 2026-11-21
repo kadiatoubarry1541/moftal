@@ -8,8 +8,9 @@ import Friend from '../models/Friend.js';
 import { liensDe, lienAvec } from '../utils/liens.js';
 import { estCompteAdmin } from '../utils/compteAdmin.js';
 import { authenticate, estAdminUtilisateur } from '../middleware/auth.js';
+import { priveDepuisFichier } from '../services/mediasPrives.js';
 
-// Stockage en mémoire → conversion en base64 et stockage en DB
+// Stockage en mémoire → médias rangés à part (mediasPrives.js)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -24,10 +25,8 @@ const upload = multer({
   }
 });
 
-// Convertit le buffer en data URL base64
-function toDataUrl(file) {
-  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-}
+// Média d'une histoire ou d'une story (réservée aux amis) → repère privé
+const ranger = (req, usage) => priveDepuisFichier(req.file, { proprietaire: req.user?.numeroH || null, usage });
 
 const router = Router();
 
@@ -508,8 +507,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       };
     }
 
-    // Convertir en base64 et stocker en DB
-    const dataUrl = toDataUrl(req.file);
+    // Rangé à part (privé) : la ligne ne garde qu'un repère
+    const dataUrl = await ranger(req, 'histoire');
     if (type === 'photo') {
       if (!stories[sectionId].photos) stories[sectionId].photos = [];
       stories[sectionId].photos.push(dataUrl);
@@ -749,8 +748,8 @@ router.post('/mes-amours/story', upload.single('file'), async (req, res) => {
     }
 
     const content = (req.body.content || '').toString().slice(0, 500);
-    // Convertir en base64 → stockage persistant en DB
-    const dataUrl = toDataUrl(req.file);
+    // Rangé à part (privé) : la ligne ne garde qu'un repère
+    const dataUrl = await ranger(req, 'story');
     const now = new Date();
 
     const authorName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
