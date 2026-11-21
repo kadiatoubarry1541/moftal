@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { WORLD_GEOGRAPHY, findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
@@ -93,15 +93,60 @@ function lieuReel(v: unknown): string | null {
 /** Nombre de membres du groupe : le serveur l'envoie même sans la liste */
 const nbMembres = (g: ResidenceGroup) => g.membersCount ?? g.members?.length ?? 0;
 
+/** Adresse complète d'un logo enregistré (chemin du serveur ou adresse entière) */
+const urlLogo = (u?: string | null) => (u ? (u.startsWith('http') ? u : `${API_BASE}${u}`) : null);
+
+/** Les 6 niveaux au-dessus du quartier ; chacun garde sa propre page */
+const NIVEAUX = ['sous-prefecture', 'prefecture', 'region', 'pays', 'continent', 'mondial'] as const;
+type Niveau = typeof NIVEAUX[number];
+type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
+
+/** Une icône de lieu, dans le même style que les icônes de la page Services :
+ *  son logo s'il en a un, sinon son image ; son nom ; son niveau. */
+function TuileLieu({ icone, logo, nom, niveau, fond, onClick }: {
+  icone: string; logo: string | null; nom: string; niveau: string; fond: string; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-gray-50 hover:border-gray-200 active:scale-95"
+    >
+      <div className={`w-11 h-11 rounded-lg overflow-hidden flex items-center justify-center text-2xl flex-shrink-0 ${fond}`}>
+        {logo ? <img src={logo} alt={nom} className="w-full h-full object-cover" /> : icone}
+      </div>
+      <span className="w-full text-[10px] font-semibold text-gray-700 text-center leading-tight truncate">{nom}</span>
+      <span className="w-full text-[9px] text-gray-400 text-center leading-none truncate">{niveau}</span>
+    </button>
+  );
+}
+
 export default function TerreAdam() {
   const { t } = useI18n();
   useMarquerVu('terreAdam');
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'lieux' | 'sous-prefecture' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
-  type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
-  const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
+  // La page ouverte est dans l'adresse (?lieu=quartier-1, ?lieu=pays…) :
+  // sans « lieu », c'est la grille d'icônes. Le bouton Retour du téléphone
+  // ramène ainsi d'une page de lieu à la grille.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const lieuParam = searchParams.get('lieu') || '';
+  const activeTab: 'accueil' | 'lieux' | Niveau =
+    lieuParam.startsWith('quartier-') ? 'lieux'
+      : (NIVEAUX as readonly string[]).includes(lieuParam) ? lieuParam as Niveau
+        : 'accueil';
+  const activeLieuTab: LieuTabId = ['quartier-1', 'quartier-2', 'quartier-3'].includes(lieuParam) ? lieuParam as LieuTabId : 'quartier-1';
+  const ouvrirLieu = (lieu: string) => {
+    setSearchParams({ lieu }, { state: { depuisGrille: true } });
+    window.scrollTo(0, 0);
+  };
+  const retour = () => {
+    if (activeTab === 'accueil') navigate('/compte');
+    else if ((location.state as { depuisGrille?: boolean } | null)?.depuisGrille) navigate(-1);
+    else setSearchParams({}, { replace: true });
+  };
+  const [loading, setLoading] = useState(true);
   // Salle vide : on renseigne le lieu dans la page unique « Mettre à jour mon profil »
   const boutonRenseigner = (
     <button type="button" onClick={() => navigate(PAGE_MAJ_PROFIL)}
@@ -130,6 +175,8 @@ export default function TerreAdam() {
   // l'onglet — même les personnes qui ne savent pas lire reconnaissent
   // leur quartier par sa photo, pas seulement par son nom.
   const [quartierTabLogos, setQuartierTabLogos] = useState<Record<string, string | null>>({});
+  // Logo de chaque niveau au-dessus (commune… monde) : il devient son icône dans la grille
+  const [niveauLogos, setNiveauLogos] = useState<Record<string, string | null>>({});
   // Permet d'ouvrir la modale "Projets" du quartier depuis le bouton placé
   // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
   // bouton (masqué sur la page Quartier via hideProjetsButton).
@@ -238,23 +285,6 @@ export default function TerreAdam() {
       ? (findLocationByCode(user.quartierCode)?.name || lieuReel(user.lieu1) || user.quartier)
       : (lieuReel(user.lieu1) || user.quartier || t('terre_adam.default_quartier'));
     setTabLabels(quartierName || t('terre_adam.default_quartier'));
-
-    // ✅ Choisir automatiquement le bon onglet de résidence:
-    // - si seul le 1er quartier est renseigné → Résidence 1
-    // - sinon, utiliser le premier des quartiers renseignés (2 ou 3)
-    const slot1Code = lieuReel(user.quartierCode) || lieuReel(user.lieu1) || lieuReel(user.lieuResidence1);
-    const slot2Code = lieuReel(user.quartierCode2) || lieuReel(user.lieu2) || lieuReel(user.lieuResidence2);
-    const slot3Code = lieuReel(user.quartierCode3) || lieuReel(user.lieu3) || lieuReel(user.lieuResidence3);
-    if (slot1Code) {
-      setActiveLieuTab('quartier-1');
-    } else if (slot2Code) {
-      setActiveLieuTab('quartier-2');
-    } else if (slot3Code) {
-      setActiveLieuTab('quartier-3');
-    } else {
-      // Aucun quartier configuré → basculer directement sur l'onglet Sous-préfecture
-      setActiveTab('sous-prefecture');
-    }
   };
 
   useEffect(() => {
@@ -358,6 +388,24 @@ export default function TerreAdam() {
         setQuartierTabLogos(prev => ({ ...prev, [code]: null }));
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
+
+  // Logo enregistré de chaque niveau (le même que celui affiché dans sa page)
+  useEffect(() => {
+    if (!userData) return;
+    const token = localStorage.getItem('token');
+    let annule = false;
+    geoLevels.forEach(async ({ scope, location: loc }) => {
+      try {
+        const res = await fetch(`${API_BASE}/api/developpement/logo?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(loc)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = res.ok ? await res.json() : null;
+        if (!annule) setNiveauLogos(prev => ({ ...prev, [scope]: data?.logoUrl || null }));
+      } catch { /* sans connexion : l'icône garde son image */ }
+    });
+    return () => { annule = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
@@ -472,79 +520,116 @@ export default function TerreAdam() {
   const activeQuartierLoc = activeQuartierCode ? findLocationByCode(activeQuartierCode) : null;
   const activeQuartierName = activeQuartierLoc?.name || (isRealLieu(activeQuartierCode) ? activeQuartierCode : null);
 
+  // Nom, image et niveau de chacun des 6 lieux au-dessus du quartier
+  const libellesPays = userData?.pays ? getCountryGeoLabels(userData.pays) : null;
+  const niveauxInfo: Record<Niveau, { icone: string; nom: string; niveau: string }> = {
+    'sous-prefecture': {
+      icone: '🏛️',
+      nom: userSousPrefecture?.name || userData?.sousPrefecture || libellesPays?.level3.label || t('terre_adam.default_commune'),
+      niveau: libellesPays?.level3.label || t('terre_adam.default_commune'),
+    },
+    prefecture: {
+      icone: '🏢',
+      nom: userPrefecture?.name || userData?.prefecture || libellesPays?.level2.label || t('terre_adam.default_prefecture'),
+      niveau: libellesPays?.level2.label || t('terre_adam.default_prefecture'),
+    },
+    region: {
+      icone: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
+      nom: userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region'),
+      niveau: t('terre_adam.default_region'),
+    },
+    pays: {
+      icone: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
+      nom: effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays'),
+      niveau: t('terre_adam.default_pays'),
+    },
+    continent: {
+      icone: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
+      nom: effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent'),
+      niveau: t('terre_adam.default_continent'),
+    },
+    mondial: { icone: '🌎', nom: t('terre_adam.default_mondial'), niveau: t('terre_adam.default_mondial') },
+  };
+
+  // Les icônes de la grille, en 3 cercles : Chez moi · Ma ville · Mon pays et le monde
+  const tuileNiveau = (n: Niveau) => ({ id: n, icone: niveauxInfo[n].icone, logo: urlLogo(niveauLogos[n]), nom: niveauxInfo[n].nom, niveau: niveauxInfo[n].niveau });
+  const tuilesQuartiers = ([0, 1, 2] as const)
+    .map(i => {
+      const code = userQuartierCodes[i];
+      const loc = code ? findLocationByCode(code) : null;
+      return {
+        id: `quartier-${i + 1}`,
+        icone: '🏠',
+        logo: code ? urlLogo(quartierTabLogos[code]) : null,
+        nom: loc?.name || (isRealLieu(code) ? String(code).trim() : `Résidence ${i + 1}`),
+        niveau: t('terre_adam.default_quartier'),
+        visible: isAdmin || isRealLieu(code),
+      };
+    })
+    .filter(q => q.visible);
+  const bandesGrille = [
+    {
+      id: 'chez-moi', titre: `🏠 ${t('terre_adam.band_home')}`,
+      fondBande: 'bg-emerald-50', couleurTitre: 'text-emerald-800', fondIcone: 'bg-emerald-100',
+      // Aucun quartier renseigné : une icône quand même, qui invite à le renseigner
+      tuiles: tuilesQuartiers.length ? tuilesQuartiers
+        : [{ id: 'quartier-1', icone: '🏠', logo: null as string | null, nom: t('terre_adam.default_quartier'), niveau: t('terre_adam.default_quartier') }],
+    },
+    {
+      id: 'ville', titre: `🏙️ ${t('terre_adam.band_town')}`,
+      fondBande: 'bg-blue-50', couleurTitre: 'text-blue-800', fondIcone: 'bg-blue-100',
+      tuiles: (['sous-prefecture', 'prefecture'] as Niveau[]).map(tuileNiveau),
+    },
+    {
+      id: 'monde', titre: `🌍 ${t('terre_adam.band_world')}`,
+      fondBande: 'bg-orange-50', couleurTitre: 'text-orange-800', fondIcone: 'bg-orange-100',
+      tuiles: (['region', 'pays', 'continent', 'mondial'] as Niveau[]).map(tuileNiveau),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header + Menu 3 points */}
+      {/* En-tête : Retour + nom de la page ouverte (Terre ADAM sur la grille) */}
       {(() => {
-        const navTabs = [
-          { id: 'lieux', icon: '🏠', label: 'Résidence' },
-          {
-            id: 'sous-prefecture',
-            icon: '🏛️',
-            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : t('terre_adam.default_commune'))
-          },
-          {
-            id: 'prefecture',
-            icon: '🏢',
-            label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : t('terre_adam.default_prefecture'))
-          },
-          {
-            id: 'region',
-            icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
-            label: userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region')
-          },
-          {
-            id: 'pays',
-            icon: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
-            label: effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays')
-          },
-          {
-            id: 'continent',
-            icon: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
-            label: effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent')
-          },
-          { id: 'mondial', icon: '🌎', label: t('terre_adam.default_mondial') }
-        ];
+        const page = activeTab === 'accueil' ? null
+          : activeTab === 'lieux' ? { icone: '🏠', nom: activeQuartierName || `Résidence ${activeQuartierSlotNum}` }
+            : { icone: niveauxInfo[activeTab].icone, nom: niveauxInfo[activeTab].nom };
         return (
           <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-            {/* Retour + titre + badge du niveau actif */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <button
-                  type="button"
-                  onClick={() => navigate('/compte')}
-                  aria-label={t('services.back_aria')}
-                  style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
-                >
-                  ‹
-                </button>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 {t('terre_adam.title')}</h1>
-              </div>
-            </div>
-
-            {/* Les 7 niveaux propres à Terre ADAM — tous sur une seule ligne fixe, largeur égale, jamais de défilement, remontée contre le titre */}
-            <div className="flex gap-1" style={{ padding: '0 6px 1px', marginTop: -10 }}>
-              {navTabs.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0 text-[7px] font-bold transition leading-none"
-                  style={{
-                    borderRadius: 8,
-                    background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
-                    color: activeTab === tab.id ? 'white' : '#94a3b8',
-                  }}
-                >
-                  <span className={`text-[10px] leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
-                  <span className="truncate max-w-full leading-none">{tab.label}</span>
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 12px', minHeight: 44 }}>
+              <button
+                type="button"
+                onClick={retour}
+                aria-label={t('services.back_aria')}
+                style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              >
+                ‹
+              </button>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: page ? 15 : 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1.1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {page ? `${page.icone} ${page.nom}` : `🌍 ${t('terre_adam.title')}`}
+              </h1>
             </div>
           </header>
         );
       })()}
 
+      {/* Grille : chaque lieu a son icône (son logo), comme sur la page Services.
+          Trois cercles, du plus proche au plus loin ; chaque icône ouvre la
+          page de ce lieu seulement, sans rien mélanger. */}
+      {activeTab === 'accueil' && (
+        <div className="max-w-lg mx-auto px-2 pt-3 pb-4 space-y-3">
+          {bandesGrille.map(bande => (
+            <section key={bande.id} className={`rounded-2xl p-2 ${bande.fondBande}`}>
+              <h2 className={`px-1 pb-2 text-sm font-extrabold ${bande.couleurTitre}`}>{bande.titre}</h2>
+              <div className="grid grid-cols-4 gap-2">
+                {bande.tuiles.map(tuile => (
+                  <TuileLieu key={tuile.id} {...tuile} fond={bande.fondIcone} onClick={() => ouvrirLieu(tuile.id)} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
       {/* Content */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
         {/* 1. Résidence */}
@@ -558,77 +643,6 @@ export default function TerreAdam() {
                   👑 Responsables du quartier
                 </button>
               </div>
-              {/* Sous-onglets : un par quartier (Résidence 1, 2, 3) — affichés
-                  seulement s'il y en a plus d'un à choisir. */}
-              {(() => {
-                const tabs = [
-                  {
-                    id: 'quartier-1' as LieuTabId,
-                    code: userQuartierCodes[0],
-                    label: (() => {
-                      const c = userQuartierCodes[0];
-                      const loc = c ? findLocationByCode(c) : null;
-                      if (loc?.name) return loc.name;
-                      return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
-                    })(),
-                    visible: isAdmin || isRealLieu(userQuartierCodes[0])
-                  },
-                  {
-                    id: 'quartier-2' as LieuTabId,
-                    code: userQuartierCodes[1],
-                    label: (() => {
-                      const c = userQuartierCodes[1];
-                      const loc = c ? findLocationByCode(c) : null;
-                      if (loc?.name) return loc.name;
-                      return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
-                    })(),
-                    visible: isAdmin || isRealLieu(userQuartierCodes[1])
-                  },
-                  {
-                    id: 'quartier-3' as LieuTabId,
-                    code: userQuartierCodes[2],
-                    label: (() => {
-                      const c = userQuartierCodes[2];
-                      const loc = c ? findLocationByCode(c) : null;
-                      if (loc?.name) return loc.name;
-                      return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
-                    })(),
-                    visible: isAdmin || isRealLieu(userQuartierCodes[2])
-                  }
-                ].filter(tab => tab.visible);
-                if (tabs.length <= 1) return null;
-                return (
-                  <div className="border-b border-gray-200 mb-4">
-                    <nav className="flex">
-                      {tabs.map((tab) => {
-                        const rawLogo = tab.code ? quartierTabLogos[tab.code] : null;
-                        const logoSrc = rawLogo ? (rawLogo.startsWith('http') ? rawLogo : `${API_BASE}${rawLogo}`) : null;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveLieuTab(tab.id)}
-                            className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 border-b-2 transition-colors ${
-                              activeLieuTab === tab.id
-                                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            <span className="w-8 h-8 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-sm font-bold text-emerald-700 flex-shrink-0">
-                              {logoSrc ? (
-                                <img src={logoSrc} alt={tab.label} className="w-full h-full object-cover" />
-                              ) : (
-                                tab.label.charAt(0).toUpperCase()
-                              )}
-                            </span>
-                            <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
-                          </button>
-                        );
-                      })}
-                    </nav>
-                  </div>
-                );
-              })()}
-
               {(userQuartierCodes.some(Boolean) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
                 <div className="space-y-2.5">
                   {/* Page Quartier : une page indépendante par résidence (1, 2 ou 3) */}
