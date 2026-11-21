@@ -604,10 +604,10 @@ function App() {
                   >
                     <Pastille className="absolute top-0 right-1" n={item.id === "terre-adam" ? nouveautes.terreAdam : item.id === "famille" ? nouveautes.recit + nouveautes.galerie + nouveautes.amitie : 0} />
                     {item.id === "echanges"
-                      ? <SalesIcon size={34} className="text-gray-500" />
-                      : <span className="text-[32px] leading-none">{item.icon}</span>
+                      ? <SalesIcon size={32} className="text-gray-500" />
+                      : <span className="text-[30px] leading-none">{item.icon}</span>
                     }
-                    <span className={`text-[15px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
+                    <span className={`text-[13px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
                       {item.label}
                     </span>
                   </button>
