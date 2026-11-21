@@ -607,7 +607,7 @@ function App() {
                       ? <SalesIcon size={34} className="text-gray-500" />
                       : <span className="text-[32px] leading-none">{item.icon}</span>
                     }
-                    <span className={`text-[19px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
+                    <span className={`text-[17px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
                       {item.label}
                     </span>
                   </button>
