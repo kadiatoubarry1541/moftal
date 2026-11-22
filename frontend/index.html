@@ -76,8 +76,27 @@
     </script>
 
     <title>Moftal</title>
-    <!-- Suivi des erreurs : chargé sans bloquer l'affichage (réseau lent ou coupé = le site s'affiche quand même) -->
-    <script async src="https://cdn.logr-in.com/LogRocket.min.js" crossorigin="anonymous" onload="window.LogRocket && window.LogRocket.init('0vmbcf/moftal')"></script>
+    <!-- Suivi des erreurs : chargé sans bloquer l'affichage (réseau lent ou coupé = le site s'affiche quand même).
+         Vie privée : l'enregistrement ne garde AUCUN texte de l'écran ni rien de ce que la
+         personne tape (montants, soldes, messages, noms, mots de passe, photos → masqués :
+         ils ne sont jamais envoyés), ni le contenu des échanges avec le serveur, ni le jeton de connexion.
+         Restent seulement les pages visitées, les clics et les erreurs du site. -->
+    <script>
+      window.demarrerSuiviErreurs = function () {
+        if (!window.LogRocket) return;
+        var vider = function (r) {
+          r.body = null;
+          if (r.headers) { delete r.headers.Authorization; delete r.headers.authorization; delete r.headers['X-Anti-Robot']; }
+          return r;
+        };
+        window.LogRocket.init('0vmbcf/moftal', {
+          dom: { textSanitizer: true, inputSanitizer: true, imageSanitizer: true },
+          network: { requestSanitizer: vider, responseSanitizer: vider },
+          shouldCaptureIP: false
+        });
+      };
+    </script>
+    <script async src="https://cdn.logr-in.com/LogRocket.min.js" crossorigin="anonymous" onload="window.demarrerSuiviErreurs && window.demarrerSuiviErreurs()"></script>
   </head>
   <body style="background-color:#ffffff;color-scheme:only light;">
     <div id="root" style="background-color:#ffffff;"></div>
