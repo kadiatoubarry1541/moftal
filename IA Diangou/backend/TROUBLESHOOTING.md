@@ -35,7 +35,7 @@ Ou utilisez l'API :
 ```bash
 curl -X POST http://localhost:5003/api/education/create-admin \
   -H "Content-Type: application/json" \
-  -d '{"email":"kadiatou1541.kb@gmail.com","password":"Neneyaya1","nomComplet":"Admin Diangou"}'
+  -d '{"email":"kadiatou1541.kb@gmail.com","password":"(celui défini dans ADMIN_PASSWORD)","nomComplet":"Admin Diangou"}'
 ```
 
 ### 3. Vérifier que le serveur backend est démarré

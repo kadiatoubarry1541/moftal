@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
+import { adresseVisiteur, validationLimite } from '../utils/cleLimite.js';
 import { config } from '../../config.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { enregistrerErreur, listerErreurs, marquerResolue } from '../services/journalErreurs.js';
@@ -10,9 +11,14 @@ const router = express.Router();
 // Le site signale une erreur (écran « Oups ! », erreur de page). Ouvert à tous
 // (une erreur peut survenir avant la connexion), mais limité : 30 envois par
 // quart d'heure et par appareil, et jamais de gros contenus.
-const limite = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+// Compté par visiteur réel (avant : par l'adresse du relais, la même pour tout
+// le monde → 30 erreurs par quart d'heure pour tout le site)
+const limite = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => `erreurs:${adresseVisiteur(req)}`, validate: validationLimite,
+});
 
-router.post('/', limite, express.json({ limit: '20kb' }), async (req, res) => {
+router.post('/', limite, async (req, res) => {
   const { message, pile, adresse } = req.body || {};
   if (typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ success: false, message: 'Erreur vide.' });

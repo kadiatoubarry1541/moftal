@@ -12,7 +12,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, 'config.env') });
 
 const email = 'kadiatou1541.kb@gmail.com';
-const password = 'Neneyaya1';
+const password = process.env.ADMIN_PASSWORD || '';
+if (!password) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
 
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('  VÉRIFICATION DIRECTE DANS LA BASE DE DONNÉES');
@@ -76,7 +77,7 @@ async function verifierDansBase() {
         console.log('   ✅ Mot de passe CORRECT\n');
       } else {
         console.log('   ❌ Mot de passe INCORRECT\n');
-        console.log('   💡 Le mot de passe dans la base ne correspond pas à "Neneyaya1"\n');
+        console.log('   💡 Le mot de passe dans la base ne correspond pas à ADMIN_PASSWORD\n');
       }
 
       // Vérifier le rôle
@@ -94,7 +95,7 @@ async function verifierDansBase() {
         console.log('✅ COMPTE ADMIN TROUVÉ ET PRÊT POUR LA CONNEXION !');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         console.log('📧 Email:', email);
-        console.log('🔑 Mot de passe:', password);
+        console.log('🔑 Mot de passe:', '(celui de ADMIN_PASSWORD)');
         console.log('👤 NumeroH:', admin.numeroH);
         console.log('🎭 Rôle:', admin.role);
         console.log('✅ Actif:', admin.isActive ? 'Oui' : 'Non');

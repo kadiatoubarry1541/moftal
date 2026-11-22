@@ -1,3 +1,4 @@
+import { enTetesAntiRobot } from './antiRobot'
 // En dev : proxy Vite (/api → localhost:7777 via vite.config.ts)
 // En prod : VITE_API_URL défini dans .env.production
 const API_BASE_URL = import.meta.env.VITE_API_URL
@@ -45,10 +46,12 @@ export const api = {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
     try {
+      const antiRobot = await enTetesAntiRobot()
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...antiRobot,
         },
         body: JSON.stringify({
           ...userData,
@@ -257,7 +260,7 @@ export const api = {
   async forgotPasswordVerify(numeroH: string, parentNumeroH?: string, familyCode?: string) {
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await enTetesAntiRobot() },
       body: JSON.stringify({ numeroH, ...(parentNumeroH && { parentNumeroH }), ...(familyCode && { familyCode }) })
     })
     const data = await response.json().catch(() => ({}))

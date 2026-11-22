@@ -122,3 +122,6 @@ edication/
 backend-log.txt
 
 livrables/
+
+# Fichiers de verrouillage temporaires de Word/Excel
+~$*

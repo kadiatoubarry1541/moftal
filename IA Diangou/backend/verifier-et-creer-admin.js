@@ -12,7 +12,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, 'config.env') });
 
 const email = 'kadiatou1541.kb@gmail.com';
-const password = 'Neneyaya1';
+const password = process.env.ADMIN_PASSWORD || '';
+if (!password) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
 
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('  VÉRIFICATION ET CRÉATION DU COMPTE ADMIN');
@@ -91,7 +92,7 @@ async function main() {
       console.log('✅ BASE DE DONNÉES FONCTIONNE ET COMPTE ADMIN PRÊT !');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       console.log('📧 Email:', email);
-      console.log('🔑 Mot de passe:', password);
+      console.log('🔑 Mot de passe:', '(celui de ADMIN_PASSWORD)');
       console.log('👤 NumeroH:', finalUser.numeroH);
       console.log('🎭 Rôle:', finalUser.role);
       console.log('✅ Actif:', finalUser.isActive ? 'Oui' : 'Non');

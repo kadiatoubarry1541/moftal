@@ -65,11 +65,10 @@ async function handleParentConfirmations(user) {
 
     if (pere) {
       // Père vivant : créer une confirmation
-      const confirmation = await FamilyTreeConfirmation.create({
-        childNumeroH: user.numeroH,
-        parentNumeroH: numeroHPere,
-        parentType: 'pere',
-        status: 'pending'
+      // Une seule demande en attente par parent (pas de doublon à chaque enregistrement)
+      const [confirmation] = await FamilyTreeConfirmation.findOrCreate({
+        where: { childNumeroH: user.numeroH, parentNumeroH: numeroHPere, parentType: 'pere', status: 'pending' },
+        defaults: { childNumeroH: user.numeroH, parentNumeroH: numeroHPere, parentType: 'pere', status: 'pending' }
       });
       confirmations.push(confirmation);
     } else {
@@ -90,11 +89,10 @@ async function handleParentConfirmations(user) {
 
     if (mere) {
       // Mère vivante : créer une confirmation
-      const confirmation = await FamilyTreeConfirmation.create({
-        childNumeroH: user.numeroH,
-        parentNumeroH: numeroHMere,
-        parentType: 'mere',
-        status: 'pending'
+      // Une seule demande en attente par parent (pas de doublon à chaque enregistrement)
+      const [confirmation] = await FamilyTreeConfirmation.findOrCreate({
+        where: { childNumeroH: user.numeroH, parentNumeroH: numeroHMere, parentType: 'mere', status: 'pending' },
+        defaults: { childNumeroH: user.numeroH, parentNumeroH: numeroHMere, parentType: 'mere', status: 'pending' }
       });
       confirmations.push(confirmation);
     } else {
@@ -236,8 +234,12 @@ router.post('/register', validateUser, async (req, res) => {
     const hashedPassword = estDefunt ? null : await bcrypt.hash(password, saltRounds);
 
     // Créer l'objet utilisateur avec TOUS les champs du formulaire
+    // Champs que le formulaire ne choisit jamais (solde, sessions, liens, rôle…)
+    const corps = { ...req.body };
+    for (const interdit of ['wallet', 'walletCurrency', 'sessionsValidesDepuis', 'children', 'parents',
+      'lastLogin', 'userStories', 'isActive', 'isVerified', 'role', 'isAdmin', 'isMasterAdmin', 'treeHidden']) delete corps[interdit];
     const userData = {
-      ...req.body, // Tous les champs du formulaire
+      ...corps, // Champs du formulaire
       password: hashedPassword, // Remplacer par le mot de passe hashé
       numeroH: numeroH,
       // Le formulaire d'inscription envoie "telephone" — la colonne réelle en
@@ -828,12 +830,12 @@ router.post('/login', [
         });
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(password, user.password || '');
       if (!isPasswordValid) {
+        // Même réponse que pour un compte inexistant : on ne révèle pas qui a un compte
         return res.status(401).json({
           success: false,
-          message: 'Mot de passe incorrect',
-          numeroHExists: true
+          message: 'NuméroH, téléphone, email ou mot de passe incorrect',
         });
       }
 
@@ -892,10 +894,12 @@ function versionMotDePasse(user) {
 }
 const demandesRecuperation = new Map(); // numeroH → heure de la dernière demande
 const essaisCode = new Map();           // jti → { n: nombre d'essais, t: heure }
+const codesParCompte = new Map();       // numeroH → heures des derniers codes envoyés
 setInterval(() => {
   const limite = Date.now() - 15 * 60 * 1000; // un code expire après 10 min
   for (const [k, t] of demandesRecuperation) if (t < limite) demandesRecuperation.delete(k);
   for (const [k, v] of essaisCode) if (v.t < limite) essaisCode.delete(k);
+  for (const [k, l] of codesParCompte) if (!l.some((t) => t > Date.now() - 60 * 60 * 1000)) codesParCompte.delete(k);
   for (const [k, v] of essaisPremiere) if (v.t < limite) essaisPremiere.delete(k);
 }, 10 * 60 * 1000).unref();
 
@@ -982,11 +986,19 @@ router.post('/forgot-password/verify', [
       }
     }
 
-    // Un code par minute au plus pour un même compte (pas d'envoi d'emails en rafale)
+    // Un code par minute au plus, et 5 codes par heure au plus pour un même compte.
+    // Avant, un nouveau code chaque minute donnait 5 essais de plus à chaque fois
+    // (environ 7 000 essais par jour) et remplissait la boîte mail de la personne.
     const derniereDemande = demandesRecuperation.get(user.numeroH) || 0;
     if (Date.now() - derniereDemande < 60 * 1000) {
       return res.status(429).json({ success: false, message: 'Un code vient d\'être envoyé. Attendez une minute avant d\'en demander un nouveau.' });
     }
+    const heure = Date.now() - 60 * 60 * 1000;
+    const recents = (codesParCompte.get(user.numeroH) || []).filter((t) => t > heure);
+    if (recents.length >= 5) {
+      return res.status(429).json({ success: false, message: 'Trop de codes demandés pour ce compte. Réessayez dans une heure.' });
+    }
+    codesParCompte.set(user.numeroH, [...recents, Date.now()]);
     demandesRecuperation.set(user.numeroH, Date.now());
 
     // Code à 6 chiffres (tirage cryptographique)
@@ -1335,7 +1347,7 @@ router.put('/profile', authenticate, async (req, res) => {
     const updates = {};
     const champsIgnores = [];
     Object.keys(req.body).forEach((cle) => {
-      if (cle === 'numeroH' || req.body[cle] === undefined) return;
+      if (cle === 'numeroH' || cle === 'motDePasseActuel' || req.body[cle] === undefined) return;
       const champ = alias[cle] || cle;
       if (!allowedFields.includes(champ) || !User.rawAttributes[champ]) {
         champsIgnores.push(cle);
@@ -1350,6 +1362,22 @@ router.put('/profile', authenticate, async (req, res) => {
     if (updates.email !== undefined) {
       const email = String(updates.email || '').trim();
       updates.email = email || null;
+      // Changer l'e-mail (qui sert à récupérer le compte) demande le mot de passe :
+      // sinon un téléphone volé ou une session volée suffisait pour mettre son
+      // propre e-mail puis prendre le compte avec « Mot de passe oublié ».
+      // Un administrateur qui corrige le profil d'un autre n'en a pas besoin.
+      const emailChange = (email || '').toLowerCase() !== String(user.email || '').trim().toLowerCase();
+      const parSoiMeme = String(req.user.numeroH).toLowerCase() === String(user.numeroH).toLowerCase();
+      if (emailChange && parSoiMeme) {
+        const mdp = String(req.body.motDePasseActuel || '');
+        if (!mdp || !user.password || !(await bcrypt.compare(mdp, user.password))) {
+          return res.status(403).json({
+            success: false,
+            code: 'MOT_DE_PASSE_REQUIS',
+            message: "Mot de passe incorrect : il est obligatoire pour changer d'adresse e-mail."
+          });
+        }
+      }
       if (email) {
         const autre = await User.findOne({ where: { email: { [Op.iLike]: email.replace(/[\\%_]/g, '\\$&') }, numeroH: { [Op.ne]: user.numeroH } } });
         if (autre) {
@@ -1367,23 +1395,34 @@ router.put('/profile', authenticate, async (req, res) => {
       }
     }
 
+    // Générations G0–G90 réservées : refusées ici comme à l'inscription
+    if ('generation' in updates && !MASTER_ADMIN_NUMEROS.includes(user.numeroH)
+        && isReservedGeneration(updates.generation) && updates.generation !== user.generation) {
+      return res.status(400).json({ success: false, message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.' });
+    }
+
     // Activité bloquée par l'administrateur (ex. faux « Président ») : refusée
     if (['activite1', 'activite2', 'activite3'].some((c) => c in updates)) {
       const bloquee = await premiereActiviteBloquee(user.numeroH, [updates.activite1, updates.activite2, updates.activite3]);
       if (bloquee) return res.status(403).json({ success: false, message: messageActiviteBloquee(bloquee) });
     }
 
+    // Parents réellement changés (le formulaire renvoie souvent tous les champs)
+    const memeNumero = (a, b) => normalizeNumeroH(a || '') === normalizeNumeroH(b || '');
+    const parentsChanges = ('numeroHPere' in updates && !memeNumero(updates.numeroHPere, user.numeroHPere))
+      || ('numeroHMere' in updates && !memeNumero(updates.numeroHMere, user.numeroHMere));
+
     await user.update(updates);
 
-    // Si les parents viennent d'être renseignés/corrigés (ex: inconnus à
-    // l'inscription, ajoutés ensuite depuis le profil), rattacher l'utilisateur
-    // à l'arbre familial correspondant — sinon il reste isolé pour toujours,
-    // même si son NuméroH parent est maintenant correct.
-    if ('numeroHPere' in updates || 'numeroHMere' in updates) {
+    // Parents renseignés/corrigés depuis le profil : même règle qu'à l'inscription.
+    // Un parent vivant doit CONFIRMER avant que la personne entre dans son arbre
+    // (avant, déclarer n'importe quel NuméroH comme père suffisait pour entrer dans
+    // l'arbre d'une autre famille, lire ses messages et gérer son Moftal Pay).
+    if (parentsChanges) {
       try {
-        await addUserToFamilyTree(user.numeroH, user.numeroHPere, user.numeroHMere);
+        await handleParentConfirmations(user);
       } catch (treeErr) {
-        console.error('addUserToFamilyTree (profile update):', treeErr.message);
+        console.error('Confirmation des parents (profil):', treeErr.message);
       }
     }
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import { membresDeMaFamille } from '../utils/familleArbre.js';
 import { Op } from 'sequelize';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
@@ -130,9 +131,10 @@ async function compterFamille(familyName, me) {
     `SELECT COUNT(*)::int AS n FROM family_tree_messages m
      JOIN message_reads r ON r.numero_h = :me AND r.conv_key = 'family:'
      WHERE m.family_name = :familyName AND m.numero_h <> :me
+       AND m.numero_h IN (:membres)
        AND COALESCE(m.is_active, true) = true AND COALESCE(m.is_deleted, false) = false
        AND m.created_at > r.last_read_at`,
-    { replacements: { me, familyName }, type: 'SELECT' }
+    { replacements: { me, familyName, membres: [...await membresDeMaFamille(me)] }, type: 'SELECT' }
   );
   return row?.n ? { 'family:': row.n } : {};
 }

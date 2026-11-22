@@ -24,7 +24,8 @@ async function createAdmin() {
     console.log('✅ Modèles synchronisés');
 
     const adminEmail = 'kadiatou1541.kb@gmail.com';
-    const adminPassword = 'Neneyaya1';
+    const adminPassword = process.env.ADMIN_PASSWORD || '';
+if (!adminPassword) { console.error('❌ Mot de passe absent : lancez le script avec ADMIN_PASSWORD=… (jamais écrit dans le code).'); process.exit(1); }
     const adminNomComplet = 'Admin Diangou';
 
     console.log(`\n🔍 Recherche de l'utilisateur avec l'email: ${adminEmail}...`);
@@ -42,7 +43,7 @@ async function createAdmin() {
       console.log('\n✅ Compte admin mis à jour avec succès !');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📧 Email: ${adminEmail}`);
-      console.log(`🔑 Mot de passe: ${adminPassword}`);
+      console.log(`🔑 Mot de passe: (celui de ADMIN_PASSWORD)`);
       console.log(`👤 NumeroH: ${existingAdmin.numeroH}`);
       console.log(`🎭 Rôle: ${existingAdmin.role}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -85,7 +86,7 @@ async function createAdmin() {
       console.log('\n✅ Compte admin créé avec succès !');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📧 Email: ${adminEmail}`);
-      console.log(`🔑 Mot de passe: ${adminPassword}`);
+      console.log(`🔑 Mot de passe: (celui de ADMIN_PASSWORD)`);
       console.log(`👤 NumeroH: ${admin.numeroH}`);
       console.log(`🎭 Rôle: ${admin.role}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

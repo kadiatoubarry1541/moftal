@@ -1,4 +1,6 @@
 import express from 'express';
+import { Op } from 'sequelize';
+import { membresDeMaFamille } from '../utils/familleArbre.js';
 import multer from 'multer';
 import path from 'path';
 import { authenticate } from '../middleware/auth.js';
@@ -297,7 +299,7 @@ router.delete('/gallery/:album/:index', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MÉDIAS POUR PROBLÈMES DE LA FAMILLE (santé, situations graves)
-// Visibles uniquement par les membres ayant le même nom de famille
+// Visibles uniquement par les membres des mêmes arbres familiaux
 // ─────────────────────────────────────────────────────────────────────────────
 
 // GET /api/family/problems/media
@@ -310,8 +312,9 @@ router.get('/problems/media', async (req, res) => {
       return res.json({ success: true, items: [] });
     }
 
+    // Seulement ce que les membres de SES arbres familiaux ont publié (jamais les homonymes)
     const items = await FamilyProblemMedia.findAll({
-      where: { familyName },
+      where: { familyName, numeroH: { [Op.in]: [...await membresDeMaFamille(req.user.numeroH)] } },
       order: [['created_at', 'DESC']]
     });
 
@@ -358,7 +361,7 @@ router.post('/problems/media', upload.single('media'), async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GALERIE PARTAGÉE — visible par tous les membres de la même famille
+// GALERIE PARTAGÉE — visible par les membres des mêmes arbres familiaux
 // Médias privés rangés à part, servis par liens signés
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -369,8 +372,9 @@ router.get('/shared-gallery', async (req, res) => {
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     const familyName = userData?.nomFamille;
     if (!familyName) return res.json({ success: true, items: [] });
+    // Seulement ce que les membres de SES arbres familiaux ont partagé (jamais les homonymes)
     const items = await FamilyGallery.findAll({
-      where: { familyName },
+      where: { familyName, uploaderNumeroH: { [Op.in]: [...await membresDeMaFamille(req.user.numeroH)] } },
       order: [['created_at', 'DESC']]
     });
     res.json({ success: true, items });

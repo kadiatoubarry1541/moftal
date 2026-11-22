@@ -19,7 +19,9 @@ if (process.env.DATABASE_URL) {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false
+        // Connexion chiffrée, réglée comme toujours (rien ne change pour Render).
+        // Vérification du certificat seulement si on l'active exprès : DB_SSL_VERIFY=oui
+        rejectUnauthorized: process.env.DB_SSL_VERIFY === 'oui'
       }
     },
     pool: {

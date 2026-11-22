@@ -34,7 +34,6 @@ export function initSocket(httpServer, corsOrigins) {
 
   // Un salon de discussion n'est rejoint que par ceux qui en font partie :
   // sinon n'importe qui recevait en direct les messages privés des autres.
-  const estAdmin = (u) => ['admin', 'super-admin'].includes(String(u.role || '').toLowerCase());
   async function peutRejoindre(user, room) {
     const m = /^(couple|friend|parent-child)-(.+)$/.exec(String(room || ''));
     if (!m) return false;
@@ -69,12 +68,14 @@ export function initSocket(httpServer, corsOrigins) {
     // Pas d'annonce « en ligne » à tous les connectés : nom et présence de
     // chacun n'ont pas à être envoyés à tout le site
 
-    // Rejoindre la room familiale
-    // Seulement SA famille (même nom de famille que la messagerie familiale)
-    socket.on('join-family', (familyName) => {
-      if (!familyName) return;
-      const memeFamille = String(familyName).trim().toLowerCase() === String(nomFamille || '').trim().toLowerCase();
-      if (memeFamille || estAdmin(socket.user)) socket.join(`family-${familyName}`);
+    // Rejoindre la messagerie familiale : les salons de SES arbres familiaux
+    // seulement (avant : tous ceux du même nom de famille recevaient les messages).
+    // Le nom envoyé par le téléphone est ignoré.
+    socket.on('join-family', async () => {
+      try {
+        const { arbresDe, salonsFamille } = await import('./utils/familleArbre.js');
+        for (const salon of salonsFamille(await arbresDe(numeroH))) socket.join(salon);
+      } catch { /* pas de temps réel famille : les messages restent lisibles */ }
     });
 
     // Salon privé (couple-<id>, friend-<id>, parent-child-<id>) : seulement si
@@ -86,12 +87,13 @@ export function initSocket(httpServer, corsOrigins) {
     // ──── Signaling WebRTC ────────────────────────────────────────────────────
 
     // Appel sortant : l'appelant envoie une offre SDP
-    socket.on('call-offer', ({ to, offer, callType, callerName }) => {
+    socket.on('call-offer', ({ to, offer, callType }) => {
       const targetId = onlineUsers.get(to);
       if (targetId) {
         io.to(targetId).emit('incoming-call', {
           from: numeroH,
-          callerName: callerName || `${prenom} ${nomFamille}`,
+          // Nom fixé par le serveur : un appelant ne peut pas se faire passer pour un autre
+          callerName: `${prenom || ''} ${nomFamille || ''}`.trim() || 'Membre Moftal',
           offer,
           callType: callType || 'audio'
         });
