@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/useI18n';
+import OffreGalerie from './OffreGalerie';
+import { avertirOffre, ajouterDureeVideo, type Offre } from '../utils/offreGaleries';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -14,6 +16,7 @@ interface Souvenir {
 
 // Galerie souvenirs 💎 : n'appartient qu'aux deux amis précieux.
 // Chacun ajoute ses photos / vidéos et ne retire que les siennes.
+// Offre : 5 photos + 2 vidéos gratuites ; retirer libère une place, au-delà on paie avec ses points.
 export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
   linkId: string;
   moi: string;
@@ -26,6 +29,7 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
   const [ouvert, setOuvert] = useState<Souvenir | null>(null);
+  const [offre, setOffre] = useState<Offre | null>(null);
   const fichierRef = useRef<HTMLInputElement>(null);
 
   const entetes = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -37,7 +41,7 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
         const res = await fetch(`${API_BASE}/api/friends/souvenirs?linkId=${encodeURIComponent(linkId)}`, { headers: entetes() });
         const data = await res.json();
         if (annule) return;
-        if (data.success) setSouvenirs(data.souvenirs || []);
+        if (data.success) { setSouvenirs(data.souvenirs || []); setOffre(data.offre || null); }
         else setErreur(data.message || t('amitie.souvenirs.erreur'));
       } catch {
         if (!annule) setErreur(t('amitie.souvenirs.erreur'));
@@ -58,10 +62,15 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
       const form = new FormData();
       form.append('linkId', linkId);
       form.append('media', fichier);
+      await ajouterDureeVideo(form, fichier);
       const res = await fetch(`${API_BASE}/api/friends/souvenirs`, { method: 'POST', headers: entetes(), body: form });
       const data = await res.json();
-      if (data.success && data.souvenir) setSouvenirs((s) => [data.souvenir, ...s]);
-      else setErreur(data.message || t('amitie.souvenirs.erreur'));
+      if (data.success && data.souvenir) {
+        setSouvenirs((s) => [data.souvenir, ...s]);
+        if (data.offre) setOffre(data.offre);
+      } else if (data.code === 'QUOTA_EXCEEDED') {
+        avertirOffre(data, t('amitie.souvenirs.erreur'));
+      } else setErreur(data.message || t('amitie.souvenirs.erreur'));
     } catch {
       setErreur(t('amitie.souvenirs.erreur'));
     } finally {
@@ -77,6 +86,15 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
       if (data.success) {
         setSouvenirs((s) => s.filter((x) => x.id !== souvenir.id));
         setOuvert(null);
+        // Sa place dans l'offre gratuite est libérée
+        setOffre((o) => {
+          if (!o) return o;
+          const video = souvenir.mediaType === 'video';
+          const photosUtilisees = o.photosUtilisees - (video ? 0 : 1);
+          const videosUtilisees = o.videosUtilisees - (video ? 1 : 0);
+          return { ...o, photosUtilisees, videosUtilisees,
+            photosRestantes: Math.max(0, o.photosLibres - photosUtilisees), videosRestantes: Math.max(0, o.videosLibres - videosUtilisees) };
+        });
       } else {
         alert(data.message || t('amitie.souvenirs.erreur'));
       }
@@ -95,6 +113,7 @@ export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
+          <OffreGalerie offre={offre} className="mb-3" />
           {chargement ? (
             <div className="flex justify-center py-12">
               <span className="w-8 h-8 rounded-full border-[3px] border-amber-500 border-t-transparent animate-spin" />

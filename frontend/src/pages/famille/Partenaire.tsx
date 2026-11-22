@@ -5,6 +5,8 @@ import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import type { UserData } from "../../utils/auth";
+import OffreGalerie from '../../components/OffreGalerie'
+import { avertirOffre, ajouterDureeVideo, type Offre } from '../../utils/offreGaleries'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -92,12 +94,14 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
   const [noteRating, setNoteRating] = useState(0)
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<SessionId | 'notes'>('avant')
-  const [mediaBySession, setMediaBySession] = useState<Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
+  const [mediaBySession, setMediaBySession] = useState<Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>>>({
     avant: [],
     paradis: [],
     objectif: []
   })
   const [uploaderSession, setUploaderSession] = useState<SessionId | null>(null)
+  // Offre gratuite de la galerie commune : 5 photos + 2 vidéos
+  const [offre, setOffre] = useState<Offre | null>(null)
   const [partnerRatings, setPartnerRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
   const [selectedHusbandIndex, setSelectedHusbandIndex] = useState(0)
   const [showVerifSection, setShowVerifSection] = useState(false)
@@ -202,7 +206,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         setActivities(list)
 
         // Reconstruire les médias par session à partir des activités avec mediaUrl
-        const sessions: Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>> = {
+        const sessions: Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>> = {
           avant: [],
           paradis: [],
           objectif: []
@@ -234,10 +238,13 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
             type: mediaType,
             url: displayUrl,
             caption: caption || undefined,
-            date: act.created_at
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaBySession(sessions)
+        fetch(`${API_BASE}/api/couple/gallery-offer`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json()).then(d => setOffre(d.success ? d.offre : null)).catch(() => setOffre(null))
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -510,9 +517,9 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (data?: { code?: string; message?: string }) => {
       setMediaBySession((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== newItem.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      avertirOffre(data, "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -527,6 +534,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const formData = new FormData()
         const fieldName = mediaData.type === 'photo' ? 'image' : mediaData.type === 'video' ? 'video' : 'audio'
         formData.append(fieldName, file)
+        await ajouterDureeVideo(formData, blob)
         formData.append('type', `souvenir_${session}`)
         formData.append('content', JSON.stringify({ caption: mediaData.caption || '', mediaType: mediaData.type }))
         const res = await fetch(`${API_BASE}/api/couple/activity/upload`, {
@@ -537,7 +545,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média couple:', data)
-          annuler()
+          annuler(data)
         } else {
           await loadActivities()
         }
@@ -549,6 +557,21 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
 
     void persist()
     setUploaderSession(null)
+  }
+
+  // Retirer un de ses souvenirs : sa place dans l'offre gratuite est libérée
+  const supprimerSouvenir = async (id: string) => {
+    if (!confirm("Supprimer ce souvenir ? C'est définitif.")) return
+    try {
+      const res = await fetch(`${API_BASE}/api/couple/activity/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) alert(data.message || "La suppression n'a pas été enregistrée.")
+    } catch {
+      alert("La suppression n'a pas été enregistrée : vérifiez votre connexion.")
+    }
+    await loadActivities()
   }
 
   const handleAddNote = async () => {
@@ -1060,6 +1083,7 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
                             📷 Ajouter
                           </button>
                         </div>
+                        <OffreGalerie offre={offre} className="mb-4" />
                         {(mediaBySession[openSection as SessionId]?.length ?? 0) === 0 ? (
                           <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                             <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
@@ -1074,7 +1098,11 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {(mediaBySession[openSection as SessionId] || []).map((m) => (
-                              <div key={m.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                              <div key={m.id} className="relative bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                {m.from && m.from === user?.numeroH && (
+                                  <button type="button" onClick={() => supprimerSouvenir(m.id)} aria-label="Supprimer"
+                                    className="absolute top-1.5 right-1.5 z-10 w-8 h-8 rounded-full bg-black/55 text-white text-sm">🗑</button>
+                                )}
                                 {m.type === 'photo' && <img src={m.url} alt="" className="w-full h-40 object-cover" />}
                                 {m.type === 'video' && <video src={m.url} controls className="w-full h-40 bg-black" />}
                                 {m.type === 'audio' && <div className="w-full h-24 bg-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}

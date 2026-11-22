@@ -6,6 +6,8 @@ import GalleryPoints from '../models/GalleryPoints.js';
 import PointsTransaction from '../models/PointsTransaction.js';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
+import FamilyGallery from '../models/FamilyGallery.js';
+import { OFFRES_GALERIES, genreMedia, resumeOffre } from '../utils/offreGaleries.js';
 
 const router = express.Router();
 
@@ -156,25 +158,20 @@ router.get('/my-points', async (req, res) => {
   }
 });
 
-// GET /api/quotas/family → quota galerie familiale de l'utilisateur connecté
+// GET /api/quotas/family → offre de la galerie familiale (7 photos + 2 vidéos,
+// comptées sur ce qui est dans la galerie en ce moment)
 router.get('/family', async (req, res) => {
   try {
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     if (!userData?.nomFamille) {
       return res.json({ success: true, quota: null });
     }
-    const quota = await getOrCreateQuota('family', userData.nomFamille, 5, 1);
+    const items = await FamilyGallery.findAll({ where: { familyName: userData.nomFamille }, attributes: ['type', 'url'] });
+    const videos = items.filter(it => genreMedia({ type: it.type, mediaUrl: it.url }) === 'video').length;
     const pts = await GalleryPoints.findOne({ where: { numeroH: req.user.numeroH } });
     res.json({
       success: true,
-      quota: {
-        photosLibres: quota.photosLibres,
-        videosLibres: quota.videosLibres,
-        photosUtilisees: quota.photosUtilisees,
-        videosUtilisees: quota.videosUtilisees,
-        photosRestantes: Math.max(0, quota.photosLibres - quota.photosUtilisees),
-        videosRestantes: Math.max(0, quota.videosLibres - quota.videosUtilisees)
-      },
+      quota: resumeOffre(OFFRES_GALERIES.famille, items.length - videos, videos),
       points: {
         disponibles: pts?.pointsDisponibles || 0
       }

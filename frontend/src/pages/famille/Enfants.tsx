@@ -6,6 +6,8 @@ import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 import ChampPersonne from '../../components/ChampPersonne'
 import { FicheEnfantActions, AnnulerFusionFiche, DemandesFichesEnfants } from '../../components/FicheEnfantActions'
 import type { UserData } from "../../utils/auth";
+import OffreGalerie from '../../components/OffreGalerie'
+import { avertirOffre, ajouterDureeVideo, type Offre } from '../../utils/offreGaleries'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -94,12 +96,14 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
   const [childRatings, setChildRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
   const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<SessionKey | 'notes'>('avant')
-  const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
+  const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>>>({
     avant: [],
     paradis: [],
     objectif: []
   })
   const [uploaderSession, setUploaderSession] = useState<SessionKey | null>(null)
+  // Offre gratuite de la galerie commune : 5 photos + 2 vidéos
+  const [offre, setOffre] = useState<Offre | null>(null)
 
   void activities
 
@@ -182,7 +186,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         setActivities(list)
 
         // Reconstruire les médias par chapitre à partir des activités avec mediaUrl
-        const chapters: Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>> = {
+        const chapters: Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string; from?: string }>> = {
           avant: [],
           paradis: [],
           objectif: []
@@ -212,10 +216,14 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
             type: mediaType,
             url: displayUrl,
             caption: caption || undefined,
-            date: act.created_at
+            date: act.created_at,
+            from: act.fromNumeroH
           })
         }
         setMediaByChapter(chapters)
+        fetch(`${API_BASE}/api/parent-child/gallery-offer?parentNumeroH=${encodeURIComponent(link.parentNumeroH)}&childNumeroH=${encodeURIComponent(link.childNumeroH)}`,
+          { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json()).then(d => setOffre(d.success ? d.offre : null)).catch(() => setOffre(null))
       }
     } catch (e) {
       console.error('Erreur chargement activités:', e)
@@ -355,9 +363,9 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
     }))
 
     // Échec : la photo est retirée de l'écran et l'utilisateur est prévenu (jamais de faux succès)
-    const annuler = () => {
+    const annuler = (data?: { code?: string; message?: string }) => {
       setMediaByChapter((prev) => ({ ...prev, [session]: (prev[session] || []).filter((m) => m.id !== optimistic.id) }))
-      alert("Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
+      avertirOffre(data, "Le souvenir n'a pas été enregistré. Vérifiez votre connexion et réessayez.")
     }
 
     const persist = async () => {
@@ -373,6 +381,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         const formData = new FormData()
         const fieldName = mediaData.type === 'photo' ? 'image' : mediaData.type === 'video' ? 'video' : 'audio'
         formData.append(fieldName, file)
+        await ajouterDureeVideo(formData, blob)
         formData.append('parentNumeroH', selectedChild.parentNumeroH)
         formData.append('childNumeroH', selectedChild.childNumeroH)
         formData.append('toNumeroH', toNumeroH)
@@ -386,7 +395,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
         const data = await res.json()
         if (!data.success) {
           console.error('Erreur sauvegarde média enfant:', data)
-          annuler()
+          annuler(data)
         } else {
           await loadActivitiesForChild(selectedChild)
         }
@@ -398,6 +407,21 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
 
     void persist()
     setUploaderSession(null)
+  }
+
+  // Retirer un de ses souvenirs : sa place dans l'offre gratuite est libérée
+  const supprimerSouvenir = async (id: string) => {
+    if (!selectedChild || !confirm("Supprimer ce souvenir ? C'est définitif.")) return
+    try {
+      const res = await fetch(`${API_BASE}/api/parent-child/activity/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) alert(data.message || "La suppression n'a pas été enregistrée.")
+    } catch {
+      alert("La suppression n'a pas été enregistrée : vérifiez votre connexion.")
+    }
+    await loadActivitiesForChild(selectedChild)
   }
 
   const handleAddNote = async () => {
@@ -806,6 +830,7 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
                                         📷 Ajouter
                                       </button>
                                     </div>
+                                    <OffreGalerie offre={offre} className="mb-4" />
                                     {mediaByChapter[openSection as SessionKey].length === 0 ? (
                                       <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                                         <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
@@ -820,7 +845,11 @@ export default function Enfants({ focusNumeroH }: { inline?: boolean; focusNumer
                                     ) : (
                                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {mediaByChapter[openSection as SessionKey].map((m) => (
-                                          <div key={m.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                          <div key={m.id} className="relative bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                            {m.from && m.from === user?.numeroH && (
+                                              <button type="button" onClick={() => supprimerSouvenir(m.id)} aria-label="Supprimer"
+                                                className="absolute top-1.5 right-1.5 z-10 w-8 h-8 rounded-full bg-black/55 text-white text-sm">🗑</button>
+                                            )}
                                             {m.type === 'photo' && <img src={m.url} alt="" className="w-full h-40 object-cover" />}
                                             {m.type === 'video' && <video src={m.url} controls className="w-full h-40 bg-black" />}
                                             {m.type === 'audio' && <div className="w-full h-24 bg-slate-200 flex items-center justify-center"><span className="text-3xl">🎵</span></div>}
