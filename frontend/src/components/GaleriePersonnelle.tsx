@@ -12,7 +12,7 @@ const entetes = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}
 
 /**
  * Ma galerie personnelle 🔒 (Noyau → carte « Moi ») : visible uniquement par
- * son propriétaire. Offre : 5 photos + 2 vidéos gratuites ; supprimer ou
+ * son propriétaire. Offre : 3 photos + 1 vidéo gratuites ; supprimer ou
  * remplacer libère une place, au-delà on paie avec ses points.
  */
 export default function GaleriePersonnelle({ onClose }: { onClose: () => void }) {

@@ -420,7 +420,7 @@ const enhancedUser: UserData = useMemo(() => {
     [enhancedUser, familyMembers]
   )
 
-  // Offre gratuite de la galerie famille : 7 photos + 2 vidéos
+  // Offre gratuite de la galerie famille : 10 photos + 2 vidéos
   const [offreFamille, setOffreFamille] = useState<Offre | null>(null)
   const loadOffreFamille = async () => {
     try {

@@ -1,5 +1,5 @@
-// Galeries : galerie personnelle (privée), offre gratuite 5 photos + 2 vidéos
-// (Noyau) et 7 photos + 2 vidéos (famille), supprimer / remplacer libère une
+// Galeries : galerie personnelle (privée, 3 photos + 1 vidéo), offre gratuite
+// 5 photos + 2 vidéos (Noyau), 4 + 2 (amis), 10 + 2 (famille) ; supprimer / remplacer libère une
 // place, au-delà on paie avec ses points — base PostgreSQL de test.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +14,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   const { default: parentChildRouter } = await import('../src/routes/parentChild.js');
   const { default: friendsRouter } = await import('../src/routes/friends.js');
   const { default: Friend } = await import('../src/models/Friend.js');
+  const { FamilyTree } = await import('../src/models/additional.js');
   const { default: User } = await import('../src/models/User.js');
   const { default: FamilyGallery } = await import('../src/models/FamilyGallery.js');
   const { default: ParentChildLink } = await import('../src/models/ParentChildLink.js');
@@ -24,6 +25,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   await ParentChildLink.sync();
   await ParentChildActivity.sync();
   await Friend.sync();
+  await FamilyTree.sync();
   await new Promise((r) => setTimeout(r, 500)); // tables des points (quotas.js)
 
   const base = String(Date.now()).slice(-7);
@@ -35,6 +37,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   app.use('/api/friends', friendsRouter);
   const serveur = app.listen(0);
   const numeros = [];
+  let arbre = null;
   t.after(async () => {
     serveur.close();
     const rep = { replacements: { n: numeros } };
@@ -43,6 +46,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     await sequelize.query('DELETE FROM parent_child_activities WHERE parent_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM parent_child_links WHERE parent_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM friend_souvenirs WHERE numero_h IN (:n)', rep).catch(() => {});
+    if (arbre) await arbre.destroy().catch(() => {});
     await sequelize.query('DELETE FROM friends WHERE user_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM gallery_points WHERE numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM users WHERE tel1 IN (:t)', { replacements: { t: tels } });
@@ -79,9 +83,11 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     jetons.push(jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: '1h' }));
   }
   const [moi, autre] = jetons;
+  // Les deux personnes sont dans le même arbre familial (galerie famille)
+  arbre = await FamilyTree.create({ rootMember: numeros[0], members: [numeros[0], numeros[1]], isActive: true });
 
-  // ── Galerie personnelle : 5 photos gratuites, puis refus (pas de points)
-  for (let i = 0; i < 5; i++) {
+  // ── Galerie personnelle : 3 photos gratuites, puis refus (pas de points)
+  for (let i = 0; i < 3; i++) {
     const r = await fichier('POST', '/api/family/personal-gallery', moi);
     assert.equal(r.status, 200, r.d.message);
   }
@@ -93,7 +99,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   r = await json('GET', '/api/family/personal-gallery', autre);
   assert.equal(r.d.items.length, 0, 'une autre personne ne voit rien');
   r = await json('GET', '/api/family/personal-gallery', moi);
-  assert.equal(r.d.items.length, 5);
+  assert.equal(r.d.items.length, 3);
   assert.equal(r.d.offre.photosRestantes, 0);
   const premier = r.d.items[0].id;
   assert.equal((await json('DELETE', `/api/family/personal-gallery/${premier}`, autre)).status, 404, 'personne d\'autre ne supprime');
@@ -102,13 +108,12 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   // Remplacer garde la place (toujours gratuit), supprimer la libère
   r = await fichier('PUT', `/api/family/personal-gallery/${premier}`, moi);
   assert.equal(r.status, 200, r.d.message);
-  assert.equal(r.d.items.length, 5);
+  assert.equal(r.d.items.length, 3);
   r = await json('DELETE', `/api/family/personal-gallery/${premier}`, moi);
   assert.equal(r.d.offre.photosRestantes, 1);
   assert.equal((await fichier('POST', '/api/family/personal-gallery', moi)).status, 200, 'la place libérée resservit gratuitement');
 
-  // 2 vidéos gratuites, puis payées avec des points (selon la durée)
-  assert.equal((await fichier('POST', '/api/family/personal-gallery', moi, true)).status, 200);
+  // 1 vidéo gratuite, puis payée avec des points (selon la durée)
   assert.equal((await fichier('POST', '/api/family/personal-gallery', moi, true)).status, 200);
   assert.equal((await fichier('POST', '/api/family/personal-gallery', moi, true, 'media', { videoDuration: '8' })).status, 402);
   await sequelize.query(`INSERT INTO gallery_points (id, numero_h, points_disponibles, total_achete, created_at, updated_at)
@@ -120,14 +125,14 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   assert.equal(r.d.pointsDisponibles, 0);
   assert.equal((await fichier('POST', '/api/family/personal-gallery', moi)).status, 402, 'plus de points');
 
-  // ── Galerie famille : 7 photos + 2 vidéos gratuites pour toute la famille
-  for (let i = 0; i < 7; i++) {
+  // ── Galerie famille : 10 photos + 2 vidéos gratuites pour toute la famille
+  for (let i = 0; i < 10; i++) {
     assert.equal((await fichier('POST', '/api/family/shared-gallery/mariage', i % 2 ? autre : moi)).status, 200);
   }
   r = await fichier('POST', '/api/family/shared-gallery/mariage', autre);
   assert.equal(r.status, 402);
   r = await json('GET', '/api/quotas/family', moi);
-  assert.equal(r.d.quota.photosLibres, 7);
+  assert.equal(r.d.quota.photosLibres, 10);
   assert.equal(r.d.quota.photosRestantes, 0);
   assert.equal(r.d.quota.videosLibres, 2);
   const familiale = (await json('GET', '/api/family/shared-gallery', moi)).d.items.find((i) => i.uploaderNumeroH === numeros[1]);
@@ -167,19 +172,19 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   r = await json('POST', '/api/parent-child/activity', moi, { ...paire, mediaUrl: 'data:image/png;base64,aW1hZ2U=' });
   assert.equal(r.status, 200, 'la place libérée resservit gratuitement');
 
-  // ── Souvenirs entre amis précieux : 5 photos + 2 vidéos, puis points
+  // ── Souvenirs entre amis précieux : 4 photos + 2 vidéos, puis points
   const amitie = await Friend.create({
     userNumeroH: numeros[0], friendNumeroH: numeros[1], status: 'accepted', precieuxUser: true, precieuxFriend: true
   });
   r = await json('GET', `/api/friends/souvenirs?linkId=${amitie.id}`, moi);
   assert.equal(r.status, 200, r.d.message);
-  assert.deepEqual([r.d.offre.photosLibres, r.d.offre.videosLibres], [5, 2]);
-  for (let i = 0; i < 5; i++) {
+  assert.deepEqual([r.d.offre.photosLibres, r.d.offre.videosLibres], [4, 2]);
+  for (let i = 0; i < 4; i++) {
     await sequelize.query(`INSERT INTO friend_souvenirs (link_id, numero_h, media_type, media_url)
       VALUES (:l, :n, 'image', 'https://exemple.test/p.png')`, { replacements: { l: amitie.id, n: numeros[i % 2] } });
   }
   r = await fichier('POST', '/api/friends/souvenirs', autre, false, 'media', { linkId: amitie.id });
-  assert.equal(r.status, 402, 'sixième photo : payante (pas de points)');
+  assert.equal(r.status, 402, 'cinquième photo : payante (pas de points)');
   assert.equal(r.d.code, 'QUOTA_EXCEEDED');
   r = await json('GET', `/api/friends/souvenirs?linkId=${amitie.id}`, autre);
   assert.equal(r.d.offre.photosRestantes, 0);

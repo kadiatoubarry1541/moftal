@@ -1040,7 +1040,7 @@ router.post('/precieux', async (req, res) => {
   }
 });
 
-// Galerie souvenirs : offre 5 photos + 2 vidéos gratuites pour les deux amis
+// Galerie souvenirs : offre 4 photos + 2 vidéos gratuites pour les deux amis
 // (comptées sur ce qui est dans la galerie en ce moment), puis points
 async function compteSouvenirs(linkId) {
   const [l] = await sequelize.query(

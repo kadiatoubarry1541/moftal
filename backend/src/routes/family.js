@@ -395,10 +395,10 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
     if (!familyName) return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour partager des médias' });
     const isVideoFile = req.file.mimetype.startsWith('video/');
 
-    // Offre famille : 7 photos + 2 vidéos gratuites (ce qui est dans la galerie
+    // Offre famille : 10 photos + 2 vidéos gratuites (ce qui est dans la galerie
     // en ce moment), puis points de la personne qui ajoute
     try {
-      const c = await compteFamille(familyName);
+      const c = await compteFamille(familyName, req.user.numeroH);
       await placeDansGalerie({
         offre: OFFRES_GALERIES.famille, ...c, estVideo: isVideoFile, numeroH: req.user.numeroH,
         cout: isVideoFile ? coutVideo(req.body.videoDuration) : 1
@@ -440,8 +440,12 @@ router.delete('/shared-gallery/:id', async (req, res) => {
 });
 
 // Photos et vidéos de la galerie famille en ce moment
-async function compteFamille(familyName) {
-  const items = await FamilyGallery.findAll({ where: { familyName }, attributes: ['type', 'url'] });
+// (seulement ce que voit la personne : les membres de SES arbres, jamais les homonymes)
+async function compteFamille(familyName, numeroH) {
+  const items = await FamilyGallery.findAll({
+    where: { familyName, uploaderNumeroH: { [Op.in]: [...await membresDeMaFamille(numeroH)] } },
+    attributes: ['type', 'url']
+  });
   let photos = 0, videos = 0;
   for (const it of items) (genreMedia({ type: it.type, mediaUrl: it.url }) === 'video' ? videos++ : photos++);
   return { photos, videos };
@@ -452,7 +456,7 @@ router.get('/shared-gallery/offre', async (req, res) => {
   try {
     await ensureGalleryTable();
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
-    const c = userData?.nomFamille ? await compteFamille(userData.nomFamille) : { photos: 0, videos: 0 };
+    const c = userData?.nomFamille ? await compteFamille(userData.nomFamille, req.user.numeroH) : { photos: 0, videos: 0 };
     res.json({ success: true, offre: resumeOffre(OFFRES_GALERIES.famille, c.photos, c.videos) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -470,7 +474,7 @@ router.put('/shared-gallery/:id', upload.single('media'), async (req, res) => {
     const avantVideo = genreMedia({ type: item.type, mediaUrl: item.url }) === 'video';
     if (estVideo !== avantVideo) {
       // Une photo remplacée par une vidéo (ou l'inverse) : la nouvelle doit avoir sa place
-      const c = await compteFamille(item.familyName);
+      const c = await compteFamille(item.familyName, req.user.numeroH);
       if (avantVideo) c.videos--; else c.photos--;
       try {
         await placeDansGalerie({
@@ -493,7 +497,7 @@ router.put('/shared-gallery/:id', upload.single('media'), async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GALERIE PERSONNELLE — visible uniquement par son propriétaire
-// (dans le Noyau, sur la carte « Moi »). Offre : 5 photos + 2 vidéos gratuites.
+// (dans le Noyau, sur la carte « Moi »). Offre : 3 photos + 1 vidéo gratuites.
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function ensureGaleriePersonnelle() {
