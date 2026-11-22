@@ -11,6 +11,7 @@ import DevSignalement from '../models/DevSignalement.js';
 import DevPublisher from '../models/DevPublisher.js';
 import LocationLogo from '../models/LocationLogo.js';
 import { EXEMPLES_TERRE, EXEMPLE_NUMERO_H } from '../data/exemplesTerre.js';
+import { peutPublierCommeAncien, estJournalistePro } from '../utils/droitsTerre.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 
@@ -54,11 +55,16 @@ const isJournalistOrAdmin = (user) =>
 const isAdminOnly = (user) =>
   user.isMasterAdmin || user.role === 'admin' || user.role === 'super-admin';
 
-/** Journalistes/admins peuvent toujours publier — les autres seulement si
- *  l'admin les a explicitement autorisés pour ce lieu précis (chef de
- *  quartier, correspondant local...). */
+/** Peuvent publier : admins et journalistes (rôle ou compte pro) partout ;
+ *  habitants de 40 ans ou plus dans leur quartier ; les autres seulement si
+ *  l'admin les a autorisés pour ce lieu précis (chef de quartier validé,
+ *  maire, correspondant local...). */
 async function canPublishActualite(user, scope, location) {
   if (isJournalistOrAdmin(user)) return true;
+  // Dans son quartier : tout habitant de 40 ans ou plus
+  if (peutPublierCommeAncien(user, scope, location)) return true;
+  // Partout : tout journaliste qui a un compte pro
+  if (await estJournalistePro(user.numeroH)) return true;
   const grant = await DevPublisher.findOne({
     where: { numeroH: user.numeroH, scope, location: (location || '').toLowerCase() }
   });
