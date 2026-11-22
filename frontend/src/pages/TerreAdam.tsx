@@ -559,8 +559,8 @@ export default function TerreAdam() {
       tuiles: tuilesQuartiers.length ? tuilesQuartiers
         : [{ id: 'quartier-1', icone: '🏠', logo: null as string | null, nom: t('terre_adam.default_quartier'), niveau: t('terre_adam.default_quartier') }],
     },
-    { id: 'ville', titre: t('terre_adam.band_town'), tuiles: (['sous-prefecture', 'prefecture'] as Niveau[]).map(tuileNiveau) },
-    { id: 'monde', titre: t('terre_adam.band_world'), tuiles: (['region', 'pays', 'continent', 'mondial'] as Niveau[]).map(tuileNiveau) },
+    { id: 'ville', titre: t('terre_adam.band_town'), tuiles: (['sous-prefecture', 'prefecture', 'region'] as Niveau[]).map(tuileNiveau) },
+    { id: 'monde', titre: t('terre_adam.band_world'), tuiles: (['pays', 'continent', 'mondial'] as Niveau[]).map(tuileNiveau) },
   ];
   // ─── Publications d'exemple (admin) ───────────────────────────────────
   // Les lieux remplis sont exactement ceux que la page affiche (mêmes
