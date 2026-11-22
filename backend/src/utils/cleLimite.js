@@ -36,8 +36,13 @@ const dans = (liste, ip) => { const t = type(ip); return !!t && liste.check(ip, 
 export function adresseVisiteur(req) {
   let pair = propre(req.socket?.remoteAddress || req.ip);
   if (dans(PRIVEES, pair)) {
+    // De droite à gauche, en sautant nos propres relais (adresses privées) : la
+    // première adresse publique est celle que notre hébergeur a vue (Render, Caddy)
     const xff = String(req.headers['x-forwarded-for'] || '').split(',').map(propre).filter(Boolean);
-    if (xff.length) pair = xff[xff.length - 1];
+    for (let i = xff.length - 1; i >= 0; i--) {
+      pair = xff[i];
+      if (!dans(PRIVEES, pair)) break;
+    }
   }
   if (dans(CLOUDFLARE, pair)) {
     const cf = propre(req.headers['cf-connecting-ip']);

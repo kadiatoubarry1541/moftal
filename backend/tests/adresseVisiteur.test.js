@@ -18,3 +18,7 @@ test('CF-Connecting-IP cru seulement quand l\'appel vient vraiment de Cloudflare
   assert.equal(adresseVisiteur(req('::ffff:104.16.0.9', { 'cf-connecting-ip': '41.202.1.1' })), '41.202.1.1');
   assert.equal(adresseVisiteur(req('172.18.0.5', { 'x-forwarded-for': '8.8.4.4', 'cf-connecting-ip': '41.202.1.1' })), '8.8.4.4');
 });
+
+test('plusieurs relais privés (Render) : la dernière adresse publique', () => {
+  assert.equal(adresseVisiteur(req('10.0.0.3', { 'x-forwarded-for': '6.6.6.6, 41.202.10.20, 10.1.2.3' })), '41.202.10.20');
+});

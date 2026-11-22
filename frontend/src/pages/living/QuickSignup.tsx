@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { config } from '../../config/api'
 import { useTraduction } from '../../i18n/traduction'
+import { enTetesAntiRobot } from '../../utils/antiRobot'
 
 // Inscription rapide : un seul champ (téléphone ou e-mail, reconnu tout seul)
 // + mot de passe.
@@ -35,7 +36,7 @@ export function QuickSignup() {
     try {
       const res = await fetch(`${config.API_BASE_URL}/auth/register-quick`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await enTetesAntiRobot() },
         body: JSON.stringify(estEmail
           ? { email: saisie, password }
           : { telephone: saisie, password })

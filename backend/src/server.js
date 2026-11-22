@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import { verifierAntiRobot } from './middleware/antiRobot.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -442,6 +443,8 @@ const limiteurCompte = rateLimit({
   message: { success: false, message: 'Trop d\'essais de connexion pour ce compte. Réessayez dans une heure, ou utilisez « Mot de passe oublié ».' }
 });
 app.post('/api/auth/login', limiteurConnexion, limiteurCompte);
+// Anti-robot (Cloudflare Turnstile) : création de compte et code « mot de passe oublié »
+app.post(['/api/auth/register', '/api/auth/register-quick', '/api/auth/forgot-password/verify'], verifierAntiRobot);
 app.use('/api/auth', authRoutes);
 // Badges : gérés depuis l'espace admin (/api/admin/badges), réservés aux admins
 app.use('/api/admin/badges', badgeRoutes);

@@ -116,6 +116,9 @@ jobs:
         env:
           VITE_API_URL: https://api.moftal.com
           VITE_PAYMENTS_ENABLED: 'true'
+          # Clé publique anti-robot (Cloudflare Turnstile) : variable GitHub
+          # « TURNSTILE_SITE_KEY » (Settings → Secrets and variables → Variables). Vide = désactivé.
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
 
       - name: Garder le site construit pour la mise en ligne
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
