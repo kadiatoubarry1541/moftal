@@ -536,7 +536,7 @@ export default function TerreAdam() {
     mondial: { icone: '🌎', nom: t('terre_adam.default_mondial'), niveau: t('terre_adam.default_mondial') },
   };
 
-  // Les icônes de la grille, en 4 groupes : Chez moi · Ma ville · Mon pays · Autour
+  // Les icônes de la grille, en 4 groupes : Chez moi · Ville · Pays · Autour
   const tuileNiveau = (n: Niveau) => ({ id: n, icone: niveauxInfo[n].icone, logo: urlLogo(niveauLogos[n]), nom: niveauxInfo[n].nom, niveau: niveauxInfo[n].niveau });
   const tuilesQuartiers = ([0, 1, 2] as const)
     .map(i => {
