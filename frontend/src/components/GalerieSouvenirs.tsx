@@ -16,7 +16,7 @@ interface Souvenir {
 
 // Galerie souvenirs 💎 : n'appartient qu'aux deux amis précieux.
 // Chacun ajoute ses photos / vidéos et ne retire que les siennes.
-// Offre : 5 photos + 2 vidéos gratuites ; retirer libère une place, au-delà on paie avec ses points.
+// Offre : 4 photos + 2 vidéos gratuites ; retirer libère une place, au-delà on paie avec ses points.
 export default function GalerieSouvenirs({ linkId, moi, nomAmi, onClose }: {
   linkId: string;
   moi: string;

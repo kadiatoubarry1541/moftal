@@ -3,9 +3,10 @@ import { sequelize } from '../config/database.js';
 /**
  * Offre gratuite des galeries.
  *
- * - Galerie personnelle, galeries du Noyau (parents, enfants, conjoint) et
- *   galerie souvenirs entre amis précieux : 5 photos + 2 vidéos gratuites.
- * - Galerie famille (partagée) : 7 photos + 2 vidéos gratuites.
+ * - Galerie personnelle : 3 photos + 1 vidéo gratuites.
+ * - Galeries du Noyau (parents, enfants, conjoint) : 5 photos + 2 vidéos.
+ * - Souvenirs entre amis précieux : 4 photos + 2 vidéos.
+ * - Galerie famille (partagée) : 10 photos + 2 vidéos.
  *
  * On compte ce qui est DANS la galerie en ce moment : supprimer ou remplacer
  * une photo libère sa place, et l'offre gratuite peut resservir. Au-delà, chaque
@@ -13,10 +14,10 @@ import { sequelize } from '../config/database.js';
  * 2 à 5 points la vidéo selon sa durée).
  */
 export const OFFRES_GALERIES = {
-  personnelle: { photos: 5, videos: 2 },
+  personnelle: { photos: 3, videos: 1 },
   noyau: { photos: 5, videos: 2 },
-  amis: { photos: 5, videos: 2 },
-  famille: { photos: 7, videos: 2 },
+  amis: { photos: 4, videos: 2 },
+  famille: { photos: 10, videos: 2 },
 };
 
 /** Prix d'une vidéo au-delà de l'offre, selon sa durée (en secondes). */

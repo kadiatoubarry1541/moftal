@@ -7,6 +7,7 @@ import PointsTransaction from '../models/PointsTransaction.js';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
 import FamilyGallery from '../models/FamilyGallery.js';
+import { membresDeMaFamille } from '../utils/familleArbre.js';
 import { OFFRES_GALERIES, genreMedia, resumeOffre } from '../utils/offreGaleries.js';
 
 const router = express.Router();
@@ -158,7 +159,7 @@ router.get('/my-points', async (req, res) => {
   }
 });
 
-// GET /api/quotas/family → offre de la galerie familiale (7 photos + 2 vidéos,
+// GET /api/quotas/family → offre de la galerie familiale (10 photos + 2 vidéos,
 // comptées sur ce qui est dans la galerie en ce moment)
 router.get('/family', async (req, res) => {
   try {
@@ -166,7 +167,10 @@ router.get('/family', async (req, res) => {
     if (!userData?.nomFamille) {
       return res.json({ success: true, quota: null });
     }
-    const items = await FamilyGallery.findAll({ where: { familyName: userData.nomFamille }, attributes: ['type', 'url'] });
+    const items = await FamilyGallery.findAll({
+      where: { familyName: userData.nomFamille, uploaderNumeroH: { [Op.in]: [...await membresDeMaFamille(req.user.numeroH)] } },
+      attributes: ['type', 'url']
+    });
     const videos = items.filter(it => genreMedia({ type: it.type, mediaUrl: it.url }) === 'video').length;
     const pts = await GalleryPoints.findOne({ where: { numeroH: req.user.numeroH } });
     res.json({

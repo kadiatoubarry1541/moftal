@@ -133,7 +133,7 @@ export default function AcheterPoints() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
           <p className="font-bold text-amber-900 text-sm mb-1">Comment ça marche ?</p>
           <ul className="text-amber-800 text-sm space-y-1">
-            <li>• Chaque galerie a son offre gratuite : <strong>7 photos + 2 vidéos</strong> pour la galerie famille, <strong>5 photos + 2 vidéos</strong> pour votre galerie personnelle, vos galeries du Noyau et vos souvenirs entre amis</li>
+            <li>• Chaque galerie a son offre gratuite : <strong>10 photos + 2 vidéos</strong> pour la galerie famille, <strong>5 photos + 2 vidéos</strong> pour vos galeries du Noyau (parents, enfants, conjoint), <strong>4 photos + 2 vidéos</strong> pour vos souvenirs entre amis et <strong>3 photos + 1 vidéo</strong> pour votre galerie personnelle</li>
             <li>• Supprimer ou remplacer une photo libère sa place : l'offre gratuite resservit</li>
             <li>• Au-delà, vous achetez des points pour publier plus</li>
             <li>• <strong>Les points sont valables 1 mois</strong> à partir de l'achat</li>
@@ -198,11 +198,11 @@ export default function AcheterPoints() {
         {/* Quota des galeries */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { icon: '🖼️', title: 'Galerie familiale', free: '7 photos + 2 vidéos' },
-            { icon: '🔒', title: 'Galerie personnelle', free: '5 photos + 2 vidéos' },
+            { icon: '🖼️', title: 'Galerie familiale', free: '10 photos + 2 vidéos' },
+            { icon: '🔒', title: 'Galerie personnelle', free: '3 photos + 1 vidéo' },
             { icon: '💑', title: 'Galerie couple', free: '5 photos + 2 vidéos' },
             { icon: '👨‍👩‍👧', title: 'Galerie parent-enfant', free: '5 photos + 2 vidéos' },
-            { icon: '💎', title: 'Souvenirs entre amis', free: '5 photos + 2 vidéos' },
+            { icon: '💎', title: 'Souvenirs entre amis', free: '4 photos + 2 vidéos' },
           ].map((item) => (
             <div key={item.title} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
               <div className="text-2xl mb-1">{item.icon}</div>
