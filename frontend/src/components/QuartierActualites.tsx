@@ -264,7 +264,7 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
           <div className="text-4xl mb-2">📰</div>
           <p className="text-gray-500 text-sm font-medium">Aucune actualité publiée</p>
           {canPublishActu && <p className="text-gray-400 text-xs mt-1">Publiez la première actualité de {locationName}</p>}
-          {!canPublishActu && <p className="text-gray-400 text-xs mt-1">Les responsables autorisés publient les informations du quartier ici</p>}
+          {!canPublishActu && <p className="text-gray-400 text-xs mt-1">Les responsables du quartier, les journalistes et les habitants de 40 ans et plus publient ici</p>}
         </div>
       ) : (
         <div className="space-y-3">
