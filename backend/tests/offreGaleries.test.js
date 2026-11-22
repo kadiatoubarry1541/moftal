@@ -12,6 +12,8 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   const { default: familyRouter } = await import('../src/routes/family.js');
   const { default: quotasRouter } = await import('../src/routes/quotas.js');
   const { default: parentChildRouter } = await import('../src/routes/parentChild.js');
+  const { default: friendsRouter } = await import('../src/routes/friends.js');
+  const { default: Friend } = await import('../src/models/Friend.js');
   const { default: User } = await import('../src/models/User.js');
   const { default: FamilyGallery } = await import('../src/models/FamilyGallery.js');
   const { default: ParentChildLink } = await import('../src/models/ParentChildLink.js');
@@ -21,6 +23,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   await FamilyGallery.sync();
   await ParentChildLink.sync();
   await ParentChildActivity.sync();
+  await Friend.sync();
   await new Promise((r) => setTimeout(r, 500)); // tables des points (quotas.js)
 
   const base = String(Date.now()).slice(-7);
@@ -29,6 +32,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   const app = express(); app.use(express.json());
   app.use('/api/auth', authRouter); app.use('/api/family', familyRouter);
   app.use('/api/quotas', quotasRouter); app.use('/api/parent-child', parentChildRouter);
+  app.use('/api/friends', friendsRouter);
   const serveur = app.listen(0);
   const numeros = [];
   t.after(async () => {
@@ -38,6 +42,8 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     await sequelize.query('DELETE FROM family_gallery WHERE family_name = :f', { replacements: { f: nomFamille } }).catch(() => {});
     await sequelize.query('DELETE FROM parent_child_activities WHERE parent_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM parent_child_links WHERE parent_numero_h IN (:n)', rep).catch(() => {});
+    await sequelize.query('DELETE FROM friend_souvenirs WHERE numero_h IN (:n)', rep).catch(() => {});
+    await sequelize.query('DELETE FROM friends WHERE user_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM gallery_points WHERE numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM users WHERE tel1 IN (:t)', { replacements: { t: tels } });
     await sequelize.close();
@@ -67,7 +73,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     const r = await json('POST', '/api/auth/register-quick', null, { telephone: tel, password: 'motdepasse1' });
     assert.equal(r.status, 201, r.d.message);
     const numeroH = `G${i}TESTGAL${base}`;
-    await sequelize.query('UPDATE users SET numero_h = :n, nom_famille = :f, prenom = :p WHERE tel1 = :tel',
+    await sequelize.query('UPDATE users SET numero_h = :n, nom_famille = :f, prenom = :p, genre = \'FEMME\' WHERE tel1 = :tel',
       { replacements: { n: numeroH, f: nomFamille, p: `Test${i}`, tel } });
     numeros.push(numeroH);
     jetons.push(jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: '1h' }));
@@ -160,4 +166,26 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
   assert.equal((await json('DELETE', `/api/parent-child/activity/${sienne.id}`, autre)).status, 200);
   r = await json('POST', '/api/parent-child/activity', moi, { ...paire, mediaUrl: 'data:image/png;base64,aW1hZ2U=' });
   assert.equal(r.status, 200, 'la place libérée resservit gratuitement');
+
+  // ── Souvenirs entre amis précieux : 5 photos + 2 vidéos, puis points
+  const amitie = await Friend.create({
+    userNumeroH: numeros[0], friendNumeroH: numeros[1], status: 'accepted', precieuxUser: true, precieuxFriend: true
+  });
+  r = await json('GET', `/api/friends/souvenirs?linkId=${amitie.id}`, moi);
+  assert.equal(r.status, 200, r.d.message);
+  assert.deepEqual([r.d.offre.photosLibres, r.d.offre.videosLibres], [5, 2]);
+  for (let i = 0; i < 5; i++) {
+    await sequelize.query(`INSERT INTO friend_souvenirs (link_id, numero_h, media_type, media_url)
+      VALUES (:l, :n, 'image', 'https://exemple.test/p.png')`, { replacements: { l: amitie.id, n: numeros[i % 2] } });
+  }
+  r = await fichier('POST', '/api/friends/souvenirs', autre, false, 'media', { linkId: amitie.id });
+  assert.equal(r.status, 402, 'sixième photo : payante (pas de points)');
+  assert.equal(r.d.code, 'QUOTA_EXCEEDED');
+  r = await json('GET', `/api/friends/souvenirs?linkId=${amitie.id}`, autre);
+  assert.equal(r.d.offre.photosRestantes, 0);
+  assert.equal(r.d.offre.videosRestantes, 2);
+  const souvenirAmi = r.d.souvenirs.find((x) => x.numeroH === numeros[1]);
+  assert.equal((await json('DELETE', `/api/friends/souvenirs/${souvenirAmi.id}`, autre)).status, 200);
+  r = await json('GET', `/api/friends/souvenirs?linkId=${amitie.id}`, autre);
+  assert.equal(r.d.offre.photosRestantes, 1, 'retirer un souvenir libère sa place');
 });

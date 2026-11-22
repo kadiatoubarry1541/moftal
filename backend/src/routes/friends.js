@@ -15,6 +15,7 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
+import { OFFRES_GALERIES, coutVideo, resumeOffre, placeDansGalerie, refusOffre } from '../utils/offreGaleries.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
 import { estCompteAdmin, sansComptesAdmin } from '../utils/compteAdmin.js';
 import { normalizeLoc, getImmediateFamilyNumeroHs, findMyFamilyTree, findMyQuartierGroups, liensDe, lienAvec, LIEN_MESSAGE } from '../utils/liens.js';
@@ -1039,6 +1040,18 @@ router.post('/precieux', async (req, res) => {
   }
 });
 
+// Galerie souvenirs : offre 5 photos + 2 vidéos gratuites pour les deux amis
+// (comptées sur ce qui est dans la galerie en ce moment), puis points
+async function compteSouvenirs(linkId) {
+  const [l] = await sequelize.query(
+    `SELECT COUNT(*) FILTER (WHERE media_type = 'video')::int AS videos,
+            COUNT(*) FILTER (WHERE media_type <> 'video')::int AS photos
+     FROM friend_souvenirs WHERE link_id = :linkId`,
+    { replacements: { linkId }, type: 'SELECT' }
+  );
+  return { photos: l?.photos || 0, videos: l?.videos || 0 };
+}
+
 // GET /api/friends/souvenirs?linkId= — galerie des deux amis précieux
 router.get('/souvenirs', async (req, res) => {
   try {
@@ -1052,7 +1065,8 @@ router.get('/souvenirs', async (req, res) => {
        FROM friend_souvenirs WHERE link_id = :linkId ORDER BY created_at DESC`,
       { replacements: { linkId: friend.id }, type: 'SELECT' }
     );
-    res.json({ success: true, souvenirs });
+    const c = await compteSouvenirs(friend.id);
+    res.json({ success: true, souvenirs, offre: resumeOffre(OFFRES_GALERIES.amis, c.photos, c.videos) });
   } catch (error) {
     console.error('Erreur /friends/souvenirs:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -1073,6 +1087,15 @@ router.post('/souvenirs', uploadFriendMedia.single('media'), async (req, res) =>
       return res.status(400).json({ success: false, message: 'Photo ou vidéo uniquement.' });
     }
     const mediaType = mime.startsWith('video/') ? 'video' : 'image';
+    try {
+      await placeDansGalerie({
+        offre: OFFRES_GALERIES.amis, ...(await compteSouvenirs(friend.id)), estVideo: mediaType === 'video',
+        numeroH: req.user.numeroH, cout: mediaType === 'video' ? coutVideo(req.body.videoDuration) : 1
+      });
+    } catch (e) {
+      if (e.code === 'QUOTA_EXCEEDED') return refusOffre(res, e, OFFRES_GALERIES.amis);
+      throw e;
+    }
     const mediaUrl = mediaType === 'image'
       ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'friend-souvenirs')
       : await uploadToR2(req.file.buffer, req.file.originalname, mime, 'friend-souvenirs');
@@ -1094,7 +1117,8 @@ router.post('/souvenirs', uploadFriendMedia.single('media'), async (req, res) =>
         type: 'SELECT'
       }
     );
-    res.status(201).json({ success: true, souvenir });
+    const c = await compteSouvenirs(friend.id);
+    res.status(201).json({ success: true, souvenir, offre: resumeOffre(OFFRES_GALERIES.amis, c.photos, c.videos) });
   } catch (error) {
     console.error('Erreur ajout souvenir:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

@@ -4,7 +4,7 @@ import type { Offre } from "../utils/offreGaleries";
 /**
  * Offre gratuite d'une galerie (comptée par le serveur sur ce qui est dans la
  * galerie en ce moment) :
- *  - galerie personnelle et galeries du Noyau : 5 photos + 2 vidéos ;
+ *  - galerie personnelle, galeries du Noyau et souvenirs entre amis : 5 photos + 2 vidéos ;
  *  - galerie famille : 7 photos + 2 vidéos.
  * Supprimer ou remplacer libère une place ; au-delà, on paie avec ses points.
  */

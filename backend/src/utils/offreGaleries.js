@@ -3,8 +3,8 @@ import { sequelize } from '../config/database.js';
 /**
  * Offre gratuite des galeries.
  *
- * - Galerie personnelle, et galeries du Noyau (parents, enfants, conjoint) :
- *   5 photos + 2 vidéos gratuites.
+ * - Galerie personnelle, galeries du Noyau (parents, enfants, conjoint) et
+ *   galerie souvenirs entre amis précieux : 5 photos + 2 vidéos gratuites.
  * - Galerie famille (partagée) : 7 photos + 2 vidéos gratuites.
  *
  * On compte ce qui est DANS la galerie en ce moment : supprimer ou remplacer
@@ -15,6 +15,7 @@ import { sequelize } from '../config/database.js';
 export const OFFRES_GALERIES = {
   personnelle: { photos: 5, videos: 2 },
   noyau: { photos: 5, videos: 2 },
+  amis: { photos: 5, videos: 2 },
   famille: { photos: 7, videos: 2 },
 };
 
