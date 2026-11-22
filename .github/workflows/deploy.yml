@@ -8,6 +8,8 @@ name: Vérifier puis mettre en ligne
 on:
   push:
   pull_request:
+  # Bouton « Run workflow » (onglet Actions) pour remettre le site en ligne à la main
+  workflow_dispatch:
 
 # Un nouvel envoi annule la vérification encore en cours sur la même branche.
 concurrency:
