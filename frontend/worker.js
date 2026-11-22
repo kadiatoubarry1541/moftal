@@ -39,6 +39,23 @@ export default {
 // visiteur peut voir une ancienne version du site même après un déploiement
 // réussi). Les fichiers avec un hash dans leur nom (assets/*) restent
 // immuables : leur contenu ne change jamais sans que le nom change aussi.
+const CSP_OBSERVATION = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdn.logr-in.com https://challenges.cloudflare.com https://cdnjs.cloudflare.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' data: blob: https:",
+  "connect-src 'self' https://api.moftal.com wss://api.moftal.com https://*.moftal.com wss://*.moftal.com https://enfants-adam-backend.onrender.com wss://enfants-adam-backend.onrender.com https://nominatim.openstreetmap.org https://*.openstreetmap.org https://tiles.openfreemap.org https://*.logr-in.com https://*.lr-ingest.io https://*.lr-in.com https://*.lr-ingest.com https://challenges.cloudflare.com",
+  "frame-src 'self' https://challenges.cloudflare.com https://www.google.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  'report-uri /api/erreurs/csp',
+].join('; ');
+
 function applyCacheHeaders(response, pathname) {
   const isHtml = response.headers.get('content-type')?.includes('text/html');
   const isServiceWorker = pathname === '/sw.js';
@@ -47,6 +64,15 @@ function applyCacheHeaders(response, pathname) {
   if (!isHtml && !isServiceWorker && !isManifest) return response;
 
   const headers = new Headers(response.headers);
+  if (isHtml) {
+    // Protection des pages en mode OBSERVATION : rien n'est bloqué, le navigateur
+    // signale seulement ce que la règle bloquerait (journal des erreurs de
+    // l'admin). Quand le journal ne montre plus de cas normaux, on pourra
+    // passer à « Content-Security-Policy » pour bloquer vraiment.
+    headers.set('Content-Security-Policy-Report-Only', CSP_OBSERVATION);
+    headers.set('X-Content-Type-Options', 'nosniff');
+    headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  }
   if (isHtml || isServiceWorker) {
     headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   } else if (isManifest) {
