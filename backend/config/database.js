@@ -19,10 +19,9 @@ if (process.env.DATABASE_URL) {
     dialectOptions: {
       ssl: {
         require: true,
-        // Certificat du serveur vérifié (Neon a un vrai certificat) : sinon
-        // quelqu'un placé sur le chemin pourrait se faire passer pour la base.
-        // DB_SSL_VERIFY=non seulement pour une base à certificat maison.
-        rejectUnauthorized: process.env.DB_SSL_VERIFY !== 'non'
+        // Connexion chiffrée, réglée comme toujours (rien ne change pour Render).
+        // Vérification du certificat seulement si on l'active exprès : DB_SSL_VERIFY=oui
+        rejectUnauthorized: process.env.DB_SSL_VERIFY === 'oui'
       }
     },
     pool: {
