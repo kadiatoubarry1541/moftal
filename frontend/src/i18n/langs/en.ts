@@ -428,6 +428,7 @@ const en: Record<string, string> = {
   'terre_adam.default_mondial': 'Global',
   'terre_adam.default_quartier': 'Neighborhood',
   'terre_adam.band_home': 'Home',
+  'terre_adam.band_town': 'My town',
   'terre_adam.band_country': 'My country',
   'terre_adam.band_around': 'Around',
   'terre_adam.canal.alerte_section': 'ALERTS & INFO',

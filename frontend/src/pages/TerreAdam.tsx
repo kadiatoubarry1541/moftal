@@ -536,7 +536,7 @@ export default function TerreAdam() {
     mondial: { icone: '🌎', nom: t('terre_adam.default_mondial'), niveau: t('terre_adam.default_mondial') },
   };
 
-  // Les icônes de la grille, en 3 cercles : Chez moi · Mon pays · Autour
+  // Les icônes de la grille, en 4 groupes : Chez moi · Ma ville · Mon pays · Autour
   const tuileNiveau = (n: Niveau) => ({ id: n, icone: niveauxInfo[n].icone, logo: urlLogo(niveauLogos[n]), nom: niveauxInfo[n].nom, niveau: niveauxInfo[n].niveau });
   const tuilesQuartiers = ([0, 1, 2] as const)
     .map(i => {
@@ -559,8 +559,10 @@ export default function TerreAdam() {
       tuiles: tuilesQuartiers.length ? tuilesQuartiers
         : [{ id: 'quartier-1', icone: '🏠', logo: null as string | null, nom: t('terre_adam.default_quartier'), niveau: t('terre_adam.default_quartier') }],
     },
-    // Le pays et tout son intérieur, du plus proche au plus large
-    { id: 'pays', titre: t('terre_adam.band_country'), tuiles: (['sous-prefecture', 'prefecture', 'region', 'pays'] as Niveau[]).map(tuileNiveau) },
+    // L'intérieur du pays, du plus proche au plus large
+    { id: 'ville', titre: t('terre_adam.band_town'), tuiles: (['sous-prefecture', 'prefecture', 'region'] as Niveau[]).map(tuileNiveau) },
+    // Le pays (plus tard, une personne pourra en avoir plusieurs)
+    { id: 'pays', titre: t('terre_adam.band_country'), tuiles: (['pays'] as Niveau[]).map(tuileNiveau) },
     // Hors du pays : continent et monde
     { id: 'autour', titre: t('terre_adam.band_around'), tuiles: (['continent', 'mondial'] as Niveau[]).map(tuileNiveau) },
   ];
