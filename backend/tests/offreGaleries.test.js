@@ -40,6 +40,7 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     const rep = { replacements: { n: numeros } };
     await sequelize.query('DELETE FROM galerie_personnelle WHERE numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM family_gallery WHERE family_name = :f', { replacements: { f: nomFamille } }).catch(() => {});
+    await sequelize.query('DELETE FROM family_trees WHERE "familyName" = :f', { replacements: { f: nomFamille } }).catch(() => {});
     await sequelize.query('DELETE FROM parent_child_activities WHERE parent_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM parent_child_links WHERE parent_numero_h IN (:n)', rep).catch(() => {});
     await sequelize.query('DELETE FROM friend_souvenirs WHERE numero_h IN (:n)', rep).catch(() => {});
@@ -79,6 +80,10 @@ test('galeries : galerie personnelle, offre gratuite, remplacement et points', {
     jetons.push(jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: '1h' }));
   }
   const [moi, autre] = jetons;
+  // Même famille = même arbre familial (le nom seul ne suffit plus pour voir la galerie)
+  const { FamilyTree } = await import('../src/models/additional.js');
+  await FamilyTree.sync();
+  await FamilyTree.create({ rootMember: numeros[0], members: numeros, deceasedMembers: [], familyName: nomFamille, isActive: true });
 
   // ── Galerie personnelle : 5 photos gratuites, puis refus (pas de points)
   for (let i = 0; i < 5; i++) {
