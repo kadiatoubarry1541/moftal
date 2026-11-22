@@ -1,4 +1,4 @@
-// Droits de publier dans Terre ADAM : habitants de 40 ans et plus dans leur quartier.
+// Droits de publier dans Terre ADAM : habitants de 25 ans et plus dans leur quartier.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ageDe, habiteLeQuartier, peutPublierCommeAncien } from '../src/utils/droitsTerre.js';
@@ -25,12 +25,12 @@ test('quartier : l\'une des résidences, sans tenir compte des majuscules', () =
   assert.equal(habiteLeQuartier({ lieu1: 'Non spécifié' }, 'non spécifié'), false);
 });
 
-test('40 ans ou plus, dans son quartier seulement', () => {
-  const ancien = { dateNaissance: ilYa(45), lieu1: 'Tata' };
+test('25 ans ou plus, dans son quartier seulement', () => {
+  const ancien = { dateNaissance: ilYa(25), lieu1: 'Tata' };
   assert.equal(peutPublierCommeAncien(ancien, 'quartier', 'tata'), true);
   assert.equal(peutPublierCommeAncien(ancien, 'quartier', 'daka'), false);
   assert.equal(peutPublierCommeAncien(ancien, 'sous-prefecture', 'tata'), false);
-  assert.equal(peutPublierCommeAncien({ dateNaissance: ilYa(39), lieu1: 'Tata' }, 'quartier', 'tata'), false);
+  assert.equal(peutPublierCommeAncien({ dateNaissance: ilYa(24), lieu1: 'Tata' }, 'quartier', 'tata'), false);
   assert.equal(peutPublierCommeAncien({ lieu1: 'Tata' }, 'quartier', 'tata'), false); // âge inconnu
 });
 

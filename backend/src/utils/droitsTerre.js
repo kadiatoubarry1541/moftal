@@ -1,14 +1,14 @@
 /**
  * Droits de publier une actualité dans Terre ADAM, en plus des admins, des
  * comptes « journaliste » et des responsables validés :
- *  - dans son quartier, tout habitant de 40 ans ou plus ;
+ *  - dans son quartier, tout habitant de 25 ans ou plus ;
  *  - partout, tout journaliste qui a un compte pro (service Journalistes),
  *    sans attendre la validation de son établissement (sauf s'il est refusé
  *    ou désactivé).
  */
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 
-export const AGE_MIN_PUBLIER_QUARTIER = 40;
+export const AGE_MIN_PUBLIER_QUARTIER = 25;
 
 /** Âge de la personne : d'après sa date de naissance, sinon son âge enregistré. */
 export function ageDe(user) {
@@ -34,7 +34,7 @@ export function habiteLeQuartier(user, location) {
     .some((champ) => norme(user?.[champ]) === lieu);
 }
 
-/** Habitant de 40 ans ou plus, qui publie dans l'un de ses quartiers. */
+/** Habitant de 25 ans ou plus, qui publie dans l'un de ses quartiers. */
 export function peutPublierCommeAncien(user, scope, location) {
   if (scope !== 'quartier') return false;
   const age = ageDe(user);
