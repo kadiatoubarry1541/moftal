@@ -56,12 +56,12 @@ const isAdminOnly = (user) =>
   user.isMasterAdmin || user.role === 'admin' || user.role === 'super-admin';
 
 /** Peuvent publier : admins et journalistes (rôle ou compte pro) partout ;
- *  habitants de 40 ans ou plus dans leur quartier ; les autres seulement si
+ *  habitants de 25 ans ou plus dans leur quartier ; les autres seulement si
  *  l'admin les a autorisés pour ce lieu précis (chef de quartier validé,
  *  maire, correspondant local...). */
 async function canPublishActualite(user, scope, location) {
   if (isJournalistOrAdmin(user)) return true;
-  // Dans son quartier : tout habitant de 40 ans ou plus
+  // Dans son quartier : tout habitant de 25 ans ou plus
   if (peutPublierCommeAncien(user, scope, location)) return true;
   // Partout : tout journaliste qui a un compte pro
   if (await estJournalistePro(user.numeroH)) return true;
