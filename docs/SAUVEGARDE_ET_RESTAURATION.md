@@ -25,6 +25,7 @@ Dans GitHub : dépôt → **Settings → Secrets and variables → Actions → N
 | `SAUVEGARDE_CLE` | Un long mot de passe inventé (20 caractères ou plus) qui chiffre les copies |
 | `IDRIVE_ACCESS_KEY`, `IDRIVE_SECRET_KEY`, `IDRIVE_ENDPOINT`, `IDRIVE_REGION`, `IDRIVE_BUCKET` | Les mêmes valeurs que sur Render |
 | *(facultatif)* `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_SAUVEGARDES` | Pour une 2e copie sur Cloudflare R2 : créez un seau **privé** dédié (jamais `moftal-storage`, qui est public) |
+| *(facultatif, recommandé)* `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_ENDPOINT`, `B2_BUCKET` | 2e endroit, chez **Backblaze B2** (10 Go gratuits) : seau **privé**, clé d'application limitée à ce seau ; `B2_ENDPOINT` = l'adresse « Endpoint » du seau (ex. `s3.us-west-004.backblazeb2.com`) |
 
 ⚠️ **Notez `SAUVEGARDE_CLE` ailleurs que dans GitHub** (papier rangé, gestionnaire de mots de passe).
 Sans elle, les copies chiffrées ne peuvent pas être ouvertes.

@@ -18,6 +18,7 @@
 #   SAUVEGARDE_CLE         (facultatif) mot de passe de chiffrement — À GARDER PRÉCIEUSEMENT
 #   IDRIVE_ENDPOINT, IDRIVE_REGION, IDRIVE_ACCESS_KEY, IDRIVE_SECRET_KEY, IDRIVE_BUCKET
 #   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_SAUVEGARDES (facultatif)
+#   B2_KEY_ID, B2_APPLICATION_KEY, B2_ENDPOINT, B2_BUCKET (facultatif) — Backblaze B2, 2e endroit
 #   DESTINATION_LOCALE     (tests) dossier local à la place des stockages en ligne
 set -euo pipefail
 set -f   # pas d'expansion de « ? » ou « * » dans les adresses
@@ -49,8 +50,14 @@ destinations() {
   if [ -n "${DESTINATION_LOCALE:-}" ]; then echo local; return; fi
   [ -n "${IDRIVE_ACCESS_KEY:-}" ] && echo idrive
   [ -n "${R2_BUCKET_SAUVEGARDES:-}" ] && [ -n "${R2_ACCESS_KEY_ID:-}" ] && echo r2
+  [ -n "${B2_BUCKET:-}" ] && [ -n "${B2_KEY_ID:-}" ] && echo b2
   true
 }
+
+# Adresse copiée avec ou sans « https:// » (et sans espace autour)
+adresse() { local a; a="$(printf '%s' "$1" | tr -d '[:space:]')"; case "$a" in http*) echo "$a" ;; *) echo "https://$a" ;; esac; }
+# Région déduite de l'adresse Backblaze (s3.<région>.backblazeb2.com)
+region_b2() { printf '%s' "$1" | sed -nE 's#.*s3\.([a-z0-9-]+)\.backblazeb2\.com.*#\1#p'; }
 
 s3() { # s3 <destination> <arguments aws s3…>
   local dest="$1"; shift
@@ -58,14 +65,18 @@ s3() { # s3 <destination> <arguments aws s3…>
     idrive)
       AWS_ACCESS_KEY_ID="$IDRIVE_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$IDRIVE_SECRET_KEY" \
       AWS_DEFAULT_REGION="${IDRIVE_REGION:-eu-west-4}" \
-        aws s3 --endpoint-url "${IDRIVE_ENDPOINT:-https://s3.eu-west-4.idrivee2.com}" "$@" ;;
+        aws s3 --endpoint-url "$(adresse "${IDRIVE_ENDPOINT:-s3.eu-west-4.idrivee2.com}")" "$@" ;;
     r2)
       AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
       AWS_DEFAULT_REGION=auto \
         aws s3 --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" "$@" ;;
+    b2)
+      AWS_ACCESS_KEY_ID="$B2_KEY_ID" AWS_SECRET_ACCESS_KEY="$B2_APPLICATION_KEY" \
+      AWS_DEFAULT_REGION="$(region_b2 "$B2_ENDPOINT")" \
+        aws s3 --endpoint-url "$(adresse "$B2_ENDPOINT")" "$@" ;;
   esac
 }
-seau() { case "$1" in idrive) echo "${IDRIVE_BUCKET:-moftal-backup}" ;; r2) echo "$R2_BUCKET_SAUVEGARDES" ;; esac; }
+seau() { case "$1" in idrive) printf '%s\n' "${IDRIVE_BUCKET:-moftal-backup}" | tr -d '[:space:]' ;; r2) echo "$R2_BUCKET_SAUVEGARDES" ;; b2) printf '%s\n' "$B2_BUCKET" | tr -d '[:space:]' ;; esac; }
 
 envoyer() { # envoyer <destination> <fichier> <chemin>
   local dest="$1" fichier="$2" chemin="$3"
@@ -104,7 +115,7 @@ url_directe() { echo "$1" | sed -E 's/-pooler\././'; }
 nb_tables() { psql "$1" -XAtqc "SELECT count(*) FROM information_schema.tables WHERE table_type='BASE TABLE' AND table_schema NOT IN ('pg_catalog','information_schema')"; }
 
 DESTS="$(destinations)"
-[ -n "$DESTS" ] || { echo "Aucun stockage configuré (IDrive ou R2) : sauvegarde impossible." >&2; exit 1; }
+[ -n "$DESTS" ] || { echo "Aucun stockage configuré (IDrive, R2 ou Backblaze B2) : sauvegarde impossible." >&2; exit 1; }
 echo "## Sauvegarde des bases Moftal — $DATE" >> "$RESUME"
 if [ -z "${SAUVEGARDE_CLE:-}" ]; then
   log "⚠️  SAUVEGARDE_CLE absente : copies NON chiffrées (stockage privé seulement)."
