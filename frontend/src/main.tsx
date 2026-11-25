@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 import { installOfflineSync } from "./utils/offlineSync";
+import { installerJetonGlissant } from "./utils/jetonGlissant";
 import { installerLimiteDureesMedias } from "./utils/dureesMedias";
 import { echangerCodeOuverture } from "./utils/codeOuverture";
 import { noterLancementApp, appPlayInstallee } from "./utils/appMoftalInstallee";
@@ -159,6 +160,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function initAndRender() {
   // Santé & Éducation : données gardées sur l'appareil + envoi différé hors connexion
   installOfflineSync();
+  // Après le mode hors-ligne : voit toutes les vraies réponses du serveur
+  installerJetonGlissant();
   // Vidéos 1 min max, audios 5 s max — vérifié pour tous les champs fichier
   installerLimiteDureesMedias();
 

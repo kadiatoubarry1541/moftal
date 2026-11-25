@@ -18,6 +18,33 @@ const limite = rateLimit({
   keyGenerator: (req) => `erreurs:${adresseVisiteur(req)}`, validate: validationLimite,
 });
 
+// Protection des pages du site (CSP) en mode observation : le navigateur signale
+// ce que la règle bloquerait, sans rien bloquer. Rangé dans ce journal (une ligne
+// par cas, avec le nombre de fois) pour régler la règle avant de l'activer.
+const limiteCsp = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => `csp:${adresseVisiteur(req)}`, validate: validationLimite,
+});
+const corpsCsp = express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '10kb' });
+router.post('/csp', limiteCsp, corpsCsp, async (req, res) => {
+  try {
+    const liste = Array.isArray(req.body) ? req.body : [req.body];
+    for (const r of liste.slice(0, 5)) {
+      const c = r?.['csp-report'] || r?.body || {};
+      const directive = String(c['effective-directive'] || c.effectiveDirective || c['violated-directive'] || c.violatedDirective || '?').slice(0, 60);
+      const bloque = String(c['blocked-uri'] || c.blockedURL || c.blockedUri || '?').slice(0, 200);
+      await enregistrerErreur({
+        origine: 'site',
+        message: `Protection des pages (observation) : bloquerait ${directive} → ${bloque}`,
+        adresse: String(c['document-uri'] || c.documentURL || '').slice(0, 300),
+        navigateur: String(req.headers['user-agent'] || '').slice(0, 300),
+        alerter: false,
+      });
+    }
+  } catch { /* un rapport mal formé n'est pas une erreur */ }
+  res.status(204).end();
+});
+
 router.post('/', limite, async (req, res) => {
   const { message, pile, adresse } = req.body || {};
   if (typeof message !== 'string' || !message.trim()) {

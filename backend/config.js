@@ -11,7 +11,9 @@ const config = {
   JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
     ? (() => { throw new Error('🚨 JWT_SECRET absent en production : définissez-le chez l\'hébergeur avant de démarrer le serveur.'); })()
     : 'enfants-adam-dev-only-change-in-production'),
-  JWT_EXPIRE: process.env.JWT_EXPIRE || '365d',
+  // 60 jours, renouvelé automatiquement chaque jour d'utilisation (middleware/auth.js) :
+  // seule une personne qui n'ouvre pas Moftal pendant 2 mois devra se reconnecter.
+  JWT_EXPIRE: process.env.JWT_EXPIRE || '60d',
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 10,
   NODE_ENV: process.env.NODE_ENV || 'development',
 

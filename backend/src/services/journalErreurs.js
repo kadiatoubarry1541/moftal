@@ -49,7 +49,7 @@ function peutAlerter() {
   return alertes.nombre++ < 10;
 }
 
-export async function enregistrerErreur({ origine, message, pile, adresse, navigateur, numeroH }) {
+export async function enregistrerErreur({ origine, message, pile, adresse, navigateur, numeroH, alerter = true }) {
   try {
     if (!message) return null;
     const premiereLignePile = String(pile || '').split('\n').find((l) => /at |@/.test(l)) || '';
@@ -75,7 +75,7 @@ export async function enregistrerErreur({ origine, message, pile, adresse, navig
         type: QueryTypes.SELECT,
       }
     );
-    if (ligne?.occurrences === 1 && peutAlerter()) {
+    if (ligne?.occurrences === 1 && alerter && peutAlerter()) {
       const texte = `${origine === 'site' ? 'Site' : 'Serveur'} : ${couper(message, 160)}${adresse ? ` (${couper(adresse, 80)})` : ''}`;
       for (const admin of MASTER_ADMIN_NUMEROS) notifier(admin, 'erreur', texte, '🚨 Nouvelle erreur');
     }

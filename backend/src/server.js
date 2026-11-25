@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { verifierAntiRobot } from './middleware/antiRobot.js';
+import { MagasinBase } from './utils/compteursBase.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -303,7 +304,9 @@ app.use(cors({
     if (/^https:\/\/([a-z0-9-]+\.)?moftal\.com$/.test(origin)) return callback(null, true);
     return callback(new Error(`CORS: origine non autorisée — ${origin}`));
   },
-  credentials: true
+  credentials: true,
+  // Le site lit le jeton renouvelé (voir middleware/auth.js)
+  exposedHeaders: ['X-Nouveau-Jeton']
 }));
 
 // Rate limiting
@@ -425,6 +428,7 @@ const limiteurConnexion = rateLimit({
   max: isDev ? 1000 : 10,
   skipSuccessfulRequests: true,
   keyGenerator: (req) => `connexion:${compteVise(req) || '-'}:${adresseVisiteur(req)}`,
+  store: new MagasinBase('limite-connexion'), passOnStoreError: true,
   validate: validationLimite,
   standardHeaders: true,
   legacyHeaders: false,
@@ -437,6 +441,7 @@ const limiteurCompte = rateLimit({
   max: isDev ? 5000 : 50,
   skipSuccessfulRequests: true,
   keyGenerator: (req) => `connexion-compte:${compteVise(req) || adresseVisiteur(req)}`,
+  store: new MagasinBase('limite-compte'), passOnStoreError: true,
   validate: validationLimite,
   standardHeaders: true,
   legacyHeaders: false,

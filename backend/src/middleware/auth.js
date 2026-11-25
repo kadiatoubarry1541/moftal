@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { sessionOuverte } from '../services/sessionsAppareils.js';
+import { sessionOuverte, signerJeton } from '../services/sessionsAppareils.js';
+
+const RENOUVELER_APRES_S = 24 * 60 * 60; // un nouveau jeton au plus une fois par jour
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
@@ -173,6 +175,14 @@ export const authenticate = async (req, res, next) => {
 
       req.user = user;
       req.sessionId = decoded.sid || null;
+      // Jeton glissant : le jeton dure JWT_EXPIRE (60 jours) et le serveur en
+      // renvoie un neuf, une fois par jour d'utilisation (en-tête X-Nouveau-Jeton,
+      // gardé par le site). Une personne active n'est jamais déconnectée ; un jeton
+      // volé puis oublié cesse de marcher. Même session (sid) : la déconnexion à
+      // distance d'un appareil fonctionne toujours.
+      if (!decoded.purpose && decoded.iat && Date.now() / 1000 - decoded.iat > RENOUVELER_APRES_S) {
+        try { res.setHeader('X-Nouveau-Jeton', signerJeton(user.numeroH, decoded.sid)); } catch { /* jeton actuel garde sa validité */ }
+      }
       // Ancien compte administrateur : simple utilisateur, quoi qu'en dise la base,
       // et compte de consultation seulement : il se connecte et regarde, mais ne
       // peut rien modifier (ni son profil, ni publier, ni ajouter, ni supprimer).

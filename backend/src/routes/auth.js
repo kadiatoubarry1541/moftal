@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import express from 'express';
+import * as compteurs from '../utils/compteursBase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
@@ -691,7 +692,6 @@ router.post('/code-premiere-connexion', authenticate, async (req, res) => {
 // POST /api/auth/premiere-connexion { identifiant, code, password } → connecté
 // Le code à 6 chiffres est remis par l'établissement qui a ajouté la personne :
 // sans lui, quiconque connaissait le téléphone prenait le compte.
-const essaisPremiere = new Map(); // numeroH → { n, t }
 router.post('/premiere-connexion', async (req, res) => {
   try {
     const password = String(req.body?.password || '');
@@ -702,9 +702,8 @@ router.post('/premiere-connexion', async (req, res) => {
     if (!/^[0-9]{6}$/.test(code)) {
       return res.status(400).json({ success: false, code: 'CODE_REQUIS', message: "Saisissez le code de première connexion (6 chiffres) que l'établissement vous a donné." });
     }
-    const essai = essaisPremiere.get(nh);
-    const recent = essai && Date.now() - essai.t < 15 * 60 * 1000;
-    if (recent && essai.n >= 5) {
+    // 5 essais ratés au plus en 15 minutes (compteur gardé dans la base)
+    if (await compteurs.lire(`premiere:${nh}`) >= 5) {
       return res.status(429).json({ success: false, message: "Trop d'essais. Réessayez dans 15 minutes, ou demandez un nouveau code à l'établissement." });
     }
     const [ligne] = await User.sequelize.query(
@@ -714,10 +713,10 @@ router.post('/premiere-connexion', async (req, res) => {
     const attendu = Buffer.from(String(ligne?.code_premiere_connexion || ''), 'utf8');
     const donne = Buffer.from(empreinteCodePremiereConnexion(nh, code), 'utf8');
     if (!ligne?.code_premiere_connexion || attendu.length !== donne.length || !crypto.timingSafeEqual(attendu, donne)) {
-      essaisPremiere.set(nh, { n: (recent ? essai.n : 0) + 1, t: Date.now() });
+      await compteurs.ajouter(`premiere:${nh}`, 15 * 60 * 1000);
       return res.status(400).json({ success: false, code: 'CODE_INCORRECT', message: "Code incorrect. Vérifiez le code donné par l'établissement (ou demandez-lui un nouveau code)." });
     }
-    essaisPremiere.delete(nh);
+    await compteurs.effacer(`premiere:${nh}`);
     const user = await User.findByPk(nh);
     if (!user) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
     user.password = await bcrypt.hash(password, config.BCRYPT_ROUNDS);
@@ -892,16 +891,9 @@ function empreinteCode(numeroH, jti, code) {
 function versionMotDePasse(user) {
   return crypto.createHmac('sha256', config.JWT_SECRET).update(`pwv|${user.password || ''}`).digest('hex').slice(0, 24);
 }
-const demandesRecuperation = new Map(); // numeroH → heure de la dernière demande
-const essaisCode = new Map();           // jti → { n: nombre d'essais, t: heure }
-const codesParCompte = new Map();       // numeroH → heures des derniers codes envoyés
-setInterval(() => {
-  const limite = Date.now() - 15 * 60 * 1000; // un code expire après 10 min
-  for (const [k, t] of demandesRecuperation) if (t < limite) demandesRecuperation.delete(k);
-  for (const [k, v] of essaisCode) if (v.t < limite) essaisCode.delete(k);
-  for (const [k, l] of codesParCompte) if (!l.some((t) => t > Date.now() - 60 * 60 * 1000)) codesParCompte.delete(k);
-  for (const [k, v] of essaisPremiere) if (v.t < limite) essaisPremiere.delete(k);
-}, 10 * 60 * 1000).unref();
+// Compteurs d'essais (codes « mot de passe oublié », première connexion) : gardés
+// dans la base, ils survivent à un redémarrage ou à la mise en veille du serveur.
+setInterval(() => { compteurs.nettoyer(); }, 10 * 60 * 1000).unref();
 
 // @route   POST /api/auth/forgot-password/verify
 // @desc    Vérifier l'identité : NumeroH obligatoire, NumeroH parent et code arbre facultatifs
@@ -989,17 +981,14 @@ router.post('/forgot-password/verify', [
     // Un code par minute au plus, et 5 codes par heure au plus pour un même compte.
     // Avant, un nouveau code chaque minute donnait 5 essais de plus à chaque fois
     // (environ 7 000 essais par jour) et remplissait la boîte mail de la personne.
-    const derniereDemande = demandesRecuperation.get(user.numeroH) || 0;
-    if (Date.now() - derniereDemande < 60 * 1000) {
+    if (await compteurs.lire(`oubli-minute:${user.numeroH}`) > 0) {
       return res.status(429).json({ success: false, message: 'Un code vient d\'être envoyé. Attendez une minute avant d\'en demander un nouveau.' });
     }
-    const heure = Date.now() - 60 * 60 * 1000;
-    const recents = (codesParCompte.get(user.numeroH) || []).filter((t) => t > heure);
-    if (recents.length >= 5) {
+    if (await compteurs.lire(`oubli-heure:${user.numeroH}`) >= 5) {
       return res.status(429).json({ success: false, message: 'Trop de codes demandés pour ce compte. Réessayez dans une heure.' });
     }
-    codesParCompte.set(user.numeroH, [...recents, Date.now()]);
-    demandesRecuperation.set(user.numeroH, Date.now());
+    await compteurs.ajouter(`oubli-heure:${user.numeroH}`, 60 * 60 * 1000);
+    await compteurs.ajouter(`oubli-minute:${user.numeroH}`, 60 * 1000);
 
     // Code à 6 chiffres (tirage cryptographique)
     const otpCode = String(crypto.randomInt(100000, 1000000));
@@ -1057,8 +1046,7 @@ router.post('/forgot-password/verify-code', [
       return res.status(400).json({ success: false, message: 'Code expiré. Recommencez la procédure.' });
     }
     // 5 essais au plus par code : impossible de deviner le code en essayant tout
-    const essais = (essaisCode.get(payload.jti)?.n || 0) + 1;
-    essaisCode.set(payload.jti, { n: essais, t: Date.now() });
+    const { compte: essais } = await compteurs.ajouter(`code-oubli:${payload.jti}`, 15 * 60 * 1000);
     if (essais > 5) {
       return res.status(429).json({ success: false, message: 'Trop d\'essais. Recommencez la procédure pour recevoir un nouveau code.' });
     }
@@ -1067,7 +1055,7 @@ router.post('/forgot-password/verify-code', [
     if (attendu.length !== donne.length || !crypto.timingSafeEqual(attendu, donne)) {
       return res.status(400).json({ success: false, message: `Code incorrect. Vérifiez le code reçu par email (${5 - essais} essai(s) restant(s)).` });
     }
-    essaisCode.set(payload.jti, { n: 99, t: Date.now() }); // un code ne sert qu'une fois
+    await compteurs.ajouter(`code-oubli:${payload.jti}`, 15 * 60 * 1000, 99); // un code ne sert qu'une fois
     // Compte de consultation (ancien administrateur) : son mot de passe ne se change pas
     if (estAncienAdmin(payload.numeroH)) {
       return res.status(403).json({ success: false, message: 'Ce compte est un compte de consultation : il ne peut pas être modifié.' });
