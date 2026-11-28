@@ -4,8 +4,11 @@
  *  de façon fiable à ce qui est stocké en base. */
 export function normalizeNumeroH(numeroH) {
   if (!numeroH || typeof numeroH !== 'string') return '';
-  return numeroH
-    .trim()
+  const s = numeroH.trim();
+  // Compte provisoire (TMP-…) : identifiant tiré au hasard, la lettre O y est
+  // légitime — la remplacer par 0 rendrait le compte introuvable.
+  if (/^TMP-/i.test(s)) return s.toUpperCase();
+  return s
     .replace(/\s+/g, ' ')
     .replace(/O/g, '0')
     .replace(/o/g, '0');

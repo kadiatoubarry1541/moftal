@@ -210,64 +210,48 @@ router.post('/request-access', async (req, res) => {
     }
 
     const confirmations = [];
+    const dejaConfirmes = [];
+    const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
 
-    // Si le père est fourni, vérifier s'il est vivant ou décédé
-    if (numeroHPere) {
-      const pere = await User.findOne({ where: { numeroH: matchNumeroH(numeroHPere), type: 'vivant' } });
-      
-      if (pere && pere.isActive) {
-        // Père vivant : créer une confirmation
-        const confirmation = await FamilyTreeConfirmation.create({
-          childNumeroH: user.numeroH,
-          parentNumeroH: pere.numeroH,
-          parentType: 'pere',
-          status: 'pending'
-        });
+    // Pour chaque parent : vivant → demande de confirmation ; défunt → accès
+    // direct ; introuvable → erreur claire (jamais de lien vers un compte inexistant).
+    for (const [parentType, numeroParent] of [['pere', numeroHPere], ['mere', numeroHMere]]) {
+      if (!numeroParent) continue;
+      const libelle = parentType === 'pere' ? 'le père' : 'la mère';
+
+      if (numeroParent.toUpperCase() === String(user.numeroH).toUpperCase()) {
+        return res.status(400).json({ success: false, message: `Vous ne pouvez pas vous choisir vous-même comme ${parentType === 'pere' ? 'père' : 'mère'}.` });
+      }
+
+      const parent = await User.findOne({ where: { numeroH: matchNumeroH(numeroParent), type: 'vivant' } });
+      if (parent && parent.isActive) {
+        const { confirmation, dejaConfirme } = await FamilyTreeConfirmation.demander(user.numeroH, parent.numeroH, parentType);
+        if (dejaConfirme) { dejaConfirmes.push(libelle); continue; }
         confirmations.push(confirmation);
-        // Notifier le père
         try {
-          const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
           await Notification.createNotification({
-            recipientNumeroH: pere.numeroH,
+            recipientNumeroH: parent.numeroH,
             type: 'tree_request',
             title: 'Demande d\'accès à l\'arbre familial',
             message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
             relatedId: confirmation.id
           });
-        } catch (e) { console.error('Notif tree_request (père):', e.message); }
-      } else {
-        // Père décédé : accès direct (pas de confirmation nécessaire)
-        // L'utilisateur sera ajouté directement à l'arbre
+        } catch (e) { console.error(`Notif tree_request (${parentType}):`, e.message); }
+        continue;
       }
+
+      if (!parent) {
+        const defunt = await DeceasedMember.findOne({ where: { numeroHD: matchNumeroH(numeroParent) } })
+          || await User.findOne({ where: { numeroH: matchNumeroH(numeroParent) }, attributes: ['numeroH'] });
+        if (!defunt) {
+          return res.status(404).json({ success: false, message: `Aucun compte trouvé pour ${libelle}. Vérifiez le numéro saisi.` });
+        }
+      }
+      // Parent défunt (ou compte désactivé) : accès direct, sans confirmation
     }
 
-    // Si la mère est fournie, vérifier si elle est vivante ou décédée
-    if (numeroHMere) {
-      const mere = await User.findOne({ where: { numeroH: matchNumeroH(numeroHMere), type: 'vivant' } });
-
-      if (mere && mere.isActive) {
-        // Mère vivante : créer une confirmation
-        const confirmation = await FamilyTreeConfirmation.create({
-          childNumeroH: user.numeroH,
-          parentNumeroH: mere.numeroH,
-          parentType: 'mere',
-          status: 'pending'
-        });
-        confirmations.push(confirmation);
-        // Notifier la mère
-        try {
-          const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
-          await Notification.createNotification({
-            recipientNumeroH: mere.numeroH,
-            type: 'tree_request',
-            title: 'Demande d\'accès à l\'arbre familial',
-            message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
-            relatedId: confirmation.id
-          });
-        } catch (e) { console.error('Notif tree_request (mère):', e.message); }
-      } else {
-        // Mère décédée : accès direct (pas de confirmation nécessaire)
-      }
+    if (dejaConfirmes.length > 0 && confirmations.length === 0) {
+      return res.json({ success: true, message: `Le lien avec ${dejaConfirmes.join(' et ')} est déjà confirmé.`, confirmations: [], limitReached: false });
     }
 
     // Si les deux parents sont décédés, ajouter directement à l'arbre

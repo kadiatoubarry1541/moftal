@@ -22,6 +22,27 @@ class FamilyTreeConfirmation extends Model {
     });
   }
 
+  /**
+   * Demande (ou redemande) la confirmation d'un parent. Une seule ligne par
+   * (enfant, parent, rôle) — index unique : on réutilise celle qui existe
+   * au lieu d'en créer une seconde (sinon erreur serveur à la 2e demande).
+   * Retourne { confirmation, dejaConfirme }.
+   */
+  static async demander(childNumeroH, parentNumeroH, parentType) {
+    const [confirmation, cree] = await this.findOrCreate({
+      where: { childNumeroH, parentNumeroH, parentType },
+      defaults: { childNumeroH, parentNumeroH, parentType, status: 'pending' }
+    });
+    if (!cree && confirmation.status === 'confirmed') {
+      return { confirmation, dejaConfirme: true };
+    }
+    if (!cree && confirmation.status !== 'pending') {
+      // Demande refusée ou annulée auparavant : on la relance
+      await confirmation.update({ status: 'pending', rejectedAt: null, confirmedAt: null, isActive: true });
+    }
+    return { confirmation, dejaConfirme: false };
+  }
+
   static async confirmAccess(childNumeroH, parentNumeroH) {
     const confirmation = await this.findOne({
       where: {

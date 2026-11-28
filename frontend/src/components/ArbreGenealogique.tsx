@@ -74,9 +74,21 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
   const [showAddDoc, setShowAddDoc] = useState(false)
-  const [zoom, setZoom] = useState(0.4)
+  // Taille par défaut : 50 % — les cases restent lisibles
+  const [zoom, setZoom] = useState(0.5)
+  // Conteneur de l'arbre : l'arbre est toujours centré à l'écran
+  const arbreScrollRef = useRef<HTMLDivElement>(null)
   const [showZoomMenu, setShowZoomMenu] = useState(false)
   const zoomMenuRef = useRef<HTMLDivElement>(null)
+
+  // Arbre plus large que l'écran : on place la vue au milieu (jamais collée à gauche)
+  useEffect(() => {
+    const el = arbreScrollRef.current
+    if (!el) return
+    const centrer = () => { el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2) }
+    const id = requestAnimationFrame(centrer)
+    return () => cancelAnimationFrame(id)
+  }, [zoom, familyMembers.length])
   const navigate = useNavigate()
   // Petits-enfants RÉELS : liens parent-enfant confirmés (cross-comptes), un
   // par enfant G2, chargés depuis /api/parent-child/children-of/:numeroH —
@@ -1067,7 +1079,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             >↺ Normal</button>
             <button
               type="button"
-              onClick={() => setZoom(0.4)}
+              onClick={() => setZoom(0.5)}
               className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
             >🔍 Vue globale</button>
             {filtres && (
@@ -1085,7 +1097,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         )}
       </div>
 
-      <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
+      <div ref={arbreScrollRef} className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
        {(() => {
         // ── Constantes de mise en page ──
         // PG = gap entre père et mère (>= NW+NGAP=200 pour que les grands-parents ne se chevauchent pas)
@@ -1203,7 +1215,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         }
 
         return (
-        <svg className="tree-svg" width={SVG_W * zoom} height={SVG_VISIBLE_H * zoom} viewBox={`0 ${SVG_TOP} ${SVG_W} ${SVG_VISIBLE_H}`} style={{ display: 'block' }}>
+        <svg className="tree-svg" width={SVG_W * zoom} height={SVG_VISIBLE_H * zoom} viewBox={`0 ${SVG_TOP} ${SVG_W} ${SVG_VISIBLE_H}`} style={{ display: 'block', margin: '0 auto' }}>
           {/* ── G-1 : Grands-parents ── */}
           {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">

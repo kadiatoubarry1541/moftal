@@ -66,11 +66,8 @@ async function handleParentConfirmations(user) {
     if (pere) {
       // Père vivant : créer une confirmation
       // Une seule demande en attente par parent (pas de doublon à chaque enregistrement)
-      const [confirmation] = await FamilyTreeConfirmation.findOrCreate({
-        where: { childNumeroH: user.numeroH, parentNumeroH: numeroHPere, parentType: 'pere', status: 'pending' },
-        defaults: { childNumeroH: user.numeroH, parentNumeroH: numeroHPere, parentType: 'pere', status: 'pending' }
-      });
-      confirmations.push(confirmation);
+      const { confirmation, dejaConfirme } = await FamilyTreeConfirmation.demander(user.numeroH, pere.numeroH, 'pere');
+      if (!dejaConfirme) confirmations.push(confirmation);
     } else {
       // Père décédé ou n'existe pas : accès direct
       // L'utilisateur sera ajouté directement à l'arbre
@@ -90,11 +87,8 @@ async function handleParentConfirmations(user) {
     if (mere) {
       // Mère vivante : créer une confirmation
       // Une seule demande en attente par parent (pas de doublon à chaque enregistrement)
-      const [confirmation] = await FamilyTreeConfirmation.findOrCreate({
-        where: { childNumeroH: user.numeroH, parentNumeroH: numeroHMere, parentType: 'mere', status: 'pending' },
-        defaults: { childNumeroH: user.numeroH, parentNumeroH: numeroHMere, parentType: 'mere', status: 'pending' }
-      });
-      confirmations.push(confirmation);
+      const { confirmation, dejaConfirme } = await FamilyTreeConfirmation.demander(user.numeroH, mere.numeroH, 'mere');
+      if (!dejaConfirme) confirmations.push(confirmation);
     } else {
       // Mère décédée ou n'existe pas : accès direct
     }

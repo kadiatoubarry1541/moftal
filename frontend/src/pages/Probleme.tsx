@@ -39,6 +39,9 @@ export default function Probleme() {
   const [moftalRaison, setMoftalRaison] = useState('');
   const [moftalLoading, setMoftalLoading] = useState(false);
   const [moftalReçu, setMoftalReçu] = useState<DonneesReçu | null>(null);
+  // Numéro de sang de la famille = code de l'arbre (F<famille>S<sang>, ex. F2S1).
+  // Jamais le NuméroH d'une personne.
+  const [arbreCode, setArbreCode] = useState<{ familyCode: string | null; activationRequise: boolean; nbMembres: number } | null>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -76,6 +79,26 @@ export default function Probleme() {
       } catch { /* ignore */ }
     };
     loadFund();
+  }, [userData, API]);
+
+  // Charger le numéro de sang de la famille depuis l'arbre (base de données)
+  useEffect(() => {
+    if (!userData) return;
+    const token = localStorage.getItem("token");
+    fetch(`${API}/api/family-tree/tree`, { headers: { Authorization: token ? `Bearer ${token}` : "" } })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.success && d.tree) {
+          setArbreCode({
+            familyCode: d.tree.familyCode || null,
+            activationRequise: !!d.tree.codePaiementRequis,
+            nbMembres: d.tree.memberCount || 0,
+          });
+        } else {
+          setArbreCode({ familyCode: null, activationRequise: false, nbMembres: 0 });
+        }
+      })
+      .catch(() => setArbreCode({ familyCode: null, activationRequise: false, nbMembres: 0 }));
   }, [userData, API]);
 
   const payerSante = async () => {
@@ -216,13 +239,108 @@ export default function Probleme() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Numéro familial (pour les contributions) */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 sm:p-5">
-          <h2 className="text-lg font-bold text-emerald-800">💳 Numéro de la famille</h2>
-          <p className="text-sm text-emerald-900 mb-3">Partagez-le pour que chacun sache où envoyer l&apos;aide.</p>
-          <div className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-emerald-300 shadow-sm">
-            <span className="font-mono text-sm sm:text-base text-emerald-900">{userData.numeroH}</span>
+        {/* ─── Moftal Pay Famille : en premier, c'est le but de cette page ─── */}
+        <div className="rounded-xl shadow-sm p-4 sm:p-5 border border-emerald-200" style={{ background: 'linear-gradient(135deg,#f0fdf0,#dcfcdc)' }}>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-3xl">💰</span>
+            <div>
+              <h2 className="text-lg font-bold text-emerald-900">Moftal Pay Famille</h2>
+              <p className="text-sm text-emerald-700">
+                {fundCompte
+                  ? <>Solde santé disponible : <strong>{(fundCompte.soldes?.sante || 0).toLocaleString()} GNF</strong></>
+                  : "L'argent de la famille : soins, urgences et autres besoins."}
+              </p>
+            </div>
           </div>
+
+          {/* Accès rapide à Moftal Pay (toujours visible) */}
+          <button
+            onClick={() => navigate('/compte-famille')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm mb-3"
+            style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
+          >
+            💰 Compte Famille Moftal Pay
+          </button>
+
+          {fundCompte ? (
+            <>
+              {!fundCompte.estAdmin && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                  ⚠️ Seuls les responsables du compte peuvent payer.
+                </p>
+              )}
+
+              {fundCompte.estAdmin && (
+                <>
+                  <button
+                    onClick={() => setShowMoftalPay(v => !v)}
+                    className="w-full py-2.5 rounded-xl text-white font-bold text-sm mb-3"
+                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}
+                  >
+                    {showMoftalPay ? '✕ Annuler' : '🏥 Payer une clinique ou médecin'}
+                  </button>
+
+                  {showMoftalPay && (
+                    <div className="space-y-3 bg-white rounded-xl p-4 border border-emerald-100">
+                      <p className="text-xs text-emerald-700 font-semibold">Paiement depuis la caisse santé de la famille</p>
+                      <input type="number" value={moftalMontant} onChange={e => setMoftalMontant(e.target.value)}
+                        placeholder="Montant en GNF" min="100"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <input type="text" value={moftalBenef} onChange={e => setMoftalBenef(e.target.value)}
+                        placeholder="Clinique / médecin (bénéficiaire)"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <input type="text" value={moftalContact} onChange={e => setMoftalContact(e.target.value)}
+                        placeholder="Numéro Orange Money ou MTN MoMo du bénéficiaire"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <textarea value={moftalRaison} onChange={e => setMoftalRaison(e.target.value)}
+                        placeholder="Raison (ex: hospitalisation de Mamadou, 3 jours en clinique...)"
+                        rows={2}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none" />
+                      <button onClick={payerSante} disabled={moftalLoading}
+                        className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
+                        style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
+                        {moftalLoading ? 'Traitement...' : '✅ Confirmer le paiement santé'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              Pas encore de Compte Famille : touchez le bouton ci-dessus.
+            </p>
+          )}
+        </div>
+
+        {/* Numéro de sang de la famille : code de l'arbre (F…S…), jamais un NuméroH */}
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 sm:p-5">
+          <h2 className="text-lg font-bold text-emerald-800">🩸 Numéro de sang de la famille</h2>
+          {arbreCode === null ? (
+            <p className="text-sm text-emerald-900">Chargement…</p>
+          ) : arbreCode.familyCode ? (
+            <>
+              <p className="text-sm text-emerald-900 mb-3">Partagez-le pour que chacun sache où envoyer l&apos;aide.</p>
+              <div className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-emerald-300 shadow-sm">
+                <span className="font-mono font-bold text-base sm:text-lg tracking-widest text-emerald-900">{arbreCode.familyCode}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-emerald-900 mb-3">
+                {arbreCode.activationRequise
+                  ? "Votre famille n'a pas encore son numéro : activez votre arbre pour l'obtenir."
+                  : `Votre famille recevra son numéro quand l'arbre aura au moins 3 membres confirmés (actuellement ${arbreCode.nbMembres}).`}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/famille/moi/arbre")}
+                className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
+              >
+                🌳 {arbreCode.activationRequise ? "Activer mon arbre" : "Compléter mon arbre"}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Zone de partage des vidéos / preuves pour les problèmes de santé familiaux */}
@@ -299,80 +417,6 @@ export default function Probleme() {
           </div>
         </div>
 
-        {/* ─── Moftal Pay — Paiement santé depuis problème familial ─── */}
-        <div className="rounded-xl shadow-sm p-4 sm:p-5 border border-emerald-200" style={{ background: 'linear-gradient(135deg,#f0fdf0,#dcfcdc)' }}>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">💰</span>
-            <div>
-              <h2 className="text-lg font-bold text-emerald-900">Moftal Pay — Santé</h2>
-              <p className="text-sm text-emerald-700">
-                {fundCompte
-                  ? <>Solde santé disponible : <strong>{(fundCompte.soldes?.sante || 0).toLocaleString()} GNF</strong></>
-                  : "Payer les soins avec l'argent de la famille."}
-              </p>
-            </div>
-          </div>
-
-          {/* Accès rapide à Moftal Pay (toujours visible) */}
-          <button
-            onClick={() => navigate('/compte-famille')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm mb-3"
-            style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
-          >
-            💰 Compte Famille Moftal Pay
-          </button>
-
-          {fundCompte ? (
-            <>
-              {!fundCompte.estAdmin && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                  ⚠️ Seuls les responsables du compte peuvent payer.
-                </p>
-              )}
-
-              {fundCompte.estAdmin && (
-                <>
-                  <button
-                    onClick={() => setShowMoftalPay(v => !v)}
-                    className="w-full py-2.5 rounded-xl text-white font-bold text-sm mb-3"
-                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}
-                  >
-                    {showMoftalPay ? '✕ Annuler' : '🏥 Payer une clinique ou médecin'}
-                  </button>
-
-                  {showMoftalPay && (
-                    <div className="space-y-3 bg-white rounded-xl p-4 border border-emerald-100">
-                      <p className="text-xs text-emerald-700 font-semibold">Paiement depuis la caisse santé de la famille</p>
-                      <input type="number" value={moftalMontant} onChange={e => setMoftalMontant(e.target.value)}
-                        placeholder="Montant en GNF" min="100"
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-                      <input type="text" value={moftalBenef} onChange={e => setMoftalBenef(e.target.value)}
-                        placeholder="Clinique / médecin (bénéficiaire)"
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-                      <input type="text" value={moftalContact} onChange={e => setMoftalContact(e.target.value)}
-                        placeholder="Numéro Orange Money ou MTN MoMo du bénéficiaire"
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-                      <textarea value={moftalRaison} onChange={e => setMoftalRaison(e.target.value)}
-                        placeholder="Raison (ex: hospitalisation de Mamadou, 3 jours en clinique...)"
-                        rows={2}
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none" />
-                      <button onClick={payerSante} disabled={moftalLoading}
-                        className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                        style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
-                        {moftalLoading ? 'Traitement...' : '✅ Confirmer le paiement santé'}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          ) : (
-            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              Pas encore de Compte Famille : touchez le bouton ci-dessus.
-            </p>
-          )}
-        </div>
-
         {/* Fenêtre « Comment ça marche ? » : toutes les explications détaillées */}
         {showAide && (
           <div
@@ -403,13 +447,15 @@ export default function Probleme() {
               </section>
 
               <section>
-                <h3 className="font-bold text-gray-900">💳 Numéro de la famille</h3>
+                <h3 className="font-bold text-gray-900">🩸 Numéro de sang de la famille</h3>
                 <p>
-                  C&apos;est le <strong>numéro unique</strong> que la famille utilise pour contribuer et assister un membre
-                  malade. Partagez-le dans la famille pour que tout le monde sache où envoyer l&apos;aide.
+                  C&apos;est le <strong>code unique de votre lignée</strong> (par exemple <strong>F2S1</strong>) : F est le
+                  numéro du nom de famille, S le numéro de sang de votre arbre. Il n&apos;est jamais répété et ce n&apos;est
+                  pas le NuméroH d&apos;une personne.
                 </p>
                 <p className="mt-1">
-                  Plus tard, ce numéro pourra être relié à un compte (Orange Money, MTN MoMo ou banque) pour les contributions.
+                  Il est attribué quand l&apos;arbre compte au moins 3 membres confirmés et qu&apos;il est activé.
+                  Partagez-le dans la famille pour que tout le monde sache où envoyer l&apos;aide.
                 </p>
               </section>
 
@@ -423,7 +469,7 @@ export default function Probleme() {
               </section>
 
               <section>
-                <h3 className="font-bold text-gray-900">💰 Moftal Pay — Santé</h3>
+                <h3 className="font-bold text-gray-900">💰 Moftal Pay Famille</h3>
                 <p>
                   Le <strong>Compte Famille</strong> réunit l&apos;argent déposé par les membres. Sa partie « santé » sert
                   à payer directement une clinique ou un médecin.
